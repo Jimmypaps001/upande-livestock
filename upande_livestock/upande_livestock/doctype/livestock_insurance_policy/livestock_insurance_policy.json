@@ -1,0 +1,196 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "format:LIP-{####}",
+ "creation": "2026-05-25 00:44:24.322652",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "policy_section",
+  "policy_number",
+  "insurer",
+  "status",
+  "column_break_policy",
+  "start_date",
+  "end_date",
+  "payout_percent",
+  "coverage_section",
+  "total_insured_value",
+  "total_premium",
+  "column_break_coverage",
+  "company",
+  "remarks",
+  "animals_section",
+  "animals"
+ ],
+ "fields": [
+  {
+   "fieldname": "policy_section",
+   "fieldtype": "Section Break",
+   "label": "Policy Information"
+  },
+  {
+   "description": "The insurance policy number from the insurer.",
+   "fieldname": "policy_number",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Policy Number",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "description": "Name of the insurance company (e.g. Heritage Insurance, Jubilee).",
+   "fieldname": "insurer",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Insurer",
+   "reqd": 1
+  },
+  {
+   "default": "Active",
+   "description": "Current status of this policy.",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Active\nExpired\nCancelled"
+  },
+  {
+   "fieldname": "column_break_policy",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Date the insurance cover begins.",
+   "fieldname": "start_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Start Date",
+   "reqd": 1
+  },
+  {
+   "description": "Date the insurance cover expires.",
+   "fieldname": "end_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "End Date",
+   "reqd": 1
+  },
+  {
+   "default": "90",
+   "description": "Percentage of insured value the insurer pays on a valid claim.",
+   "fieldname": "payout_percent",
+   "fieldtype": "Percent",
+   "label": "Payout %"
+  },
+  {
+   "fieldname": "coverage_section",
+   "fieldtype": "Section Break",
+   "label": "Coverage & Financials"
+  },
+  {
+   "description": "Auto-calculated from covered animals.",
+   "fieldname": "total_insured_value",
+   "fieldtype": "Currency",
+   "label": "Total Insured Value (KES)",
+   "read_only": 1
+  },
+  {
+   "description": "Total annual premium paid for this policy.",
+   "fieldname": "total_premium",
+   "fieldtype": "Currency",
+   "label": "Annual Premium (KES)"
+  },
+  {
+   "fieldname": "column_break_coverage",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "The company this policy belongs to.",
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "reqd": 1
+  },
+  {
+   "description": "Any policy notes, exclusions, or special conditions.",
+   "fieldname": "remarks",
+   "fieldtype": "Small Text",
+   "label": "Remarks"
+  },
+  {
+   "description": "Animals covered under this policy. Insured value is pulled from the Asset.",
+   "fieldname": "animals_section",
+   "fieldtype": "Section Break",
+   "label": "Covered Animals"
+  },
+  {
+   "fieldname": "animals",
+   "fieldtype": "Table",
+   "label": "Covered Animals",
+   "options": "Livestock Insurance Policy Animal"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-05-25 00:44:24.322652",
+ "modified_by": "judah@upande.com",
+ "module": "Upande Livestock",
+ "name": "Livestock Insurance Policy",
+ "naming_rule": "Expression (old style)",
+ "owner": "judah@upande.com",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "HOD Dairy",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "CEO",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "CFO",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

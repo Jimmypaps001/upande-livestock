@@ -1,0 +1,301 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "MILK-.YYYY.-.MM.-.#####",
+ "creation": "2026-05-25 00:38:55.527029",
+ "description": "Daily milk production record per herd per session. Creates a Stock Entry (type from Livestock Settings) to move milk into the Milk warehouse and a Journal Entry crediting Dairy Milk Sales.",
+ "doctype": "DocType",
+ "document_type": "Document",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "herd",
+  "session",
+  "recording_date",
+  "col_break_1",
+  "cows_milked",
+  "operator",
+  "company",
+  "section_qty",
+  "total_yield_kg",
+  "discarded_kg",
+  "net_yield_kg",
+  "col_break_qty",
+  "price_per_kg",
+  "milk_revenue",
+  "section_stock",
+  "stock_entry",
+  "target_warehouse",
+  "discard_warehouse",
+  "col_break_stock",
+  "journal_entry",
+  "income_account",
+  "cost_center",
+  "section_lab",
+  "bulk_scc",
+  "fat_percent",
+  "protein_percent",
+  "col_break_lab",
+  "lab_test_date",
+  "remarks",
+  "amended_from",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "fieldname": "herd",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Herd",
+   "options": "Herds",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "session",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Session",
+   "options": "AM \u2014 Morning\nPM \u2014 Afternoon\nEvening",
+   "reqd": 1
+  },
+  {
+   "fieldname": "recording_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Date",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "col_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Number of cows milked this session (auto-filled from herd).",
+   "fieldname": "cows_milked",
+   "fieldtype": "Int",
+   "label": "Cows Milked"
+  },
+  {
+   "fieldname": "operator",
+   "fieldtype": "Link",
+   "label": "Operator",
+   "options": "Employee"
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_qty",
+   "fieldtype": "Section Break",
+   "label": "Quantities"
+  },
+  {
+   "fieldname": "total_yield_kg",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Total Yield (kg)",
+   "reqd": 1
+  },
+  {
+   "description": "Milk excluded due to withdrawal periods, mastitis, or contamination.",
+   "fieldname": "discarded_kg",
+   "fieldtype": "Float",
+   "label": "Discarded (kg)"
+  },
+  {
+   "description": "Auto-calculated: Total Yield minus Discarded.",
+   "fieldname": "net_yield_kg",
+   "fieldtype": "Float",
+   "label": "Net Sellable Yield (kg)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "col_break_qty",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Pulled from Livestock Settings milk_price_per_kg.",
+   "fieldname": "price_per_kg",
+   "fieldtype": "Currency",
+   "label": "Price per kg (KES)"
+  },
+  {
+   "description": "Auto-calculated: Net Yield \u00d7 Price.",
+   "fieldname": "milk_revenue",
+   "fieldtype": "Currency",
+   "label": "Estimated Revenue (KES)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_stock",
+   "fieldtype": "Section Break",
+   "label": "Stock Entry & Accounting"
+  },
+  {
+   "description": "Auto-created on submit. Type from Livestock Settings (Milking).",
+   "fieldname": "stock_entry",
+   "fieldtype": "Link",
+   "label": "Stock Entry",
+   "options": "Stock Entry",
+   "read_only": 1
+  },
+  {
+   "description": "Target warehouse from Livestock Settings.",
+   "fieldname": "target_warehouse",
+   "fieldtype": "Link",
+   "label": "Target Warehouse (Milk)",
+   "options": "Warehouse"
+  },
+  {
+   "description": "Discard warehouse from Livestock Settings.",
+   "fieldname": "discard_warehouse",
+   "fieldtype": "Link",
+   "label": "Discard Warehouse",
+   "options": "Warehouse"
+  },
+  {
+   "fieldname": "col_break_stock",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Auto-created on submit. Credits Dairy Milk Sales, debits Finished Goods - Milk.",
+   "fieldname": "journal_entry",
+   "fieldtype": "Link",
+   "label": "Journal Entry",
+   "options": "Journal Entry",
+   "read_only": 1
+  },
+  {
+   "description": "Income account from Livestock Settings milk_income_account.",
+   "fieldname": "income_account",
+   "fieldtype": "Link",
+   "label": "Income Account",
+   "options": "Account"
+  },
+  {
+   "description": "Cost center from the herd record.",
+   "fieldname": "cost_center",
+   "fieldtype": "Link",
+   "label": "Cost Center",
+   "options": "Cost Center",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_lab",
+   "fieldtype": "Section Break",
+   "label": "Lab Results (recorded separately)"
+  },
+  {
+   "fieldname": "bulk_scc",
+   "fieldtype": "Float",
+   "label": "Bulk Tank SCC (cells/ml \u00d7 1000)"
+  },
+  {
+   "fieldname": "fat_percent",
+   "fieldtype": "Float",
+   "label": "Fat %"
+  },
+  {
+   "fieldname": "protein_percent",
+   "fieldtype": "Float",
+   "label": "Protein %"
+  },
+  {
+   "fieldname": "col_break_lab",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "lab_test_date",
+   "fieldtype": "Date",
+   "label": "Lab Test Date"
+  },
+  {
+   "fieldname": "remarks",
+   "fieldtype": "Small Text",
+   "label": "Remarks"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Milk Recording",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Milk Recording",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2026-05-25 00:38:55.527029",
+ "modified_by": "judah@upande.com",
+ "module": "Upande Livestock",
+ "name": "Milk Recording",
+ "naming_rule": "Expression",
+ "owner": "judah@upande.com",
+ "permissions": [
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "HOD Dairy",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "role": "Dairy Supervisor",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "herd"
+}

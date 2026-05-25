@@ -1,0 +1,217 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "CALF-.YYYY.-.#####",
+ "creation": "2026-05-25 00:38:51.891604",
+ "description": "Tracks calf rearing from birth through weaning. Linked to the Animal (calf). Growth rate auto-calculated from Weight Recording events.",
+ "doctype": "DocType",
+ "document_type": "Document",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "animal",
+  "calf_name",
+  "date_of_birth",
+  "dam",
+  "col_break_top",
+  "birth_weight_kg",
+  "company",
+  "section_colostrum",
+  "colostrum_given_litres",
+  "colostrum_within_6h",
+  "feeding_type",
+  "col_break_col",
+  "milk_replacer_item",
+  "daily_milk_litres",
+  "section_weaning",
+  "weaning_date",
+  "weaning_weight_kg",
+  "col_break_weaning",
+  "avg_daily_gain_g",
+  "target_daily_gain_g",
+  "growth_status",
+  "remarks"
+ ],
+ "fields": [
+  {
+   "fieldname": "animal",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Calf (Animal)",
+   "options": "Animal",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fetch_from": "animal.burn_name",
+   "fieldname": "calf_name",
+   "fieldtype": "Data",
+   "label": "Calf Name",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "animal.date_of_birth",
+   "fieldname": "date_of_birth",
+   "fieldtype": "Date",
+   "label": "Date of Birth",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "animal.dam",
+   "fieldname": "dam",
+   "fieldtype": "Link",
+   "label": "Dam (Mother)",
+   "options": "Animal",
+   "read_only": 1
+  },
+  {
+   "fieldname": "col_break_top",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fetch_from": "animal.birth_weight_kg",
+   "fieldname": "birth_weight_kg",
+   "fieldtype": "Float",
+   "label": "Birth Weight (kg)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_colostrum",
+   "fieldtype": "Section Break",
+   "label": "Colostrum & Early Feeding"
+  },
+  {
+   "fieldname": "colostrum_given_litres",
+   "fieldtype": "Float",
+   "label": "Colostrum Given (litres)"
+  },
+  {
+   "default": "0",
+   "fieldname": "colostrum_within_6h",
+   "fieldtype": "Check",
+   "label": "Colostrum Given Within 6 Hours?"
+  },
+  {
+   "fieldname": "feeding_type",
+   "fieldtype": "Select",
+   "label": "Feeding Type",
+   "options": "Whole Milk\nMilk Replacer\nBoth"
+  },
+  {
+   "fieldname": "col_break_col",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "milk_replacer_item",
+   "fieldtype": "Link",
+   "label": "Milk Replacer Item",
+   "options": "Item"
+  },
+  {
+   "fieldname": "daily_milk_litres",
+   "fieldtype": "Float",
+   "label": "Daily Milk Allowance (litres)"
+  },
+  {
+   "fieldname": "section_weaning",
+   "fieldtype": "Section Break",
+   "label": "Weaning"
+  },
+  {
+   "fieldname": "weaning_date",
+   "fieldtype": "Date",
+   "label": "Weaning Date"
+  },
+  {
+   "fieldname": "weaning_weight_kg",
+   "fieldtype": "Float",
+   "label": "Weaning Weight (kg)"
+  },
+  {
+   "fieldname": "col_break_weaning",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Auto-calculated from birth weight and weight recording events.",
+   "fieldname": "avg_daily_gain_g",
+   "fieldtype": "Float",
+   "label": "Avg Daily Gain (g/day)",
+   "read_only": 1
+  },
+  {
+   "description": "Pulled from Livestock Settings target_growth_gday.",
+   "fieldname": "target_daily_gain_g",
+   "fieldtype": "Float",
+   "label": "Target Daily Gain (g/day)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "growth_status",
+   "fieldtype": "Select",
+   "label": "Growth Status",
+   "options": "On Target\nBelow Target\nAbove Target",
+   "read_only": 1
+  },
+  {
+   "fieldname": "remarks",
+   "fieldtype": "Small Text",
+   "label": "Notes / Observations"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-05-25 00:38:51.891604",
+ "modified_by": "judah@upande.com",
+ "module": "Upande Livestock",
+ "name": "Calf Rearing",
+ "naming_rule": "Expression",
+ "owner": "judah@upande.com",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "HOD Dairy",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "role": "Dairy Supervisor",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "calf_name"
+}

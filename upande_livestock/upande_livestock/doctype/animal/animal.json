@@ -1,0 +1,435 @@
+{
+ "actions": [],
+ "allow_import": 1,
+ "allow_rename": 1,
+ "autoname": "field:tag_number",
+ "creation": "2026-05-25 00:38:49.079883",
+ "description": "Primary livestock animal record. Book number is the system ID, burn name is the display name used on herd lists. Every event, cost, milk record, and disposal links here.",
+ "doctype": "DocType",
+ "document_type": "Document",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "tag_number",
+  "burn_name",
+  "col_break_top",
+  "sex",
+  "breed",
+  "species",
+  "section_placement",
+  "current_herd",
+  "company",
+  "status",
+  "col_break_placement",
+  "repro_status",
+  "parity",
+  "days_in_milk",
+  "section_birth",
+  "date_of_birth",
+  "origin",
+  "acquisition_date",
+  "birth_weight_kg",
+  "col_break_birth",
+  "dam",
+  "sire_name",
+  "coat_colour",
+  "section_health",
+  "in_treatment",
+  "milk_safe_date",
+  "last_weight_kg",
+  "last_bcs",
+  "col_break_health",
+  "last_vaccination_date",
+  "last_deworming_date",
+  "next_due_event",
+  "section_repro",
+  "last_calving_date",
+  "expected_calving_date",
+  "last_service_date",
+  "col_break_repro",
+  "last_service_sire",
+  "total_services",
+  "conception_rate",
+  "section_accounting",
+  "is_capitalised",
+  "asset_link",
+  "col_break_accounting",
+  "purchase_value",
+  "current_book_value",
+  "insured_value",
+  "section_notes",
+  "remarks",
+  "amended_from",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "bold": 1,
+   "description": "Unique ID e.g. A001/26 \u2014 used as the system name.",
+   "fieldname": "tag_number",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Tag / Book Number",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "bold": 1,
+   "description": "Common name shown on herd list e.g. Ivy, Atlas, Zebby.",
+   "fieldname": "burn_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Burn Name (Display)",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "col_break_top",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "sex",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Sex",
+   "options": "\nFemale\nMale",
+   "reqd": 1
+  },
+  {
+   "fieldname": "breed",
+   "fieldtype": "Link",
+   "label": "Breed",
+   "options": "Breed"
+  },
+  {
+   "default": "Cattle",
+   "fieldname": "species",
+   "fieldtype": "Select",
+   "label": "Species",
+   "options": "Cattle\nGoat\nSheep\nOther"
+  },
+  {
+   "fieldname": "section_placement",
+   "fieldtype": "Section Break",
+   "label": "Placement & Status"
+  },
+  {
+   "fieldname": "current_herd",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Current Herd",
+   "options": "Herds",
+   "search_index": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "reqd": 1
+  },
+  {
+   "default": "Active",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Status",
+   "options": "Active\nDry\nDead\nSold\nCulled\nTransferred Out",
+   "search_index": 1
+  },
+  {
+   "fieldname": "col_break_placement",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Open",
+   "fieldname": "repro_status",
+   "fieldtype": "Select",
+   "label": "Reproductive Status",
+   "options": "Open\nServed\nPregnant\nDry\nHeifer\nBull\nCalf"
+  },
+  {
+   "fieldname": "parity",
+   "fieldtype": "Int",
+   "label": "Parity (No. of Calvings)"
+  },
+  {
+   "fieldname": "days_in_milk",
+   "fieldtype": "Int",
+   "label": "Days in Milk (DIM)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_birth",
+   "fieldtype": "Section Break",
+   "label": "Birth & Origin"
+  },
+  {
+   "fieldname": "date_of_birth",
+   "fieldtype": "Date",
+   "label": "Date of Birth",
+   "search_index": 1
+  },
+  {
+   "default": "Born on Farm",
+   "fieldname": "origin",
+   "fieldtype": "Select",
+   "label": "Origin",
+   "options": "Born on Farm\nPurchased\nTransferred In"
+  },
+  {
+   "fieldname": "acquisition_date",
+   "fieldtype": "Date",
+   "label": "Acquisition / Birth Date"
+  },
+  {
+   "fieldname": "birth_weight_kg",
+   "fieldtype": "Float",
+   "label": "Birth Weight (kg)"
+  },
+  {
+   "fieldname": "col_break_birth",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "dam",
+   "fieldtype": "Link",
+   "label": "Dam (Mother)",
+   "options": "Animal"
+  },
+  {
+   "fieldname": "sire_name",
+   "fieldtype": "Data",
+   "label": "Sire Name"
+  },
+  {
+   "fieldname": "coat_colour",
+   "fieldtype": "Data",
+   "label": "Coat Colour"
+  },
+  {
+   "fieldname": "section_health",
+   "fieldtype": "Section Break",
+   "label": "Health Summary"
+  },
+  {
+   "default": "0",
+   "fieldname": "in_treatment",
+   "fieldtype": "Check",
+   "label": "In Treatment / Withdrawal"
+  },
+  {
+   "description": "Auto-set when drug with withdrawal period administered. Excluded from milking until this date.",
+   "fieldname": "milk_safe_date",
+   "fieldtype": "Date",
+   "label": "Milk Safe From Date"
+  },
+  {
+   "fieldname": "last_weight_kg",
+   "fieldtype": "Float",
+   "label": "Last Recorded Weight (kg)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_bcs",
+   "fieldtype": "Float",
+   "label": "Last BCS (Body Condition Score)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "col_break_health",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "last_vaccination_date",
+   "fieldtype": "Date",
+   "label": "Last Vaccination Date",
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_deworming_date",
+   "fieldtype": "Date",
+   "label": "Last Deworming Date",
+   "read_only": 1
+  },
+  {
+   "fieldname": "next_due_event",
+   "fieldtype": "Data",
+   "label": "Next Due Event (summary)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_repro",
+   "fieldtype": "Section Break",
+   "label": "Reproduction"
+  },
+  {
+   "fieldname": "last_calving_date",
+   "fieldtype": "Date",
+   "label": "Last Calving Date",
+   "read_only": 1
+  },
+  {
+   "fieldname": "expected_calving_date",
+   "fieldtype": "Date",
+   "label": "Expected Calving Date"
+  },
+  {
+   "fieldname": "last_service_date",
+   "fieldtype": "Date",
+   "label": "Last Service Date",
+   "read_only": 1
+  },
+  {
+   "fieldname": "col_break_repro",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "last_service_sire",
+   "fieldtype": "Data",
+   "label": "Last Service Sire",
+   "read_only": 1
+  },
+  {
+   "fieldname": "total_services",
+   "fieldtype": "Int",
+   "label": "Total Services (all time)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "conception_rate",
+   "fieldtype": "Percent",
+   "label": "Conception Rate (%)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_accounting",
+   "fieldtype": "Section Break",
+   "label": "Accounting"
+  },
+  {
+   "default": "0",
+   "description": "Tick when animal has been entered on the Fixed Asset register. Required for insurance claims and depreciation.",
+   "fieldname": "is_capitalised",
+   "fieldtype": "Check",
+   "label": "Is Capitalised (on Fixed Asset Register)"
+  },
+  {
+   "description": "Link to the ERPNext Asset record. Required when is_capitalised = 1.",
+   "fieldname": "asset_link",
+   "fieldtype": "Link",
+   "label": "Linked Asset (ERPNext)",
+   "options": "Asset"
+  },
+  {
+   "fieldname": "col_break_accounting",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Pulled from Asset when capitalised, or entered for born-on-farm valuation.",
+   "fieldname": "purchase_value",
+   "fieldtype": "Currency",
+   "label": "Purchase / Capitalisation Value (KES)"
+  },
+  {
+   "fieldname": "current_book_value",
+   "fieldtype": "Currency",
+   "label": "Current Book Value (KES)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "insured_value",
+   "fieldtype": "Currency",
+   "label": "Insured Value (KES)"
+  },
+  {
+   "fieldname": "section_notes",
+   "fieldtype": "Section Break",
+   "label": "Notes"
+  },
+  {
+   "fieldname": "remarks",
+   "fieldtype": "Small Text",
+   "label": "Remarks"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Animal",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Animal",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2026-05-25 00:38:49.079883",
+ "modified_by": "judah@upande.com",
+ "module": "Upande Livestock",
+ "name": "Animal",
+ "naming_rule": "By fieldname",
+ "owner": "judah@upande.com",
+ "permissions": [
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "HOD Dairy",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Dairy Supervisor",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "search_fields": "burn_name,current_herd,status",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "burn_name"
+}

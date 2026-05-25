@@ -1,0 +1,251 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "ANI-DISP-.YYYY.-.#####",
+ "creation": "2026-05-25 00:41:36.905453",
+ "description": "Records the removal of an animal from the herd by sale, culling, death, or condemnation. On submit: updates Animal status, cancels Asset if capitalised, creates Journal Entries for disposal/sale proceeds.",
+ "doctype": "DocType",
+ "document_type": "Document",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "animal",
+  "animal_name",
+  "col_break_top",
+  "disposal_date",
+  "disposal_type",
+  "section_valuation",
+  "book_value",
+  "sale_price",
+  "col_break_valuation",
+  "buyer_name",
+  "buyer_contact",
+  "gain_loss",
+  "section_accounting",
+  "income_account",
+  "disposal_account",
+  "cost_center",
+  "col_break_accounting",
+  "sale_journal_entry",
+  "writeoff_journal_entry",
+  "section_notes",
+  "reason_details",
+  "witness",
+  "amended_from",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "bold": 1,
+   "fieldname": "animal",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Animal",
+   "options": "Animal",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fetch_from": "animal.burn_name",
+   "fieldname": "animal_name",
+   "fieldtype": "Data",
+   "label": "Animal Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "col_break_top",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "disposal_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Disposal Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "disposal_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Disposal Type",
+   "options": "Sold\nCulled (Farm Use)\nDied \u2014 Natural Causes\nDied \u2014 Disease\nDied \u2014 Accident\nCondemned\nSlaughtered",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "section_valuation",
+   "fieldtype": "Section Break",
+   "label": "Valuation & Proceeds"
+  },
+  {
+   "description": "Pulled from Animal record.",
+   "fieldname": "book_value",
+   "fieldtype": "Currency",
+   "label": "Book Value at Disposal (KES)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "sale_price",
+   "fieldtype": "Currency",
+   "label": "Sale / Salvage Price (KES)"
+  },
+  {
+   "fieldname": "col_break_valuation",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "buyer_name",
+   "fieldtype": "Data",
+   "label": "Buyer Name"
+  },
+  {
+   "fieldname": "buyer_contact",
+   "fieldtype": "Data",
+   "label": "Buyer Contact / Phone"
+  },
+  {
+   "description": "Auto-calculated: Sale Price minus Book Value. Positive = gain, negative = loss.",
+   "fieldname": "gain_loss",
+   "fieldtype": "Currency",
+   "label": "Gain / Loss on Disposal (KES)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_accounting",
+   "fieldtype": "Section Break",
+   "label": "Accounting Entries"
+  },
+  {
+   "description": "Account credited with sale proceeds. Pulled from Livestock Settings \u2014 animal_sale_income_account.",
+   "fieldname": "income_account",
+   "fieldtype": "Link",
+   "label": "Income / Gain Account",
+   "options": "Account"
+  },
+  {
+   "description": "Account debited to write off book value. Pulled from Livestock Settings \u2014 disposal_account.",
+   "fieldname": "disposal_account",
+   "fieldtype": "Link",
+   "label": "Asset Write-off Account",
+   "options": "Account"
+  },
+  {
+   "description": "Pulled from Animal\u2019s current herd cost centre.",
+   "fieldname": "cost_center",
+   "fieldtype": "Link",
+   "label": "Cost Center",
+   "options": "Cost Center",
+   "read_only": 1
+  },
+  {
+   "fieldname": "col_break_accounting",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Auto-created on submit when sale_price > 0.",
+   "fieldname": "sale_journal_entry",
+   "fieldtype": "Link",
+   "label": "Sale Receipt Journal Entry",
+   "options": "Journal Entry",
+   "read_only": 1
+  },
+  {
+   "description": "Auto-created on submit to write off the animal from the asset register.",
+   "fieldname": "writeoff_journal_entry",
+   "fieldtype": "Link",
+   "label": "Asset Write-off Journal Entry",
+   "options": "Journal Entry",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_notes",
+   "fieldtype": "Section Break",
+   "label": "Notes"
+  },
+  {
+   "fieldname": "reason_details",
+   "fieldtype": "Small Text",
+   "label": "Reason / Details"
+  },
+  {
+   "fieldname": "witness",
+   "fieldtype": "Data",
+   "label": "Witness / Authorised By"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Animal Disposal",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Animal Disposal",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2026-05-25 00:41:36.905453",
+ "modified_by": "judah@upande.com",
+ "module": "Upande Livestock",
+ "name": "Animal Disposal",
+ "naming_rule": "Expression",
+ "owner": "judah@upande.com",
+ "permissions": [
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "HOD Dairy",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Dairy Supervisor",
+   "share": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "animal_name"
+}
