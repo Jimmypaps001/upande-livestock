@@ -1,0 +1,101 @@
+[
+ {
+  "doctype": "Custom Field",
+  "name": "Herds-custom_is_milking",
+  "default": "0",
+  "description": "Check if this herd contains milking cows (lactating groups)",
+  "dt": "Herds",
+  "fieldname": "custom_is_milking",
+  "fieldtype": "Check",
+  "insert_after": "herd_name",
+  "label": "Is Milking Herd",
+  "module": "Upande Livestock"
+ },
+ {
+  "doctype": "Custom Field",
+  "name": "Herds-custom_is_calf_rearing",
+  "default": "0",
+  "description": "Tick if this herd contains calves on milk feeding (e.g. 0-2 months). Calf Feeding events validate that the calf's current herd has this flag set.",
+  "dt": "Herds",
+  "fieldname": "custom_is_calf_rearing",
+  "fieldtype": "Check",
+  "in_standard_filter": 1,
+  "insert_after": "custom_is_milking",
+  "label": "Is Calf-Rearing Herd",
+  "module": "Upande Livestock"
+ },
+ {
+  "doctype": "Custom Field",
+  "name": "Herds-custom_production_group",
+  "depends_on": "eval:doc.custom_is_milking",
+  "description": "Maps this herd to a production group for KPI tracking (matches Excel tracker Group 1/2/3)",
+  "dt": "Herds",
+  "fieldname": "custom_production_group",
+  "fieldtype": "Select",
+  "insert_after": "custom_is_milking",
+  "label": "Production Group",
+  "module": "Upande Livestock",
+  "options": "\nGroup 1\nGroup 2\nGroup 3"
+ },
+ {
+  "doctype": "Custom Field",
+  "name": "Herds-custom_is_dry",
+  "default": "0",
+  "description": "Tick if this herd contains dry cows or steaming-up cows. Excluded from milk recording.",
+  "dt": "Herds",
+  "fieldname": "custom_is_dry",
+  "fieldtype": "Check",
+  "in_standard_filter": 1,
+  "insert_after": "custom_is_calf_rearing",
+  "label": "Is Dry / Pre-calving Herd",
+  "module": "Upande Livestock"
+ },
+ {
+  "doctype": "Custom Field",
+  "name": "Herds-custom_herd_category",
+  "description": "Herd category for KPI grouping: Milking, Dry, Youngstock",
+  "dt": "Herds",
+  "fieldname": "custom_herd_category",
+  "fieldtype": "Select",
+  "insert_after": "custom_production_group",
+  "label": "Herd Category",
+  "module": "Upande Livestock",
+  "options": "\nMilking\nDry\nYoungstock > 12m\nYoungstock < 12m"
+ },
+ {
+  "doctype": "Custom Field",
+  "name": "Herds-custom_feed_account",
+  "description": "Expense account for feed costs for this herd. Overrides the global setting in Livestock Settings.",
+  "dt": "Herds",
+  "fieldname": "custom_feed_account",
+  "fieldtype": "Link",
+  "insert_after": "cost_center",
+  "label": "Feed Expense Account (override)",
+  "module": "Upande Livestock",
+  "options": "Account"
+ },
+ {
+  "doctype": "Custom Field",
+  "name": "Herds-custom_vet_account",
+  "description": "Expense account for vet/drug costs for this herd. Overrides the global setting.",
+  "dt": "Herds",
+  "fieldname": "custom_vet_account",
+  "fieldtype": "Link",
+  "insert_after": "custom_feed_account",
+  "label": "Vet / Drug Expense Account (override)",
+  "module": "Upande Livestock",
+  "options": "Account"
+ },
+ {
+  "doctype": "Custom Field",
+  "name": "Herds-custom_cost_center",
+  "description": "Cost centre for this herd. All JEs for events, feed, vet costs, and milk for this herd use this cost centre. Pulled from Livestock Settings if not set.",
+  "dt": "Herds",
+  "fieldname": "custom_cost_center",
+  "fieldtype": "Link",
+  "insert_after": "bom",
+  "label": "Cost Center",
+  "module": "Upande Livestock",
+  "options": "Cost Center"
+ }
+]

@@ -79,6 +79,32 @@ app_license = "mit"
 # 	"filters": "upande_livestock.utils.jinja_filters"
 # }
 
+# Fixtures
+# --------
+# Custom fields added to the standard Herds doctype for dairy KPI grouping and
+# per-herd accounting overrides. Exported so they deploy to every site via migrate.
+fixtures = [
+	{
+		"dt": "Custom Field",
+		"filters": [
+			[
+				"name",
+				"in",
+				[
+					"Herds-custom_is_milking",
+					"Herds-custom_is_calf_rearing",
+					"Herds-custom_production_group",
+					"Herds-custom_is_dry",
+					"Herds-custom_herd_category",
+					"Herds-custom_feed_account",
+					"Herds-custom_vet_account",
+					"Herds-custom_cost_center",
+				],
+			]
+		],
+	},
+]
+
 # Installation
 # ------------
 

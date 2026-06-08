@@ -1,0 +1,395 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "format:HC-{YYYY}-{#####}",
+ "creation": "2026-06-08 00:00:00.000000",
+ "description": "Clinical case file for sick or injured animals. Captures diagnosis, treatment course, outcome. Replaces use of Asset Repair for animal health events. On submit and case close, drives Animal master health-summary fields and (if outcome = Died/Culled) pre-fills a draft Animal Disposal.",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "animal",
+  "animal_name",
+  "current_herd",
+  "company",
+  "col_break_top",
+  "opened_date",
+  "opened_by",
+  "case_status",
+  "section_presentation",
+  "presenting_symptoms",
+  "body_systems",
+  "col_break_pres",
+  "provisional_diagnosis",
+  "confirmed_diagnosis",
+  "severity",
+  "section_vet",
+  "vet_called",
+  "vet_name",
+  "vet_visit_date",
+  "col_break_vet",
+  "lab_test_done",
+  "lab_results",
+  "is_zoonotic",
+  "is_notifiable",
+  "notification_reference",
+  "section_treatments",
+  "treatments",
+  "section_outcome",
+  "closed_date",
+  "outcome_notes",
+  "duration_days",
+  "col_break_outcome",
+  "milk_safe_date",
+  "production_loss_kg",
+  "production_loss_value",
+  "total_treatment_cost",
+  "linked_disposal",
+  "section_accounting",
+  "treatment_journal_entry",
+  "drug_stock_entry",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "fieldname": "animal",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Animal",
+   "options": "Animal",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "animal.burn_name",
+   "fieldname": "animal_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Animal Name",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "animal.current_herd",
+   "fieldname": "current_herd",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Current Herd",
+   "options": "Herds",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "animal.company",
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "col_break_top",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Today",
+   "fieldname": "opened_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Date Opened",
+   "reqd": 1
+  },
+  {
+   "description": "Herder, supervisor or vet who first flagged the case",
+   "fieldname": "opened_by",
+   "fieldtype": "Link",
+   "label": "Opened By",
+   "options": "Employee"
+  },
+  {
+   "default": "Open",
+   "fieldname": "case_status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Case Status",
+   "options": "Open\nUnder Treatment\nRecovered\nChronic\nDied\nCulled",
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_presentation",
+   "fieldtype": "Section Break",
+   "label": "Presentation"
+  },
+  {
+   "description": "What the herder or operator first observed",
+   "fieldname": "presenting_symptoms",
+   "fieldtype": "Text",
+   "label": "Presenting Symptoms",
+   "reqd": 1
+  },
+  {
+   "description": "Tick all body systems involved",
+   "fieldname": "body_systems",
+   "fieldtype": "Small Text",
+   "label": "Body Systems Affected"
+  },
+  {
+   "fieldname": "col_break_pres",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Initial best guess by herder/supervisor",
+   "fieldname": "provisional_diagnosis",
+   "fieldtype": "Link",
+   "label": "Provisional Diagnosis",
+   "options": "Animal Disease"
+  },
+  {
+   "description": "Confirmed by vet, lab or progression",
+   "fieldname": "confirmed_diagnosis",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Confirmed Diagnosis",
+   "options": "Animal Disease"
+  },
+  {
+   "default": "Moderate",
+   "fieldname": "severity",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Severity",
+   "options": "Mild\nModerate\nSevere\nCritical"
+  },
+  {
+   "fieldname": "section_vet",
+   "fieldtype": "Section Break",
+   "label": "Veterinary Involvement"
+  },
+  {
+   "default": "0",
+   "fieldname": "vet_called",
+   "fieldtype": "Check",
+   "label": "Vet Called"
+  },
+  {
+   "depends_on": "eval:doc.vet_called == 1",
+   "fieldname": "vet_name",
+   "fieldtype": "Data",
+   "label": "Vet Name"
+  },
+  {
+   "depends_on": "eval:doc.vet_called == 1",
+   "fieldname": "vet_visit_date",
+   "fieldtype": "Date",
+   "label": "Vet Visit Date"
+  },
+  {
+   "fieldname": "col_break_vet",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "description": "Bacterial culture, blood test, faecal egg count etc.",
+   "fieldname": "lab_test_done",
+   "fieldtype": "Check",
+   "label": "Lab Test Done"
+  },
+  {
+   "depends_on": "eval:doc.lab_test_done == 1",
+   "description": "Pathogen identified, sensitivity, parameters etc.",
+   "fieldname": "lab_results",
+   "fieldtype": "Long Text",
+   "label": "Lab Results"
+  },
+  {
+   "default": "0",
+   "fetch_from": "confirmed_diagnosis.is_zoonotic",
+   "fieldname": "is_zoonotic",
+   "fieldtype": "Check",
+   "label": "Zoonotic Risk",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fetch_from": "confirmed_diagnosis.is_notifiable",
+   "fieldname": "is_notifiable",
+   "fieldtype": "Check",
+   "label": "Notifiable to Authorities",
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:doc.is_notifiable == 1",
+   "description": "Reference number from Veterinary Officer or DOAS",
+   "fieldname": "notification_reference",
+   "fieldtype": "Data",
+   "label": "Notification Reference"
+  },
+  {
+   "fieldname": "section_treatments",
+   "fieldtype": "Section Break",
+   "label": "Treatment Log"
+  },
+  {
+   "description": "Each treatment administered. Drug withdrawal periods drive milk_safe_date.",
+   "fieldname": "treatments",
+   "fieldtype": "Table",
+   "label": "Treatments",
+   "options": "Animal Health Treatment"
+  },
+  {
+   "fieldname": "section_outcome",
+   "fieldtype": "Section Break",
+   "label": "Outcome"
+  },
+  {
+   "depends_on": "eval:['Recovered','Chronic','Died','Culled'].includes(doc.case_status)",
+   "fieldname": "closed_date",
+   "fieldtype": "Date",
+   "label": "Date Closed"
+  },
+  {
+   "depends_on": "eval:['Recovered','Chronic','Died','Culled'].includes(doc.case_status)",
+   "fieldname": "outcome_notes",
+   "fieldtype": "Text",
+   "label": "Outcome Notes"
+  },
+  {
+   "depends_on": "eval:doc.opened_date && doc.closed_date",
+   "fieldname": "duration_days",
+   "fieldtype": "Int",
+   "label": "Case Duration (days)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "col_break_outcome",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Calculated date until which milk from this animal must be discarded. Set to latest withdrawal across all treatments.",
+   "fieldname": "milk_safe_date",
+   "fieldtype": "Date",
+   "label": "Milk Safe From Date",
+   "read_only": 1
+  },
+  {
+   "description": "Total milk discarded due to this case (kg)",
+   "fieldname": "production_loss_kg",
+   "fieldtype": "Float",
+   "label": "Milk Discarded (kg)"
+  },
+  {
+   "description": "Auto-calculated from production_loss_kg × milk price in Livestock Settings",
+   "fieldname": "production_loss_value",
+   "fieldtype": "Currency",
+   "label": "Production Loss Value (KES)",
+   "read_only": 1
+  },
+  {
+   "description": "Sum of all treatment costs in this case",
+   "fieldname": "total_treatment_cost",
+   "fieldtype": "Currency",
+   "label": "Total Treatment Cost (KES)",
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:['Died','Culled'].includes(doc.case_status)",
+   "description": "Auto-created on submit when case closes with Died or Culled. Operator must complete and submit the disposal record separately.",
+   "fieldname": "linked_disposal",
+   "fieldtype": "Link",
+   "label": "Linked Animal Disposal",
+   "options": "Animal Disposal",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_accounting",
+   "fieldtype": "Section Break",
+   "label": "Accounting"
+  },
+  {
+   "description": "Auto-created Journal Entry for total_treatment_cost",
+   "fieldname": "treatment_journal_entry",
+   "fieldtype": "Link",
+   "label": "Treatment Cost JE",
+   "options": "Journal Entry",
+   "read_only": 1
+  },
+  {
+   "description": "Auto-created Stock Entry issuing drugs from store",
+   "fieldname": "drug_stock_entry",
+   "fieldtype": "Link",
+   "label": "Drug Issue Stock Entry",
+   "options": "Stock Entry",
+   "read_only": 1
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Animal Health Case",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2026-06-08 00:00:00.000000",
+ "modified_by": "james@upande.com",
+ "module": "Upande Livestock",
+ "name": "Animal Health Case",
+ "naming_rule": "Expression (old style)",
+ "owner": "james@upande.com",
+ "permissions": [
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "HOD Dairy",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Dairy Supervisor",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "opened_date",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "animal_name",
+ "track_changes": 1
+}
