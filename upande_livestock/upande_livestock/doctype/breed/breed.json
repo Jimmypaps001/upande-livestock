@@ -1,0 +1,46 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "field:breed",
+ "creation": "2025-10-04 20:57:56.216849",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "breed"
+ ],
+ "fields": [
+  {
+   "fieldname": "breed",
+   "fieldtype": "Data",
+   "label": "Breed",
+   "unique": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2025-10-04 20:59:04.210315",
+ "modified_by": "Administrator",
+ "module": "Upande Livestock",
+ "name": "Breed",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

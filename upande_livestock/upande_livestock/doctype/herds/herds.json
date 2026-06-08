@@ -1,0 +1,160 @@
+
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "field:herd_name",
+ "creation": "2025-09-30 13:10:59.741095",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "section_break_ypa9",
+  "min_age",
+  "herd_name",
+  "cost_center",
+  "amended_from",
+  "column_break_zoyl",
+  "max_age",
+  "number_of_animals",
+  "section_break_69rv",
+  "bom",
+  "ration_items"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_break_ypa9",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Herds",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "herd_name",
+   "fieldtype": "Data",
+   "label": "Herd Name",
+   "unique": 1
+  },
+  {
+   "fieldname": "min_age",
+   "fieldtype": "Float",
+   "label": "Min Age"
+  },
+  {
+   "fieldname": "max_age",
+   "fieldtype": "Float",
+   "label": "Max age"
+  },
+  {
+   "fieldname": "cost_center",
+   "fieldtype": "Link",
+   "label": "Cost Center",
+   "options": "Cost Center"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "ration_items",
+   "fieldtype": "Table",
+   "label": "Ration Items",
+   "options": "Feeding Ration Item"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "bom",
+   "fieldtype": "Link",
+   "label": "BOM",
+   "options": "BOM"
+  },
+  {
+   "fieldname": "number_of_animals",
+   "fieldtype": "Int",
+   "label": "Number of animals",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_zoyl",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "section_break_69rv",
+   "fieldtype": "Section Break",
+   "label": "Feeding Ratios"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2025-10-04 16:08:08.643066",
+ "modified_by": "Administrator",
+ "module": "Upande Livestock",
+ "name": "Herds",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "select": 1,
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Agriculture Manager",
+   "select": 1,
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Agriculture User",
+   "select": 1,
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Accounts User",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
