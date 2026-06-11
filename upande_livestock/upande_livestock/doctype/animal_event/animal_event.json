@@ -30,12 +30,11 @@
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Animal",
-   "link_filters": "[[\"Asset\",\"custom_is_livestock\",\"=\",1]]",
-   "options": "Asset",
+   "options": "Animal",
    "reqd": 1
   },
   {
-   "fetch_from": "animal.custom_current_herd",
+   "fetch_from": "animal.current_herd",
    "fieldname": "current_herd",
    "fieldtype": "Link",
    "label": "Current Herd",
