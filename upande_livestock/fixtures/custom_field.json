@@ -180,5 +180,53 @@
   "ignore_user_permissions": 1,
   "allow_on_submit": 1,
   "module": "Upande Livestock"
+ },
+ {
+  "doctype": "Custom Field",
+  "name": "Animal Event-expected_calving_date",
+  "dt": "Animal Event",
+  "fieldname": "expected_calving_date",
+  "fieldtype": "Date",
+  "label": "Expected Calving Date",
+  "insert_after": "pregnancy_confirmation_date",
+  "read_only": 1,
+  "allow_on_submit": 1,
+  "module": "Upande Livestock"
+ },
+ {
+  "doctype": "Custom Field",
+  "name": "Animal Event-pregnancy_check_due_date",
+  "dt": "Animal Event",
+  "fieldname": "pregnancy_check_due_date",
+  "fieldtype": "Date",
+  "label": "Pregnancy Check Due Date",
+  "insert_after": "expected_calving_date",
+  "read_only": 1,
+  "allow_on_submit": 1,
+  "module": "Upande Livestock"
+ },
+ {
+  "doctype": "Custom Field",
+  "name": "Animal Event-next_expected_heat",
+  "dt": "Animal Event",
+  "fieldname": "next_expected_heat",
+  "fieldtype": "Date",
+  "label": "Next Expected Heat",
+  "insert_after": "pregnancy_check_due_date",
+  "read_only": 1,
+  "allow_on_submit": 1,
+  "module": "Upande Livestock"
+ },
+ {
+  "doctype": "Custom Field",
+  "name": "Animal Event-ready_for_service_date",
+  "dt": "Animal Event",
+  "fieldname": "ready_for_service_date",
+  "fieldtype": "Date",
+  "label": "Ready For Service Date",
+  "insert_after": "next_expected_heat",
+  "read_only": 1,
+  "allow_on_submit": 1,
+  "module": "Upande Livestock"
  }
 ]

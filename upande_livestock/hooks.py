@@ -106,6 +106,10 @@ fixtures = [
 					"Animal Event-custom_status_after_test",
 					"Asset-custom_is_livestock",
 					"Asset-custom_current_herd",
+					"Animal Event-expected_calving_date",
+					"Animal Event-pregnancy_check_due_date",
+					"Animal Event-next_expected_heat",
+					"Animal Event-ready_for_service_date",
 				],
 			]
 		],
