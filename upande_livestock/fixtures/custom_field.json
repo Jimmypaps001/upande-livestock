@@ -97,5 +97,88 @@
   "label": "Cost Center",
   "module": "Upande Livestock",
   "options": "Cost Center"
+ },
+ {
+  "doctype": "Custom Field",
+  "name": "Animal Event-custom_calving_outcome",
+  "dt": "Animal Event",
+  "fieldname": "custom_calving_outcome",
+  "fieldtype": "Select",
+  "label": "Calving outcome",
+  "insert_after": "event_type",
+  "options": "Live Birth\nStill Birth\nAbortion",
+  "translatable": 1,
+  "module": "Upande Livestock"
+ },
+ {
+  "doctype": "Custom Field",
+  "name": "Animal Event-custom_no_of_calves",
+  "dt": "Animal Event",
+  "fieldname": "custom_no_of_calves",
+  "fieldtype": "Int",
+  "label": "No Of Calves",
+  "insert_after": "custom_calving_outcome",
+  "module": "Upande Livestock"
+ },
+ {
+  "doctype": "Custom Field",
+  "name": "Animal Event-custom_calf_sex",
+  "dt": "Animal Event",
+  "fieldname": "custom_calf_sex",
+  "fieldtype": "Select",
+  "label": "Calf Sex",
+  "insert_after": "custom_no_of_calves",
+  "options": "Male\nFemale",
+  "translatable": 1,
+  "module": "Upande Livestock"
+ },
+ {
+  "doctype": "Custom Field",
+  "name": "Animal Event-custom_related_pregnancy",
+  "dt": "Animal Event",
+  "fieldname": "custom_related_pregnancy",
+  "fieldtype": "Link",
+  "label": "Related Pregnancy",
+  "insert_after": "custom_calf_sex",
+  "options": "Animal Event",
+  "module": "Upande Livestock"
+ },
+ {
+  "doctype": "Custom Field",
+  "name": "Animal Event-custom_status_after_test",
+  "dt": "Animal Event",
+  "fieldname": "custom_status_after_test",
+  "fieldtype": "Select",
+  "label": "Status after test",
+  "insert_after": "service_status",
+  "options": "Pending\nSuccessfull\nFailed",
+  "default": "Pending",
+  "allow_on_submit": 1,
+  "translatable": 1,
+  "module": "Upande Livestock"
+ },
+ {
+  "doctype": "Custom Field",
+  "name": "Asset-custom_is_livestock",
+  "dt": "Asset",
+  "fieldname": "custom_is_livestock",
+  "fieldtype": "Check",
+  "label": "Is Livestock?",
+  "insert_after": "asset_name",
+  "module": "Upande Livestock"
+ },
+ {
+  "doctype": "Custom Field",
+  "name": "Asset-custom_current_herd",
+  "dt": "Asset",
+  "fieldname": "custom_current_herd",
+  "fieldtype": "Link",
+  "label": "Current herd",
+  "placeholder": "Enter the Cow's herd",
+  "insert_after": "custom_is_livestock",
+  "options": "Herds",
+  "ignore_user_permissions": 1,
+  "allow_on_submit": 1,
+  "module": "Upande Livestock"
  }
 ]
