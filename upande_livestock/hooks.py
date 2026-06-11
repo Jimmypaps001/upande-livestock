@@ -99,6 +99,47 @@ fixtures = [
 					"Herds-custom_feed_account",
 					"Herds-custom_vet_account",
 					"Herds-custom_cost_center",
+					"Animal Event-custom_calving_outcome",
+					"Animal Event-custom_no_of_calves",
+					"Animal Event-custom_calf_sex",
+					"Animal Event-custom_related_pregnancy",
+					"Animal Event-custom_status_after_test",
+					"Asset-custom_is_livestock",
+					"Asset-custom_current_herd",
+				],
+			]
+		],
+	},
+	{
+		"dt": "Client Script",
+		"filters": [
+			[
+				"name",
+				"in",
+				[
+					"Control on Animal events",
+					"Test on dynamic pregnancy",
+					"Dynainamic fields on Animal event",
+					"Milking Palour Checksheet",
+				],
+			]
+		],
+	},
+	{
+		"dt": "Server Script",
+		"filters": [
+			[
+				"name",
+				"in",
+				[
+					"Updates animal status, creates alerts, and updates related events",
+					"herd_movement_processor",
+					"VALIDATION FOR SERVICE EVENTS",
+					"Update Service from Diagnosis",
+					"Get Animal Reproductive Summary",
+					"CHECK OVERDUE PREGNANCY DIAGNOSES",
+					"Get animals ready for service",
+					"Get animals needing pregnancy check",
 				],
 			]
 		],
