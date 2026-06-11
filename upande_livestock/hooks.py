@@ -130,6 +130,7 @@ fixtures = [
 					"Test on dynamic pregnancy",
 					"Dynainamic fields on Animal event",
 					"Milking Palour Checksheet",
+					"Animal Event controller",
 				],
 			]
 		],
@@ -151,6 +152,9 @@ fixtures = [
 					"Get animals needing pregnancy check",
 					"Number of animals in a Herd",
 					"Livestock Auto Journal Entry",
+					"Record Livestock Birth",
+					"Scrap Livestock Asset",
+					"Sell Livestock Asset",
 				],
 			]
 		],
