@@ -18,11 +18,11 @@
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Animal",
-   "options": "Asset",
+   "options": "Animal",
    "reqd": 1
   },
   {
-   "fetch_from": "animal.asset_name",
+   "fetch_from": "animal.burn_name",
    "fieldname": "animal_name",
    "fieldtype": "Data",
    "in_list_view": 1,

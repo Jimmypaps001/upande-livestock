@@ -159,30 +159,6 @@
  },
  {
   "doctype": "Custom Field",
-  "name": "Asset-custom_is_livestock",
-  "dt": "Asset",
-  "fieldname": "custom_is_livestock",
-  "fieldtype": "Check",
-  "label": "Is Livestock?",
-  "insert_after": "asset_name",
-  "module": "Upande Livestock"
- },
- {
-  "doctype": "Custom Field",
-  "name": "Asset-custom_current_herd",
-  "dt": "Asset",
-  "fieldname": "custom_current_herd",
-  "fieldtype": "Link",
-  "label": "Current herd",
-  "placeholder": "Enter the Cow's herd",
-  "insert_after": "custom_is_livestock",
-  "options": "Herds",
-  "ignore_user_permissions": 1,
-  "allow_on_submit": 1,
-  "module": "Upande Livestock"
- },
- {
-  "doctype": "Custom Field",
   "name": "Animal Event-expected_calving_date",
   "dt": "Animal Event",
   "fieldname": "expected_calving_date",
@@ -227,6 +203,83 @@
   "insert_after": "next_expected_heat",
   "read_only": 1,
   "allow_on_submit": 1,
+  "module": "Upande Livestock"
+ },
+ {
+  "doctype": "Custom Field",
+  "name": "Animal Event-custom_activity_cost",
+  "dt": "Animal Event",
+  "fieldname": "custom_activity_cost",
+  "fieldtype": "Currency",
+  "label": "Activity Cost",
+  "insert_after": "remarks",
+  "module": "Upande Livestock"
+ },
+ {
+  "doctype": "Custom Field",
+  "name": "Animal Event-custom_expense_account",
+  "dt": "Animal Event",
+  "fieldname": "custom_expense_account",
+  "fieldtype": "Link",
+  "options": "Account",
+  "label": "Expense Account",
+  "insert_after": "custom_activity_cost",
+  "read_only": 1,
+  "module": "Upande Livestock"
+ },
+ {
+  "doctype": "Custom Field",
+  "name": "Animal Event-custom_cost_center",
+  "dt": "Animal Event",
+  "fieldname": "custom_cost_center",
+  "fieldtype": "Link",
+  "options": "Cost Center",
+  "label": "Cost Center",
+  "insert_after": "custom_expense_account",
+  "read_only": 1,
+  "module": "Upande Livestock"
+ },
+ {
+  "doctype": "Custom Field",
+  "name": "Animal Event-custom_journal_entry",
+  "dt": "Animal Event",
+  "fieldname": "custom_journal_entry",
+  "fieldtype": "Link",
+  "options": "Journal Entry",
+  "label": "Journal Entry",
+  "insert_after": "custom_cost_center",
+  "read_only": 1,
+  "module": "Upande Livestock"
+ },
+ {
+  "doctype": "Custom Field",
+  "name": "Livestock Settings-custom_auto_create_journal_entry",
+  "dt": "Livestock Settings",
+  "fieldname": "custom_auto_create_journal_entry",
+  "fieldtype": "Check",
+  "label": "Auto-create Journal Entry on Animal Event",
+  "module": "Upande Livestock"
+ },
+ {
+  "doctype": "Custom Field",
+  "name": "Livestock Settings-custom_default_company",
+  "dt": "Livestock Settings",
+  "fieldname": "custom_default_company",
+  "fieldtype": "Link",
+  "options": "Company",
+  "label": "Default Company (Livestock JE)",
+  "insert_after": "custom_auto_create_journal_entry",
+  "module": "Upande Livestock"
+ },
+ {
+  "doctype": "Custom Field",
+  "name": "Livestock Settings-custom_default_credit_account",
+  "dt": "Livestock Settings",
+  "fieldname": "custom_default_credit_account",
+  "fieldtype": "Link",
+  "options": "Account",
+  "label": "Default Credit Account (Livestock JE)",
+  "insert_after": "custom_default_company",
   "module": "Upande Livestock"
  }
 ]
