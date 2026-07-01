@@ -1,7 +1,7 @@
 {
  "actions": [],
  "allow_rename": 1,
- "creation": "2026-05-25 00:53:23.704829",
+ "creation": "2026-06-08 16:14:21.049313",
  "doctype": "DocType",
  "editable_grid": 1,
  "engine": "InnoDB",
@@ -147,11 +147,11 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-05-25 00:53:23.704829",
- "modified_by": "judah@upande.com",
+ "modified": "2026-07-01 05:39:04.260263",
+ "modified_by": "Administrator",
  "module": "Upande Livestock",
  "name": "Livestock Settings",
- "owner": "judah@upande.com",
+ "owner": "Administrator",
  "permissions": [
   {
    "create": 1,
@@ -179,6 +179,39 @@
    "read": 1,
    "role": "Dairy Supervisor",
    "share": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "Livestock Manager",
+   "select": 1,
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "Dairy Secretary",
+   "select": 1,
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "Farm Manager",
+   "select": 1,
+   "share": 1,
+   "write": 1
   }
  ],
  "row_format": "Dynamic",
