@@ -1,9 +1,8 @@
-
 {
  "actions": [],
  "allow_rename": 1,
  "autoname": "field:herd_name",
- "creation": "2025-09-30 13:10:59.741095",
+ "creation": "2026-06-08 16:14:21.602451",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
@@ -90,7 +89,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2025-10-04 16:08:08.643066",
+ "modified": "2026-07-01 05:39:03.554957",
  "modified_by": "Administrator",
  "module": "Upande Livestock",
  "name": "Herds",
@@ -150,6 +149,49 @@
    "role": "Accounts User",
    "share": 1,
    "submit": 1,
+   "write": 1
+  },
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Livestock Manager",
+   "select": 1,
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Dairy Secretary",
+   "select": 1,
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Farm Manager",
+   "select": 1,
+   "share": 1,
    "write": 1
   }
  ],

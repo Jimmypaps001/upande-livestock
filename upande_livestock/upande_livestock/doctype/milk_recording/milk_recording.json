@@ -2,7 +2,7 @@
  "actions": [],
  "allow_rename": 1,
  "autoname": "MILK-.YYYY.-.MM.-.#####",
- "creation": "2026-05-25 00:38:55.527029",
+ "creation": "2026-06-08 16:14:20.236287",
  "description": "Daily milk production record per herd per session. Creates a Stock Entry (type from Livestock Settings) to move milk into the Milk warehouse and a Journal Entry crediting Dairy Milk Sales.",
  "doctype": "DocType",
  "document_type": "Document",
@@ -38,7 +38,6 @@
   "col_break_lab",
   "lab_test_date",
   "remarks",
-  "amended_from",
   "amended_from"
  ],
  "fields": [
@@ -229,28 +228,18 @@
    "print_hide": 1,
    "read_only": 1,
    "search_index": 1
-  },
-  {
-   "fieldname": "amended_from",
-   "fieldtype": "Link",
-   "label": "Amended From",
-   "no_copy": 1,
-   "options": "Milk Recording",
-   "print_hide": 1,
-   "read_only": 1,
-   "search_index": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-05-25 00:38:55.527029",
- "modified_by": "judah@upande.com",
+ "modified": "2026-07-01 05:39:04.581484",
+ "modified_by": "Administrator",
  "module": "Upande Livestock",
  "name": "Milk Recording",
  "naming_rule": "Expression",
- "owner": "judah@upande.com",
+ "owner": "Administrator",
  "permissions": [
   {
    "amend": 1,
@@ -289,6 +278,49 @@
    "role": "Dairy Supervisor",
    "share": 1,
    "submit": 1,
+   "write": 1
+  },
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Livestock Manager",
+   "select": 1,
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Dairy Secretary",
+   "select": 1,
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Farm Manager",
+   "select": 1,
+   "share": 1,
    "write": 1
   }
  ],
