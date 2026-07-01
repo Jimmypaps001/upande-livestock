@@ -1,0 +1,56 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-07-01 07:07:27.528463",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "body_system",
+  "finding",
+  "severity"
+ ],
+ "fields": [
+  {
+   "columns": 3,
+   "fieldname": "body_system",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Body System",
+   "options": "Eyes / Ocular\nNose / Nasal\nMouth / Oral\nRespiratory\nDigestive / Rumen\nUrogenital\nMammary / Udder\nFeet / Hooves\nSkin / Coat\nMusculoskeletal\nNervous / Behaviour\nLymph nodes",
+   "reqd": 1
+  },
+  {
+   "columns": 5,
+   "description": "Short description of what the operator observed",
+   "fieldname": "finding",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Finding",
+   "reqd": 1
+  },
+  {
+   "columns": 2,
+   "fieldname": "severity",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Severity",
+   "options": "\nMild\nModerate\nSevere"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-07-01 07:08:25.134258",
+ "modified_by": "Administrator",
+ "module": "Upande Livestock",
+ "name": "Animal Diagnosis System Check",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
