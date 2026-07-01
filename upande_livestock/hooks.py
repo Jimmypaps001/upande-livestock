@@ -115,6 +115,8 @@ fixtures = [
 					"Livestock Settings-custom_auto_create_journal_entry",
 					"Livestock Settings-custom_default_company",
 					"Livestock Settings-custom_default_credit_account",
+					"Stock Entry-custom_milking_session",
+					"Stock Entry-custom_cows_milked",
 				],
 			]
 		],
@@ -155,6 +157,7 @@ fixtures = [
 					"Record Livestock Birth",
 					"Scrap Livestock Asset",
 					"Sell Livestock Asset",
+					"Milk Recording After Submit - Stock Entry",
 				],
 			]
 		],
