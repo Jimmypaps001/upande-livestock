@@ -1,0 +1,330 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "format:DX-{YYYY}-{#####}",
+ "creation": "2026-07-01 07:07:27.930045",
+ "description": "Field-side triage record.",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "section_identity",
+  "animal",
+  "animal_name",
+  "current_herd",
+  "company",
+  "col_break_identity",
+  "diagnosis_date",
+  "operator",
+  "reason_for_check",
+  "section_vitals",
+  "appearance",
+  "bcs",
+  "lameness_score",
+  "hydration",
+  "col_break_vitals",
+  "temperature_c",
+  "respiration_rate",
+  "heart_rate",
+  "rumen_fill",
+  "section_findings",
+  "system_checks",
+  "suggested_diagnosis",
+  "differential_notes",
+  "section_action",
+  "action_taken",
+  "action_notes",
+  "col_break_action",
+  "confirmed_by_vet",
+  "vet_name",
+  "follow_up_date",
+  "related_case",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_identity",
+   "fieldtype": "Section Break",
+   "label": "Animal & Triage"
+  },
+  {
+   "description": "The animal being assessed.",
+   "fieldname": "animal",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Animal",
+   "options": "Animal",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "animal.burn_name",
+   "fieldname": "animal_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Animal Name",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "animal.current_herd",
+   "fieldname": "current_herd",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Current Herd",
+   "options": "Herds",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "animal.company",
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "col_break_identity",
+   "fieldtype": "Column Break",
+   "label": "Col Break Identity"
+  },
+  {
+   "default": "Today",
+   "fieldname": "diagnosis_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Diagnosis Date",
+   "reqd": 1
+  },
+  {
+   "description": "The herder, supervisor or vet who carried out the triage.",
+   "fieldname": "operator",
+   "fieldtype": "Link",
+   "label": "Operator",
+   "options": "Employee",
+   "reqd": 1
+  },
+  {
+   "description": "Why the animal was checked. e.g. \"Off feed\", \"Limping\", \"Routine\".",
+   "fieldname": "reason_for_check",
+   "fieldtype": "Data",
+   "label": "Reason For Check"
+  },
+  {
+   "fieldname": "section_vitals",
+   "fieldtype": "Section Break",
+   "label": "Vital signs & general appearance"
+  },
+  {
+   "description": "General attitude.",
+   "fieldname": "appearance",
+   "fieldtype": "Select",
+   "label": "Appearance",
+   "options": "\nBright & Alert\nDull\nDepressed\nDown / Recumbent"
+  },
+  {
+   "description": "Body Condition Score, 1.0-5.0 in 0.25 steps.",
+   "fieldname": "bcs",
+   "fieldtype": "Float",
+   "label": "Body Condition Score",
+   "precision": "2"
+  },
+  {
+   "description": "0 = sound, 1 = mild, 2 = obvious limp, 3 = will not bear weight.",
+   "fieldname": "lameness_score",
+   "fieldtype": "Int",
+   "label": "Lameness Score (0-3)"
+  },
+  {
+   "fieldname": "hydration",
+   "fieldtype": "Select",
+   "label": "Hydration",
+   "options": "\nNormal\nMild dehydration\nModerate dehydration\nSevere dehydration"
+  },
+  {
+   "fieldname": "col_break_vitals",
+   "fieldtype": "Column Break",
+   "label": "Col Break Vitals"
+  },
+  {
+   "description": "Rectal, \u00b0C. Normal cattle 38.0-39.0.",
+   "fieldname": "temperature_c",
+   "fieldtype": "Float",
+   "label": "Temperature (\u00b0C)",
+   "precision": "1"
+  },
+  {
+   "fieldname": "respiration_rate",
+   "fieldtype": "Int",
+   "label": "Respiration Rate (breaths/min)"
+  },
+  {
+   "fieldname": "heart_rate",
+   "fieldtype": "Int",
+   "label": "Heart Rate (bpm)"
+  },
+  {
+   "fieldname": "rumen_fill",
+   "fieldtype": "Data",
+   "label": "Rumen Fill"
+  },
+  {
+   "fieldname": "section_findings",
+   "fieldtype": "Section Break",
+   "label": "System checks & suggested diagnosis"
+  },
+  {
+   "fieldname": "system_checks",
+   "fieldtype": "Table",
+   "label": "System Checks",
+   "options": "Animal Diagnosis System Check"
+  },
+  {
+   "description": "Optional pick from the Animal Disease catalogue.",
+   "fieldname": "suggested_diagnosis",
+   "fieldtype": "Link",
+   "label": "Suggested Diagnosis",
+   "options": "Animal Disease"
+  },
+  {
+   "fieldname": "differential_notes",
+   "fieldtype": "Small Text",
+   "label": "Differential / Notes"
+  },
+  {
+   "fieldname": "section_action",
+   "fieldtype": "Section Break",
+   "label": "Outcome"
+  },
+  {
+   "fieldname": "action_taken",
+   "fieldtype": "Select",
+   "label": "Action Taken",
+   "options": "Logged \u2014 monitor\nTreated on Spot\nEscalated to Case\nReferred to Vet\nNo action \u2014 normal",
+   "reqd": 1
+  },
+  {
+   "fieldname": "action_notes",
+   "fieldtype": "Small Text",
+   "label": "Action Notes"
+  },
+  {
+   "fieldname": "col_break_action",
+   "fieldtype": "Column Break",
+   "label": "Col Break Action"
+  },
+  {
+   "default": "0",
+   "fieldname": "confirmed_by_vet",
+   "fieldtype": "Check",
+   "label": "Confirmed by Vet"
+  },
+  {
+   "fieldname": "vet_name",
+   "fieldtype": "Data",
+   "label": "Vet Name"
+  },
+  {
+   "fieldname": "follow_up_date",
+   "fieldtype": "Date",
+   "label": "Follow Up Date"
+  },
+  {
+   "description": "Set when the diagnosis is escalated to a health case.",
+   "fieldname": "related_case",
+   "fieldtype": "Link",
+   "label": "Related Case",
+   "options": "Animal Health Case",
+   "read_only": 1
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Animal Diagnosis",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "icon": "fa fa-stethoscope",
+ "index_web_pages_for_search": 1,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2026-07-01 07:08:25.587023",
+ "modified_by": "Administrator",
+ "module": "Upande Livestock",
+ "name": "Animal Diagnosis",
+ "naming_rule": "Expression (old style)",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Livestock Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Dairy Secretary",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Farm Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "search_fields": "animal,animal_name,suggested_diagnosis,current_herd",
+ "show_title_field_in_link": 1,
+ "sort_field": "diagnosis_date",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "animal_name",
+ "track_changes": 1
+}
