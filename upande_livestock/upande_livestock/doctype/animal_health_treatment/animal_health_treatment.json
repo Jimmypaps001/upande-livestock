@@ -65,8 +65,7 @@
    "fieldname": "dosage",
    "fieldtype": "Data",
    "in_list_view": 1,
-   "label": "Dosage",
-   "reqd": 1
+   "label": "Dosage"
   },
   {
    "fieldname": "route",
