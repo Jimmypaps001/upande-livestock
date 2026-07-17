@@ -63,8 +63,11 @@ app_include_js = "/assets/upande_livestock/js/livestock_desk.js?v=5"
 # include js in page
 # page_js = {"page" : "public/js/file.js"}
 
-# include js in doctype views
-# doctype_js = {"doctype" : "public/js/doctype.js"}
+# include js in doctype views — form scripts (ex Client Scripts, now versioned code)
+doctype_js = {
+	"Animal Event": "public/js/animal_event.js",
+	"Milking Palour Checksheet": "public/js/milking_palour_checksheet.js",
+}
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
 # doctype_calendar_js = {"doctype" : "public/js/doctype_calendar.js"}
@@ -151,47 +154,10 @@ fixtures = [
 			]
 		],
 	},
-	{
-		"dt": "Client Script",
-		"filters": [
-			[
-				"name",
-				"in",
-				[
-					"Control on Animal events",
-					"Test on dynamic pregnancy",
-					"Dynainamic fields on Animal event",
-					"Milking Palour Checksheet",
-					"Animal Event controller",
-				],
-			]
-		],
-	},
-	{
-		"dt": "Server Script",
-		"filters": [
-			[
-				"name",
-				"in",
-				[
-					"Updates animal status, creates alerts, and updates related events",
-					"herd_movement_processor",
-					"VALIDATION FOR SERVICE EVENTS",
-					"Update Service from Diagnosis",
-					"Get Animal Reproductive Summary",
-					"CHECK OVERDUE PREGNANCY DIAGNOSES",
-					"Get animals ready for service",
-					"Get animals needing pregnancy check",
-					"Number of animals in a Herd",
-					"Livestock Auto Journal Entry",
-					"Record Livestock Birth",
-					"Scrap Livestock Asset",
-					"Sell Livestock Asset",
-					"Milk Recording After Submit - Stock Entry",
-				],
-			]
-		],
-	},
+	# NOTE: Client Scripts and Server Scripts are no longer shipped as fixtures.
+	# They now live in the codebase: form scripts under public/js/ (doctype_js),
+	# doc-event logic in the doctype controllers (animal_event / animal /
+	# milk_recording), and API/scheduler logic in api/*.py and tasks.py.
 	{
 		"dt": "Custom HTML Block",
 		"filters": [["name", "in", ["Livestock Dashboard", "Livestock Operations"]]],
@@ -273,23 +239,12 @@ fixtures = [
 # Scheduled Tasks
 # ---------------
 
-# scheduler_events = {
-# 	"all": [
-# 		"upande_livestock.tasks.all"
-# 	],
-# 	"daily": [
-# 		"upande_livestock.tasks.daily"
-# 	],
-# 	"hourly": [
-# 		"upande_livestock.tasks.hourly"
-# 	],
-# 	"weekly": [
-# 		"upande_livestock.tasks.weekly"
-# 	],
-# 	"monthly": [
-# 		"upande_livestock.tasks.monthly"
-# 	],
-# }
+scheduler_events = {
+	# Ex "CHECK OVERDUE PREGNANCY DIAGNOSES" Server Script (Daily).
+	"daily": [
+		"upande_livestock.tasks.check_overdue_pregnancy_diagnoses",
+	],
+}
 
 # Testing
 # -------
