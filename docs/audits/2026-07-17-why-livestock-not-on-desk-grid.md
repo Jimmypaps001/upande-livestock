@@ -62,8 +62,23 @@ restore, bypassing the hook that auto-creates it). `get_bootinfo()` calls
 with `frappe.desk.doctype.notification_settings.notification_settings.create_notification_settings`
 for all 548 users missing it.
 
+## Editing the Desktop Icon later (the "it disappeared again" trap)
+
+Changing the Desktop Icon (e.g. its `icon`) does **not** remove it from the grid —
+verified that the card is present in `bootinfo.desktop_icons` with either `milk`
+or `agriculture`. But a change only shows after **both** per-user caches are
+dropped and web is restarted; edit it, then run:
+```python
+frappe.cache.delete_value("desktop_icons"); frappe.cache.delete_value("bootinfo")
+```
+and `bench restart` / `supervisorctl restart <bench>-web`. If you look before that
+propagates, the card appears "gone." The grid icon is kept as **`milk`** (the
+confirmed-good look; the Upande logo image is what actually renders on the card,
+same as SCP).
+
 ## Takeaway
 
 To put any custom app/workspace on the v16 desk grid, ship a **`Desktop Icon`**
 (as a fixture). A Workspace + Workspace Sidebar alone is reachable by URL but will
-not appear on the grid.
+not appear on the grid. After editing a Desktop Icon, clear the `desktop_icons`
+**and** `bootinfo` Redis caches and restart web, or it looks unchanged/removed.
