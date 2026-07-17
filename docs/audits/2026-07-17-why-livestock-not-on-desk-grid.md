@@ -1,84 +1,62 @@
-# Why the Upande Livestock workspace didn't show on the v16 desk grid
+# Why "Upande Livestock" wasn't on the v16 desk grid — and the permanent fix
 
-**Date:** 2026-07-17
-**Site:** kaitet.local (Frappe/ERPNext v16)
+**Date:** 2026-07-17 · **Site:** kaitet.local (Frappe/ERPNext v16)
 
 ## Symptom
 
-After building the `Upande Livestock` workspace + dashboard, it was reachable
-directly (`/app/upande-livestock` rendered fine) but **its card never appeared on
-the desk app grid**, while `Upande SCP` and `T&A` did — on every browser and
-computer, even incognito.
+The `Upande Livestock` workspace was reachable by URL (`/app/upande-livestock`)
+and fully functional, but its **card never appeared on the desk app grid**, while
+`Upande SCP` / `T&A` did — on every browser/computer, incognito included.
 
-## Root cause
+## Root cause (confirmed)
 
-In Frappe **v16 the desk app grid renders one card per `Desktop Icon` record**
-(`bootinfo.desktop_icons`, built by
-`frappe.desk.doctype.desktop_icon.desktop_icon.get_desktop_icons`). It is **not**
-driven by the Workspace, the Workspace Sidebar, `app_data`, or `get_apps`.
+The v16 desk grid (`frappe/desk/page/desktop/desktop.js`) renders one card per
+**`Desktop Icon`**, but the list it renders comes from a **per-user `Desktop
+Layout`** doctype (`name = <user>`, field `layout`) — a *snapshot* of the grid.
+`get_context` (desktop page) loads that snapshot; `sync_layout()` only falls back
+to `frappe.boot.desktop_icons` when there is **no** layout.
 
-`upande_livestock` had **no `Desktop Icon` record**. SCP and T&A each got one
-during their own setup (SCP: `Scouting & Crop Protection` → label "Upande SCP";
-T&A: `T&A`), so they showed; livestock didn't. Everything else was correct the
-whole time — the Workspace, Workspace Sidebar, `app_data`, `workspaces.pages`, and
-per-user permissions all included livestock (which is why the direct URL always
-worked).
+A `Desktop Layout` saved **before** this app's Desktop Icon existed simply doesn't
+contain it, so the card is filtered out at render — regardless of server data,
+permissions, Redis caches, or browser cache. That's why nothing server- or
+client-cache-related ever fixed it.
 
-## Two caches that masked it during diagnosis
+Two things had to be true and are:
+1. **A `Desktop Icon` must exist** (the grid is one card per Desktop Icon). We
+   ship one as a fixture (`fixtures/desktop_icon.json`, `hooks.fixtures`).
+2. The icon must be **permitted** for the user. `get_desktop_icons(bootinfo=…)`
+   admits a `Workspace Sidebar`-type icon only if
+   `bootinfo.workspace_sidebar_item[label.lower()]` exists and has items — i.e.
+   the user can see ≥1 item in its Workspace Sidebar. Verified for stephene:
+   `BOOT_DESKTOP_ICONS_HAS_LIVESTOCK: True`, sidebar has 10 items.
 
-Clearing the browser (localStorage / hard refresh / incognito) did nothing because
-the relevant state is **server-side per-user Redis caches**, and `bench clear-cache`
-did not reliably drop them:
+So the icon is correctly, permission-gated, in the boot — the only thing hiding it
+was the **stale per-user `Desktop Layout` snapshot**.
 
-1. **`bootinfo`** hash — `frappe.cache.hget("bootinfo", user)` (see
-   `frappe/sessions.py`). Cached per *user*, so even a fresh incognito login reused
-   the same stale boot.
-2. **`desktop_icons`** hash — `frappe.cache.hget("desktop_icons", user)` (see
-   `get_desktop_icons`). Separate from `bootinfo`; clearing `bootinfo` alone left
-   the old icon list in place.
+## Permanent fix
 
-Fix both with, in a bench console:
-```python
-frappe.cache.delete_value("desktop_icons")
-frappe.cache.delete_value("bootinfo")
-```
+- **Ship the Desktop Icon** as a fixture (so it exists on every install/migrate).
+- **`on_session_creation` hook** (`heal.clear_stale_desktop_layout`): on login,
+  delete the user's `Desktop Layout` **iff** it's missing an icon the user is
+  permitted to see (computed from the same permission-filtered `get_desktop_icons`).
+  The grid then rebuilds natively from the boot, including the new icon. It only
+  deletes when something permitted is actually missing, so custom arrangements are
+  otherwise preserved. Respects roles (uses the permission-filtered list).
+- A thin, **role-gated** client safety net (`public/js/livestock_desk.js`, via
+  `app_include_js`) injects the card only if the user is permitted (icon present in
+  `frappe.boot.desktop_icons`) and it isn't already rendered — a no-op once the
+  native path shows it. Removable once every user has logged in post-fix.
 
-## Fix applied
+## Gotchas encountered (for future debugging)
 
-Created a `Desktop Icon` for livestock, mirroring SCP's (links to the
-`Upande Livestock` Workspace Sidebar, Upande logo, `agriculture` icon, gray
-background) and exported it as a fixture so it deploys on install/migrate:
-
-- `upande_livestock/fixtures/desktop_icon.json`
-- `hooks.py` `fixtures` gains a name-filtered `Desktop Icon` entry.
-
-## Related fix (separate bug this exposed)
-
-Clearing the `bootinfo` cache exposed that **most restored users had no
-`Notification Settings` document** (they were inserted via SQL during the prod
-restore, bypassing the hook that auto-creates it). `get_bootinfo()` calls
-`get_cached_doc("Notification Settings", user)` which threw
-`DoesNotExistError` → `SessionBootFailed` (HTTP 500) for those users. Backfilled
-with `frappe.desk.doctype.notification_settings.notification_settings.create_notification_settings`
-for all 548 users missing it.
-
-## Editing the Desktop Icon later (the "it disappeared again" trap)
-
-Changing the Desktop Icon (e.g. its `icon`) does **not** remove it from the grid —
-verified that the card is present in `bootinfo.desktop_icons` with either `milk`
-or `agriculture`. But a change only shows after **both** per-user caches are
-dropped and web is restarted; edit it, then run:
-```python
-frappe.cache.delete_value("desktop_icons"); frappe.cache.delete_value("bootinfo")
-```
-and `bench restart` / `supervisorctl restart <bench>-web`. If you look before that
-propagates, the card appears "gone." The grid icon is kept as **`milk`** (the
-confirmed-good look; the Upande logo image is what actually renders on the card,
-same as SCP).
-
-## Takeaway
-
-To put any custom app/workspace on the v16 desk grid, ship a **`Desktop Icon`**
-(as a fixture). A Workspace + Workspace Sidebar alone is reachable by URL but will
-not appear on the grid. After editing a Desktop Icon, clear the `desktop_icons`
-**and** `bootinfo` Redis caches and restart web, or it looks unchanged/removed.
+- Browser `localStorage`/incognito/hard-refresh do nothing here — the layout is a
+  **server-side doctype**, not browser state.
+- `get_desktop_icons(user)` **without** `bootinfo` returns `[]` (the permission
+  loop is `if bootinfo:`), so testing it that way is misleading — always pass a
+  bootinfo (or check `frappe.boot.desktop_icons`).
+- To reset one user's grid manually: delete their `Desktop Layout` (or call
+  `frappe.desk.doctype.desktop_layout.desktop_layout.delete_layout` as that user)
+  and clear the `desktop_icons` + `bootinfo` Redis caches.
+- Desktop Icon `bg_color` is a Select limited to `gray`/`blue`.
+- App/External-type Desktop Icons get filtered from the boot list differently than
+  Workspace-Sidebar-type; livestock uses the Workspace-Sidebar style like SCP.
