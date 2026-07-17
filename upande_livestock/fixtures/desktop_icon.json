@@ -5,9 +5,9 @@
   "icon_type": "Link",
   "link_type": "Workspace Sidebar",
   "link_to": "Upande Livestock",
-  "icon_image": "/assets/upande_livestock/images/upande_logo.png",
-  "logo_url": "/assets/upande_livestock/images/upande_logo.png",
-  "icon": "milk",
+  "icon_image": "/assets/upande_scp/images/upande_logo.png",
+  "logo_url": "/assets/upande_scp/images/upande_logo.png",
+  "icon": "agriculture",
   "bg_color": "gray",
   "standard": 0,
   "doctype": "Desktop Icon"
