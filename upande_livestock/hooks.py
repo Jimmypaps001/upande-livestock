@@ -43,7 +43,9 @@ on_session_creation = ["upande_livestock.heal.clear_stale_desktop_layout"]
 # ------------------
 
 # include js, css files in header of desk.html
-# app_include_css = "/assets/upande_livestock/css/upande_livestock.css"
+# Poppins @font-face must live at document level: Custom HTML Blocks render in a
+# Shadow DOM, where in-block @font-face is ignored. See livestock_fonts.css.
+app_include_css = "/assets/upande_livestock/css/livestock_fonts.css"
 # Debug: logs whether the "Upande Livestock" desk grid card is in boot + rendered.
 app_include_js = "/assets/upande_livestock/js/livestock_desk.js?v=5"
 

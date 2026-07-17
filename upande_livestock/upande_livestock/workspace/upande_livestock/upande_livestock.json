@@ -1,16 +1,12 @@
 {
  "app": "upande_livestock",
  "charts": [],
- "content": "[{\"id\": \"uldOverview1\", \"type\": \"custom_block\", \"data\": {\"custom_block_name\": \"Livestock Dashboard\", \"col\": 12}}, {\"id\": \"uloOps1\", \"type\": \"custom_block\", \"data\": {\"custom_block_name\": \"Livestock Operations\", \"col\": 12}}]",
+ "content": "[{\"id\": \"uldOverview1\", \"type\": \"custom_block\", \"data\": {\"custom_block_name\": \"Livestock Dashboard\", \"col\": 12}}]",
  "creation": "2026-07-17 00:00:00.000000",
  "custom_blocks": [
   {
    "custom_block_name": "Livestock Dashboard",
    "label": "Livestock Dashboard"
-  },
-  {
-   "custom_block_name": "Livestock Operations",
-   "label": "Livestock Operations"
   }
  ],
  "docstatus": 0,

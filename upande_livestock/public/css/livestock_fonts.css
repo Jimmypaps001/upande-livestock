@@ -1,0 +1,11 @@
+/* Poppins registered at desk-document level.
+ *
+ * Custom HTML Blocks render inside a Shadow DOM (frappe.create_shadow_element),
+ * and @font-face declared INSIDE a shadow root is ignored by browsers — the
+ * font must be registered in the main document. Loading it here (app_include_css)
+ * makes Poppins available to the shadow-DOM blocks (Livestock Dashboard /
+ * Livestock Operations), which is why an in-block @font-face never worked. */
+@font-face { font-family: 'Poppins'; font-style: normal; font-weight: 400; font-display: swap; src: url('/assets/upande_livestock/fonts/poppins-400.woff2') format('woff2'); }
+@font-face { font-family: 'Poppins'; font-style: normal; font-weight: 500; font-display: swap; src: url('/assets/upande_livestock/fonts/poppins-500.woff2') format('woff2'); }
+@font-face { font-family: 'Poppins'; font-style: normal; font-weight: 600; font-display: swap; src: url('/assets/upande_livestock/fonts/poppins-600.woff2') format('woff2'); }
+@font-face { font-family: 'Poppins'; font-style: normal; font-weight: 700; font-display: swap; src: url('/assets/upande_livestock/fonts/poppins-700.woff2') format('woff2'); }
