@@ -5,6 +5,19 @@ app_description = "Livestock management on ERPNext"
 app_email = "dev@upande.com"
 app_license = "mit"
 
+# Logo shown on the desk app/workspace grid card.
+app_logo_url = "/assets/upande_livestock/images/upande_logo.png"
+
+# Also surface the app on the /apps launcher screen.
+add_to_apps_screen = [
+	{
+		"name": "upande_livestock",
+		"logo": "/assets/upande_livestock/images/upande_logo.png",
+		"title": "Upande Livestock",
+		"route": "/app/upande-livestock",
+	}
+]
+
 # Apps
 # ------------------
 
@@ -161,6 +174,16 @@ fixtures = [
 				],
 			]
 		],
+	},
+	{
+		"dt": "Custom HTML Block",
+		"filters": [["name", "in", ["Livestock Dashboard"]]],
+	},
+	{
+		# Desktop Icon = the card on the v16 desk app grid. Without it the
+		# workspace exists and is reachable by URL but never shows on the grid.
+		"dt": "Desktop Icon",
+		"filters": [["name", "in", ["Upande Livestock"]]],
 	},
 ]
 

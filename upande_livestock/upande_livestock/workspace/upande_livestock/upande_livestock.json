@@ -1,0 +1,74 @@
+{
+ "app": "upande_livestock",
+ "charts": [],
+ "content": "[{\"id\": \"uldOverview1\", \"type\": \"custom_block\", \"data\": {\"custom_block_name\": \"Livestock Dashboard\", \"col\": 12}}]",
+ "creation": "2026-07-17 00:00:00.000000",
+ "custom_blocks": [
+  {
+   "custom_block_name": "Livestock Dashboard",
+   "label": "Livestock Dashboard"
+  }
+ ],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 0,
+ "icon": "milk",
+ "idx": 1,
+ "indicator_color": "green",
+ "is_hidden": 0,
+ "label": "Upande Livestock",
+ "links": [],
+ "module": "Upande Livestock",
+ "name": "Upande Livestock",
+ "number_cards": [],
+ "parent_page": "",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [],
+ "sequence_id": 50.0,
+ "shortcuts": [
+  {
+   "color": "Green",
+   "doc_view": "List",
+   "label": "Animals",
+   "link_to": "Animal",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Green",
+   "doc_view": "List",
+   "label": "Herds",
+   "link_to": "Herds",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Blue",
+   "doc_view": "List",
+   "label": "Milk Recording",
+   "link_to": "Milk Recording",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Orange",
+   "doc_view": "List",
+   "label": "Health Cases",
+   "link_to": "Animal Health Case",
+   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Animal Events",
+   "link_to": "Animal Event",
+   "stats_filter": "[]",
+   "type": "DocType"
+  }
+ ],
+ "title": "Upande Livestock",
+ "type": "Workspace"
+}
