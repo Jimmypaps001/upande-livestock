@@ -40,7 +40,7 @@ add_to_apps_screen = [
 # include js, css files in header of desk.html
 # app_include_css = "/assets/upande_livestock/css/upande_livestock.css"
 # Debug: logs whether the "Upande Livestock" desk grid card is in boot + rendered.
-app_include_js = "/assets/upande_livestock/js/livestock_desk.js"
+app_include_js = "/assets/upande_livestock/js/livestock_desk.js?v=4"
 
 # include js, css files in header of web template
 # web_include_css = "/assets/upande_livestock/css/upande_livestock.css"

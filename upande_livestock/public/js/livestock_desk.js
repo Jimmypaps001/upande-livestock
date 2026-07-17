@@ -1,50 +1,68 @@
-// Debug helper: on every desk page, report whether the "Upande Livestock"
-// desk grid card is (a) present in the boot data and (b) actually rendered
-// into the DOM. Logs to the browser console so we can tell a data problem
-// from a render problem. Safe to remove once the grid card is confirmed.
+// Ensure the "Upande Livestock" card appears on the v16 desk grid.
+//
+// The desk grid (frappe/desk/page/desktop) renders from a per-user layout that
+// pre-dates this app's Desktop Icon and filters it out, so the card never
+// paints even though it's in frappe.boot.desktop_icons. Rather than patch
+// Frappe core, this clones the rendered "Upande SCP" card, retargets it at the
+// livestock workspace, and inserts it into the grid — repeatedly, so it
+// survives re-renders/navigation.
 (function () {
-	function check() {
+	var LABEL = "Upande Livestock";
+	var LOGO = "/assets/upande_scp/images/upande_logo.png";
+	var ROUTE = "/desk/upande-livestock?sidebar=Upande%20Livestock";
+
+	function inject() {
 		try {
-			var icons = (window.frappe && frappe.boot && frappe.boot.desktop_icons) || [];
-			var inBoot = icons.some(function (d) {
-				return d && d.label === "Upande Livestock";
+			// already present?
+			if (document.querySelector('.desktop-icon[data-id="' + LABEL + '"]')) return;
+			// find a rendered top-level card to clone (SCP, else the first one)
+			var seed =
+				document.querySelector('.icons > .desktop-icon[data-id="Upande SCP"]') ||
+				document.querySelector('.icons-container > .icons > .desktop-icon') ||
+				document.querySelector('.desktop-icon');
+			if (!seed || !seed.parentElement) return;
+
+			var clone = seed.cloneNode(true);
+			clone.setAttribute("data-id", LABEL);
+			clone.setAttribute("data-logo", LOGO);
+			clone.setAttribute("data-icon", "agriculture");
+			clone.setAttribute("href", ROUTE);
+			clone.removeAttribute("target");
+
+			var img = clone.querySelector("img.app-icon");
+			if (img) { img.setAttribute("src", LOGO); img.setAttribute("alt", LABEL); }
+			var title = clone.querySelector(".icon-title");
+			if (title) { title.textContent = LABEL; title.setAttribute("data-original-title", LABEL); }
+			// drop any nested folder contents copied from the seed
+			var folder = clone.querySelector(".icon-container.folder-icon, .icons-container");
+			if (folder) folder.remove();
+
+			// navigate on click (cloned node has no JS listeners)
+			clone.addEventListener("click", function (e) {
+				e.preventDefault();
+				window.location.href = ROUTE;
 			});
 
-			// Scan the rendered DOM for any node that references the card.
-			var candidates = Array.prototype.slice.call(
-				document.querySelectorAll(
-					"[data-name],[data-app-route],.app-item,.desktop-icon,.dropdown-menu-item,.app-logo,.workspace-icon,a,div"
-				)
-			);
-			var node = candidates.find(function (n) {
-				var hay =
-					(n.getAttribute && (n.getAttribute("data-name") || "") + " " + (n.getAttribute("data-app-route") || "")) +
-					" " +
-					(n.textContent || "");
-				return /upande\s*livestock/i.test(hay);
-			});
-
-			console.log(
-				"%c[Upande Livestock desk-icon]",
-				"color:#228883;font-weight:bold",
-				"| in boot.desktop_icons:",
-				inBoot,
-				"| RENDERED in DOM:",
-				!!node,
-				node || "(no matching node)"
-			);
+			seed.parentElement.appendChild(clone);
+			console.log("[ULD] injected Upande Livestock card into the desk grid");
 		} catch (e) {
-			console.log("[Upande Livestock desk-icon] check failed:", e);
+			console.log("[ULD] inject failed:", e);
 		}
 	}
 
-	if (window.frappe && frappe.after_ajax) {
-		frappe.after_ajax(function () {
-			setTimeout(check, 1500);
-		});
-	} else {
-		window.addEventListener("load", function () {
-			setTimeout(check, 1500);
-		});
+	function start() {
+		// try a few times as the grid renders / re-renders
+		var n = 0;
+		var t = setInterval(function () {
+			inject();
+			if (++n >= 12) clearInterval(t);
+		}, 700);
+		// and re-inject on SPA route changes into the desktop page
+		if (window.frappe && frappe.router && frappe.router.on) {
+			frappe.router.on("change", function () { setTimeout(inject, 600); });
+		}
 	}
+
+	if (window.frappe && frappe.after_ajax) frappe.after_ajax(start);
+	else window.addEventListener("load", start);
 })();
