@@ -1,15 +1,24 @@
 [
  {
-  "name": "Upande Livestock",
-  "label": "Upande Livestock",
-  "icon_type": "Link",
-  "link_type": "Workspace Sidebar",
-  "link_to": "Upande Livestock",
-  "icon_image": "/assets/upande_scp/images/upande_logo.png",
-  "logo_url": "/assets/upande_scp/images/upande_logo.png",
-  "icon": "agriculture",
+  "app": null,
   "bg_color": "gray",
-  "standard": 0,
-  "doctype": "Desktop Icon"
+  "docstatus": 0,
+  "doctype": "Desktop Icon",
+  "hidden": 0,
+  "icon": "agriculture",
+  "icon_image": "/assets/upande_scp/images/upande_logo.png",
+  "icon_type": "Link",
+  "label": "Upande Livestock",
+  "link": null,
+  "link_to": "Upande Livestock",
+  "link_type": "Workspace Sidebar",
+  "logo_url": "/assets/upande_scp/images/upande_logo.png",
+  "modified": "2026-07-17 17:19:25.179855",
+  "name": "Upande Livestock",
+  "parent_icon": null,
+  "restrict_removal": 0,
+  "roles": [],
+  "sidebar": null,
+  "standard": 0
  }
 ]

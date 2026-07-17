@@ -134,6 +134,15 @@ fixtures = [
 					"Livestock Settings-custom_auto_create_journal_entry",
 					"Livestock Settings-custom_default_company",
 					"Livestock Settings-custom_default_credit_account",
+					"Livestock Settings-custom_dairy_section",
+					"Livestock Settings-custom_feed_wip_warehouse",
+					"Livestock Settings-custom_milk_item",
+					"Livestock Settings-custom_milking_stock_entry_type",
+					"Livestock Settings-custom_dairy_col",
+					"Livestock Settings-custom_milk_target_warehouse",
+					"Livestock Settings-custom_milk_discard_warehouse",
+					# Milking session/cows fields depend_on stock_entry_type == "Milking"
+					# so they stay hidden on non-Milking Stock Entries.
 					"Stock Entry-custom_milking_session",
 					"Stock Entry-custom_cows_milked",
 				],
