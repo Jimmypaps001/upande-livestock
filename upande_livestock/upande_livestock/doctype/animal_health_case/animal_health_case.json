@@ -8,49 +8,64 @@
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
+  "sb_case",
   "animal",
   "animal_name",
   "current_herd",
   "company",
-  "col_break_top",
+  "cb_case",
   "opened_date",
   "opened_by",
   "case_status",
-  "section_presentation",
+  "tab_diagnosis",
+  "sb_presentation",
   "presenting_symptoms",
   "body_systems",
-  "col_break_pres",
+  "cb_pres",
   "provisional_diagnosis",
   "confirmed_diagnosis",
   "severity",
-  "section_vet",
+  "sb_vet",
   "vet_called",
   "vet_name",
   "vet_visit_date",
-  "col_break_vet",
+  "cb_vet",
   "lab_test_done",
   "lab_results",
-  "is_zoonotic",
-  "is_notifiable",
-  "notification_reference",
-  "section_treatments",
+  "tab_treatment",
+  "sb_treatlog",
   "treatments",
-  "section_outcome",
+  "sb_cost",
+  "total_treatment_cost",
+  "treatment_journal_entry",
+  "cb_cost",
+  "drug_stock_entry",
+  "tab_outcome",
+  "sb_outcome",
   "closed_date",
   "outcome_notes",
   "duration_days",
-  "col_break_outcome",
+  "cb_outcome",
   "milk_safe_date",
-  "production_loss_kg",
-  "production_loss_value",
-  "total_treatment_cost",
   "linked_disposal",
-  "section_accounting",
-  "treatment_journal_entry",
-  "drug_stock_entry",
+  "sb_prodloss",
+  "production_loss_kg",
+  "cb_prodloss",
+  "production_loss_value",
+  "sb_flags",
+  "is_zoonotic",
+  "is_notifiable",
+  "cb_flags",
+  "notification_reference",
+  "sb_amend",
   "amended_from"
  ],
  "fields": [
+  {
+   "fieldname": "sb_case",
+   "fieldtype": "Section Break",
+   "label": "Animal"
+  },
   {
    "fieldname": "animal",
    "fieldtype": "Link",
@@ -88,7 +103,7 @@
    "reqd": 1
   },
   {
-   "fieldname": "col_break_top",
+   "fieldname": "cb_case",
    "fieldtype": "Column Break"
   },
   {
@@ -117,7 +132,12 @@
    "reqd": 1
   },
   {
-   "fieldname": "section_presentation",
+   "fieldname": "tab_diagnosis",
+   "fieldtype": "Tab Break",
+   "label": "Diagnosis"
+  },
+  {
+   "fieldname": "sb_presentation",
    "fieldtype": "Section Break",
    "label": "Presentation"
   },
@@ -135,7 +155,7 @@
    "label": "Body Systems Affected"
   },
   {
-   "fieldname": "col_break_pres",
+   "fieldname": "cb_pres",
    "fieldtype": "Column Break"
   },
   {
@@ -164,7 +184,7 @@
    "options": "Mild\nModerate\nSevere\nCritical"
   },
   {
-   "fieldname": "section_vet",
+   "fieldname": "sb_vet",
    "fieldtype": "Section Break",
    "label": "Veterinary Involvement"
   },
@@ -187,7 +207,7 @@
    "label": "Vet Visit Date"
   },
   {
-   "fieldname": "col_break_vet",
+   "fieldname": "cb_vet",
    "fieldtype": "Column Break"
   },
   {
@@ -205,30 +225,12 @@
    "label": "Lab Results"
   },
   {
-   "default": "0",
-   "fetch_from": "confirmed_diagnosis.is_zoonotic",
-   "fieldname": "is_zoonotic",
-   "fieldtype": "Check",
-   "label": "Zoonotic Risk",
-   "read_only": 1
+   "fieldname": "tab_treatment",
+   "fieldtype": "Tab Break",
+   "label": "Treatment"
   },
   {
-   "default": "0",
-   "fetch_from": "confirmed_diagnosis.is_notifiable",
-   "fieldname": "is_notifiable",
-   "fieldtype": "Check",
-   "label": "Notifiable to Authorities",
-   "read_only": 1
-  },
-  {
-   "depends_on": "eval:doc.is_notifiable == 1",
-   "description": "Reference number from Veterinary Officer or DOAS",
-   "fieldname": "notification_reference",
-   "fieldtype": "Data",
-   "label": "Notification Reference"
-  },
-  {
-   "fieldname": "section_treatments",
+   "fieldname": "sb_treatlog",
    "fieldtype": "Section Break",
    "label": "Treatment Log"
   },
@@ -240,7 +242,44 @@
    "options": "Animal Health Treatment"
   },
   {
-   "fieldname": "section_outcome",
+   "fieldname": "sb_cost",
+   "fieldtype": "Section Break",
+   "label": "Cost & Accounting"
+  },
+  {
+   "description": "Sum of all treatment costs in this case",
+   "fieldname": "total_treatment_cost",
+   "fieldtype": "Currency",
+   "label": "Total Treatment Cost (KES)",
+   "read_only": 1
+  },
+  {
+   "description": "Auto-created Journal Entry for total_treatment_cost",
+   "fieldname": "treatment_journal_entry",
+   "fieldtype": "Link",
+   "label": "Treatment Cost JE",
+   "options": "Journal Entry",
+   "read_only": 1
+  },
+  {
+   "fieldname": "cb_cost",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Auto-created Stock Entry issuing drugs from store",
+   "fieldname": "drug_stock_entry",
+   "fieldtype": "Link",
+   "label": "Drug Issue Stock Entry",
+   "options": "Stock Entry",
+   "read_only": 1
+  },
+  {
+   "fieldname": "tab_outcome",
+   "fieldtype": "Tab Break",
+   "label": "Outcome & Flags"
+  },
+  {
+   "fieldname": "sb_outcome",
    "fieldtype": "Section Break",
    "label": "Outcome"
   },
@@ -264,7 +303,7 @@
    "read_only": 1
   },
   {
-   "fieldname": "col_break_outcome",
+   "fieldname": "cb_outcome",
    "fieldtype": "Column Break"
   },
   {
@@ -272,26 +311,6 @@
    "fieldname": "milk_safe_date",
    "fieldtype": "Date",
    "label": "Milk Safe From Date",
-   "read_only": 1
-  },
-  {
-   "description": "Total milk discarded due to this case (kg)",
-   "fieldname": "production_loss_kg",
-   "fieldtype": "Float",
-   "label": "Milk Discarded (kg)"
-  },
-  {
-   "description": "Auto-calculated from production_loss_kg \u00d7 milk price in Livestock Settings",
-   "fieldname": "production_loss_value",
-   "fieldtype": "Currency",
-   "label": "Production Loss Value (KES)",
-   "read_only": 1
-  },
-  {
-   "description": "Sum of all treatment costs in this case",
-   "fieldname": "total_treatment_cost",
-   "fieldtype": "Currency",
-   "label": "Total Treatment Cost (KES)",
    "read_only": 1
   },
   {
@@ -304,25 +323,63 @@
    "read_only": 1
   },
   {
-   "fieldname": "section_accounting",
+   "fieldname": "sb_prodloss",
    "fieldtype": "Section Break",
-   "label": "Accounting"
+   "label": "Production Loss"
   },
   {
-   "description": "Auto-created Journal Entry for total_treatment_cost",
-   "fieldname": "treatment_journal_entry",
-   "fieldtype": "Link",
-   "label": "Treatment Cost JE",
-   "options": "Journal Entry",
+   "description": "Total milk discarded due to this case (kg)",
+   "fieldname": "production_loss_kg",
+   "fieldtype": "Float",
+   "label": "Milk Discarded (kg)"
+  },
+  {
+   "fieldname": "cb_prodloss",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Auto-calculated from production_loss_kg \u00d7 milk price in Livestock Settings",
+   "fieldname": "production_loss_value",
+   "fieldtype": "Currency",
+   "label": "Production Loss Value (KES)",
    "read_only": 1
   },
   {
-   "description": "Auto-created Stock Entry issuing drugs from store",
-   "fieldname": "drug_stock_entry",
-   "fieldtype": "Link",
-   "label": "Drug Issue Stock Entry",
-   "options": "Stock Entry",
+   "fieldname": "sb_flags",
+   "fieldtype": "Section Break",
+   "label": "Regulatory Flags"
+  },
+  {
+   "default": "0",
+   "fetch_from": "confirmed_diagnosis.is_zoonotic",
+   "fieldname": "is_zoonotic",
+   "fieldtype": "Check",
+   "label": "Zoonotic Risk",
    "read_only": 1
+  },
+  {
+   "default": "0",
+   "fetch_from": "confirmed_diagnosis.is_notifiable",
+   "fieldname": "is_notifiable",
+   "fieldtype": "Check",
+   "label": "Notifiable to Authorities",
+   "read_only": 1
+  },
+  {
+   "fieldname": "cb_flags",
+   "fieldtype": "Column Break"
+  },
+  {
+   "depends_on": "eval:doc.is_notifiable == 1",
+   "description": "Reference number from Veterinary Officer or DOAS",
+   "fieldname": "notification_reference",
+   "fieldtype": "Data",
+   "label": "Notification Reference"
+  },
+  {
+   "fieldname": "sb_amend",
+   "fieldtype": "Section Break",
+   "label": "Amended From"
   },
   {
    "fieldname": "amended_from",

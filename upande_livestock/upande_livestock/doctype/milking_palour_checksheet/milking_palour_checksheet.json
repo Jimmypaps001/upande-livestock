@@ -15,10 +15,13 @@
   "section_break_ihoo",
   "equipment",
   "frequency",
-  "date",
+  "cb_insp",
   "inspector",
-  "inspection_items",
+  "date",
   "time",
+  "sb_log",
+  "inspection_items",
+  "sb_amend",
   "amended_from"
  ],
  "fields": [
@@ -62,7 +65,22 @@
   },
   {
    "fieldname": "section_break_ihoo",
-   "fieldtype": "Section Break"
+   "fieldtype": "Section Break",
+   "label": "Inspection"
+  },
+  {
+   "fieldname": "cb_insp",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "sb_log",
+   "fieldtype": "Section Break",
+   "label": "Equipment Log"
+  },
+  {
+   "fieldname": "sb_amend",
+   "fieldtype": "Section Break",
+   "label": "Amended From"
   },
   {
    "default": "Daily",

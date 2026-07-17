@@ -24,7 +24,19 @@
   "weight_section",
   "min_weight_recording_interval_days",
   "hoof_section",
-  "min_hoof_trimming_interval_days"
+  "min_hoof_trimming_interval_days",
+  "tab_dairy",
+  "custom_dairy_section",
+  "custom_feed_wip_warehouse",
+  "custom_milk_item",
+  "custom_milking_stock_entry_type",
+  "custom_dairy_col",
+  "custom_milk_target_warehouse",
+  "custom_milk_discard_warehouse",
+  "sb_accounting",
+  "custom_auto_create_journal_entry",
+  "custom_default_company",
+  "custom_default_credit_account"
  ],
  "fields": [
   {
@@ -141,6 +153,77 @@
    "fieldname": "min_hoof_trimming_interval_days",
    "fieldtype": "Int",
    "label": "Min Hoof Trimming Interval (Days)"
+  },
+  {
+   "fieldname": "tab_dairy",
+   "fieldtype": "Tab Break",
+   "label": "Dairy & Accounts"
+  },
+  {
+   "fieldname": "custom_dairy_section",
+   "fieldtype": "Section Break",
+   "label": "Feed & Milk Stock"
+  },
+  {
+   "description": "Store where manufactured feed (TMR) is produced and held.",
+   "fieldname": "custom_feed_wip_warehouse",
+   "fieldtype": "Link",
+   "label": "Feed WIP / Store Warehouse",
+   "options": "Warehouse"
+  },
+  {
+   "description": "Stock item representing raw milk.",
+   "fieldname": "custom_milk_item",
+   "fieldtype": "Link",
+   "label": "Milk Item",
+   "options": "Item"
+  },
+  {
+   "default": "Milking",
+   "fieldname": "custom_milking_stock_entry_type",
+   "fieldtype": "Link",
+   "label": "Milking Stock Entry Type",
+   "options": "Stock Entry Type"
+  },
+  {
+   "fieldname": "custom_dairy_col",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Warehouse net sellable milk is posted into.",
+   "fieldname": "custom_milk_target_warehouse",
+   "fieldtype": "Link",
+   "label": "Milk Target Warehouse",
+   "options": "Warehouse"
+  },
+  {
+   "description": "Warehouse discarded/withheld milk is posted into.",
+   "fieldname": "custom_milk_discard_warehouse",
+   "fieldtype": "Link",
+   "label": "Milk Discard Warehouse",
+   "options": "Warehouse"
+  },
+  {
+   "fieldname": "sb_accounting",
+   "fieldtype": "Section Break",
+   "label": "Accounting"
+  },
+  {
+   "fieldname": "custom_auto_create_journal_entry",
+   "fieldtype": "Check",
+   "label": "Auto-create Journal Entry on Animal Event"
+  },
+  {
+   "fieldname": "custom_default_company",
+   "fieldtype": "Link",
+   "label": "Default Company (Livestock JE)",
+   "options": "Company"
+  },
+  {
+   "fieldname": "custom_default_credit_account",
+   "fieldtype": "Link",
+   "label": "Default Credit Account (Livestock JE)",
+   "options": "Account"
   }
  ],
  "grid_page_length": 50,

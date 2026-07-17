@@ -8,42 +8,48 @@
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
-  "section_identity",
+  "sb_identity",
   "animal",
   "animal_name",
   "current_herd",
   "company",
-  "col_break_identity",
+  "cb_identity",
   "diagnosis_date",
   "operator",
   "reason_for_check",
-  "section_vitals",
+  "tab_vitals",
+  "sb_vitals",
   "appearance",
   "bcs",
   "lameness_score",
   "hydration",
-  "col_break_vitals",
+  "cb_vitals",
   "temperature_c",
   "respiration_rate",
   "heart_rate",
   "rumen_fill",
-  "section_findings",
+  "tab_findings",
+  "sb_checks",
   "system_checks",
+  "sb_dx",
   "suggested_diagnosis",
+  "cb_dx",
   "differential_notes",
-  "section_action",
+  "tab_outcome",
+  "sb_action",
   "action_taken",
   "action_notes",
-  "col_break_action",
+  "cb_action",
   "confirmed_by_vet",
   "vet_name",
   "follow_up_date",
   "related_case",
+  "sb_amend",
   "amended_from"
  ],
  "fields": [
   {
-   "fieldname": "section_identity",
+   "fieldname": "sb_identity",
    "fieldtype": "Section Break",
    "label": "Animal & Triage"
   },
@@ -85,9 +91,8 @@
    "reqd": 1
   },
   {
-   "fieldname": "col_break_identity",
-   "fieldtype": "Column Break",
-   "label": "Col Break Identity"
+   "fieldname": "cb_identity",
+   "fieldtype": "Column Break"
   },
   {
    "default": "Today",
@@ -113,9 +118,14 @@
    "label": "Reason For Check"
   },
   {
-   "fieldname": "section_vitals",
+   "fieldname": "tab_vitals",
+   "fieldtype": "Tab Break",
+   "label": "Vitals"
+  },
+  {
+   "fieldname": "sb_vitals",
    "fieldtype": "Section Break",
-   "label": "Vital signs & general appearance"
+   "label": "Vital Signs & General Appearance"
   },
   {
    "description": "General attitude.",
@@ -144,9 +154,8 @@
    "options": "\nNormal\nMild dehydration\nModerate dehydration\nSevere dehydration"
   },
   {
-   "fieldname": "col_break_vitals",
-   "fieldtype": "Column Break",
-   "label": "Col Break Vitals"
+   "fieldname": "cb_vitals",
+   "fieldtype": "Column Break"
   },
   {
    "description": "Rectal, \u00b0C. Normal cattle 38.0-39.0.",
@@ -171,15 +180,25 @@
    "label": "Rumen Fill"
   },
   {
-   "fieldname": "section_findings",
+   "fieldname": "tab_findings",
+   "fieldtype": "Tab Break",
+   "label": "Findings"
+  },
+  {
+   "fieldname": "sb_checks",
    "fieldtype": "Section Break",
-   "label": "System checks & suggested diagnosis"
+   "label": "System Checks"
   },
   {
    "fieldname": "system_checks",
    "fieldtype": "Table",
    "label": "System Checks",
    "options": "Animal Diagnosis System Check"
+  },
+  {
+   "fieldname": "sb_dx",
+   "fieldtype": "Section Break",
+   "label": "Suggested Diagnosis"
   },
   {
    "description": "Optional pick from the Animal Disease catalogue.",
@@ -189,14 +208,23 @@
    "options": "Animal Disease"
   },
   {
+   "fieldname": "cb_dx",
+   "fieldtype": "Column Break"
+  },
+  {
    "fieldname": "differential_notes",
    "fieldtype": "Small Text",
    "label": "Differential / Notes"
   },
   {
-   "fieldname": "section_action",
-   "fieldtype": "Section Break",
+   "fieldname": "tab_outcome",
+   "fieldtype": "Tab Break",
    "label": "Outcome"
+  },
+  {
+   "fieldname": "sb_action",
+   "fieldtype": "Section Break",
+   "label": "Action"
   },
   {
    "fieldname": "action_taken",
@@ -211,9 +239,8 @@
    "label": "Action Notes"
   },
   {
-   "fieldname": "col_break_action",
-   "fieldtype": "Column Break",
-   "label": "Col Break Action"
+   "fieldname": "cb_action",
+   "fieldtype": "Column Break"
   },
   {
    "default": "0",
@@ -238,6 +265,11 @@
    "label": "Related Case",
    "options": "Animal Health Case",
    "read_only": 1
+  },
+  {
+   "fieldname": "sb_amend",
+   "fieldtype": "Section Break",
+   "label": "Amended From"
   },
   {
    "fieldname": "amended_from",

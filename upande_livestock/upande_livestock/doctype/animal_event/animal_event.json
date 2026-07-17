@@ -5,26 +5,62 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
+  "sb_details",
   "animal",
   "current_herd",
   "new_herd",
+  "cb_details",
   "event_type",
   "event_date",
+  "operator",
+  "remarks",
+  "tab_service",
+  "sb_service",
   "sire",
   "service_type",
   "service_date",
+  "cb_service",
   "service_status",
+  "custom_status_after_test",
   "pregnancy_confirmation_status",
-  "diagnosis_result",
+  "pregnancy_confirmation_date",
+  "sb_breeding",
+  "expected_calving_date",
+  "pregnancy_check_due_date",
+  "cb_breeding",
+  "next_expected_heat",
+  "ready_for_service_date",
+  "tab_diagnosis",
+  "sb_diagnosis",
   "related_service",
+  "diagnosis_result",
+  "cb_diagnosis",
   "diagnosis_date",
   "diagnosis_remarks",
-  "pregnancy_confirmation_date",
-  "operator",
-  "remarks",
+  "tab_calving",
+  "sb_calving",
+  "custom_calving_outcome",
+  "custom_no_of_calves",
+  "cb_calving",
+  "custom_calf_sex",
+  "custom_related_pregnancy",
+  "tab_accounting",
+  "sb_accounting",
+  "custom_activity_cost",
+  "custom_expense_account",
+  "cb_accounting",
+  "custom_cost_center",
+  "custom_journal_entry",
+  "tab_more",
+  "sb_amended",
   "amended_from"
  ],
  "fields": [
+  {
+   "fieldname": "sb_details",
+   "fieldtype": "Section Break",
+   "label": "Details"
+  },
   {
    "fieldname": "animal",
    "fieldtype": "Link",
@@ -48,6 +84,10 @@
    "options": "Herds"
   },
   {
+   "fieldname": "cb_details",
+   "fieldtype": "Column Break"
+  },
+  {
    "fieldname": "event_type",
    "fieldtype": "Select",
    "label": "Event type",
@@ -60,6 +100,28 @@
    "fieldtype": "Date",
    "in_list_view": 1,
    "label": "Event Date"
+  },
+  {
+   "fieldname": "operator",
+   "fieldtype": "Link",
+   "label": "Operator(technician)",
+   "options": "Employee",
+   "reqd": 1
+  },
+  {
+   "fieldname": "remarks",
+   "fieldtype": "Small Text",
+   "label": "Remarks"
+  },
+  {
+   "fieldname": "tab_service",
+   "fieldtype": "Tab Break",
+   "label": "Service & Breeding"
+  },
+  {
+   "fieldname": "sb_service",
+   "fieldtype": "Section Break",
+   "label": "Service"
   },
   {
    "fieldname": "sire",
@@ -78,10 +140,22 @@
    "label": "Service Date"
   },
   {
+   "fieldname": "cb_service",
+   "fieldtype": "Column Break"
+  },
+  {
    "fieldname": "service_status",
    "fieldtype": "Select",
    "label": "Service Status",
    "options": "Pending\nSuccessfull\nFailed"
+  },
+  {
+   "fieldname": "custom_status_after_test",
+   "label": "Status after test",
+   "fieldtype": "Select",
+   "options": "Pending\nSuccessfull\nFailed",
+   "default": "Pending",
+   "allow_on_submit": 1
   },
   {
    "fieldname": "pregnancy_confirmation_status",
@@ -90,16 +164,72 @@
    "options": "Pending\nConfirmed\nNot Pregnant"
   },
   {
-   "fieldname": "diagnosis_result",
-   "fieldtype": "Select",
-   "label": "Diagnosis Result",
-   "options": "\nNot Pregnant\nAborted\nConfirmed"
+   "fieldname": "pregnancy_confirmation_date",
+   "fieldtype": "Date",
+   "label": "Pregnancy Confirmation Date"
+  },
+  {
+   "fieldname": "sb_breeding",
+   "fieldtype": "Section Break",
+   "label": "Breeding Schedule"
+  },
+  {
+   "fieldname": "expected_calving_date",
+   "label": "Expected Calving Date",
+   "fieldtype": "Date",
+   "read_only": 1,
+   "allow_on_submit": 1
+  },
+  {
+   "fieldname": "pregnancy_check_due_date",
+   "label": "Pregnancy Check Due Date",
+   "fieldtype": "Date",
+   "read_only": 1,
+   "allow_on_submit": 1
+  },
+  {
+   "fieldname": "cb_breeding",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "next_expected_heat",
+   "label": "Next Expected Heat",
+   "fieldtype": "Date",
+   "read_only": 1,
+   "allow_on_submit": 1
+  },
+  {
+   "fieldname": "ready_for_service_date",
+   "label": "Ready For Service Date",
+   "fieldtype": "Date",
+   "read_only": 1,
+   "allow_on_submit": 1
+  },
+  {
+   "fieldname": "tab_diagnosis",
+   "fieldtype": "Tab Break",
+   "label": "Diagnosis"
+  },
+  {
+   "fieldname": "sb_diagnosis",
+   "fieldtype": "Section Break",
+   "label": "Diagnosis"
   },
   {
    "fieldname": "related_service",
    "fieldtype": "Link",
    "label": "Related Service",
    "options": "Animal Event"
+  },
+  {
+   "fieldname": "diagnosis_result",
+   "fieldtype": "Select",
+   "label": "Diagnosis Result",
+   "options": "\nNot Pregnant\nAborted\nConfirmed"
+  },
+  {
+   "fieldname": "cb_diagnosis",
+   "fieldtype": "Column Break"
   },
   {
    "fieldname": "diagnosis_date",
@@ -112,21 +242,91 @@
    "label": "Diagnosis Remarks"
   },
   {
-   "fieldname": "pregnancy_confirmation_date",
-   "fieldtype": "Date",
-   "label": "Pregnancy Confirmation Date"
+   "fieldname": "tab_calving",
+   "fieldtype": "Tab Break",
+   "label": "Calving"
   },
   {
-   "fieldname": "operator",
+   "fieldname": "sb_calving",
+   "fieldtype": "Section Break",
+   "label": "Calving"
+  },
+  {
+   "fieldname": "custom_calving_outcome",
+   "label": "Calving outcome",
+   "fieldtype": "Select",
+   "options": "Live Birth\nStill Birth\nAbortion"
+  },
+  {
+   "fieldname": "custom_no_of_calves",
+   "label": "No Of Calves",
+   "fieldtype": "Int"
+  },
+  {
+   "fieldname": "cb_calving",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "custom_calf_sex",
+   "label": "Calf Sex",
+   "fieldtype": "Select",
+   "options": "Male\nFemale"
+  },
+  {
+   "fieldname": "custom_related_pregnancy",
+   "label": "Related Pregnancy",
    "fieldtype": "Link",
-   "label": "Operator(technician)",
-   "options": "Employee",
-   "reqd": 1
+   "options": "Animal Event"
   },
   {
-   "fieldname": "remarks",
-   "fieldtype": "Small Text",
-   "label": "Remarks"
+   "fieldname": "tab_accounting",
+   "fieldtype": "Tab Break",
+   "label": "Accounting"
+  },
+  {
+   "fieldname": "sb_accounting",
+   "fieldtype": "Section Break",
+   "label": "Accounting"
+  },
+  {
+   "fieldname": "custom_activity_cost",
+   "label": "Activity Cost",
+   "fieldtype": "Currency"
+  },
+  {
+   "fieldname": "custom_expense_account",
+   "label": "Expense Account",
+   "fieldtype": "Link",
+   "options": "Account",
+   "read_only": 1
+  },
+  {
+   "fieldname": "cb_accounting",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "custom_cost_center",
+   "label": "Cost Center",
+   "fieldtype": "Link",
+   "options": "Cost Center",
+   "read_only": 1
+  },
+  {
+   "fieldname": "custom_journal_entry",
+   "label": "Journal Entry",
+   "fieldtype": "Link",
+   "options": "Journal Entry",
+   "read_only": 1
+  },
+  {
+   "fieldname": "tab_more",
+   "fieldtype": "Tab Break",
+   "label": "More Info"
+  },
+  {
+   "fieldname": "sb_amended",
+   "fieldtype": "Section Break",
+   "label": "Amended From"
   },
   {
    "fieldname": "amended_from",

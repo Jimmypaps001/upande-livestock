@@ -8,29 +8,35 @@
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
+  "sb_identity",
   "disease_name",
   "common_name",
-  "col_break_top",
+  "cb_identity",
   "category",
   "affected_systems",
-  "section_clinical",
+  "sb_clinical",
   "typical_symptoms",
   "typical_severity",
-  "col_break_clinical",
+  "cb_clinical",
   "is_zoonotic",
   "is_notifiable",
   "is_chronic",
-  "section_treatment",
+  "sb_treatment",
   "standard_protocol",
   "typical_duration_days",
-  "col_break_treatment",
+  "cb_treatment",
   "expected_milk_withdrawal_days",
   "expected_meat_withdrawal_days",
-  "section_notes",
+  "sb_notes",
   "notes",
   "is_active"
  ],
  "fields": [
+  {
+   "fieldname": "sb_identity",
+   "fieldtype": "Section Break",
+   "label": "Identity"
+  },
   {
    "description": "Canonical name e.g. Mastitis, Foot Rot, Lumpy Skin Disease",
    "fieldname": "disease_name",
@@ -49,7 +55,7 @@
    "label": "Common / Local Name"
   },
   {
-   "fieldname": "col_break_top",
+   "fieldname": "cb_identity",
    "fieldtype": "Column Break"
   },
   {
@@ -68,7 +74,7 @@
    "label": "Body Systems Affected"
   },
   {
-   "fieldname": "section_clinical",
+   "fieldname": "sb_clinical",
    "fieldtype": "Section Break",
    "label": "Clinical Profile"
   },
@@ -85,7 +91,7 @@
    "options": "\nMild\nModerate\nSevere\nVariable"
   },
   {
-   "fieldname": "col_break_clinical",
+   "fieldname": "cb_clinical",
    "fieldtype": "Column Break"
   },
   {
@@ -108,7 +114,7 @@
    "label": "Tends to be Chronic / Recurring"
   },
   {
-   "fieldname": "section_treatment",
+   "fieldname": "sb_treatment",
    "fieldtype": "Section Break",
    "label": "Standard Treatment Protocol"
   },
@@ -124,7 +130,7 @@
    "label": "Typical Treatment Duration (days)"
   },
   {
-   "fieldname": "col_break_treatment",
+   "fieldname": "cb_treatment",
    "fieldtype": "Column Break"
   },
   {
@@ -139,7 +145,7 @@
    "label": "Typical Meat Withdrawal (days)"
   },
   {
-   "fieldname": "section_notes",
+   "fieldname": "sb_notes",
    "fieldtype": "Section Break",
    "label": "Notes"
   },

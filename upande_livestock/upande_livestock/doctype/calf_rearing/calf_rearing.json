@@ -10,6 +10,7 @@
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
+  "sb_identity",
   "animal",
   "calf_name",
   "date_of_birth",
@@ -31,9 +32,15 @@
   "avg_daily_gain_g",
   "target_daily_gain_g",
   "growth_status",
+  "sb_notes",
   "remarks"
  ],
  "fields": [
+  {
+   "fieldname": "sb_identity",
+   "fieldtype": "Section Break",
+   "label": "Calf Identity"
+  },
   {
    "fieldname": "animal",
    "fieldtype": "Link",
@@ -159,6 +166,11 @@
    "label": "Growth Status",
    "options": "On Target\nBelow Target\nAbove Target",
    "read_only": 1
+  },
+  {
+   "fieldname": "sb_notes",
+   "fieldtype": "Section Break",
+   "label": "Notes & Observations"
   },
   {
    "fieldname": "remarks",
