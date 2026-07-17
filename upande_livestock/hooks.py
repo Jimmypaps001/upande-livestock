@@ -183,7 +183,7 @@ fixtures = [
 	},
 	{
 		"dt": "Custom HTML Block",
-		"filters": [["name", "in", ["Livestock Dashboard"]]],
+		"filters": [["name", "in", ["Livestock Dashboard", "Livestock Operations"]]],
 	},
 	{
 		# Desktop Icon = the card on the v16 desk app grid. Without it the
