@@ -47,7 +47,7 @@ on_session_creation = ["upande_livestock.heal.clear_stale_desktop_layout"]
 # Shadow DOM, where in-block @font-face is ignored. See livestock_fonts.css.
 app_include_css = "/assets/upande_livestock/css/livestock_fonts.css"
 # Debug: logs whether the "Upande Livestock" desk grid card is in boot + rendered.
-app_include_js = "/assets/upande_livestock/js/livestock_desk.js?v=5"
+app_include_js = "/assets/upande_livestock/js/livestock_desk.js?v=6"
 
 # include js, css files in header of web template
 # web_include_css = "/assets/upande_livestock/css/upande_livestock.css"
