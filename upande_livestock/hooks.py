@@ -109,47 +109,22 @@ doctype_js = {
 # per-herd accounting overrides. Exported so they deploy to every site via migrate.
 fixtures = [
 	{
+		# Only Stock Entry (an ERPNext core doctype) still carries livestock custom
+		# fields — everything on our own doctypes (Herds, Animal Event, Livestock
+		# Settings) was folded into the DocType JSONs natively. The milk fields are
+		# grouped in a "Milking" section that shows only for Milking stock entries;
+		# the trailing section break keeps the following (non-livestock) fields
+		# visible on other stock-entry types.
 		"dt": "Custom Field",
 		"filters": [
 			[
 				"name",
 				"in",
 				[
-					"Herds-custom_is_milking",
-					"Herds-custom_is_calf_rearing",
-					"Herds-custom_production_group",
-					"Herds-custom_is_dry",
-					"Herds-custom_herd_category",
-					"Herds-custom_feed_account",
-					"Herds-custom_vet_account",
-					"Herds-custom_cost_center",
-					"Animal Event-custom_calving_outcome",
-					"Animal Event-custom_no_of_calves",
-					"Animal Event-custom_calf_sex",
-					"Animal Event-custom_related_pregnancy",
-					"Animal Event-custom_status_after_test",
-					"Animal Event-expected_calving_date",
-					"Animal Event-pregnancy_check_due_date",
-					"Animal Event-next_expected_heat",
-					"Animal Event-ready_for_service_date",
-					"Animal Event-custom_activity_cost",
-					"Animal Event-custom_expense_account",
-					"Animal Event-custom_cost_center",
-					"Animal Event-custom_journal_entry",
-					"Livestock Settings-custom_auto_create_journal_entry",
-					"Livestock Settings-custom_default_company",
-					"Livestock Settings-custom_default_credit_account",
-					"Livestock Settings-custom_dairy_section",
-					"Livestock Settings-custom_feed_wip_warehouse",
-					"Livestock Settings-custom_milk_item",
-					"Livestock Settings-custom_milking_stock_entry_type",
-					"Livestock Settings-custom_dairy_col",
-					"Livestock Settings-custom_milk_target_warehouse",
-					"Livestock Settings-custom_milk_discard_warehouse",
-					# Milking session/cows fields depend_on stock_entry_type == "Milking"
-					# so they stay hidden on non-Milking Stock Entries.
+					"Stock Entry-custom_milking_details_section",
 					"Stock Entry-custom_milking_session",
 					"Stock Entry-custom_cows_milked",
+					"Stock Entry-custom_milking_end_section",
 				],
 			]
 		],

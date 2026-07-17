@@ -5,9 +5,15 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
+  "sb_breeder",
   "breeder"
  ],
  "fields": [
+  {
+   "fieldname": "sb_breeder",
+   "fieldtype": "Section Break",
+   "label": "Breeder Details"
+  },
   {
    "fieldname": "breeder",
    "fieldtype": "Data",

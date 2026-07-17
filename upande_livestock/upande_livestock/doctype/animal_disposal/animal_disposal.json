@@ -9,31 +9,38 @@
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
+  "sb_identity",
   "animal",
   "animal_name",
-  "col_break_top",
+  "cb_identity",
   "disposal_date",
   "disposal_type",
-  "section_valuation",
+  "sb_valuation",
   "book_value",
   "sale_price",
-  "col_break_valuation",
+  "gain_loss",
+  "cb_valuation",
   "buyer_name",
   "buyer_contact",
-  "gain_loss",
-  "section_accounting",
+  "sb_accounting",
   "income_account",
   "disposal_account",
   "cost_center",
-  "col_break_accounting",
+  "cb_accounting",
   "sale_journal_entry",
   "writeoff_journal_entry",
-  "section_notes",
+  "sb_notes",
   "reason_details",
   "witness",
+  "sb_amend",
   "amended_from"
  ],
  "fields": [
+  {
+   "fieldname": "sb_identity",
+   "fieldtype": "Section Break",
+   "label": "Animal & Disposal"
+  },
   {
    "bold": 1,
    "fieldname": "animal",
@@ -52,7 +59,7 @@
    "read_only": 1
   },
   {
-   "fieldname": "col_break_top",
+   "fieldname": "cb_identity",
    "fieldtype": "Column Break"
   },
   {
@@ -72,7 +79,7 @@
    "search_index": 1
   },
   {
-   "fieldname": "section_valuation",
+   "fieldname": "sb_valuation",
    "fieldtype": "Section Break",
    "label": "Valuation & Proceeds"
   },
@@ -89,7 +96,14 @@
    "label": "Sale / Salvage Price (KES)"
   },
   {
-   "fieldname": "col_break_valuation",
+   "description": "Auto-calculated: Sale Price minus Book Value. Positive = gain, negative = loss.",
+   "fieldname": "gain_loss",
+   "fieldtype": "Currency",
+   "label": "Gain / Loss on Disposal (KES)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "cb_valuation",
    "fieldtype": "Column Break"
   },
   {
@@ -103,14 +117,7 @@
    "label": "Buyer Contact / Phone"
   },
   {
-   "description": "Auto-calculated: Sale Price minus Book Value. Positive = gain, negative = loss.",
-   "fieldname": "gain_loss",
-   "fieldtype": "Currency",
-   "label": "Gain / Loss on Disposal (KES)",
-   "read_only": 1
-  },
-  {
-   "fieldname": "section_accounting",
+   "fieldname": "sb_accounting",
    "fieldtype": "Section Break",
    "label": "Accounting Entries"
   },
@@ -137,7 +144,7 @@
    "read_only": 1
   },
   {
-   "fieldname": "col_break_accounting",
+   "fieldname": "cb_accounting",
    "fieldtype": "Column Break"
   },
   {
@@ -157,7 +164,7 @@
    "read_only": 1
   },
   {
-   "fieldname": "section_notes",
+   "fieldname": "sb_notes",
    "fieldtype": "Section Break",
    "label": "Notes"
   },
@@ -170,6 +177,11 @@
    "fieldname": "witness",
    "fieldtype": "Data",
    "label": "Witness / Authorised By"
+  },
+  {
+   "fieldname": "sb_amend",
+   "fieldtype": "Section Break",
+   "label": "Amended From"
   },
   {
    "fieldname": "amended_from",

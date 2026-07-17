@@ -9,6 +9,7 @@
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
+  "sb_recording",
   "herd",
   "session",
   "recording_date",
@@ -23,6 +24,7 @@
   "col_break_qty",
   "price_per_kg",
   "milk_revenue",
+  "tab_stock",
   "section_stock",
   "stock_entry",
   "target_warehouse",
@@ -31,6 +33,7 @@
   "journal_entry",
   "income_account",
   "cost_center",
+  "tab_lab",
   "section_lab",
   "bulk_scc",
   "fat_percent",
@@ -38,9 +41,15 @@
   "col_break_lab",
   "lab_test_date",
   "remarks",
+  "sb_amend",
   "amended_from"
  ],
  "fields": [
+  {
+   "fieldname": "sb_recording",
+   "fieldtype": "Section Break",
+   "label": "Session Details"
+  },
   {
    "fieldname": "herd",
    "fieldtype": "Link",
@@ -132,6 +141,11 @@
    "read_only": 1
   },
   {
+   "fieldname": "tab_stock",
+   "fieldtype": "Tab Break",
+   "label": "Stock & Accounting"
+  },
+  {
    "fieldname": "section_stock",
    "fieldtype": "Section Break",
    "label": "Stock Entry & Accounting"
@@ -186,6 +200,11 @@
    "read_only": 1
   },
   {
+   "fieldname": "tab_lab",
+   "fieldtype": "Tab Break",
+   "label": "Lab"
+  },
+  {
    "fieldname": "section_lab",
    "fieldtype": "Section Break",
    "label": "Lab Results (recorded separately)"
@@ -218,6 +237,11 @@
    "fieldname": "remarks",
    "fieldtype": "Small Text",
    "label": "Remarks"
+  },
+  {
+   "fieldname": "sb_amend",
+   "fieldtype": "Section Break",
+   "label": "Amended From"
   },
   {
    "fieldname": "amended_from",

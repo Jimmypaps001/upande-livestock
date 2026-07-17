@@ -7,12 +7,14 @@
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
+  "sb_drug",
   "item_code",
   "item_name",
   "qty",
   "uom",
   "source_warehouse",
   "batch_no",
+  "sb_schedule",
   "withdrawal_days",
   "milk_safe_date",
   "next_due_date",
@@ -20,6 +22,11 @@
   "stock_entry_ref"
  ],
  "fields": [
+  {
+   "fieldname": "sb_drug",
+   "fieldtype": "Section Break",
+   "label": "Drug & Quantity"
+  },
   {
    "fieldname": "item_code",
    "fieldtype": "Link",
@@ -62,6 +69,11 @@
    "fieldname": "batch_no",
    "fieldtype": "Data",
    "label": "Batch / Lot No."
+  },
+  {
+   "fieldname": "sb_schedule",
+   "fieldtype": "Section Break",
+   "label": "Withdrawal & Scheduling"
   },
   {
    "fieldname": "withdrawal_days",

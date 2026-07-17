@@ -7,31 +7,35 @@
  "engine": "InnoDB",
  "field_order": [
   "section_break_ypa9",
-  "min_age",
   "herd_name",
-  "cost_center",
-  "amended_from",
+  "min_age",
   "column_break_zoyl",
   "max_age",
   "number_of_animals",
+  "sb_class",
+  "custom_is_milking",
+  "custom_production_group",
+  "custom_is_calf_rearing",
+  "cb_class",
+  "custom_is_dry",
+  "custom_herd_category",
   "section_break_69rv",
+  "ration_items",
   "bom",
-  "ration_items"
+  "sb_acct",
+  "cost_center",
+  "custom_feed_account",
+  "cb_acct",
+  "custom_vet_account",
+  "custom_cost_center",
+  "sb_amend",
+  "amended_from"
  ],
  "fields": [
   {
    "fieldname": "section_break_ypa9",
-   "fieldtype": "Section Break"
-  },
-  {
-   "fieldname": "amended_from",
-   "fieldtype": "Link",
-   "label": "Amended From",
-   "no_copy": 1,
-   "options": "Herds",
-   "print_hide": 1,
-   "read_only": 1,
-   "search_index": 1
+   "fieldtype": "Section Break",
+   "label": "Details"
   },
   {
    "fieldname": "herd_name",
@@ -45,15 +49,69 @@
    "label": "Min Age"
   },
   {
+   "fieldname": "column_break_zoyl",
+   "fieldtype": "Column Break"
+  },
+  {
    "fieldname": "max_age",
    "fieldtype": "Float",
    "label": "Max age"
   },
   {
-   "fieldname": "cost_center",
-   "fieldtype": "Link",
-   "label": "Cost Center",
-   "options": "Cost Center"
+   "fieldname": "number_of_animals",
+   "fieldtype": "Int",
+   "label": "Number of animals",
+   "read_only": 1
+  },
+  {
+   "fieldname": "sb_class",
+   "fieldtype": "Section Break",
+   "label": "Classification"
+  },
+  {
+   "default": "0",
+   "description": "Check if this herd contains milking cows (lactating groups)",
+   "fieldname": "custom_is_milking",
+   "fieldtype": "Check",
+   "label": "Is Milking Herd"
+  },
+  {
+   "depends_on": "eval:doc.custom_is_milking",
+   "description": "Maps this herd to a production group for KPI tracking (matches Excel tracker Group 1/2/3)",
+   "fieldname": "custom_production_group",
+   "fieldtype": "Select",
+   "label": "Production Group",
+   "options": "\nGroup 1\nGroup 2\nGroup 3"
+  },
+  {
+   "default": "0",
+   "description": "Tick if this herd contains calves on milk feeding (e.g. 0-2 months). Calf Feeding events validate that the calf's current herd has this flag set.",
+   "fieldname": "custom_is_calf_rearing",
+   "fieldtype": "Check",
+   "label": "Is Calf-Rearing Herd"
+  },
+  {
+   "fieldname": "cb_class",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "description": "Tick if this herd contains dry cows or steaming-up cows. Excluded from milk recording.",
+   "fieldname": "custom_is_dry",
+   "fieldtype": "Check",
+   "label": "Is Dry / Pre-calving Herd"
+  },
+  {
+   "description": "Herd category for KPI grouping: Milking, Dry, Youngstock",
+   "fieldname": "custom_herd_category",
+   "fieldtype": "Select",
+   "label": "Herd Category",
+   "options": "\nMilking\nDry\nYoungstock > 12m\nYoungstock < 12m"
+  },
+  {
+   "fieldname": "section_break_69rv",
+   "fieldtype": "Section Break",
+   "label": "Feed & BOM"
   },
   {
    "allow_on_submit": 1,
@@ -70,19 +128,55 @@
    "options": "BOM"
   },
   {
-   "fieldname": "number_of_animals",
-   "fieldtype": "Int",
-   "label": "Number of animals",
-   "read_only": 1
+   "fieldname": "sb_acct",
+   "fieldtype": "Section Break",
+   "label": "Accounting"
   },
   {
-   "fieldname": "column_break_zoyl",
+   "fieldname": "cost_center",
+   "fieldtype": "Link",
+   "label": "Cost Center",
+   "options": "Cost Center"
+  },
+  {
+   "description": "Expense account for feed costs for this herd. Overrides the global setting in Livestock Settings.",
+   "fieldname": "custom_feed_account",
+   "fieldtype": "Link",
+   "label": "Feed Expense Account (override)",
+   "options": "Account"
+  },
+  {
+   "fieldname": "cb_acct",
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "section_break_69rv",
+   "description": "Expense account for vet/drug costs for this herd. Overrides the global setting.",
+   "fieldname": "custom_vet_account",
+   "fieldtype": "Link",
+   "label": "Vet / Drug Expense Account (override)",
+   "options": "Account"
+  },
+  {
+   "description": "Cost centre for this herd. All JEs for events, feed, vet costs, and milk for this herd use this cost centre. Pulled from Livestock Settings if not set.",
+   "fieldname": "custom_cost_center",
+   "fieldtype": "Link",
+   "label": "Cost Center",
+   "options": "Cost Center"
+  },
+  {
+   "fieldname": "sb_amend",
    "fieldtype": "Section Break",
-   "label": "Feeding Ratios"
+   "label": "Amended From"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Herds",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
   }
  ],
  "grid_page_length": 50,

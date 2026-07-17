@@ -10,58 +10,72 @@
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
+  "sb_identity",
   "tag_number",
   "burn_name",
-  "col_break_top",
+  "cb_identity",
   "sex",
   "breed",
   "species",
-  "section_placement",
-  "current_herd",
-  "company",
-  "status",
-  "col_break_placement",
-  "repro_status",
-  "parity",
-  "days_in_milk",
-  "section_birth",
+  "tab_lineage",
+  "sb_birth",
   "date_of_birth",
   "origin",
   "acquisition_date",
   "birth_weight_kg",
-  "col_break_birth",
+  "cb_parentage",
   "dam",
   "sire_name",
-  "coat_colour",
-  "section_health",
-  "in_treatment",
-  "milk_safe_date",
-  "last_weight_kg",
-  "last_bcs",
-  "col_break_health",
-  "last_vaccination_date",
-  "last_deworming_date",
-  "next_due_event",
-  "section_repro",
+  "tab_herd",
+  "sb_placement",
+  "current_herd",
+  "company",
+  "status",
+  "cb_placement",
+  "repro_status",
+  "parity",
+  "days_in_milk",
+  "sb_repro",
   "last_calving_date",
   "expected_calving_date",
   "last_service_date",
-  "col_break_repro",
+  "cb_repro",
   "last_service_sire",
   "total_services",
   "conception_rate",
-  "section_accounting",
+  "tab_physical",
+  "sb_body",
+  "coat_colour",
+  "last_weight_kg",
+  "cb_body",
+  "last_bcs",
+  "sb_health",
+  "in_treatment",
+  "milk_safe_date",
+  "last_vaccination_date",
+  "cb_health",
+  "last_deworming_date",
+  "next_due_event",
+  "tab_asset",
+  "sb_accounting",
   "is_capitalised",
   "asset_link",
-  "col_break_accounting",
+  "cb_accounting",
   "purchase_value",
   "current_book_value",
   "insured_value",
-  "section_notes",
+  "tab_more",
+  "sb_notes",
   "remarks",
+  "sb_amend",
   "amended_from"
  ],
  "fields": [
+  {
+   "fieldname": "sb_identity",
+   "fieldtype": "Section Break",
+   "label": "Identity"
+  },
   {
    "bold": 1,
    "description": "Unique ID e.g. A001/26 \u2014 used as the system name.",
@@ -83,7 +97,7 @@
    "search_index": 1
   },
   {
-   "fieldname": "col_break_top",
+   "fieldname": "cb_identity",
    "fieldtype": "Column Break"
   },
   {
@@ -108,7 +122,60 @@
    "options": "Cattle\nGoat\nSheep\nOther"
   },
   {
-   "fieldname": "section_placement",
+   "fieldname": "tab_lineage",
+   "fieldtype": "Tab Break",
+   "label": "Lineage"
+  },
+  {
+   "fieldname": "sb_birth",
+   "fieldtype": "Section Break",
+   "label": "Birth & Origin"
+  },
+  {
+   "fieldname": "date_of_birth",
+   "fieldtype": "Date",
+   "label": "Date of Birth",
+   "search_index": 1
+  },
+  {
+   "default": "Born on Farm",
+   "fieldname": "origin",
+   "fieldtype": "Select",
+   "label": "Origin",
+   "options": "Born on Farm\nPurchased\nTransferred In"
+  },
+  {
+   "fieldname": "acquisition_date",
+   "fieldtype": "Date",
+   "label": "Acquisition / Birth Date"
+  },
+  {
+   "fieldname": "birth_weight_kg",
+   "fieldtype": "Float",
+   "label": "Birth Weight (kg)"
+  },
+  {
+   "fieldname": "cb_parentage",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "dam",
+   "fieldtype": "Link",
+   "label": "Dam (Mother)",
+   "options": "Animal"
+  },
+  {
+   "fieldname": "sire_name",
+   "fieldtype": "Data",
+   "label": "Sire Name"
+  },
+  {
+   "fieldname": "tab_herd",
+   "fieldtype": "Tab Break",
+   "label": "Herd & Status"
+  },
+  {
+   "fieldname": "sb_placement",
    "fieldtype": "Section Break",
    "label": "Placement & Status"
   },
@@ -137,7 +204,7 @@
    "search_index": 1
   },
   {
-   "fieldname": "col_break_placement",
+   "fieldname": "cb_placement",
    "fieldtype": "Column Break"
   },
   {
@@ -159,106 +226,7 @@
    "read_only": 1
   },
   {
-   "fieldname": "section_birth",
-   "fieldtype": "Section Break",
-   "label": "Birth & Origin"
-  },
-  {
-   "fieldname": "date_of_birth",
-   "fieldtype": "Date",
-   "label": "Date of Birth",
-   "search_index": 1
-  },
-  {
-   "default": "Born on Farm",
-   "fieldname": "origin",
-   "fieldtype": "Select",
-   "label": "Origin",
-   "options": "Born on Farm\nPurchased\nTransferred In"
-  },
-  {
-   "fieldname": "acquisition_date",
-   "fieldtype": "Date",
-   "label": "Acquisition / Birth Date"
-  },
-  {
-   "fieldname": "birth_weight_kg",
-   "fieldtype": "Float",
-   "label": "Birth Weight (kg)"
-  },
-  {
-   "fieldname": "col_break_birth",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "dam",
-   "fieldtype": "Link",
-   "label": "Dam (Mother)",
-   "options": "Animal"
-  },
-  {
-   "fieldname": "sire_name",
-   "fieldtype": "Data",
-   "label": "Sire Name"
-  },
-  {
-   "fieldname": "coat_colour",
-   "fieldtype": "Data",
-   "label": "Coat Colour"
-  },
-  {
-   "fieldname": "section_health",
-   "fieldtype": "Section Break",
-   "label": "Health Summary"
-  },
-  {
-   "default": "0",
-   "fieldname": "in_treatment",
-   "fieldtype": "Check",
-   "label": "In Treatment / Withdrawal"
-  },
-  {
-   "description": "Auto-set when drug with withdrawal period administered. Excluded from milking until this date.",
-   "fieldname": "milk_safe_date",
-   "fieldtype": "Date",
-   "label": "Milk Safe From Date"
-  },
-  {
-   "fieldname": "last_weight_kg",
-   "fieldtype": "Float",
-   "label": "Last Recorded Weight (kg)",
-   "read_only": 1
-  },
-  {
-   "fieldname": "last_bcs",
-   "fieldtype": "Float",
-   "label": "Last BCS (Body Condition Score)",
-   "read_only": 1
-  },
-  {
-   "fieldname": "col_break_health",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "last_vaccination_date",
-   "fieldtype": "Date",
-   "label": "Last Vaccination Date",
-   "read_only": 1
-  },
-  {
-   "fieldname": "last_deworming_date",
-   "fieldtype": "Date",
-   "label": "Last Deworming Date",
-   "read_only": 1
-  },
-  {
-   "fieldname": "next_due_event",
-   "fieldtype": "Data",
-   "label": "Next Due Event (summary)",
-   "read_only": 1
-  },
-  {
-   "fieldname": "section_repro",
+   "fieldname": "sb_repro",
    "fieldtype": "Section Break",
    "label": "Reproduction"
   },
@@ -280,7 +248,7 @@
    "read_only": 1
   },
   {
-   "fieldname": "col_break_repro",
+   "fieldname": "cb_repro",
    "fieldtype": "Column Break"
   },
   {
@@ -302,7 +270,82 @@
    "read_only": 1
   },
   {
-   "fieldname": "section_accounting",
+   "fieldname": "tab_physical",
+   "fieldtype": "Tab Break",
+   "label": "Physical"
+  },
+  {
+   "fieldname": "sb_body",
+   "fieldtype": "Section Break",
+   "label": "Body & Condition"
+  },
+  {
+   "fieldname": "coat_colour",
+   "fieldtype": "Data",
+   "label": "Coat Colour"
+  },
+  {
+   "fieldname": "last_weight_kg",
+   "fieldtype": "Float",
+   "label": "Last Recorded Weight (kg)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "cb_body",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "last_bcs",
+   "fieldtype": "Float",
+   "label": "Last BCS (Body Condition Score)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "sb_health",
+   "fieldtype": "Section Break",
+   "label": "Health Summary"
+  },
+  {
+   "default": "0",
+   "fieldname": "in_treatment",
+   "fieldtype": "Check",
+   "label": "In Treatment / Withdrawal"
+  },
+  {
+   "description": "Auto-set when drug with withdrawal period administered. Excluded from milking until this date.",
+   "fieldname": "milk_safe_date",
+   "fieldtype": "Date",
+   "label": "Milk Safe From Date"
+  },
+  {
+   "fieldname": "last_vaccination_date",
+   "fieldtype": "Date",
+   "label": "Last Vaccination Date",
+   "read_only": 1
+  },
+  {
+   "fieldname": "cb_health",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "last_deworming_date",
+   "fieldtype": "Date",
+   "label": "Last Deworming Date",
+   "read_only": 1
+  },
+  {
+   "fieldname": "next_due_event",
+   "fieldtype": "Data",
+   "label": "Next Due Event (summary)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "tab_asset",
+   "fieldtype": "Tab Break",
+   "label": "Asset & Value"
+  },
+  {
+   "fieldname": "sb_accounting",
    "fieldtype": "Section Break",
    "label": "Accounting"
   },
@@ -321,7 +364,7 @@
    "options": "Asset"
   },
   {
-   "fieldname": "col_break_accounting",
+   "fieldname": "cb_accounting",
    "fieldtype": "Column Break"
   },
   {
@@ -342,7 +385,12 @@
    "label": "Insured Value (KES)"
   },
   {
-   "fieldname": "section_notes",
+   "fieldname": "tab_more",
+   "fieldtype": "Tab Break",
+   "label": "More"
+  },
+  {
+   "fieldname": "sb_notes",
    "fieldtype": "Section Break",
    "label": "Notes"
   },
@@ -350,6 +398,11 @@
    "fieldname": "remarks",
    "fieldtype": "Small Text",
    "label": "Remarks"
+  },
+  {
+   "fieldname": "sb_amend",
+   "fieldtype": "Section Break",
+   "label": "Amended From"
   },
   {
    "fieldname": "amended_from",
