@@ -8,7 +8,7 @@
 // survives re-renders/navigation.
 (function () {
 	var LABEL = "Upande Livestock";
-	var LOGO = "/assets/upande_scp/images/upande_logo.png";
+	var LOGO = "/assets/upande_livestock/images/upande_logo.png";
 	var ROUTE = "/desk/upande-livestock?sidebar=Upande%20Livestock";
 
 	function permitted() {
