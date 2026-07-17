@@ -11,8 +11,20 @@
 	var LOGO = "/assets/upande_scp/images/upande_logo.png";
 	var ROUTE = "/desk/upande-livestock?sidebar=Upande%20Livestock";
 
+	function permitted() {
+		// frappe.boot.desktop_icons is built server-side by get_desktop_icons,
+		// which applies the workspace roles + Workspace Sidebar is_item_allowed
+		// permission checks. Only inject if this user is permitted (i.e. the
+		// server put the icon in their boot) — so we respect roles, not bypass them.
+		var icons = (window.frappe && frappe.boot && frappe.boot.desktop_icons) || [];
+		return icons.some(function (d) {
+			return d && d.label === LABEL && d.hidden != 1;
+		});
+	}
+
 	function inject() {
 		try {
+			if (!permitted()) return; // user not allowed -> never inject
 			// already present?
 			if (document.querySelector('.desktop-icon[data-id="' + LABEL + '"]')) return;
 			// find a rendered top-level card to clone (SCP, else the first one)
