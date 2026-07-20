@@ -149,7 +149,15 @@ fixtures = [
 # ------------
 
 # before_install = "upande_livestock.install.before_install"
-# after_install = "upande_livestock.install.after_install"
+after_install = "upande_livestock.install.after_install"
+
+# Migration
+# ---------
+# Ensure the "Milking" Stock Entry Type exists before any migrate-time save of
+# Livestock Settings (whose custom_milking_stock_entry_type defaults to
+# "Milking"), and again afterwards as a safety net on redeploys.
+before_migrate = "upande_livestock.install.ensure_milking_stock_entry_type"
+after_migrate = "upande_livestock.install.ensure_milking_stock_entry_type"
 
 # Uninstallation
 # ------------
