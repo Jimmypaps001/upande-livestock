@@ -1,0 +1,225 @@
+{
+ "charts": [],
+ "content": "[{\"id\":\"lvst-hd\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Upande Livestock</b></span>\",\"col\":12}},{\"id\":\"lvst-sc\",\"type\":\"card\",\"data\":{\"card_name\":\"Herd\",\"col\":4}},{\"id\":\"lvst-hc\",\"type\":\"card\",\"data\":{\"card_name\":\"Health\",\"col\":4}},{\"id\":\"lvst-pc\",\"type\":\"card\",\"data\":{\"card_name\":\"Production\",\"col\":4}}]",
+ "creation": "2026-07-31 05:00:00.000000",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 0,
+ "icon": "milk",
+ "idx": 0,
+ "indicator_color": "green",
+ "is_hidden": 0,
+ "label": "Upande Livestock",
+ "links": [
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Herd",
+   "link_count": 0,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Animal",
+   "link_count": 0,
+   "link_to": "Animal",
+   "link_type": "DocType",
+   "onboard": 1,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Herds",
+   "link_count": 0,
+   "link_to": "Herds",
+   "link_type": "DocType",
+   "onboard": 1,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Breed",
+   "link_count": 0,
+   "link_to": "Breed",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Breeders",
+   "link_count": 0,
+   "link_to": "Breeders",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Calf Rearing",
+   "link_count": 0,
+   "link_to": "Calf Rearing",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Animal Disposal",
+   "link_count": 0,
+   "link_to": "Animal Disposal",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Health",
+   "link_count": 0,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Animal Health Case",
+   "link_count": 0,
+   "link_to": "Animal Health Case",
+   "link_type": "DocType",
+   "onboard": 1,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Animal Diagnosis",
+   "link_count": 0,
+   "link_to": "Animal Diagnosis",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Animal Disease",
+   "link_count": 0,
+   "link_to": "Animal Disease",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Livestock Insurance Policy",
+   "link_count": 0,
+   "link_to": "Livestock Insurance Policy",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Production",
+   "link_count": 0,
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Animal Event",
+   "link_count": 0,
+   "link_to": "Animal Event",
+   "link_type": "DocType",
+   "onboard": 1,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Milk Recording",
+   "link_count": 0,
+   "link_to": "Milk Recording",
+   "link_type": "DocType",
+   "onboard": 1,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Milking Palour Checksheet",
+   "link_count": 0,
+   "link_to": "Milking Palour Checksheet",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Livestock Settings",
+   "link_count": 0,
+   "link_to": "Livestock Settings",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  }
+ ],
+ "modified": "2026-07-31 05:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Upande Livestock",
+ "name": "Upande Livestock",
+ "number_cards": [],
+ "owner": "Administrator",
+ "parent_page": "",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [],
+ "sequence_id": 20.0,
+ "shortcuts": [
+  {
+   "label": "Animal",
+   "link_to": "Animal",
+   "type": "DocType"
+  },
+  {
+   "label": "Herds",
+   "link_to": "Herds",
+   "type": "DocType"
+  },
+  {
+   "label": "Milk Recording",
+   "link_to": "Milk Recording",
+   "type": "DocType"
+  }
+ ],
+ "title": "Upande Livestock",
+ "type": "Workspace"
+}
