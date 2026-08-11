@@ -56,8 +56,11 @@ References to rename live in 23 files. Heaviest: `animal_event.py` (25),
 | Disease → Diagnosis | Fetch the **full clinical profile** read-only. |
 | Health Case / Diagnosis ↔ Event | **Two new event types + auto-created Event row** pointing back at the detail doc. |
 | Calf herd resolution | **Livestock Settings field, with computed fallbacks.** |
-| Culling | **Scrap/sell the Asset + disable the Animal**, hidden from all link searches. |
+| Culling | **Scrap/sell the Asset + disable the Animal**, hidden from all link searches. A `Sold` disposal requires a Customer link. |
 | Event accounting | **Removed.** |
+| Multiple calves | **One Birth event per calf.** One Calving event + N Births, created together from a dialog. |
+| Abortion | **Its own event type**, not just a calving outcome. |
+| Livestock Weight Record | **Built out** — it is currently a fieldless stub. |
 
 ## 1. DocType renames
 
@@ -71,7 +74,7 @@ References to rename live in 23 files. Heaviest: `animal_event.py` (25),
 | Animal Drug Issue | **Livestock Drug Issue** | child table |
 | Animal Diagnosis System Check | **Livestock Diagnosis System Check** | child table |
 | Animal Disposal | **Livestock Disposal** | submittable |
-| Animal Weight Record | **Livestock Weight Record** | plain (not submittable, hash-named) |
+| Animal Weight Record | **Livestock Weight Record** | fixed — see §5.4 |
 
 `Animal` stays `Animal` — it is a single beast, not a category. `Herds` is unchanged.
 
@@ -101,13 +104,13 @@ Mirrors `Stock Entry Type`: `autoname: Prompt`, so the record's name **is** the 
 `creates_animal` and `detail_doctype` keep behaviour data-driven instead of scattering
 `if self.event_type == "Birth"` string comparisons through the controller.
 
-**Seeded types** (14) — the ten already present in live data, plus `Feeding`, `Milking`,
-`Check Up`, `Health Case`:
+**Seeded types** (15) — the ten already present in live data, plus `Feeding`, `Milking`,
+`Check Up`, `Health Case`, `Abortion`:
 
 ```
 Feeding · Milking · Movement · Service · Pregnancy Diagnosis · Calving · Birth
 Drying Off · Vaccination · Deworming · Heat Detection · Weight Recording
-Check Up · Health Case
+Check Up · Health Case · Abortion
 ```
 
 Seeding lives in `install.py` as `ensure_livestock_event_types()`, idempotent, wired to
@@ -222,13 +225,107 @@ already maintains the count. Guards: a duplicate `tag_number` throws before anyt
 written, and a non-empty `created_animal` short-circuits, so amending or resubmitting cannot
 double-create.
 
-### Birth vs Calving
+### 5.1 Birth vs Calving — one Birth event per calf
 
 **Birth** creates the calf. **Calving** remains the *dam's* event — parity increment,
-`custom_calving_outcome`, `custom_no_of_calves`, re-breeding alert. A Live Birth calving
-therefore expects one Birth event per calf, with the Birth event's `dam` defaulting from the
-related calving. The rejected alternative — Calving spawning N calves directly — would bury
-per-calf tag numbers in a child table and make each calf's own event history unreachable.
+`custom_calving_outcome`, `custom_no_of_calves`, re-breeding alert. **One Birth event per calf**,
+confirmed. The rejected alternative — Calving spawning N calves from a child table — would bury
+per-calf tag numbers and leave each calf without its own event history.
+
+Birth gains `related_calving` (Link → Livestock Event, filtered to `event_type = "Calving"` on
+the same animal). `dam` defaults from `related_calving.animal`.
+
+### 5.2 Twins and triplets
+
+A dam bearing three calves produces **one Calving event and three Birth events**:
+
+```
+CALVING-2026-00015   dam = MAUREEN-129301   no_of_calves = 3   births_recorded = 3
+  ├── BIRTH-2026-00021   tag 129412   Female
+  ├── BIRTH-2026-00022   tag 129413   Female
+  └── BIRTH-2026-00023   tag 129414   Male
+```
+
+Mechanics:
+
+- Calving gains read-only `births_recorded` (Int) — a count of submitted Birth events whose
+  `related_calving` is this document, refreshed whenever a Birth is submitted or cancelled.
+- A **Record Births** button on a submitted Live Birth / Still Birth calving opens a dialog with
+  one row per expected calf (`custom_no_of_calves` rows, add/remove allowed), each taking tag
+  number, sex, burn name and birth weight. It creates and submits one Birth event per row in a
+  single call, so a triplet birth is three form-fills, not three full forms.
+- Still Birth rows are recorded as Birth events with `is_stillborn` checked; these create **no**
+  Animal, so the calving's own outcome and count stay honest without inflating herd numbers.
+- Validation is a **warning, not a throw**, when `births_recorded != custom_no_of_calves` — farms
+  legitimately record calves the next morning, and blocking submission would push staff to
+  falsify the count.
+- Parity increments once per Calving, never per Birth.
+
+### 5.3 Abortion as its own event type
+
+`Abortion` becomes a Livestock Event Type (`creates_animal = 0`) rather than only an option
+inside `custom_calving_outcome`. A pregnancy loss is a different event from a calving — it has a
+cause, no calf, and different downstream effects — and giving it its own type makes it countable
+and reportable.
+
+The Calving tab becomes **Calving & Abortion**, with an Abortion section shown for that type:
+
+| Field | Type | Notes |
+|---|---|---|
+| `custom_related_pregnancy` | Link → Livestock Event | reused; the Service event being lost |
+| `gestation_days_at_loss` | Int, read-only | computed from the service date |
+| `abortion_cause` | Select | `Infectious` / `Nutritional` / `Traumatic` / `Congenital` / `Unknown` / `Other` |
+| `abortion_notes` | Small Text | |
+
+`on_submit` closes the pregnancy: dam `repro_status = "Open"`,
+`custom_pregnancy_status = "Not Pregnant"`, `expected_calving_date` cleared, and the related
+service marked `service_status = "Failed"` / `pregnancy_confirmation_status = "Aborted"` with a
+comment linking back. Parity is **not** incremented.
+
+`Abortion` is removed from the `custom_calving_outcome` options, leaving `Live Birth` and
+`Still Birth`. No back-migration is needed: all 14 existing calvings on kaitet.local are
+`Live Birth`. `Pregnancy Diagnosis.diagnosis_result` keeps its `Aborted` option — a diagnosis can
+legitimately *discover* a loss, which then gets its own Abortion event.
+
+**One decision to flag:** an Abortion does **not** impose the 45/60-day post-partum service
+block that Calving does — that validation keys off Calving events only, so a cow can be re-served
+once she is clinically ready. If you want a waiting period after abortion, say what it should be
+and I will add it.
+
+### 5.4 Livestock Weight Record — currently an empty stub
+
+`Animal Weight Record` has **no fields at all**, a `pass` controller, no `autoname` and no
+`is_submittable`. It is an unfinished scaffold, and `Animal.last_weight_kg` / `last_bcs` are
+consequently never populated by anything. It holds zero documents, so it can be built out with no
+migration cost.
+
+`autoname: "WT-.YYYY.-.#####"`, `is_submittable: 1`, `title_field: animal_name`.
+
+| Field | Type | Notes |
+|---|---|---|
+| `animal` | Link → Animal, reqd | |
+| `animal_name` | Data, read-only | fetch `animal.burn_name` |
+| `current_herd` | Link → Herds, read-only | fetch `animal.current_herd` |
+| `company` | Link → Company, read-only | fetch `animal.company` |
+| `weight_date` | Date, reqd, default Today | |
+| `weight_kg` | Float, reqd | |
+| `bcs` | Float | Body Condition Score |
+| `method` | Select | `Weighbridge` / `Platform Scale` / `Heart Girth Tape` / `Visual Estimate` |
+| `heart_girth_cm` | Float | shown for the tape method |
+| `measured_by` | Link → Employee | |
+| `previous_weight_kg` | Float, read-only | from the prior submitted record |
+| `previous_weight_date` | Date, read-only | |
+| `daily_gain_kg` | Float, read-only | `(weight_kg − previous) / days between` |
+| `remarks` | Small Text | |
+| `amended_from` | Link | |
+
+`validate` looks up the animal's most recent submitted record to fill `previous_weight_kg`,
+`previous_weight_date` and `daily_gain_kg`, and throws if `weight_kg <= 0` or `weight_date` is in
+the future. `on_submit` writes `last_weight_kg` and `last_bcs` back to the `Animal` — closing the
+gap where those two fields exist but are never set.
+
+It stays a separate doctype rather than folding into `Livestock Event`; the `Weight Recording`
+event type remains available for logging that a weighing session took place.
 
 ## 6. Culling: Disposal retires the animal
 
@@ -367,7 +464,21 @@ Replacing the current empty `test_*.py` stubs:
 - an inactive type is excluded from the link query
 - Birth: creates the Animal in the resolved calf herd with the right sex and dam; bumps
   `number_of_animals`; a duplicate tag throws; resubmit does not double-create
+- Birth with `is_stillborn` creates **no** Animal and leaves the herd count unchanged
+- triplets: one Calving + three Births yields `births_recorded = 3`, three Animals, and parity
+  incremented exactly once
+- `births_recorded != custom_no_of_calves` warns but does not block submission
+- Abortion: closes the pregnancy (dam Open / Not Pregnant, `expected_calving_date` cleared),
+  fails the related service, creates no Animal, and does not increment parity
+- Abortion does not trigger the post-partum service block on a subsequent Service event
 - the Accounting fields no longer exist and submitting creates no Journal Entry
+
+**`test_livestock_weight_record.py`**
+- `WT-{year}-00001` naming and submittability
+- `previous_weight_kg` / `daily_gain_kg` computed from the prior submitted record
+- first record for an animal leaves the previous-weight fields empty
+- `on_submit` writes `last_weight_kg` and `last_bcs` onto the Animal
+- a future `weight_date` and a non-positive `weight_kg` both throw
 
 **`test_livestock_diagnosis.py`**
 - `suggested_disease` fetches the clinical profile
@@ -436,3 +547,5 @@ SELECT COUNT(*) FROM `tabToDo`
   useful and is not part of the document name.
 - `Livestock Disposal` keeps its `ANI-DISP-.YYYY.-.#####` series. Renaming the series prefix
   would be cosmetic churn across 11 existing documents; flag it if you want it changed.
+- No post-abortion service waiting period (see §5.3).
+- `Livestock Weight Record` is built out but not folded into `Livestock Event`.
