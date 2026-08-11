@@ -9,7 +9,7 @@ Consolidate the livestock activity doctypes around a single **Livestock Event** 
 on ERPNext's `Stock Entry` + `Stock Entry Type` pair, and move the whole `Animal*` doctype
 family to a `Livestock*` prefix.
 
-Five outcomes:
+Six outcomes:
 
 1. **One timeline per animal.** `Livestock Event` records every occurrence — feeding, milking,
    movement, service, calving, check-ups, health cases — while clinical detail stays in its own
@@ -22,6 +22,8 @@ Five outcomes:
    A Disposal scraps or sells the linked Asset and permanently retires the Animal.
 5. **Accounting leaves the Event.** Per-event cost capture and auto-Journal-Entry are removed;
    animal-level asset accounting (`asset_link`) stays.
+6. **Breeding policy is configuration, not code.** Every waiting period, gestation length and
+   alert lead time moves to Livestock Settings and is enforced server-side.
 
 ## Current state (verified on kaitet.local, 2026-08-11)
 
@@ -61,6 +63,7 @@ References to rename live in 23 files. Heaviest: `animal_event.py` (25),
 | Multiple calves | **One Birth event per calf.** One Calving event + N Births, created together from a dialog. |
 | Abortion | **Its own event type**, not just a calving outcome. |
 | Livestock Weight Record | **Built out** — it is currently a fieldless stub. |
+| Breeding timings | **All moved to Livestock Settings**, read by the server controller. See §7. |
 
 ## 1. DocType renames
 
@@ -217,8 +220,14 @@ New **Calf** section on `Livestock Event`, shown when the event type has `create
 
 1. `Livestock Settings.default_calf_herd` (new Link → Herds), else
 2. a herd with `custom_is_calf_rearing = 1`, else
-3. a herd with `custom_herd_category = "Youngstock < 12m"`, else
-4. the herd with the lowest `min_age`.
+3. a herd whose `min_age` / `max_age` bracket matches the existing
+   `Livestock Settings.default_calf_herd_min_age` / `default_calf_herd_max_age` — two fields that
+   already exist for exactly this purpose and are currently read by nothing, else
+4. a herd with `custom_herd_category = "Youngstock < 12m"`, else
+5. the herd with the lowest `min_age`.
+
+If no herd resolves at all, the Birth event throws with a message naming the setting to fill in,
+rather than silently creating a herdless animal.
 
 It then recomputes that herd's `number_of_animals`, matching how `herd_movement_processor`
 already maintains the count. Guards: a duplicate `tag_number` throws before anything is
@@ -287,10 +296,10 @@ comment linking back. Parity is **not** incremented.
 `Live Birth`. `Pregnancy Diagnosis.diagnosis_result` keeps its `Aborted` option — a diagnosis can
 legitimately *discover* a loss, which then gets its own Abortion event.
 
-**One decision to flag:** an Abortion does **not** impose the 45/60-day post-partum service
-block that Calving does — that validation keys off Calving events only, so a cow can be re-served
-once she is clinically ready. If you want a waiting period after abortion, say what it should be
-and I will add it.
+The post-abortion service interval is configurable, not hardcoded: `on_submit` sets
+`ready_for_service_date = event_date + Livestock Settings.post_abortion_min_service_days`, and a
+subsequent Service event is blocked before that date. Default **30 days**, and setting it to `0`
+disables the block entirely. See §7.
 
 ### 5.4 Livestock Weight Record — currently an empty stub
 
@@ -365,7 +374,63 @@ A culled animal can therefore never be picked again anywhere, while its events, 
 and milk records stay intact for history and reporting. List views and reports are unaffected —
 only the link picker is filtered.
 
-## 7. Accounting removed from the Event
+## 7. Breeding timings move to Livestock Settings
+
+### The defect this fixes
+
+The timing rules exist in **two places that disagree**, and the authoritative one ignores your
+configuration:
+
+- `public/js/animal_event.js` reads Livestock Settings —
+  `settings.min_service_age_months || 15`, `min_calving_interval_days || 270`,
+  `min_vaccination_interval_days || 21`, `min_weight_recording_interval_days || 7`.
+- `animal_event.py` hardcodes its own, unrelated numbers — `minimum_days = 45`,
+  `optimal_days = 60`, gestation `280`, pregnancy check `35`, heat cycle `21`, diagnosis window
+  `21`/`70`, gestation bounds `260`/`300`, calving alert lead `7`.
+
+Client-side rules are advisory only — they are bypassed by the REST API, data import, the mobile
+client, and any server-side creation. So the rules that actually bind are the hardcoded Python
+ones, and changing a Livestock Settings value today has no effect on them.
+
+Two further settings, `default_calf_herd_min_age` and `default_calf_herd_max_age`, are read by
+nothing at all.
+
+### The fix
+
+All timing constants move to a **Breeding & Timing** section in Livestock Settings, and
+`livestock_event.py` becomes the single consumer. A `get_timing(key)` helper on the controller
+reads the single-value settings with the documented default as fallback, so a fresh site behaves
+exactly as today.
+
+| Field | Default | Governs |
+|---|---|---|
+| `post_calving_min_service_days` | 45 | hard block on Service after a Calving |
+| `post_calving_optimal_service_days` | 60 | warning threshold, and `ready_for_service_date` after Calving |
+| `post_abortion_min_service_days` | 30 | hard block on Service after an Abortion; `0` disables |
+| `gestation_period_days` | 280 | `expected_calving_date` from the service date |
+| `pregnancy_check_days_after_service` | 35 | `pregnancy_check_due_date` |
+| `heat_cycle_days` | 21 | `next_expected_heat` |
+| `diagnosis_earliest_days` | 21 | "very early diagnosis" warning |
+| `diagnosis_latest_days` | 70 | "overdue diagnosis" warning |
+| `gestation_short_warning_days` | 260 | short-gestation warning on Calving |
+| `gestation_long_warning_days` | 300 | long-gestation warning on Calving |
+| `calving_alert_lead_days` | 7 | how far ahead the calving ToDo fires |
+
+The existing `min_service_age_months`, `min_calving_age_months`, `min_calving_interval_days`,
+`min_vaccination_interval_days`, `min_deworming_interval_days`,
+`min_weight_recording_interval_days`, `min_hoof_trimming_interval_days` and the dehorning ages
+stay where they are, but are now **also enforced server-side** in `validate` rather than only in
+the browser. `public/js/livestock_event.js` keeps its client-side checks for fast feedback,
+reading the same fields, with its `||` fallbacks changed to match the table above so the two
+layers cannot drift.
+
+**Added** `default_calf_herd` (Link → Herds) for §5's resolution chain.
+
+This is a behaviour change on any site that has already customised the JS-read settings: rules
+that were previously only warned about in the browser now bind on save. That is the point — but
+it is worth calling out before deploy.
+
+## 8. Accounting removed from the Event
 
 Deleted from `Livestock Event`: the `tab_accounting` / `sb_accounting` / `cb_accounting`
 breaks and `custom_activity_cost`, `custom_expense_account`, `custom_cost_center`,
@@ -378,7 +443,7 @@ removed too. `custom_default_credit_account` **stays** — `Milk Recording` stil
 
 **32 events on kaitet.local carry a non-zero `custom_activity_cost`** (KES 3,772.21 total), so
 the data is real and must not be silently orphaned. A patch appends it to `remarks` before the
-field leaves the DocType — see `preserve_event_activity_cost` in §9. Journal Entries already
+field leaves the DocType — see `preserve_event_activity_cost` in §10. Journal Entries already
 posted are untouched, and `custom_journal_entry` values are named in the preserved note so the
 trail survives.
 
@@ -387,7 +452,7 @@ Animal-level asset accounting is untouched: `asset_link`, `is_capitalised`, `pur
 fixed assets and disposal accounting still runs. Event-level cost capture is simply not where
 that belongs.
 
-## 8. Sidebar
+## 9. Sidebar
 
 `workspace_sidebar/upande_livestock.json` — the "Health & Events" section becomes
 **Livestock Events**, surfacing all four (Diagnosis and Disease are currently unreachable from
@@ -401,7 +466,7 @@ Livestock Events
 
 The workspace JSON's `Animal Health Case` / `Animal Event` shortcuts are relabelled to match.
 
-## 9. Migration
+## 10. Migration
 
 Ordering across the model-sync boundary is load-bearing.
 
@@ -452,7 +517,7 @@ guarded on the old column existing.
 Set `disabled = 1` on animals already at `status in ("Sold", "Dead", "Culled",
 "Transferred Out")`, so historical culls are retired consistently with new ones.
 
-## 10. Testing
+## 11. Testing
 
 Replacing the current empty `test_*.py` stubs:
 
@@ -472,6 +537,17 @@ Replacing the current empty `test_*.py` stubs:
   fails the related service, creates no Animal, and does not increment parity
 - Abortion does not trigger the post-partum service block on a subsequent Service event
 - the Accounting fields no longer exist and submitting creates no Journal Entry
+
+**`test_livestock_timings.py`**
+- with settings empty, every rule falls back to the documented default (45 / 60 / 280 / 35 / 21 /
+  21 / 70 / 260 / 300 / 7) — i.e. a fresh site behaves exactly as today
+- `post_calving_min_service_days = 90` blocks a Service 60 days after calving that would
+  previously have passed
+- `post_abortion_min_service_days = 30` blocks a Service 10 days after an Abortion
+- `post_abortion_min_service_days = 0` disables the block entirely
+- `gestation_period_days = 285` shifts the computed `expected_calving_date` accordingly
+- the server enforces `min_service_age_months` even when the document is created via the API,
+  bypassing the client script
 
 **`test_livestock_weight_record.py`**
 - `WT-{year}-00001` naming and submittability
@@ -533,6 +609,7 @@ SELECT COUNT(*) FROM `tabToDo`
 | Removing the Accounting tab orphans historical cost data (32 rows, KES 3,772.21) | `preserve_event_activity_cost` appends cost, accounts and JE reference to `remarks` while the fields are still live; existing Journal Entries are untouched. |
 | `Sold` disposals fail because no Customer is set | `customer` is mandatory when `disposal_type = Sold`; the 11 existing disposals are checked before deploy and backfilled or left as-is, since the requirement only binds new submissions. |
 | `standard_queries` on Animal hides animals staff still need | It filters the link picker only; list views, reports and existing links are unaffected. `disabled` is set solely by a submitted Disposal. |
+| Enforcing the settings server-side rejects saves that used to succeed | Defaults match today's hardcoded Python numbers exactly, so an unconfigured site sees no change. Sites that customised the JS-read settings will see those rules bind on save — intended, but verify the configured values are the ones the farm actually wants before deploy. |
 
 ## Out of scope
 
