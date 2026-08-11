@@ -1314,4 +1314,1135 @@ Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
 
 ---
 
-*Tasks 5–13 continue below.*
+### Task 5: Breeding timings move to Livestock Settings
+
+**Files:**
+- Create: `upande_livestock/livestock_timings.py`
+- Create: `upande_livestock/test_livestock_timings.py`
+- Modify: `.../doctype/livestock_settings/livestock_settings.json`
+- Modify: `.../doctype/livestock_event/livestock_event.py` (lines 91, 254–268, 323, 328, 380, 385, 418–428)
+- Modify: `upande_livestock/public/js/livestock_event.js` (lines 155, 213, 238, 274, 343)
+
+**Interfaces:**
+- Consumes: `Livestock Event` from Task 3.
+- Produces:
+  - `upande_livestock.livestock_timings.TIMING_DEFAULTS` → `dict[str, int]`.
+  - `upande_livestock.livestock_timings.get_timing(key: str) -> int`. Raises `KeyError` on an unknown key so a typo fails loudly instead of silently returning 0.
+
+**Why this task exists:** the timing rules currently live in two places that disagree. `public/js/livestock_event.js` reads Livestock Settings (`min_service_age_months || 15`, `min_calving_interval_days || 270`); `livestock_event.py` hardcodes unrelated numbers (45, 60, 280, 35, 21, 21/70, 260/300, 7) and never reads settings at all. Client rules are bypassed by the REST API, data import and the mobile client, so the rules that actually bind ignore configuration entirely.
+
+- [ ] **Step 1: Write the failing test**
+
+Create `upande_livestock/test_livestock_timings.py`:
+
+```python
+# Copyright (c) 2026, Upande and contributors
+# For license information, please see license.txt
+
+import frappe
+from frappe.tests import IntegrationTestCase
+
+from upande_livestock.livestock_timings import TIMING_DEFAULTS, get_timing
+
+
+class TestLivestockTimings(IntegrationTestCase):
+	def tearDown(self):
+		for key in TIMING_DEFAULTS:
+			frappe.db.set_single_value("Livestock Settings", key, None)
+		frappe.clear_cache()
+
+	def test_defaults_match_the_previously_hardcoded_values(self):
+		self.assertEqual(TIMING_DEFAULTS["post_calving_min_service_days"], 45)
+		self.assertEqual(TIMING_DEFAULTS["post_calving_optimal_service_days"], 60)
+		self.assertEqual(TIMING_DEFAULTS["post_abortion_min_service_days"], 30)
+		self.assertEqual(TIMING_DEFAULTS["gestation_period_days"], 280)
+		self.assertEqual(TIMING_DEFAULTS["pregnancy_check_days_after_service"], 35)
+		self.assertEqual(TIMING_DEFAULTS["heat_cycle_days"], 21)
+		self.assertEqual(TIMING_DEFAULTS["diagnosis_earliest_days"], 21)
+		self.assertEqual(TIMING_DEFAULTS["diagnosis_latest_days"], 70)
+		self.assertEqual(TIMING_DEFAULTS["gestation_short_warning_days"], 260)
+		self.assertEqual(TIMING_DEFAULTS["gestation_long_warning_days"], 300)
+		self.assertEqual(TIMING_DEFAULTS["calving_alert_lead_days"], 7)
+
+	def test_unset_setting_falls_back_to_the_default(self):
+		self.assertEqual(get_timing("gestation_period_days"), 280)
+
+	def test_configured_value_wins(self):
+		frappe.db.set_single_value("Livestock Settings", "gestation_period_days", 285)
+		frappe.clear_cache()
+		self.assertEqual(get_timing("gestation_period_days"), 285)
+
+	def test_zero_is_honoured_and_not_treated_as_unset(self):
+		frappe.db.set_single_value("Livestock Settings", "post_abortion_min_service_days", 0)
+		frappe.clear_cache()
+		self.assertEqual(get_timing("post_abortion_min_service_days"), 0)
+
+	def test_unknown_key_raises(self):
+		with self.assertRaises(KeyError):
+			get_timing("no_such_timing")
+
+	def test_every_default_has_a_settings_field(self):
+		meta = frappe.get_meta("Livestock Settings")
+		for key in TIMING_DEFAULTS:
+			self.assertIsNotNone(meta.get_field(key), f"Livestock Settings is missing {key}")
+```
+
+- [ ] **Step 2: Run it to verify it fails**
+
+```bash
+cd /home/ubuntu/stive/code/frappe15
+bench --site kaitet.local run-tests --module upande_livestock.test_livestock_timings
+```
+
+Expected: FAIL — `ModuleNotFoundError: No module named 'upande_livestock.livestock_timings'`.
+
+- [ ] **Step 3: Write the timings module**
+
+Create `upande_livestock/livestock_timings.py`:
+
+```python
+# Copyright (c) 2026, Upande and contributors
+# For license information, please see license.txt
+
+"""Breeding and husbandry timing parameters, read from Livestock Settings.
+
+Every default here equals the value that was previously hardcoded in the
+Livestock Event controller, so an unconfigured site behaves exactly as before.
+
+A setting of 0 is honoured, not treated as unset — that is how
+post_abortion_min_service_days is disabled.
+"""
+
+import frappe
+
+TIMING_DEFAULTS = {
+	"post_calving_min_service_days": 45,
+	"post_calving_optimal_service_days": 60,
+	"post_abortion_min_service_days": 30,
+	"gestation_period_days": 280,
+	"pregnancy_check_days_after_service": 35,
+	"heat_cycle_days": 21,
+	"diagnosis_earliest_days": 21,
+	"diagnosis_latest_days": 70,
+	"gestation_short_warning_days": 260,
+	"gestation_long_warning_days": 300,
+	"calving_alert_lead_days": 7,
+}
+
+
+def get_timing(key):
+	"""The configured value for `key`, or its documented default.
+
+	Raises KeyError on an unknown key, so a typo fails loudly rather than
+	silently behaving as 0.
+	"""
+	default = TIMING_DEFAULTS[key]
+	value = frappe.db.get_single_value("Livestock Settings", key)
+	if value in (None, ""):
+		return default
+	return int(value)
+```
+
+- [ ] **Step 4: Add the settings fields**
+
+In `.../doctype/livestock_settings/livestock_settings.json`, insert these 13 fieldnames into `field_order` immediately after `min_calving_age_months`:
+
+```
+   "breeding_section",
+   "post_calving_min_service_days",
+   "post_calving_optimal_service_days",
+   "post_abortion_min_service_days",
+   "gestation_period_days",
+   "column_break_breeding",
+   "pregnancy_check_days_after_service",
+   "heat_cycle_days",
+   "calving_alert_lead_days",
+   "diagnosis_section",
+   "diagnosis_earliest_days",
+   "diagnosis_latest_days",
+   "column_break_diagnosis",
+   "gestation_short_warning_days",
+   "gestation_long_warning_days",
+   "default_calf_herd",
+```
+
+Then add these field objects to `fields`:
+
+```json
+  {
+   "fieldname": "breeding_section",
+   "fieldtype": "Section Break",
+   "label": "Breeding & Timing"
+  },
+  {
+   "default": "45",
+   "description": "Service is blocked before this many days after a Calving.",
+   "fieldname": "post_calving_min_service_days",
+   "fieldtype": "Int",
+   "label": "Minimum Days to Service After Calving"
+  },
+  {
+   "default": "60",
+   "description": "Service is allowed but warned about before this many days after a Calving. Also sets Ready For Service Date.",
+   "fieldname": "post_calving_optimal_service_days",
+   "fieldtype": "Int",
+   "label": "Optimal Days to Service After Calving"
+  },
+  {
+   "default": "30",
+   "description": "Service is blocked before this many days after an Abortion. Set to 0 to disable.",
+   "fieldname": "post_abortion_min_service_days",
+   "fieldtype": "Int",
+   "label": "Minimum Days to Service After Abortion"
+  },
+  {
+   "default": "280",
+   "description": "Expected Calving Date = service date + this.",
+   "fieldname": "gestation_period_days",
+   "fieldtype": "Int",
+   "label": "Gestation Period (days)"
+  },
+  {
+   "fieldname": "column_break_breeding",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "35",
+   "fieldname": "pregnancy_check_days_after_service",
+   "fieldtype": "Int",
+   "label": "Pregnancy Check Due (days after service)"
+  },
+  {
+   "default": "21",
+   "fieldname": "heat_cycle_days",
+   "fieldtype": "Int",
+   "label": "Heat Cycle Length (days)"
+  },
+  {
+   "default": "7",
+   "description": "How many days before the expected calving date the reminder fires.",
+   "fieldname": "calving_alert_lead_days",
+   "fieldtype": "Int",
+   "label": "Calving Alert Lead (days)"
+  },
+  {
+   "fieldname": "diagnosis_section",
+   "fieldtype": "Section Break",
+   "label": "Diagnosis & Gestation Warnings"
+  },
+  {
+   "default": "21",
+   "description": "Pregnancy diagnosis earlier than this warns about accuracy.",
+   "fieldname": "diagnosis_earliest_days",
+   "fieldtype": "Int",
+   "label": "Earliest Reliable Diagnosis (days after service)"
+  },
+  {
+   "default": "70",
+   "description": "Pregnancy diagnosis later than this warns as overdue.",
+   "fieldname": "diagnosis_latest_days",
+   "fieldtype": "Int",
+   "label": "Latest Expected Diagnosis (days after service)"
+  },
+  {
+   "fieldname": "column_break_diagnosis",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "260",
+   "fieldname": "gestation_short_warning_days",
+   "fieldtype": "Int",
+   "label": "Short Gestation Warning Below (days)"
+  },
+  {
+   "default": "300",
+   "fieldname": "gestation_long_warning_days",
+   "fieldtype": "Int",
+   "label": "Long Gestation Warning Above (days)"
+  },
+  {
+   "description": "Calves created by a Birth event go to this herd. If unset, the calf-rearing herd is resolved automatically.",
+   "fieldname": "default_calf_herd",
+   "fieldtype": "Link",
+   "label": "Default Calf Herd",
+   "options": "Herds"
+  },
+```
+
+`default_calf_herd` is added here because Task 8 needs it; it is not a timing and is deliberately not in `TIMING_DEFAULTS`.
+
+- [ ] **Step 5: Apply the settings doctype and confirm the test passes**
+
+```bash
+cd /home/ubuntu/stive/code/frappe15
+bench --site kaitet.local console <<'EOF'
+import frappe
+from frappe.modules.import_file import import_file_by_path
+import_file_by_path(
+    "apps/upande_livestock/upande_livestock/upande_livestock/doctype/"
+    "livestock_settings/livestock_settings.json",
+    force=True,
+)
+frappe.db.commit()
+EOF
+bench --site kaitet.local run-tests --module upande_livestock.test_livestock_timings
+```
+
+Expected: PASS (6 tests).
+
+- [ ] **Step 6: Replace the hardcoded constants in the controller**
+
+In `.../doctype/livestock_event/livestock_event.py`, add the import:
+
+```python
+from upande_livestock.livestock_timings import get_timing
+```
+
+Then make these seven replacements.
+
+*(a) line 91 — calving alert lead:*
+```python
+						alert_date = frappe.utils.add_days(
+							service.expected_calving_date, -get_timing("calving_alert_lead_days")
+						)
+```
+
+*(b) lines 254–255 — post-partum thresholds:*
+```python
+				minimum_days = get_timing("post_calving_min_service_days")
+				optimal_days = get_timing("post_calving_optimal_service_days")
+```
+
+*(c) line 323 — early diagnosis:*
+```python
+			if days_since_service < get_timing("diagnosis_earliest_days"):
+```
+and inside that message body replace `Recommended minimum: <b>21 days</b>` with
+`Recommended minimum: <b>{get_timing("diagnosis_earliest_days")} days</b>`.
+
+*(d) line 328 — late diagnosis:*
+```python
+			elif days_since_service > get_timing("diagnosis_latest_days"):
+```
+and replace `Recommended maximum: <b>70 days</b>` with
+`Recommended maximum: <b>{get_timing("diagnosis_latest_days")} days</b>`.
+
+*(e) lines 380 and 385 — gestation bounds:*
+```python
+				if gestation_days < get_timing("gestation_short_warning_days"):
+```
+```python
+				elif gestation_days > get_timing("gestation_long_warning_days"):
+```
+
+*(f) lines 418–424 — service-derived dates:*
+```python
+		if self.event_type == "Service" and self.service_date:
+			self.expected_calving_date = frappe.utils.add_days(
+				self.service_date, get_timing("gestation_period_days")
+			)
+			self.pregnancy_check_due_date = frappe.utils.add_days(
+				self.service_date, get_timing("pregnancy_check_days_after_service")
+			)
+			self.next_expected_heat = frappe.utils.add_days(
+				self.service_date, get_timing("heat_cycle_days")
+			)
+```
+
+*(g) line 428 — ready for service after calving:*
+```python
+		if self.event_type == "Calving" and self.event_date:
+			self.ready_for_service_date = frappe.utils.add_days(
+				self.event_date, get_timing("post_calving_optimal_service_days")
+			)
+```
+
+- [ ] **Step 7: Verify no hardcoded timing constants remain**
+
+```bash
+cd /home/ubuntu/stive/code/frappe15/apps/upande_livestock
+grep -nE "\b(45|60|280|35|21|70|260|300)\b" \
+  upande_livestock/upande_livestock/doctype/livestock_event/livestock_event.py \
+  | grep -v get_timing
+```
+
+Expected: no lines that set or compare a timing threshold. Matches inside unrelated strings are fine; a bare `minimum_days = 45` is not.
+
+- [ ] **Step 8: Align the client-side fallbacks**
+
+In `upande_livestock/public/js/livestock_event.js`, change the `||` fallbacks so the two layers cannot drift:
+
+- line 155: `settings.min_service_age_months || 15` — leave as is (`min_service_age_months` keeps its own default).
+- line 213 and 238: `settings.min_calving_interval_days || 270` — leave as is.
+- line 274: `settings.min_vaccination_interval_days || 21` — leave as is.
+- line 343: `settings.min_weight_recording_interval_days || 7` — leave as is.
+
+No change is required in this step: those four settings already existed and keep their defaults. It is listed explicitly so the implementer confirms they were not accidentally rewritten by the Task 1 sweep.
+
+- [ ] **Step 9: Write the server-enforcement test**
+
+Append to `upande_livestock/test_livestock_timings.py`:
+
+```python
+from frappe.utils import add_days
+
+from upande_livestock.install import ensure_livestock_event_types
+
+
+class TestTimingsAreEnforcedServerSide(IntegrationTestCase):
+	def setUp(self):
+		ensure_livestock_event_types()
+		self.animal = frappe.get_doc(
+			{
+				"doctype": "Animal",
+				"tag_number": "TEST-TIMING-1",
+				"burn_name": "TEST-TIMING-1",
+				"sex": "Female",
+				"status": "Active",
+			}
+		).insert()
+		self.operator = frappe.db.get_value("Employee", {}, "name")
+
+	def tearDown(self):
+		frappe.db.set_single_value("Livestock Settings", "post_calving_min_service_days", None)
+		frappe.db.set_single_value("Livestock Settings", "gestation_period_days", None)
+		frappe.clear_cache()
+
+	def _calving(self, event_date):
+		doc = frappe.get_doc(
+			{
+				"doctype": "Livestock Event",
+				"animal": self.animal.name,
+				"event_type": "Calving",
+				"event_date": event_date,
+				"operator": self.operator,
+				"custom_calving_outcome": "Live Birth",
+				"custom_no_of_calves": 1,
+			}
+		)
+		doc.flags.ignore_validate = True
+		doc.insert()
+		doc.submit()
+		return doc
+
+	def test_configured_post_calving_block_is_enforced(self):
+		self._calving("2026-01-01")
+		frappe.db.set_single_value("Livestock Settings", "post_calving_min_service_days", 90)
+		frappe.clear_cache()
+		service = frappe.get_doc(
+			{
+				"doctype": "Livestock Event",
+				"animal": self.animal.name,
+				"event_type": "Service",
+				"event_date": "2026-03-02",
+				"service_date": "2026-03-02",
+				"operator": self.operator,
+			}
+		)
+		with self.assertRaises(frappe.exceptions.ValidationError):
+			service.insert()
+
+	def test_configured_gestation_shifts_expected_calving_date(self):
+		frappe.db.set_single_value("Livestock Settings", "gestation_period_days", 285)
+		frappe.clear_cache()
+		service = frappe.get_doc(
+			{
+				"doctype": "Livestock Event",
+				"animal": self.animal.name,
+				"event_type": "Service",
+				"event_date": "2026-05-01",
+				"service_date": "2026-05-01",
+				"operator": self.operator,
+			}
+		)
+		service.insert()
+		self.assertEqual(str(service.expected_calving_date), add_days("2026-05-01", 285))
+```
+
+- [ ] **Step 10: Run the tests**
+
+```bash
+cd /home/ubuntu/stive/code/frappe15
+bench --site kaitet.local run-tests --module upande_livestock.test_livestock_timings
+```
+
+Expected: PASS (8 tests).
+
+- [ ] **Step 11: Commit**
+
+```bash
+cd /home/ubuntu/stive/code/frappe15/apps/upande_livestock
+git add -A
+git commit -m "feat(livestock): move breeding timings into Livestock Settings
+
+The timing rules lived in two places that disagreed: the client script
+read Livestock Settings while the controller hardcoded unrelated numbers
+and never read settings at all. Client rules are bypassed by the REST
+API, data import and the mobile client, so the rules that actually bound
+ignored configuration entirely.
+
+Adds livestock_timings.get_timing(), 11 Livestock Settings fields whose
+defaults equal the previously hardcoded values (45/60/280/35/21/21/70/
+260/300/7), and makes the controller the single consumer. A configured 0
+is honoured rather than treated as unset, which is how
+post_abortion_min_service_days is disabled.
+
+Also adds default_calf_herd, used by the Birth flow.
+
+Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
+```
+
+---
+
+### Task 6: Disease reference on Livestock Diagnosis
+
+**Files:**
+- Modify: `.../doctype/livestock_diagnosis/livestock_diagnosis.json`
+- Create: `upande_livestock/patches/rename_diagnosis_disease_field.py`
+- Modify: `upande_livestock/patches.txt`
+- Test: `.../doctype/livestock_diagnosis/test_livestock_diagnosis.py`
+
+**Interfaces:**
+- Consumes: `Livestock Disease` and `Livestock Diagnosis` from Task 1.
+- Produces: field `Livestock Diagnosis.suggested_disease` (Link → `Livestock Disease`), replacing `suggested_diagnosis`, plus six read-only fetched fields.
+
+- [ ] **Step 1: Write the failing test**
+
+Replace `.../doctype/livestock_diagnosis/test_livestock_diagnosis.py` with:
+
+```python
+# Copyright (c) 2026, Upande and contributors
+# For license information, please see license.txt
+
+import frappe
+from frappe.tests import IntegrationTestCase
+
+
+def make_disease():
+	name = "Test Mastitis"
+	if frappe.db.exists("Livestock Disease", name):
+		return frappe.get_doc("Livestock Disease", name)
+	return frappe.get_doc(
+		{
+			"doctype": "Livestock Disease",
+			"disease_name": name,
+			"category": "Infectious - Bacterial",
+			"typical_symptoms": "Swollen quarter, clots in milk",
+			"typical_severity": "Moderate",
+			"standard_protocol": "Intramammary antibiotic, 3 days",
+			"expected_milk_withdrawal_days": 4,
+			"is_zoonotic": 0,
+			"is_notifiable": 1,
+			"is_active": 1,
+		}
+	).insert()
+
+
+class TestLivestockDiagnosisDiseaseReference(IntegrationTestCase):
+	def setUp(self):
+		self.disease = make_disease()
+		self.animal = (
+			frappe.get_doc("Animal", "TEST-DX-1")
+			if frappe.db.exists("Animal", "TEST-DX-1")
+			else frappe.get_doc(
+				{
+					"doctype": "Animal",
+					"tag_number": "TEST-DX-1",
+					"burn_name": "TEST-DX-1",
+					"sex": "Female",
+					"status": "Active",
+				}
+			).insert()
+		)
+
+	def test_old_fieldname_is_gone(self):
+		self.assertIsNone(frappe.get_meta("Livestock Diagnosis").get_field("suggested_diagnosis"))
+
+	def test_suggested_disease_links_livestock_disease(self):
+		field = frappe.get_meta("Livestock Diagnosis").get_field("suggested_disease")
+		self.assertEqual(field.fieldtype, "Link")
+		self.assertEqual(field.options, "Livestock Disease")
+
+	def test_selecting_a_disease_fetches_the_clinical_profile(self):
+		doc = frappe.get_doc(
+			{
+				"doctype": "Livestock Diagnosis",
+				"animal": self.animal.name,
+				"diagnosis_date": "2026-04-01",
+				"suggested_disease": self.disease.name,
+			}
+		).insert()
+		self.assertEqual(doc.disease_typical_symptoms, "Swollen quarter, clots in milk")
+		self.assertEqual(doc.disease_typical_severity, "Moderate")
+		self.assertEqual(doc.disease_standard_protocol, "Intramammary antibiotic, 3 days")
+		self.assertEqual(doc.disease_milk_withdrawal_days, 4)
+		self.assertEqual(doc.disease_is_zoonotic, 0)
+		self.assertEqual(doc.disease_is_notifiable, 1)
+
+	def test_fetched_fields_are_read_only(self):
+		meta = frappe.get_meta("Livestock Diagnosis")
+		for fieldname in (
+			"disease_typical_symptoms",
+			"disease_typical_severity",
+			"disease_standard_protocol",
+			"disease_milk_withdrawal_days",
+			"disease_is_zoonotic",
+			"disease_is_notifiable",
+		):
+			self.assertTrue(meta.get_field(fieldname).read_only, f"{fieldname} is editable")
+```
+
+- [ ] **Step 2: Run it to verify it fails**
+
+```bash
+cd /home/ubuntu/stive/code/frappe15
+bench --site kaitet.local run-tests --module upande_livestock.upande_livestock.doctype.livestock_diagnosis.test_livestock_diagnosis
+```
+
+Expected: FAIL — `suggested_diagnosis` still exists, `suggested_disease` does not.
+
+- [ ] **Step 3: Rename the field and add the reference section**
+
+In `.../livestock_diagnosis/livestock_diagnosis.json`:
+
+Rename `"suggested_diagnosis"` to `"suggested_disease"` in `field_order`, and insert these seven fieldnames immediately after it (before `cb_dx`):
+
+```
+   "sb_disease_ref",
+   "disease_typical_symptoms",
+   "disease_typical_severity",
+   "disease_standard_protocol",
+   "cb_disease_ref",
+   "disease_milk_withdrawal_days",
+   "disease_is_zoonotic",
+   "disease_is_notifiable",
+```
+
+Replace the `suggested_diagnosis` field object with:
+
+```json
+  {
+   "fieldname": "suggested_disease",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Suggested Disease",
+   "options": "Livestock Disease"
+  },
+```
+
+And add these eight field objects:
+
+```json
+  {
+   "collapsible": 1,
+   "depends_on": "suggested_disease",
+   "fieldname": "sb_disease_ref",
+   "fieldtype": "Section Break",
+   "label": "Disease Reference"
+  },
+  {
+   "fetch_from": "suggested_disease.typical_symptoms",
+   "fieldname": "disease_typical_symptoms",
+   "fieldtype": "Text",
+   "label": "Typical Symptoms",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "suggested_disease.typical_severity",
+   "fieldname": "disease_typical_severity",
+   "fieldtype": "Data",
+   "label": "Typical Severity",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "suggested_disease.standard_protocol",
+   "fieldname": "disease_standard_protocol",
+   "fieldtype": "Text",
+   "label": "Standard Treatment Protocol",
+   "read_only": 1
+  },
+  {
+   "fieldname": "cb_disease_ref",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fetch_from": "suggested_disease.expected_milk_withdrawal_days",
+   "fieldname": "disease_milk_withdrawal_days",
+   "fieldtype": "Int",
+   "label": "Typical Milk Withdrawal (days)",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fetch_from": "suggested_disease.is_zoonotic",
+   "fieldname": "disease_is_zoonotic",
+   "fieldtype": "Check",
+   "label": "Zoonotic",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fetch_from": "suggested_disease.is_notifiable",
+   "fieldname": "disease_is_notifiable",
+   "fieldtype": "Check",
+   "label": "Notifiable to Authorities",
+   "read_only": 1
+  },
+```
+
+- [ ] **Step 4: Write the field-rename patch**
+
+Create `upande_livestock/patches/rename_diagnosis_disease_field.py`:
+
+```python
+# Copyright (c) 2026, Upande and contributors
+# For license information, please see license.txt
+
+"""Rename Livestock Diagnosis.suggested_diagnosis to suggested_disease.
+
+The field links Livestock Disease, so "disease" is what it holds. 3 documents on
+kaitet.local. Idempotent: guarded on the old column still existing.
+"""
+
+import frappe
+from frappe.model.utils.rename_field import rename_field
+
+
+def execute():
+	if not frappe.db.table_exists("Livestock Diagnosis"):
+		return
+	if not frappe.db.has_column("Livestock Diagnosis", "suggested_diagnosis"):
+		return
+
+	rename_field("Livestock Diagnosis", "suggested_diagnosis", "suggested_disease")
+	frappe.db.commit()
+```
+
+- [ ] **Step 5: Register the patch**
+
+Add to `[post_model_sync]` in `patches.txt`, **above** `rename_livestock_event_docs`:
+
+```
+upande_livestock.patches.rename_diagnosis_disease_field.execute
+```
+
+- [ ] **Step 6: Run the patch, apply the doctype, run the tests**
+
+The patch must run **before** the new JSON is imported, so the old column still exists when `rename_field` looks for it.
+
+```bash
+cd /home/ubuntu/stive/code/frappe15
+bench --site kaitet.local execute upande_livestock.patches.rename_diagnosis_disease_field.execute
+bench --site kaitet.local console <<'EOF'
+import frappe
+from frappe.modules.import_file import import_file_by_path
+import_file_by_path(
+    "apps/upande_livestock/upande_livestock/upande_livestock/doctype/"
+    "livestock_diagnosis/livestock_diagnosis.json",
+    force=True,
+)
+frappe.db.commit()
+EOF
+bench --site kaitet.local run-tests --module upande_livestock.upande_livestock.doctype.livestock_diagnosis.test_livestock_diagnosis
+```
+
+Expected: PASS (4 tests).
+
+- [ ] **Step 7: Confirm the 3 existing diagnoses kept their data**
+
+```bash
+cd /home/ubuntu/stive/code/frappe15
+bench --site kaitet.local mariadb -e "SELECT name, suggested_disease FROM \`tabLivestock Diagnosis\`;"
+```
+
+Expected: 3 rows, with whatever disease values they held before (all `NULL` is correct here — `Livestock Disease` has 0 records, so none were ever set).
+
+- [ ] **Step 8: Commit**
+
+```bash
+cd /home/ubuntu/stive/code/frappe15/apps/upande_livestock
+git add -A
+git commit -m "feat(livestock): fetch the disease clinical profile onto Diagnosis
+
+suggested_diagnosis becomes suggested_disease — the field links
+Livestock Disease, so disease is what it holds — migrated with
+rename_field across the 3 existing documents.
+
+Selecting a disease now fetches its typical symptoms, severity,
+standard protocol, milk withdrawal days and the zoonotic / notifiable
+flags into a read-only Disease Reference section, so the vet sees the
+reference data without retyping it.
+
+Livestock Health Case keeps provisional_diagnosis / confirmed_diagnosis
+as fieldnames — that is the correct clinical term there — but both now
+point at Livestock Disease.
+
+Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
+```
+
+---
+
+### Task 7: Check Up and Health Case on the event timeline
+
+**Files:**
+- Modify: `.../doctype/livestock_event/livestock_event.json`
+- Create: `upande_livestock/livestock_event_link.py`
+- Create: `upande_livestock/test_livestock_event_link.py`
+- Modify: `.../doctype/livestock_diagnosis/livestock_diagnosis.py`
+- Modify: `.../doctype/livestock_health_case/livestock_health_case.py`
+- Modify: `.../doctype/livestock_health_case/livestock_health_case.json`
+
+**Interfaces:**
+- Consumes: `get_timing` (not used here), `Livestock Event Type.detail_doctype` from Task 2, `Livestock Event` from Task 3.
+- Produces:
+  - `upande_livestock.livestock_event_link.sync_event_for(doc, event_type)` → `str` (the event name). Idempotent.
+  - `upande_livestock.livestock_event_link.cancel_event_for(doc)` → `None`.
+  - Fields `Livestock Event.reference_doctype` and `Livestock Event.reference_name`.
+
+- [ ] **Step 1: Write the failing test**
+
+Create `upande_livestock/test_livestock_event_link.py`:
+
+```python
+# Copyright (c) 2026, Upande and contributors
+# For license information, please see license.txt
+
+import frappe
+from frappe.tests import IntegrationTestCase
+
+from upande_livestock.install import ensure_livestock_event_types
+
+
+def make_animal(tag):
+	if frappe.db.exists("Animal", tag):
+		return frappe.get_doc("Animal", tag)
+	return frappe.get_doc(
+		{"doctype": "Animal", "tag_number": tag, "burn_name": tag, "sex": "Female", "status": "Active"}
+	).insert()
+
+
+class TestLivestockEventLink(IntegrationTestCase):
+	def setUp(self):
+		ensure_livestock_event_types()
+		self.animal = make_animal("TEST-LINK-1").name
+		self.operator = frappe.db.get_value("Employee", {}, "name")
+
+	def _events_for(self, doctype, name):
+		return frappe.get_all(
+			"Livestock Event",
+			filters={"reference_doctype": doctype, "reference_name": name},
+			fields=["name", "event_type", "docstatus"],
+		)
+
+	def test_reference_fields_exist_and_are_read_only(self):
+		meta = frappe.get_meta("Livestock Event")
+		for fieldname in ("reference_doctype", "reference_name"):
+			field = meta.get_field(fieldname)
+			self.assertIsNotNone(field, f"{fieldname} missing")
+			self.assertTrue(field.read_only)
+
+	def test_submitting_a_diagnosis_creates_one_check_up_event(self):
+		dx = frappe.get_doc(
+			{
+				"doctype": "Livestock Diagnosis",
+				"animal": self.animal,
+				"diagnosis_date": "2026-04-01",
+				"operator": self.operator,
+			}
+		).insert()
+		dx.submit()
+		events = self._events_for("Livestock Diagnosis", dx.name)
+		self.assertEqual(len(events), 1)
+		self.assertEqual(events[0].event_type, "Check Up")
+		self.assertTrue(events[0].name.startswith("CHECK-UP-2026-"))
+
+	def test_submitting_a_health_case_creates_one_health_case_event(self):
+		hc = frappe.get_doc(
+			{
+				"doctype": "Livestock Health Case",
+				"animal": self.animal,
+				"opened_date": "2026-04-02",
+				"case_status": "Open",
+			}
+		).insert()
+		hc.submit()
+		events = self._events_for("Livestock Health Case", hc.name)
+		self.assertEqual(len(events), 1)
+		self.assertEqual(events[0].event_type, "Health Case")
+
+	def test_sync_is_idempotent(self):
+		from upande_livestock.livestock_event_link import sync_event_for
+
+		dx = frappe.get_doc(
+			{
+				"doctype": "Livestock Diagnosis",
+				"animal": self.animal,
+				"diagnosis_date": "2026-04-03",
+				"operator": self.operator,
+			}
+		).insert()
+		dx.submit()
+		first = sync_event_for(dx, "Check Up")
+		second = sync_event_for(dx, "Check Up")
+		self.assertEqual(first, second)
+		self.assertEqual(len(self._events_for("Livestock Diagnosis", dx.name)), 1)
+
+	def test_cancelling_the_detail_cancels_its_event(self):
+		dx = frappe.get_doc(
+			{
+				"doctype": "Livestock Diagnosis",
+				"animal": self.animal,
+				"diagnosis_date": "2026-04-04",
+				"operator": self.operator,
+			}
+		).insert()
+		dx.submit()
+		dx.cancel()
+		events = self._events_for("Livestock Diagnosis", dx.name)
+		self.assertEqual(len(events), 1)
+		self.assertEqual(events[0].docstatus, 2)
+
+	def test_health_case_lists_its_check_ups(self):
+		hc = frappe.get_doc(
+			{
+				"doctype": "Livestock Health Case",
+				"animal": self.animal,
+				"opened_date": "2026-04-05",
+				"case_status": "Open",
+			}
+		).insert()
+		hc.submit()
+		dx = frappe.get_doc(
+			{
+				"doctype": "Livestock Diagnosis",
+				"animal": self.animal,
+				"diagnosis_date": "2026-04-06",
+				"operator": self.operator,
+				"related_case": hc.name,
+			}
+		).insert()
+		dx.submit()
+		linked = frappe.get_all("Livestock Diagnosis", filters={"related_case": hc.name}, pluck="name")
+		self.assertIn(dx.name, linked)
+```
+
+- [ ] **Step 2: Run it to verify it fails**
+
+```bash
+cd /home/ubuntu/stive/code/frappe15
+bench --site kaitet.local run-tests --module upande_livestock.test_livestock_event_link
+```
+
+Expected: FAIL — `reference_doctype` does not exist.
+
+- [ ] **Step 3: Add the reference fields to Livestock Event**
+
+In `.../livestock_event/livestock_event.json`, add to `field_order` immediately after `remarks`:
+
+```
+  "reference_doctype",
+  "reference_name",
+```
+
+And these field objects:
+
+```json
+  {
+   "fieldname": "reference_doctype",
+   "fieldtype": "Link",
+   "label": "Reference DocType",
+   "no_copy": 1,
+   "options": "DocType",
+   "print_hide": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "reference_name",
+   "fieldtype": "Dynamic Link",
+   "label": "Reference Document",
+   "no_copy": 1,
+   "options": "reference_doctype",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  },
+```
+
+- [ ] **Step 4: Write the link module**
+
+Create `upande_livestock/livestock_event_link.py`:
+
+```python
+# Copyright (c) 2026, Upande and contributors
+# For license information, please see license.txt
+
+"""Keep a Livestock Event row in step with a health detail document.
+
+Livestock Event is the animal's timeline; Livestock Diagnosis and Livestock
+Health Case hold the clinical detail. Each detail document owns exactly one
+event, pointing back at it through reference_doctype / reference_name, so one
+list shows an animal's whole history without clinical fields leaking onto it.
+"""
+
+import frappe
+
+
+def _existing_event(doc):
+	return frappe.db.get_value(
+		"Livestock Event",
+		{"reference_doctype": doc.doctype, "reference_name": doc.name, "docstatus": ["<", 2]},
+		"name",
+	)
+
+
+def _event_date_of(doc):
+	for fieldname in ("diagnosis_date", "opened_date", "event_date"):
+		if doc.meta.has_field(fieldname) and doc.get(fieldname):
+			return doc.get(fieldname)
+	return frappe.utils.today()
+
+
+def sync_event_for(doc, event_type):
+	"""Create or update this document's Livestock Event. Returns the event name.
+
+	Idempotent — calling it twice for the same document updates the same event
+	rather than creating a second one.
+	"""
+	event_date = _event_date_of(doc)
+	operator = doc.get("operator") or doc.get("opened_by")
+
+	name = _existing_event(doc)
+	if name:
+		event = frappe.get_doc("Livestock Event", name)
+		event.db_set("event_date", event_date, update_modified=False)
+		return event.name
+
+	event = frappe.new_doc("Livestock Event")
+	event.animal = doc.animal
+	event.event_type = event_type
+	event.event_date = event_date
+	event.reference_doctype = doc.doctype
+	event.reference_name = doc.name
+	if operator:
+		event.operator = operator
+	if doc.meta.has_field("current_herd") and doc.get("current_herd"):
+		event.current_herd = doc.current_herd
+	event.remarks = f"Auto-created from {doc.doctype} {doc.name}"
+	event.flags.ignore_permissions = True
+	event.flags.ignore_mandatory = True
+	event.insert(ignore_permissions=True)
+	event.submit()
+	return event.name
+
+
+def cancel_event_for(doc):
+	"""Cancel this document's Livestock Event, if it has a live one."""
+	name = _existing_event(doc)
+	if not name:
+		return
+	event = frappe.get_doc("Livestock Event", name)
+	if event.docstatus == 1:
+		event.flags.ignore_permissions = True
+		event.cancel()
+```
+
+- [ ] **Step 5: Wire the two detail controllers**
+
+`.../livestock_diagnosis/livestock_diagnosis.py`:
+
+```python
+# Copyright (c) 2026, Upande and contributors
+# For license information, please see license.txt
+
+from frappe.model.document import Document
+
+from upande_livestock.livestock_event_link import cancel_event_for, sync_event_for
+
+
+class LivestockDiagnosis(Document):
+	def on_submit(self):
+		sync_event_for(self, "Check Up")
+
+	def on_cancel(self):
+		cancel_event_for(self)
+```
+
+`.../livestock_health_case/livestock_health_case.py`:
+
+```python
+# Copyright (c) 2026, Upande and contributors
+# For license information, please see license.txt
+
+from frappe.model.document import Document
+
+from upande_livestock.livestock_event_link import cancel_event_for, sync_event_for
+
+
+class LivestockHealthCase(Document):
+	def on_submit(self):
+		sync_event_for(self, "Health Case")
+
+	def on_cancel(self):
+		cancel_event_for(self)
+```
+
+- [ ] **Step 6: Add the Check-ups list to Health Case**
+
+In `.../livestock_health_case/livestock_health_case.json`, add `"links"` as a top-level key (replacing the existing `"links": []`):
+
+```json
+ "links": [
+  {
+   "group": "Health",
+   "link_doctype": "Livestock Diagnosis",
+   "link_fieldname": "related_case"
+  }
+ ],
+```
+
+This renders check-ups as a linked-documents section — deliberately not a child table, because a check-up legitimately exists standalone before it escalates into a case.
+
+- [ ] **Step 7: Apply the doctypes and run the tests**
+
+```bash
+cd /home/ubuntu/stive/code/frappe15
+bench --site kaitet.local console <<'EOF'
+import frappe
+from frappe.modules.import_file import import_file_by_path
+base = "apps/upande_livestock/upande_livestock/upande_livestock/doctype"
+for d in ("livestock_event", "livestock_health_case"):
+    import_file_by_path(f"{base}/{d}/{d}.json", force=True)
+frappe.db.commit()
+EOF
+bench --site kaitet.local run-tests --module upande_livestock.test_livestock_event_link
+```
+
+Expected: PASS (6 tests).
+
+- [ ] **Step 8: Commit**
+
+```bash
+cd /home/ubuntu/stive/code/frappe15/apps/upande_livestock
+git add -A
+git commit -m "feat(livestock): put check-ups and health cases on the event timeline
+
+Livestock Diagnosis and Livestock Health Case now each own exactly one
+Livestock Event (types Check Up and Health Case), linked back through
+reference_doctype / reference_name. One event list is therefore the
+animal's full history — feeding, milking, movement, check-ups, cases —
+while the ~45 clinical fields stay on their own doctypes.
+
+sync_event_for is idempotent, so amending a detail document updates its
+event instead of duplicating it, and cancelling the detail cancels the
+event.
+
+Health Case gains a linked-documents section listing its check-ups by
+related_case, rather than a child table, because a check-up can exist
+standalone before it escalates.
+
+Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
+```
+
+---
+
+*Tasks 8–13 continue below.*
