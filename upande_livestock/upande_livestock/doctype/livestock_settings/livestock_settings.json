@@ -14,6 +14,22 @@
   "column_break_birth",
   "min_service_age_months",
   "min_calving_age_months",
+  "breeding_section",
+  "post_calving_min_service_days",
+  "post_calving_optimal_service_days",
+  "post_abortion_min_service_days",
+  "gestation_period_days",
+  "column_break_breeding",
+  "pregnancy_check_days_after_service",
+  "heat_cycle_days",
+  "calving_alert_lead_days",
+  "diagnosis_section",
+  "diagnosis_earliest_days",
+  "diagnosis_latest_days",
+  "column_break_diagnosis",
+  "gestation_short_warning_days",
+  "gestation_long_warning_days",
+  "default_calf_herd",
   "husbandry_tab",
   "vaccination_section",
   "min_vaccination_interval_days",
@@ -86,6 +102,104 @@
    "fieldname": "min_calving_age_months",
    "fieldtype": "Int",
    "label": "Minimum Calving Age (Months)"
+  },
+  {
+   "fieldname": "breeding_section",
+   "fieldtype": "Section Break",
+   "label": "Breeding & Timing"
+  },
+  {
+   "default": "45",
+   "description": "Service is blocked before this many days after a Calving.",
+   "fieldname": "post_calving_min_service_days",
+   "fieldtype": "Int",
+   "label": "Minimum Days to Service After Calving"
+  },
+  {
+   "default": "60",
+   "description": "Service is allowed but warned about before this many days after a Calving. Also sets Ready For Service Date.",
+   "fieldname": "post_calving_optimal_service_days",
+   "fieldtype": "Int",
+   "label": "Optimal Days to Service After Calving"
+  },
+  {
+   "default": "30",
+   "description": "Service is blocked before this many days after an Abortion. Set to 0 to disable.",
+   "fieldname": "post_abortion_min_service_days",
+   "fieldtype": "Int",
+   "label": "Minimum Days to Service After Abortion"
+  },
+  {
+   "default": "280",
+   "description": "Expected Calving Date = service date + this.",
+   "fieldname": "gestation_period_days",
+   "fieldtype": "Int",
+   "label": "Gestation Period (days)"
+  },
+  {
+   "fieldname": "column_break_breeding",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "35",
+   "fieldname": "pregnancy_check_days_after_service",
+   "fieldtype": "Int",
+   "label": "Pregnancy Check Due (days after service)"
+  },
+  {
+   "default": "21",
+   "fieldname": "heat_cycle_days",
+   "fieldtype": "Int",
+   "label": "Heat Cycle Length (days)"
+  },
+  {
+   "default": "7",
+   "description": "How many days before the expected calving date the reminder fires.",
+   "fieldname": "calving_alert_lead_days",
+   "fieldtype": "Int",
+   "label": "Calving Alert Lead (days)"
+  },
+  {
+   "fieldname": "diagnosis_section",
+   "fieldtype": "Section Break",
+   "label": "Diagnosis & Gestation Warnings"
+  },
+  {
+   "default": "21",
+   "description": "Pregnancy diagnosis earlier than this warns about accuracy.",
+   "fieldname": "diagnosis_earliest_days",
+   "fieldtype": "Int",
+   "label": "Earliest Reliable Diagnosis (days after service)"
+  },
+  {
+   "default": "70",
+   "description": "Pregnancy diagnosis later than this warns as overdue.",
+   "fieldname": "diagnosis_latest_days",
+   "fieldtype": "Int",
+   "label": "Latest Expected Diagnosis (days after service)"
+  },
+  {
+   "fieldname": "column_break_diagnosis",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "260",
+   "fieldname": "gestation_short_warning_days",
+   "fieldtype": "Int",
+   "label": "Short Gestation Warning Below (days)"
+  },
+  {
+   "default": "300",
+   "fieldname": "gestation_long_warning_days",
+   "fieldtype": "Int",
+   "label": "Long Gestation Warning Above (days)"
+  },
+  {
+   "description": "Calves created by a Birth event go to this herd. If unset, the calf-rearing herd is resolved automatically.",
+   "fieldname": "default_calf_herd",
+   "fieldtype": "Link",
+   "label": "Default Calf Herd",
+   "options": "Herds"
   },
   {
    "fieldname": "husbandry_tab",
