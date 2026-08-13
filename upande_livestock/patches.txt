@@ -19,3 +19,9 @@ upande_livestock.patches.repair_zeroed_age_interval_settings
 # Animal ... no longer exists" and skipping every row instead of raising.
 upande_livestock.patches.backfill_calf_fields_from_animal
 upande_livestock.patches.backfill_animal_disabled
+# No ordering dependency on anything above: works directly off event_date/
+# service_date/diagnosis_date, none of which are touched by another patch.
+# Must run before LivestockEvent.validate()'s new mandatory event_date check
+# is exercised on these 2 rows' next save (it only binds on new documents, so
+# this is a data-quality fix, not a precondition for migrate to succeed).
+upande_livestock.patches.backfill_event_date_from_twin_field
