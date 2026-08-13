@@ -2445,4 +2445,1337 @@ Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
 
 ---
 
-*Tasks 8–13 continue below.*
+### Task 8: Birth creates the calf
+
+**Files:**
+- Create: `upande_livestock/api/animal.py`
+- Create: `upande_livestock/api/test_animal.py`
+- Modify: `.../doctype/livestock_event/livestock_event.json`
+- Modify: `.../doctype/livestock_event/livestock_event.py`
+- Modify: `upande_livestock/api/operations.py:376-415` (the calf-creation loop in `record_birth`)
+
+**Interfaces:**
+- Consumes: `default_calf_herd` setting from Task 5, `Livestock Event Type.creates_animal` from Task 2.
+- Produces:
+  - `upande_livestock.api.animal.resolve_calf_herd()` → `str | None`
+  - `upande_livestock.api.animal.create_calf(dam, tag_number, sex, event_date, birth_weight=None, burn_name=None, herd=None)` → `str` (the new Animal's name)
+  - `upande_livestock.api.animal.recompute_herd_count(herd)` → `None`
+  - Fields `Livestock Event.calf_tag_number`, `calf_sex`, `calf_burn_name`, `calf_birth_weight_kg`, `dam`, `is_stillborn`, `related_calving`
+
+**Critical:** `api/operations.py:326` `record_birth` **already** creates calf Animals and Birth events. If the controller also created Animals, every birth booked through the web or mobile form would create the calf twice. This task extracts the shared helper and points both paths at it.
+
+- [ ] **Step 1: Write the failing test**
+
+Create `upande_livestock/api/test_animal.py`:
+
+```python
+# Copyright (c) 2026, Upande and contributors
+# For license information, please see license.txt
+
+import frappe
+from frappe.tests import IntegrationTestCase
+
+from upande_livestock.api.animal import create_calf, recompute_herd_count, resolve_calf_herd
+
+
+def make_herd(name, **kwargs):
+	if frappe.db.exists("Herds", name):
+		return frappe.get_doc("Herds", name)
+	return frappe.get_doc({"doctype": "Herds", "herd_name": name, **kwargs}).insert()
+
+
+def make_dam(tag="TEST-DAM-1", herd=None):
+	if frappe.db.exists("Animal", tag):
+		return frappe.get_doc("Animal", tag)
+	return frappe.get_doc(
+		{
+			"doctype": "Animal",
+			"tag_number": tag,
+			"burn_name": tag,
+			"sex": "Female",
+			"status": "Active",
+			"breed": frappe.db.get_value("Breed", {}, "name"),
+			"current_herd": herd,
+		}
+	).insert()
+
+
+class TestResolveCalfHerd(IntegrationTestCase):
+	def setUp(self):
+		frappe.db.set_single_value("Livestock Settings", "default_calf_herd", None)
+		frappe.clear_cache()
+
+	def tearDown(self):
+		frappe.db.set_single_value("Livestock Settings", "default_calf_herd", None)
+		frappe.clear_cache()
+
+	def test_explicit_setting_wins(self):
+		herd = make_herd("TEST-CALF-EXPLICIT", min_age=0, max_age=1)
+		frappe.db.set_single_value("Livestock Settings", "default_calf_herd", herd.name)
+		frappe.clear_cache()
+		self.assertEqual(resolve_calf_herd(), herd.name)
+
+	def test_falls_back_to_the_calf_rearing_flag(self):
+		herd = make_herd("TEST-CALF-REARING", min_age=0, max_age=1, custom_is_calf_rearing=1)
+		self.assertEqual(resolve_calf_herd(), herd.name)
+
+
+class TestCreateCalf(IntegrationTestCase):
+	def setUp(self):
+		self.herd = make_herd("TEST-CALF-HERD", min_age=0, max_age=1, custom_is_calf_rearing=1)
+		self.dam = make_dam("TEST-DAM-1", herd=self.herd.name)
+		for tag in ("TEST-CALF-A", "TEST-CALF-B"):
+			if frappe.db.exists("Animal", tag):
+				frappe.delete_doc("Animal", tag, force=True, ignore_permissions=True)
+
+	def test_creates_the_animal_in_the_resolved_calf_herd(self):
+		name = create_calf(self.dam.name, "TEST-CALF-A", "Female", "2026-05-01")
+		calf = frappe.get_doc("Animal", name)
+		self.assertEqual(calf.current_herd, self.herd.name)
+		self.assertEqual(calf.sex, "Female")
+		self.assertEqual(calf.dam, self.dam.name)
+		self.assertEqual(calf.origin, "Born on Farm")
+		self.assertEqual(calf.status, "Active")
+		self.assertEqual(calf.repro_status, "Calf")
+		self.assertEqual(str(calf.date_of_birth), "2026-05-01")
+		self.assertEqual(str(calf.acquisition_date), "2026-05-01")
+
+	def test_inherits_the_dam_breed(self):
+		name = create_calf(self.dam.name, "TEST-CALF-B", "Male", "2026-05-02")
+		self.assertEqual(frappe.db.get_value("Animal", name, "breed"), self.dam.breed)
+
+	def test_duplicate_tag_throws(self):
+		create_calf(self.dam.name, "TEST-CALF-A", "Female", "2026-05-01")
+		with self.assertRaises(frappe.exceptions.ValidationError):
+			create_calf(self.dam.name, "TEST-CALF-A", "Female", "2026-05-03")
+
+	def test_explicit_herd_overrides_resolution(self):
+		other = make_herd("TEST-OTHER-HERD", min_age=2, max_age=5)
+		name = create_calf(self.dam.name, "TEST-CALF-B", "Female", "2026-05-04", herd=other.name)
+		self.assertEqual(frappe.db.get_value("Animal", name, "current_herd"), other.name)
+
+	def test_recompute_herd_count_matches_reality(self):
+		create_calf(self.dam.name, "TEST-CALF-A", "Female", "2026-05-01")
+		recompute_herd_count(self.herd.name)
+		expected = frappe.db.count("Animal", {"current_herd": self.herd.name, "docstatus": ["!=", 2]})
+		self.assertEqual(frappe.db.get_value("Herds", self.herd.name, "number_of_animals"), expected)
+```
+
+- [ ] **Step 2: Run it to verify it fails**
+
+```bash
+cd /home/ubuntu/stive/code/frappe15
+bench --site kaitet.local run-tests --module upande_livestock.api.test_animal
+```
+
+Expected: FAIL — `ModuleNotFoundError: No module named 'upande_livestock.api.animal'`.
+
+- [ ] **Step 3: Write the shared animal module**
+
+Create `upande_livestock/api/animal.py`:
+
+```python
+# Copyright (c) 2026, Upande and contributors
+# For license information, please see license.txt
+
+"""Shared Animal helpers used by more than one entry path.
+
+Calf creation lives here rather than in the Livestock Event controller because
+api/operations.py:record_birth already owns the multi-calf loop for the web and
+mobile forms. If both created Animals independently, a birth booked through the
+form would create the calf twice.
+"""
+
+import frappe
+from frappe import _
+from frappe.utils import flt
+
+
+def resolve_calf_herd():
+	"""The herd a newborn calf belongs in, or None if nothing resolves.
+
+	Order: the explicit setting, then the calf-rearing flag, then the age bracket
+	configured in settings, then the Youngstock < 12m category, then the herd with
+	the lowest min_age.
+	"""
+	explicit = frappe.db.get_single_value("Livestock Settings", "default_calf_herd")
+	if explicit and frappe.db.exists("Herds", explicit):
+		return explicit
+
+	flagged = frappe.db.get_value("Herds", {"custom_is_calf_rearing": 1}, "name")
+	if flagged:
+		return flagged
+
+	min_age = frappe.db.get_single_value("Livestock Settings", "default_calf_herd_min_age")
+	max_age = frappe.db.get_single_value("Livestock Settings", "default_calf_herd_max_age")
+	if min_age is not None and max_age is not None:
+		bracketed = frappe.db.get_value(
+			"Herds", {"min_age": flt(min_age), "max_age": flt(max_age)}, "name"
+		)
+		if bracketed:
+			return bracketed
+
+	categorised = frappe.db.get_value("Herds", {"custom_herd_category": "Youngstock < 12m"}, "name")
+	if categorised:
+		return categorised
+
+	youngest = frappe.get_all("Herds", fields=["name"], order_by="min_age asc", limit=1)
+	return youngest[0].name if youngest else None
+
+
+def recompute_herd_count(herd):
+	"""Set Herds.number_of_animals to the actual count. Matches herd_movement_processor."""
+	if not herd:
+		return
+	count = frappe.db.count("Animal", {"current_herd": herd, "docstatus": ["!=", 2]})
+	frappe.db.set_value("Herds", herd, "number_of_animals", count)
+
+
+def create_calf(dam, tag_number, sex, event_date, birth_weight=None, burn_name=None, herd=None):
+	"""Insert a newborn Animal and return its name.
+
+	Throws on a duplicate tag before writing anything, so a mistyped tag cannot
+	half-create a birth.
+	"""
+	tag = (tag_number or "").strip()
+	if not tag:
+		frappe.throw(_("Calf tag number is required."))
+	if frappe.db.exists("Animal", tag):
+		frappe.throw(_("Animal {0} already exists — pick a different calf tag.").format(tag))
+	if sex not in ("Female", "Male"):
+		frappe.throw(_("Calf sex must be Female or Male."))
+
+	dam_doc = frappe.get_doc("Animal", dam)
+	target_herd = herd or resolve_calf_herd()
+	if not target_herd:
+		frappe.throw(
+			_("No calf herd could be resolved. Set Default Calf Herd in Livestock Settings.")
+		)
+
+	calf = frappe.new_doc("Animal")
+	calf.tag_number = tag
+	calf.burn_name = burn_name or tag
+	calf.sex = sex
+	calf.date_of_birth = event_date
+	calf.acquisition_date = event_date
+	calf.current_herd = target_herd
+	calf.company = dam_doc.company or frappe.db.get_single_value(
+		"Livestock Settings", "custom_default_company"
+	)
+	calf.dam = dam
+	calf.birth_weight_kg = flt(birth_weight)
+	calf.origin = "Born on Farm"
+	calf.status = "Active"
+	calf.repro_status = "Calf"
+	if dam_doc.breed:
+		calf.breed = dam_doc.breed
+	if dam_doc.species:
+		calf.species = dam_doc.species
+	calf.insert(ignore_permissions=True)
+
+	recompute_herd_count(target_herd)
+	return calf.name
+```
+
+- [ ] **Step 4: Run the test to verify it passes**
+
+```bash
+cd /home/ubuntu/stive/code/frappe15
+bench --site kaitet.local run-tests --module upande_livestock.api.test_animal
+```
+
+Expected: PASS (7 tests).
+
+- [ ] **Step 5: Add the calf fields to Livestock Event**
+
+In `.../livestock_event/livestock_event.json`, rename the `tab_calving` label to `"Calving & Birth"` and add to `field_order`, immediately after `custom_related_pregnancy`:
+
+```
+  "sb_calf",
+  "calf_tag_number",
+  "calf_sex",
+  "is_stillborn",
+  "cb_calf",
+  "calf_burn_name",
+  "calf_birth_weight_kg",
+  "dam",
+  "related_calving",
+```
+
+And these field objects:
+
+```json
+  {
+   "depends_on": "eval:doc.event_type == \"Birth\"",
+   "fieldname": "sb_calf",
+   "fieldtype": "Section Break",
+   "label": "Calf"
+  },
+  {
+   "description": "Farms tag calves physically, so tags are never auto-generated.",
+   "fieldname": "calf_tag_number",
+   "fieldtype": "Data",
+   "label": "Calf Tag / Book Number",
+   "mandatory_depends_on": "eval:doc.event_type == \"Birth\" && !doc.is_stillborn"
+  },
+  {
+   "fieldname": "calf_sex",
+   "fieldtype": "Select",
+   "label": "Calf Sex",
+   "mandatory_depends_on": "eval:doc.event_type == \"Birth\" && !doc.is_stillborn",
+   "options": "\nFemale\nMale"
+  },
+  {
+   "default": "0",
+   "description": "A stillborn calf is recorded but no Animal is created.",
+   "fieldname": "is_stillborn",
+   "fieldtype": "Check",
+   "label": "Stillborn"
+  },
+  {
+   "fieldname": "cb_calf",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "calf_burn_name",
+   "fieldtype": "Data",
+   "label": "Calf Burn Name (Display)"
+  },
+  {
+   "fieldname": "calf_birth_weight_kg",
+   "fieldtype": "Float",
+   "label": "Birth Weight (kg)"
+  },
+  {
+   "fieldname": "dam",
+   "fieldtype": "Link",
+   "label": "Dam (Mother)",
+   "options": "Animal"
+  },
+  {
+   "fieldname": "related_calving",
+   "fieldtype": "Link",
+   "label": "Related Calving",
+   "options": "Livestock Event"
+  },
+```
+
+Note the existing `custom_calf_sex` field on the Calving tab is the **dam's** record of the calf's sex and stays as it is. `calf_sex` here is the Birth event's own field.
+
+- [ ] **Step 6: Wire the controller**
+
+In `.../livestock_event/livestock_event.py`, add the import:
+
+```python
+from upande_livestock.api.animal import create_calf
+```
+
+Add this helper method and hook it into `before_insert`. Put the method just below `autoname`:
+
+```python
+	def _type_creates_animal(self):
+		if not self.event_type:
+			return False
+		return bool(
+			frappe.db.get_value("Livestock Event Type", self.event_type, "creates_animal")
+		)
+
+	def create_calf_if_needed(self):
+		"""For a Birth event with no animal yet, create the calf and point at it.
+
+		api/operations.py:record_birth creates the Animal itself and passes `animal`
+		in, so this is a no-op on that path — which is what stops a form-booked birth
+		creating the calf twice.
+		"""
+		if not self._type_creates_animal():
+			return
+		if self.animal:
+			return
+		if self.is_stillborn:
+			return
+		if not self.dam:
+			frappe.throw(_("Select the dam for a Birth event."))
+
+		self.animal = create_calf(
+			dam=self.dam,
+			tag_number=self.calf_tag_number,
+			sex=self.calf_sex,
+			event_date=self.event_date,
+			birth_weight=self.calf_birth_weight_kg,
+			burn_name=self.calf_burn_name,
+		)
+```
+
+At the **top** of the existing `before_insert`, before the `frappe.get_doc("Animal", self.animal)` line, add:
+
+```python
+		self.create_calf_if_needed()
+```
+
+`animal` is `reqd` on the doctype, and a stillborn Birth event has no calf to point at. Make `animal` non-mandatory for stillbirths by changing its field object in the JSON from `"reqd": 1` to:
+
+```json
+   "mandatory_depends_on": "eval:!doc.is_stillborn",
+```
+
+(remove the `"reqd": 1` key).
+
+- [ ] **Step 7: Point `record_birth` at the shared helper**
+
+In `upande_livestock/api/operations.py`, inside `record_birth`, replace the inline Animal creation (originally lines 376–402, from `animal = frappe.new_doc("Animal")` through `animal.insert()`) with:
+
+```python
+				animal_name = create_calf(
+					dam=dam_name,
+					tag_number=calf_id,
+					sex=sex,
+					event_date=event_date,
+					birth_weight=weight,
+					burn_name=calf_id,
+					herd=calf.get("herd") or None,
+				)
+```
+
+Then change the Birth event block that follows to reference `animal_name` and link the calving:
+
+```python
+				birth = frappe.new_doc("Livestock Event")
+				birth.animal = animal_name
+				birth.event_type = "Birth"
+				birth.event_date = event_date
+				birth.current_herd = frappe.db.get_value("Animal", animal_name, "current_herd")
+				birth.dam = dam_name
+				birth.related_calving = calving.name
+				birth.calf_tag_number = calf_id
+				birth.calf_sex = sex
+				birth.calf_birth_weight_kg = weight
+				birth.sire = sire
+				birth.operator = operator
+				birth.remarks = "Dam: {0}. Birth weight: {1} kg".format(
+					dam.tag_number or dam.burn_name, weight
+				)
+				birth.insert()
+				birth.submit()
+				created.append({"animal": animal_name, "tag": calf_id, "sex": sex})
+```
+
+Add the import at the top of `api/operations.py`:
+
+```python
+from upande_livestock.api.animal import create_calf
+```
+
+Note `create_calf` now resolves the calf herd when `calf.get("herd")` is empty, replacing the old `dam.current_herd` fallback — calves no longer land in the milking herd.
+
+- [ ] **Step 8: Write the Birth event test**
+
+Append to `.../doctype/livestock_event/test_livestock_event.py`:
+
+```python
+class TestLivestockEventBirth(IntegrationTestCase):
+	def setUp(self):
+		ensure_livestock_event_types()
+		if not frappe.db.exists("Herds", "TEST-BIRTH-CALVES"):
+			frappe.get_doc(
+				{
+					"doctype": "Herds",
+					"herd_name": "TEST-BIRTH-CALVES",
+					"min_age": 0,
+					"max_age": 1,
+					"custom_is_calf_rearing": 1,
+				}
+			).insert()
+		self.dam = make_animal("TEST-BIRTH-DAM").name
+		self.operator = frappe.db.get_value("Employee", {}, "name")
+		for tag in ("TEST-BIRTH-CALF-1", "TEST-BIRTH-CALF-2"):
+			if frappe.db.exists("Animal", tag):
+				frappe.delete_doc("Animal", tag, force=True, ignore_permissions=True)
+
+	def _birth(self, tag, sex="Female", **kwargs):
+		doc = frappe.get_doc(
+			{
+				"doctype": "Livestock Event",
+				"event_type": "Birth",
+				"event_date": "2026-06-01",
+				"operator": self.operator,
+				"dam": self.dam,
+				"calf_tag_number": tag,
+				"calf_sex": sex,
+				**kwargs,
+			}
+		)
+		doc.insert()
+		return doc
+
+	def test_birth_creates_the_calf_in_the_calf_herd(self):
+		event = self._birth("TEST-BIRTH-CALF-1")
+		self.assertEqual(event.animal, "TEST-BIRTH-CALF-1")
+		calf = frappe.get_doc("Animal", event.animal)
+		self.assertEqual(calf.current_herd, "TEST-BIRTH-CALVES")
+		self.assertEqual(calf.dam, self.dam)
+		self.assertEqual(calf.repro_status, "Calf")
+
+	def test_birth_bumps_the_herd_count(self):
+		self._birth("TEST-BIRTH-CALF-1")
+		expected = frappe.db.count(
+			"Animal", {"current_herd": "TEST-BIRTH-CALVES", "docstatus": ["!=", 2]}
+		)
+		self.assertEqual(
+			frappe.db.get_value("Herds", "TEST-BIRTH-CALVES", "number_of_animals"), expected
+		)
+
+	def test_duplicate_calf_tag_throws(self):
+		self._birth("TEST-BIRTH-CALF-1")
+		with self.assertRaises(frappe.exceptions.ValidationError):
+			self._birth("TEST-BIRTH-CALF-1")
+
+	def test_stillborn_birth_creates_no_animal(self):
+		before = frappe.db.count("Animal")
+		doc = frappe.get_doc(
+			{
+				"doctype": "Livestock Event",
+				"event_type": "Birth",
+				"event_date": "2026-06-02",
+				"operator": self.operator,
+				"dam": self.dam,
+				"is_stillborn": 1,
+			}
+		)
+		doc.insert()
+		self.assertFalse(doc.animal)
+		self.assertEqual(frappe.db.count("Animal"), before)
+
+	def test_resubmitting_does_not_double_create(self):
+		event = self._birth("TEST-BIRTH-CALF-1")
+		event.submit()
+		event.reload()
+		self.assertEqual(frappe.db.count("Animal", {"tag_number": "TEST-BIRTH-CALF-1"}), 1)
+```
+
+- [ ] **Step 9: Apply and run**
+
+```bash
+cd /home/ubuntu/stive/code/frappe15
+bench --site kaitet.local console <<'EOF'
+import frappe
+from frappe.modules.import_file import import_file_by_path
+import_file_by_path(
+    "apps/upande_livestock/upande_livestock/upande_livestock/doctype/"
+    "livestock_event/livestock_event.json",
+    force=True,
+)
+frappe.db.commit()
+EOF
+bench --site kaitet.local run-tests --module upande_livestock.upande_livestock.doctype.livestock_event.test_livestock_event
+bench --site kaitet.local run-tests --module upande_livestock.api.test_animal
+```
+
+Expected: PASS (17 tests, then 7 tests).
+
+- [ ] **Step 10: Commit**
+
+```bash
+cd /home/ubuntu/stive/code/frappe15/apps/upande_livestock
+git add -A
+git commit -m "feat(livestock): Birth events create the calf in the calf herd
+
+Extracts calf creation into api/animal.create_calf() and points both the
+Livestock Event controller and api/operations.record_birth at it.
+record_birth already created calf Animals, so without this both paths
+would create the calf twice for any birth booked from the web or mobile
+form.
+
+The calf herd now resolves properly — explicit setting, then the
+calf-rearing flag, then the configured age bracket, then the Youngstock
+< 12m category, then the lowest min_age — instead of record_birth's old
+fallback to the dam's own (usually milking) herd. Throws with a message
+naming the setting if nothing resolves, rather than creating a herdless
+animal.
+
+A duplicate tag throws before anything is written, a stillborn Birth
+creates no Animal, and an already-linked event short-circuits so
+amending cannot double-create.
+
+Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
+```
+
+---
+
+### Task 9: Twins and triplets
+
+**Files:**
+- Modify: `.../doctype/livestock_event/livestock_event.json`
+- Modify: `.../doctype/livestock_event/livestock_event.py`
+- Modify: `.../doctype/livestock_event/livestock_event.js`
+- Modify: `upande_livestock/api/operations.py`
+- Test: `.../doctype/livestock_event/test_livestock_event.py`
+
+**Interfaces:**
+- Consumes: `create_calf` from Task 8, `related_calving` field from Task 8.
+- Produces:
+  - `Livestock Event.births_recorded` (Int, read-only)
+  - `upande_livestock.api.operations.record_calf_births(payload)` — whitelisted. `payload` is a dict with keys `calving` (str) and `calves` (list of dicts with `tag`, `sex`, `burn_name`, `birth_weight`, `is_stillborn`). Returns `{"ok": True, "created": [...], "births_recorded": int}`.
+
+- [ ] **Step 1: Write the failing test**
+
+Append to `.../doctype/livestock_event/test_livestock_event.py`:
+
+```python
+class TestLivestockEventMultipleBirths(IntegrationTestCase):
+	def setUp(self):
+		ensure_livestock_event_types()
+		if not frappe.db.exists("Herds", "TEST-BIRTH-CALVES"):
+			frappe.get_doc(
+				{
+					"doctype": "Herds",
+					"herd_name": "TEST-BIRTH-CALVES",
+					"min_age": 0,
+					"max_age": 1,
+					"custom_is_calf_rearing": 1,
+				}
+			).insert()
+		self.dam = make_animal("TEST-TRIPLET-DAM").name
+		self.operator = frappe.db.get_value("Employee", {}, "name")
+		for n in (1, 2, 3):
+			tag = f"TEST-TRIPLET-{n}"
+			if frappe.db.exists("Animal", tag):
+				frappe.delete_doc("Animal", tag, force=True, ignore_permissions=True)
+
+	def _calving(self, no_of_calves):
+		doc = frappe.get_doc(
+			{
+				"doctype": "Livestock Event",
+				"animal": self.dam,
+				"event_type": "Calving",
+				"event_date": "2026-07-01",
+				"operator": self.operator,
+				"custom_calving_outcome": "Live Birth",
+				"custom_no_of_calves": no_of_calves,
+			}
+		)
+		doc.flags.ignore_validate = True
+		doc.insert()
+		doc.submit()
+		return doc
+
+	def test_births_recorded_counts_linked_births(self):
+		from upande_livestock.api.operations import record_calf_births
+
+		calving = self._calving(3)
+		record_calf_births(
+			{
+				"calving": calving.name,
+				"calves": [
+					{"tag": "TEST-TRIPLET-1", "sex": "Female"},
+					{"tag": "TEST-TRIPLET-2", "sex": "Female"},
+					{"tag": "TEST-TRIPLET-3", "sex": "Male"},
+				],
+			}
+		)
+		calving.reload()
+		self.assertEqual(calving.births_recorded, 3)
+
+	def test_three_births_create_three_animals(self):
+		from upande_livestock.api.operations import record_calf_births
+
+		calving = self._calving(3)
+		record_calf_births(
+			{
+				"calving": calving.name,
+				"calves": [
+					{"tag": "TEST-TRIPLET-1", "sex": "Female"},
+					{"tag": "TEST-TRIPLET-2", "sex": "Female"},
+					{"tag": "TEST-TRIPLET-3", "sex": "Male"},
+				],
+			}
+		)
+		for n in (1, 2, 3):
+			self.assertTrue(frappe.db.exists("Animal", f"TEST-TRIPLET-{n}"))
+
+	def test_parity_increments_once_per_calving_not_per_birth(self):
+		from upande_livestock.api.operations import record_calf_births
+
+		before = frappe.db.get_value("Animal", self.dam, "parity") or 0
+		calving = self._calving(3)
+		record_calf_births(
+			{
+				"calving": calving.name,
+				"calves": [
+					{"tag": "TEST-TRIPLET-1", "sex": "Female"},
+					{"tag": "TEST-TRIPLET-2", "sex": "Female"},
+					{"tag": "TEST-TRIPLET-3", "sex": "Male"},
+				],
+			}
+		)
+		after = frappe.db.get_value("Animal", self.dam, "parity") or 0
+		self.assertEqual(after - before, 1)
+
+	def test_stillborn_row_records_a_birth_without_an_animal(self):
+		from upande_livestock.api.operations import record_calf_births
+
+		calving = self._calving(2)
+		result = record_calf_births(
+			{
+				"calving": calving.name,
+				"calves": [
+					{"tag": "TEST-TRIPLET-1", "sex": "Female"},
+					{"is_stillborn": 1},
+				],
+			}
+		)
+		calving.reload()
+		self.assertEqual(calving.births_recorded, 2)
+		self.assertEqual(len(result["created"]), 1)
+
+	def test_count_mismatch_warns_but_does_not_block(self):
+		from upande_livestock.api.operations import record_calf_births
+
+		calving = self._calving(3)
+		record_calf_births(
+			{"calving": calving.name, "calves": [{"tag": "TEST-TRIPLET-1", "sex": "Female"}]}
+		)
+		calving.reload()
+		self.assertEqual(calving.births_recorded, 1)
+		self.assertEqual(calving.custom_no_of_calves, 3)
+```
+
+- [ ] **Step 2: Run it to verify it fails**
+
+```bash
+cd /home/ubuntu/stive/code/frappe15
+bench --site kaitet.local run-tests --module upande_livestock.upande_livestock.doctype.livestock_event.test_livestock_event
+```
+
+Expected: FAIL — `ImportError: cannot import name 'record_calf_births'`.
+
+- [ ] **Step 3: Add births_recorded**
+
+In `.../livestock_event/livestock_event.json`, add `"births_recorded"` to `field_order` immediately after `custom_no_of_calves`, and this field object:
+
+```json
+  {
+   "default": "0",
+   "description": "Birth events linked to this calving.",
+   "fieldname": "births_recorded",
+   "fieldtype": "Int",
+   "label": "Births Recorded",
+   "no_copy": 1,
+   "read_only": 1
+  },
+```
+
+- [ ] **Step 4: Keep the count in step and warn on a mismatch**
+
+In `.../livestock_event/livestock_event.py`, add these two methods to `LivestockEvent`:
+
+```python
+	def refresh_calving_birth_count(self):
+		"""Recount the Birth events linked to this event's related calving."""
+		if not self.related_calving:
+			return
+		count = frappe.db.count(
+			"Livestock Event",
+			{"related_calving": self.related_calving, "event_type": "Birth", "docstatus": 1},
+		)
+		frappe.db.set_value(
+			"Livestock Event", self.related_calving, "births_recorded", count, update_modified=False
+		)
+
+	def warn_on_birth_count_mismatch(self):
+		"""Warn, never block, when births recorded do not match the expected count.
+
+		Farms legitimately record calves the next morning. Blocking submission would
+		push staff to falsify custom_no_of_calves instead.
+		"""
+		if self.event_type != "Calving":
+			return
+		expected = self.custom_no_of_calves or 0
+		recorded = self.births_recorded or 0
+		if expected and recorded and expected != recorded:
+			frappe.msgprint(
+				_("This calving expects {0} calves but {1} Birth events are recorded.").format(
+					expected, recorded
+				),
+				alert=True,
+				indicator="orange",
+			)
+```
+
+Call them from the existing hooks — append to `on_submit`:
+
+```python
+		self.refresh_calving_birth_count()
+		self.warn_on_birth_count_mismatch()
+```
+
+And add an `on_cancel` method (the doctype has none today):
+
+```python
+	def on_cancel(self):
+		self.refresh_calving_birth_count()
+```
+
+- [ ] **Step 5: Add the whitelisted multi-calf endpoint**
+
+Append to `upande_livestock/api/operations.py`:
+
+```python
+@frappe.whitelist()
+def record_calf_births(payload):
+	"""Create one Birth event per calf for an existing Calving event.
+
+	A dam bearing triplets gets one Calving event and three Birth events. Stillborn
+	rows are recorded as Birth events that create no Animal, so the calving's count
+	stays honest without inflating herd numbers.
+	"""
+
+	def go():
+		_guard("Livestock Event")
+		_guard("Animal")
+		d = _ok(payload)
+		calving_name = d.get("calving")
+		if not calving_name:
+			frappe.throw(_("Select the calving event."))
+		calves = d.get("calves") or []
+		if not isinstance(calves, list) or not calves:
+			frappe.throw(_("Add at least one calf."))
+
+		calving = frappe.get_doc("Livestock Event", calving_name)
+		if calving.event_type != "Calving":
+			frappe.throw(_("{0} is not a Calving event.").format(calving_name))
+
+		dam_name = calving.animal
+		dam = frappe.get_doc("Animal", dam_name)
+		created = []
+
+		for calf in calves:
+			stillborn = bool(calf.get("is_stillborn"))
+			birth = frappe.new_doc("Livestock Event")
+			birth.event_type = "Birth"
+			birth.event_date = calving.event_date
+			birth.operator = calving.operator
+			birth.dam = dam_name
+			birth.related_calving = calving.name
+			birth.sire = calving.sire
+			birth.is_stillborn = 1 if stillborn else 0
+
+			if stillborn:
+				birth.remarks = "Stillborn. Dam: {0}".format(dam.tag_number or dam.burn_name)
+			else:
+				birth.calf_tag_number = (calf.get("tag") or "").strip().upper()
+				birth.calf_sex = calf.get("sex") if calf.get("sex") in ("Female", "Male") else "Female"
+				birth.calf_burn_name = calf.get("burn_name") or birth.calf_tag_number
+				birth.calf_birth_weight_kg = flt(calf.get("birth_weight"))
+				birth.remarks = "Dam: {0}".format(dam.tag_number or dam.burn_name)
+
+			birth.insert()
+			birth.submit()
+			if not stillborn:
+				created.append({"animal": birth.animal, "tag": birth.calf_tag_number})
+
+		calving.reload()
+		return {"ok": True, "created": created, "births_recorded": calving.births_recorded}
+
+	return _run(go, "livestock record_calf_births failed")
+```
+
+The controller's `create_calf_if_needed` creates each Animal, so this endpoint never touches `frappe.new_doc("Animal")` directly.
+
+- [ ] **Step 6: Add the Record Births button**
+
+Replace `.../livestock_event/livestock_event.js` with:
+
+```javascript
+// Copyright (c) 2026, Upande and contributors
+// For license information, please see license.txt
+
+frappe.ui.form.on("Livestock Event", {
+	setup(frm) {
+		frm.set_query("event_type", () => ({ filters: { is_active: 1 } }));
+	},
+
+	refresh(frm) {
+		const can_record =
+			frm.doc.docstatus === 1 &&
+			frm.doc.event_type === "Calving" &&
+			["Live Birth", "Still Birth"].includes(frm.doc.custom_calving_outcome);
+		if (!can_record) return;
+
+		frm.add_custom_button(__("Record Births"), () => open_births_dialog(frm));
+	},
+});
+
+function open_births_dialog(frm) {
+	const expected = frm.doc.custom_no_of_calves || 1;
+	const dialog = new frappe.ui.Dialog({
+		title: __("Record Births"),
+		size: "large",
+		fields: [
+			{
+				fieldname: "calves",
+				fieldtype: "Table",
+				label: __("Calves"),
+				cannot_add_rows: false,
+				in_place_edit: true,
+				data: Array.from({ length: expected }, () => ({ sex: "Female" })),
+				get_data: () => dialog.calves_data,
+				fields: [
+					{
+						fieldname: "tag",
+						fieldtype: "Data",
+						label: __("Tag Number"),
+						in_list_view: 1,
+						columns: 3,
+					},
+					{
+						fieldname: "sex",
+						fieldtype: "Select",
+						label: __("Sex"),
+						options: "Female\nMale",
+						default: "Female",
+						in_list_view: 1,
+						columns: 2,
+					},
+					{
+						fieldname: "burn_name",
+						fieldtype: "Data",
+						label: __("Burn Name"),
+						in_list_view: 1,
+						columns: 2,
+					},
+					{
+						fieldname: "birth_weight",
+						fieldtype: "Float",
+						label: __("Weight (kg)"),
+						in_list_view: 1,
+						columns: 2,
+					},
+					{
+						fieldname: "is_stillborn",
+						fieldtype: "Check",
+						label: __("Stillborn"),
+						in_list_view: 1,
+						columns: 1,
+					},
+				],
+			},
+		],
+		primary_action_label: __("Create Birth Events"),
+		primary_action(values) {
+			frappe.call({
+				method: "upande_livestock.api.operations.record_calf_births",
+				args: { payload: { calving: frm.doc.name, calves: values.calves || [] } },
+				freeze: true,
+				freeze_message: __("Recording births..."),
+				callback(r) {
+					if (!r.message || !r.message.ok) return;
+					frappe.show_alert({
+						message: __("{0} birth(s) recorded", [r.message.births_recorded]),
+						indicator: "green",
+					});
+					dialog.hide();
+					frm.reload_doc();
+				},
+			});
+		},
+	});
+	dialog.show();
+}
+```
+
+- [ ] **Step 7: Apply and run the tests**
+
+```bash
+cd /home/ubuntu/stive/code/frappe15
+bench --site kaitet.local console <<'EOF'
+import frappe
+from frappe.modules.import_file import import_file_by_path
+import_file_by_path(
+    "apps/upande_livestock/upande_livestock/upande_livestock/doctype/"
+    "livestock_event/livestock_event.json",
+    force=True,
+)
+frappe.db.commit()
+EOF
+bench --site kaitet.local run-tests --module upande_livestock.upande_livestock.doctype.livestock_event.test_livestock_event
+bench --site kaitet.local build --app upande_livestock
+```
+
+Expected: PASS (22 tests), then a successful asset build.
+
+- [ ] **Step 8: Commit**
+
+```bash
+cd /home/ubuntu/stive/code/frappe15/apps/upande_livestock
+git add -A
+git commit -m "feat(livestock): record twins and triplets as one calving plus N births
+
+A dam bearing three calves now produces one Calving event and three
+Birth events, created together from a Record Births dialog with one row
+per expected calf — three form-fills, not three full forms.
+
+Calving carries a read-only births_recorded, refreshed on every linked
+Birth submit and cancel, and warns rather than throws when it disagrees
+with custom_no_of_calves: farms legitimately record calves the next
+morning, and blocking submission would push staff to falsify the count.
+
+Stillborn rows are recorded as Birth events that create no Animal, so
+the calving count stays honest without inflating herd numbers. Parity
+increments once per calving, never per birth.
+
+Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
+```
+
+---
+
+### Task 10: Abortion as its own event type
+
+**Files:**
+- Modify: `.../doctype/livestock_event/livestock_event.json`
+- Modify: `.../doctype/livestock_event/livestock_event.py`
+- Test: `.../doctype/livestock_event/test_livestock_event.py`
+
+**Interfaces:**
+- Consumes: `Abortion` event type from Task 2, `get_timing` from Task 5.
+- Produces: fields `Livestock Event.abortion_cause`, `abortion_notes`, `gestation_days_at_loss`.
+
+- [ ] **Step 1: Write the failing test**
+
+Append to `.../doctype/livestock_event/test_livestock_event.py`:
+
+```python
+class TestLivestockEventAbortion(IntegrationTestCase):
+	def setUp(self):
+		ensure_livestock_event_types()
+		self.animal = make_animal("TEST-ABORT-1").name
+		self.operator = frappe.db.get_value("Employee", {}, "name")
+		frappe.db.set_single_value("Livestock Settings", "post_abortion_min_service_days", None)
+		frappe.clear_cache()
+
+	def tearDown(self):
+		frappe.db.set_single_value("Livestock Settings", "post_abortion_min_service_days", None)
+		frappe.clear_cache()
+
+	def _service(self, service_date):
+		doc = frappe.get_doc(
+			{
+				"doctype": "Livestock Event",
+				"animal": self.animal,
+				"event_type": "Service",
+				"event_date": service_date,
+				"service_date": service_date,
+				"operator": self.operator,
+			}
+		)
+		doc.flags.ignore_validate = True
+		doc.insert()
+		doc.submit()
+		return doc
+
+	def _abortion(self, event_date, related_pregnancy=None, **kwargs):
+		doc = frappe.get_doc(
+			{
+				"doctype": "Livestock Event",
+				"animal": self.animal,
+				"event_type": "Abortion",
+				"event_date": event_date,
+				"operator": self.operator,
+				"custom_related_pregnancy": related_pregnancy,
+				"abortion_cause": "Unknown",
+				**kwargs,
+			}
+		)
+		doc.insert()
+		doc.submit()
+		return doc
+
+	def test_abortion_is_a_seeded_event_type_that_creates_no_animal(self):
+		self.assertTrue(frappe.db.exists("Livestock Event Type", "Abortion"))
+		self.assertFalse(frappe.db.get_value("Livestock Event Type", "Abortion", "creates_animal"))
+
+	def test_abortion_removed_from_calving_outcome_options(self):
+		field = frappe.get_meta("Livestock Event").get_field("custom_calving_outcome")
+		self.assertNotIn("Abortion", (field.options or "").split("\n"))
+
+	def test_abortion_creates_no_animal(self):
+		before = frappe.db.count("Animal")
+		self._abortion("2026-08-01")
+		self.assertEqual(frappe.db.count("Animal"), before)
+
+	def test_abortion_closes_the_pregnancy_on_the_dam(self):
+		self._abortion("2026-08-02")
+		dam = frappe.get_doc("Animal", self.animal)
+		self.assertEqual(dam.repro_status, "Open")
+		self.assertEqual(dam.custom_pregnancy_status, "Not Pregnant")
+		self.assertFalse(dam.expected_calving_date)
+
+	def test_abortion_fails_the_related_service(self):
+		service = self._service("2026-01-10")
+		self._abortion("2026-05-10", related_pregnancy=service.name)
+		service.reload()
+		self.assertEqual(service.service_status, "Failed")
+		self.assertEqual(service.pregnancy_confirmation_status, "Aborted")
+
+	def test_gestation_days_at_loss_is_computed(self):
+		service = self._service("2026-01-10")
+		abortion = self._abortion("2026-05-10", related_pregnancy=service.name)
+		self.assertEqual(abortion.gestation_days_at_loss, 120)
+
+	def test_abortion_does_not_increment_parity(self):
+		before = frappe.db.get_value("Animal", self.animal, "parity") or 0
+		self._abortion("2026-08-03")
+		after = frappe.db.get_value("Animal", self.animal, "parity") or 0
+		self.assertEqual(after, before)
+
+	def test_ready_for_service_date_uses_the_setting(self):
+		frappe.db.set_single_value("Livestock Settings", "post_abortion_min_service_days", 40)
+		frappe.clear_cache()
+		abortion = self._abortion("2026-08-04")
+		self.assertEqual(str(abortion.ready_for_service_date), frappe.utils.add_days("2026-08-04", 40))
+
+	def test_service_before_the_abortion_window_is_blocked(self):
+		frappe.db.set_single_value("Livestock Settings", "post_abortion_min_service_days", 30)
+		frappe.clear_cache()
+		self._abortion("2026-08-05")
+		service = frappe.get_doc(
+			{
+				"doctype": "Livestock Event",
+				"animal": self.animal,
+				"event_type": "Service",
+				"event_date": "2026-08-15",
+				"service_date": "2026-08-15",
+				"operator": self.operator,
+			}
+		)
+		with self.assertRaises(frappe.exceptions.ValidationError):
+			service.insert()
+
+	def test_zero_setting_disables_the_block(self):
+		frappe.db.set_single_value("Livestock Settings", "post_abortion_min_service_days", 0)
+		frappe.clear_cache()
+		self._abortion("2026-08-06")
+		service = frappe.get_doc(
+			{
+				"doctype": "Livestock Event",
+				"animal": self.animal,
+				"event_type": "Service",
+				"event_date": "2026-08-16",
+				"service_date": "2026-08-16",
+				"operator": self.operator,
+			}
+		)
+		service.insert()
+		self.assertTrue(service.name)
+```
+
+- [ ] **Step 2: Run it to verify it fails**
+
+```bash
+cd /home/ubuntu/stive/code/frappe15
+bench --site kaitet.local run-tests --module upande_livestock.upande_livestock.doctype.livestock_event.test_livestock_event
+```
+
+Expected: FAIL — `abortion_cause` does not exist.
+
+- [ ] **Step 3: Add the abortion fields, drop Abortion from the outcome Select**
+
+In `.../livestock_event/livestock_event.json`:
+
+Change the `tab_calving` label to `"Calving, Birth & Abortion"`.
+
+Change `custom_calving_outcome` options from `"Live Birth\nStill Birth\nAbortion"` to:
+
+```json
+   "options": "Live Birth\nStill Birth",
+```
+
+Add to `field_order`, immediately after `related_calving`:
+
+```
+  "sb_abortion",
+  "abortion_cause",
+  "gestation_days_at_loss",
+  "cb_abortion",
+  "abortion_notes",
+```
+
+And these field objects:
+
+```json
+  {
+   "depends_on": "eval:doc.event_type == \"Abortion\"",
+   "fieldname": "sb_abortion",
+   "fieldtype": "Section Break",
+   "label": "Abortion"
+  },
+  {
+   "fieldname": "abortion_cause",
+   "fieldtype": "Select",
+   "label": "Probable Cause",
+   "mandatory_depends_on": "eval:doc.event_type == \"Abortion\"",
+   "options": "\nInfectious\nNutritional\nTraumatic\nCongenital\nUnknown\nOther"
+  },
+  {
+   "description": "Days from the service date to the loss.",
+   "fieldname": "gestation_days_at_loss",
+   "fieldtype": "Int",
+   "label": "Gestation Days at Loss",
+   "read_only": 1
+  },
+  {
+   "fieldname": "cb_abortion",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "abortion_notes",
+   "fieldtype": "Small Text",
+   "label": "Abortion Notes"
+  },
+```
+
+- [ ] **Step 4: Implement the abortion logic**
+
+In `.../livestock_event/livestock_event.py`, add these two methods:
+
+```python
+	def compute_abortion_dates(self):
+		"""Gestation length at loss, and when the dam may be served again."""
+		if self.event_type != "Abortion":
+			return
+
+		if self.custom_related_pregnancy:
+			service_date = frappe.db.get_value(
+				"Livestock Event", self.custom_related_pregnancy, "service_date"
+			)
+			if service_date:
+				self.gestation_days_at_loss = frappe.utils.date_diff(self.event_date, service_date)
+
+		wait_days = get_timing("post_abortion_min_service_days")
+		if wait_days:
+			self.ready_for_service_date = frappe.utils.add_days(self.event_date, wait_days)
+
+	def close_pregnancy_after_abortion(self):
+		"""Reopen the dam and fail the lost service. Parity is NOT incremented."""
+		if self.event_type != "Abortion":
+			return
+
+		animal = frappe.get_doc("Animal", self.animal)
+		if animal.meta.has_field("repro_status"):
+			animal.db_set("repro_status", "Open", update_modified=False)
+		if animal.meta.has_field("custom_pregnancy_status"):
+			animal.db_set("custom_pregnancy_status", "Not Pregnant", update_modified=False)
+		if animal.meta.has_field("expected_calving_date"):
+			animal.db_set("expected_calving_date", None, update_modified=False)
+
+		if not self.custom_related_pregnancy:
+			return
+
+		service = frappe.get_doc("Livestock Event", self.custom_related_pregnancy)
+		service.db_set("service_status", "Failed", update_modified=False)
+		service.db_set("pregnancy_confirmation_status", "Aborted", update_modified=False)
+		if service.meta.has_field("custom_status_after_test"):
+			service.db_set("custom_status_after_test", "Failed", update_modified=False)
+		service.add_comment("Info", text=f"Pregnancy lost — recorded by Abortion event {self.name}")
+```
+
+Add a post-abortion service guard. In `validate`, inside the existing `if self.event_type == "Service":` block, immediately after the "Rule 3: Check post-partum waiting period" block, add:
+
+```python
+			# Rule 4: post-abortion waiting period (0 disables it)
+			abortion_wait = get_timing("post_abortion_min_service_days")
+			if abortion_wait:
+				last_abortion = frappe.db.sql(
+					"""SELECT name, event_date FROM `tabLivestock Event`
+					   WHERE animal = %s AND event_type = 'Abortion' AND docstatus = 1
+					   ORDER BY event_date DESC LIMIT 1""",
+					(self.animal,),
+					as_dict=True,
+				)
+				if last_abortion:
+					days_since = frappe.utils.date_diff(self.service_date, last_abortion[0].event_date)
+					if days_since < abortion_wait:
+						frappe.throw(
+							_(
+								"Too early for service. Last abortion was {0} ({1} days ago); "
+								"this farm requires {2} days. Adjust "
+								"Livestock Settings → Minimum Days to Service After Abortion to change this."
+							).format(
+								frappe.utils.formatdate(last_abortion[0].event_date),
+								days_since,
+								abortion_wait,
+							)
+						)
+```
+
+Wire the two new methods in. Append to `validate`:
+
+```python
+		self.compute_abortion_dates()
+```
+
+Append to `on_submit`:
+
+```python
+		self.close_pregnancy_after_abortion()
+```
+
+- [ ] **Step 5: Apply and run the tests**
+
+```bash
+cd /home/ubuntu/stive/code/frappe15
+bench --site kaitet.local console <<'EOF'
+import frappe
+from frappe.modules.import_file import import_file_by_path
+import_file_by_path(
+    "apps/upande_livestock/upande_livestock/upande_livestock/doctype/"
+    "livestock_event/livestock_event.json",
+    force=True,
+)
+frappe.db.commit()
+EOF
+bench --site kaitet.local run-tests --module upande_livestock.upande_livestock.doctype.livestock_event.test_livestock_event
+```
+
+Expected: PASS (32 tests).
+
+- [ ] **Step 6: Confirm no existing calving used the removed option**
+
+```bash
+cd /home/ubuntu/stive/code/frappe15
+bench --site kaitet.local mariadb -e "
+SELECT custom_calving_outcome, COUNT(*) n FROM \`tabLivestock Event\`
+WHERE event_type = 'Calving' GROUP BY custom_calving_outcome;"
+```
+
+Expected: only `Live Birth` (14 rows). If any row shows `Abortion`, stop and write a patch converting those rows to Abortion events before continuing.
+
+- [ ] **Step 7: Commit**
+
+```bash
+cd /home/ubuntu/stive/code/frappe15/apps/upande_livestock
+git add -A
+git commit -m "feat(livestock): record abortion as its own event type
+
+A pregnancy loss is a different event from a calving — it has a cause,
+no calf and different downstream effects — so Abortion becomes its own
+Livestock Event Type instead of an option inside custom_calving_outcome,
+making it countable and reportable.
+
+On submit it reopens the dam (repro_status Open, pregnancy status Not
+Pregnant, expected_calving_date cleared), fails the related service as
+Aborted with a comment linking back, computes gestation days at loss,
+and does not increment parity.
+
+The post-abortion service interval comes from Livestock Settings
+(post_abortion_min_service_days, default 30, 0 disables) rather than a
+hardcoded number, and the throw message names the setting to change.
+
+Abortion is removed from custom_calving_outcome. No back-migration
+needed: all 14 existing calvings on kaitet.local are Live Birth.
+
+Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
+```
+
+---
+
+*Tasks 11–13 continue below.*
