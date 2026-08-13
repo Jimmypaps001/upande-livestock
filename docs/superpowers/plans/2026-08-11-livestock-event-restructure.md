@@ -1517,6 +1517,21 @@ TIMING_DEFAULTS = {
 }
 
 
+def read_setting(fieldname):
+	"""The raw stored value of a Livestock Settings field, or None if never set.
+
+	Deliberately NOT frappe.db.get_single_value: that casts the result by
+	fieldtype, so an unset Int returns 0 and an unset Float returns 0.0 —
+	indistinguishable from a deliberately configured zero, which would make
+	every default below unreachable.
+	"""
+	rows = frappe.db.sql(
+		"select `value` from `tabSingles` where doctype=%s and field=%s",
+		("Livestock Settings", fieldname),
+	)
+	return rows[0][0] if rows else None
+
+
 def get_timing(key):
 	"""The configured value for `key`, or its documented default.
 
@@ -1524,7 +1539,7 @@ def get_timing(key):
 	silently behaving as 0.
 	"""
 	default = TIMING_DEFAULTS[key]
-	value = frappe.db.get_single_value("Livestock Settings", key)
+	value = read_setting(key)
 	if value in (None, ""):
 		return default
 	return int(value)
@@ -2050,7 +2065,7 @@ bench --site kaitet.local run-tests --module upande_livestock.test_livestock_gua
 
 Expected: FAIL — `ModuleNotFoundError: No module named 'upande_livestock.livestock_guards'`.
 
-- [ ] **Step 2b: Export a correct single-value reader from `livestock_timings.py`**
+- [ ] **Step 2b: Confirm `read_setting` is available for reuse**
 
 Task 5 discovered that `frappe.db.get_single_value` runs `cast_fieldtype` on its result, so an
 **unset** field comes back as a typed zero rather than `None`:
@@ -2067,7 +2082,8 @@ which would silently disable every rule keyed on it. Task 5's `get_timing` alrea
 this by reading `tabSingles` directly; promote that read into a named, reusable function so this
 module and `api/animal.py` share one correct implementation instead of three copies.
 
-In `upande_livestock/livestock_timings.py`, extract the raw read:
+`upande_livestock/livestock_timings.py` should already define this (added in Task 5). Confirm it
+exists and is importable; if it is inlined inside `get_timing` instead, extract it:
 
 ```python
 def read_setting(fieldname):
