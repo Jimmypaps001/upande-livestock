@@ -274,3 +274,60 @@ class TestLivestockEventBirth(IntegrationTestCase):
 		event.submit()
 		event.reload()
 		self.assertEqual(frappe.db.count("Animal", {"tag_number": "TEST-BIRTH-CALF-1"}), 1)
+
+
+class TestLivestockEventAnimalMandatory(IntegrationTestCase):
+	"""animal carries mandatory_depends_on in the JSON, which is desk-UI-only in
+	Frappe 16 (see LivestockEvent.validate()'s ANIMAL block). These tests exist to
+	catch exactly the defect that shipped once already: removing `reqd: 1` from
+	`animal` with no server-side backing let any event type through animal-less.
+	"""
+
+	def setUp(self):
+		ensure_livestock_event_types()
+		self.operator = frappe.db.get_value("Employee", {}, "name")
+
+	def _cleanup_by_remarks(self, marker):
+		"""Same rationale as TestLivestockEventNaming._cleanup_by_remarks: if the
+		guard under test is ever removed, insert() succeeds instead of raising,
+		leaving a hash-named row with no other handle to clean it up by.
+		"""
+		self.addCleanup(
+			lambda: (frappe.db.delete("Livestock Event", {"remarks": marker}), frappe.db.commit())
+		)
+
+	def test_feeding_event_with_no_animal_throws(self):
+		marker = f"animal-mandatory-test-{frappe.generate_hash(length=8)}"
+		self._cleanup_by_remarks(marker)
+		doc = frappe.get_doc(
+			{
+				"doctype": "Livestock Event",
+				"event_type": "Feeding",
+				"event_date": "2026-06-03",
+				"operator": self.operator,
+				"remarks": marker,
+			}
+		)
+		with self.assertRaises(frappe.exceptions.MandatoryError):
+			doc.insert()
+
+	def test_stillborn_flag_does_not_exempt_a_non_birth_event(self):
+		"""is_stillborn is only meaningful for Birth. A Feeding event flagged
+		is_stillborn must still require an animal — the exemption is scoped to
+		"this type creates animals AND is_stillborn", not a bare is_stillborn
+		check, precisely so this case cannot slip through.
+		"""
+		marker = f"animal-mandatory-stillborn-test-{frappe.generate_hash(length=8)}"
+		self._cleanup_by_remarks(marker)
+		doc = frappe.get_doc(
+			{
+				"doctype": "Livestock Event",
+				"event_type": "Feeding",
+				"event_date": "2026-06-03",
+				"operator": self.operator,
+				"is_stillborn": 1,
+				"remarks": marker,
+			}
+		)
+		with self.assertRaises(frappe.exceptions.MandatoryError):
+			doc.insert()
