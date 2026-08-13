@@ -2,7 +2,7 @@
 
 For every Asset flagged `custom_is_livestock`, create a matching `Animal`
 record (linked back via `asset_link` for capitalisation/insurance), then
-repoint every `Animal Event` and `Livestock Insurance Policy Animal` from the
+repoint every `Livestock Event` and `Livestock Insurance Policy Animal` from the
 Asset name to the new Animal name, and recompute `Herds.number_of_animals`
 from Animal membership.
 
@@ -75,14 +75,14 @@ def execute():
 		created += 1
 	frappe.db.commit()
 
-	# Repoint Animal Event.animal (Asset name -> Animal name). db.set_value bypasses
+	# Repoint Livestock Event.animal (Asset name -> Animal name). db.set_value bypasses
 	# submit-immutability, which is what we want for a historical repoint.
 	repointed, unmapped = 0, set()
-	for ev in frappe.get_all("Animal Event", fields=["name", "animal"]):
+	for ev in frappe.get_all("Livestock Event", fields=["name", "animal"]):
 		if not ev.animal:
 			continue
 		if ev.animal in asset_to_animal:
-			frappe.db.set_value("Animal Event", ev.name, "animal", asset_to_animal[ev.animal], update_modified=False)
+			frappe.db.set_value("Livestock Event", ev.name, "animal", asset_to_animal[ev.animal], update_modified=False)
 			repointed += 1
 		elif not frappe.db.exists("Animal", ev.animal):
 			unmapped.add(ev.animal)

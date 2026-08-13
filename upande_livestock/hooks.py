@@ -65,7 +65,7 @@ app_include_js = "/assets/upande_livestock/js/livestock_desk.js?v=6"
 
 # include js in doctype views — form scripts (ex Client Scripts, now versioned code)
 doctype_js = {
-	"Animal Event": "public/js/animal_event.js",
+	"Livestock Event": "public/js/livestock_event.js",
 	"Milking Palour Checksheet": "public/js/milking_palour_checksheet.js",
 }
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
@@ -110,7 +110,7 @@ doctype_js = {
 fixtures = [
 	{
 		# Only Stock Entry (an ERPNext core doctype) still carries livestock custom
-		# fields — everything on our own doctypes (Herds, Animal Event, Livestock
+		# fields — everything on our own doctypes (Herds, Livestock Event, Livestock
 		# Settings) was folded into the DocType JSONs natively. The milk fields are
 		# grouped in a "Milking" section that shows only for Milking stock entries;
 		# the trailing section break keeps the following (non-livestock) fields
@@ -131,7 +131,7 @@ fixtures = [
 	},
 	# NOTE: Client Scripts and Server Scripts are no longer shipped as fixtures.
 	# They now live in the codebase: form scripts under public/js/ (doctype_js),
-	# doc-event logic in the doctype controllers (animal_event / animal /
+	# doc-event logic in the doctype controllers (livestock_event / animal /
 	# milk_recording), and API/scheduler logic in api/*.py and tasks.py.
 	{
 		"dt": "Custom HTML Block",

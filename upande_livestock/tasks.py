@@ -17,7 +17,7 @@ def check_overdue_pregnancy_diagnoses():
             ae.service_date,
             ae.operator,
             DATEDIFF(CURDATE(), ae.service_date) as days_since
-        FROM `tabAnimal Event` ae
+        FROM `tabLivestock Event` ae
         LEFT JOIN `tabAnimal` a ON ae.animal = a.name
         WHERE ae.event_type = 'Service'
         AND ae.pregnancy_confirmation_status = 'Pending'
@@ -25,7 +25,7 @@ def check_overdue_pregnancy_diagnoses():
         AND DATEDIFF(CURDATE(), ae.service_date) > 60
         AND NOT EXISTS (
             SELECT 1 FROM `tabToDo` t
-            WHERE t.reference_type = 'Animal Event'
+            WHERE t.reference_type = 'Livestock Event'
             AND t.reference_name = ae.name
             AND t.description LIKE '%Overdue%'
             AND t.status != 'Cancelled'
@@ -43,7 +43,7 @@ def check_overdue_pregnancy_diagnoses():
                 Days Overdue: <b>{service.days_since} days</b><br>
                 Service Event: <b>{service.name}</b><br><br>
                 <b>Action Required:</b> Record pregnancy diagnosis immediately!""",
-            "reference_type": "Animal Event",
+            "reference_type": "Livestock Event",
             "reference_name": service.name,
             "priority": "High",
             "status": "Open",
@@ -73,7 +73,7 @@ def check_overdue_pregnancy_diagnoses():
             ae.service_date,
             DATE_ADD(ae.service_date, INTERVAL 280 DAY) as expected_calving,
             DATEDIFF(DATE_ADD(ae.service_date, INTERVAL 280 DAY), CURDATE()) as days_until
-        FROM `tabAnimal Event` ae
+        FROM `tabLivestock Event` ae
         LEFT JOIN `tabAnimal` a ON ae.animal = a.name
         WHERE ae.event_type = 'Service'
         AND ae.pregnancy_confirmation_status = 'Confirmed'
@@ -81,14 +81,14 @@ def check_overdue_pregnancy_diagnoses():
         AND DATE_ADD(ae.service_date, INTERVAL 280 DAY)
             BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 7 DAY)
         AND NOT EXISTS (
-            SELECT 1 FROM `tabAnimal Event` c
+            SELECT 1 FROM `tabLivestock Event` c
             WHERE c.custom_related_pregnancy = ae.name
             AND c.event_type = 'Calving'
             AND c.docstatus = 1
         )
         AND NOT EXISTS (
             SELECT 1 FROM `tabToDo` t
-            WHERE t.reference_type = 'Animal Event'
+            WHERE t.reference_type = 'Livestock Event'
             AND t.reference_name = ae.name
             AND t.description LIKE '%Calving Expected%'
             AND t.status != 'Cancelled'
@@ -111,7 +111,7 @@ def check_overdue_pregnancy_diagnoses():
                 • Prepare calving area<br>
                 • Monitor animal closely<br>
                 • Have calving kit ready""",
-            "reference_type": "Animal Event",
+            "reference_type": "Livestock Event",
             "reference_name": calving.name,
             "priority": urgency,
             "status": "Open",
@@ -134,14 +134,14 @@ def check_overdue_pregnancy_diagnoses():
             a.current_herd AS custom_current_herd,
             ae.event_date as calving_date,
             DATEDIFF(CURDATE(), ae.event_date) as days_since_calving
-        FROM `tabAnimal Event` ae
+        FROM `tabLivestock Event` ae
         LEFT JOIN `tabAnimal` a ON ae.animal = a.name
         WHERE ae.event_type = 'Calving'
         AND ae.docstatus = 1
         AND ae.custom_calving_outcome = 'Live Birth'
         AND DATEDIFF(CURDATE(), ae.event_date) = 60
         AND NOT EXISTS (
-            SELECT 1 FROM `tabAnimal Event` s
+            SELECT 1 FROM `tabLivestock Event` s
             WHERE s.animal = ae.animal
             AND s.event_type = 'Service'
             AND s.service_date > ae.event_date
@@ -159,7 +159,7 @@ def check_overdue_pregnancy_diagnoses():
                 Last Calving: <b>{frappe.utils.formatdate(animal.calving_date)}</b><br>
                 Days Since Calving: <b>{animal.days_since_calving} days</b><br><br>
                 <b>Action:</b> Watch for heat signs and service when detected.""",
-            "reference_type": "Animal Event",
+            "reference_type": "Livestock Event",
             "reference_name": animal.name,
             "priority": "Medium",
             "status": "Open",
@@ -183,14 +183,14 @@ def check_overdue_pregnancy_diagnoses():
             ae.service_date,
             ae.pregnancy_confirmation_status,
             DATE_ADD(ae.service_date, INTERVAL 21 DAY) as expected_heat_date
-        FROM `tabAnimal Event` ae
+        FROM `tabLivestock Event` ae
         LEFT JOIN `tabAnimal` a ON ae.animal = a.name
         WHERE ae.event_type = 'Service'
         AND ae.pregnancy_confirmation_status IN ('Not Pregnant', 'Aborted', 'Failed')
         AND ae.docstatus = 1
         AND DATE_ADD(ae.service_date, INTERVAL 21 DAY) = CURDATE()
         AND NOT EXISTS (
-            SELECT 1 FROM `tabAnimal Event` s2
+            SELECT 1 FROM `tabLivestock Event` s2
             WHERE s2.animal = ae.animal
             AND s2.event_type = 'Service'
             AND s2.service_date > ae.service_date
@@ -208,7 +208,7 @@ def check_overdue_pregnancy_diagnoses():
                 Last Result: <b>{heat.pregnancy_confirmation_status}</b><br>
                 Expected Heat: <b>Today (21-day cycle)</b><br><br>
                 <b>Action:</b> Watch for heat signs and service if detected.""",
-            "reference_type": "Animal Event",
+            "reference_type": "Livestock Event",
             "reference_name": heat.name,
             "priority": "Medium",
             "status": "Open",
@@ -236,7 +236,7 @@ def check_overdue_pregnancy_diagnoses():
                 a.current_herd AS custom_current_herd,
                 COUNT(*) as service_count,
                 MAX(ae.service_date) as last_service_date
-            FROM `tabAnimal Event` ae
+            FROM `tabLivestock Event` ae
             LEFT JOIN `tabAnimal` a ON ae.animal = a.name
             WHERE ae.event_type = 'Service'
             AND ae.docstatus = 1

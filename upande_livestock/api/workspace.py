@@ -92,14 +92,14 @@ def _build() -> dict:
 	# ---- KPI: health events this week ------------------------------------
 	week_ago = add_days(today(), -7)
 	k["health_events"] = flt(
-		frappe.db.count("Animal Health Case", {"opened_date": [">=", week_ago]})
+		frappe.db.count("Livestock Health Case", {"opened_date": [">=", week_ago]})
 	)
 
 	# ---- KPI: births this month ------------------------------------------
 	month_start = today()[:8] + "01"
 	k["births"] = flt(
 		frappe.db.sql(
-			"""SELECT COUNT(*) FROM `tabAnimal Event`
+			"""SELECT COUNT(*) FROM `tabLivestock Event`
 			   WHERE event_date >= %s
 			     AND (LOWER(event_type) LIKE '%%calv%%' OR LOWER(event_type) LIKE '%%birth%%')""",
 			(month_start,),
@@ -279,11 +279,11 @@ def get_production() -> dict:
 
 @frappe.whitelist()
 def get_health() -> dict:
-	"""Health tab: Animal Health Cases (open first) + summary counts."""
+	"""Health tab: Livestock Health Cases (open first) + summary counts."""
 	try:
 		herds = _herd_labels()
 		rows = frappe.get_all(
-			"Animal Health Case",
+			"Livestock Health Case",
 			fields=[
 				"name", "animal", "animal_name", "current_herd", "opened_date",
 				"case_status", "severity", "provisional_diagnosis",
@@ -320,11 +320,11 @@ def get_health() -> dict:
 
 @frappe.whitelist()
 def get_events() -> dict:
-	"""Events tab: recent Animal Events + counts by type."""
+	"""Events tab: recent Livestock Events + counts by type."""
 	try:
 		herds = _herd_labels()
 		rows = frappe.get_all(
-			"Animal Event",
+			"Livestock Event",
 			fields=[
 				"name", "animal", "current_herd", "new_herd", "event_type",
 				"event_date", "service_type", "service_status",
@@ -379,9 +379,9 @@ def get_reports() -> dict:
 		)
 
 		open_cases = flt(
-			frappe.db.count("Animal Health Case", {"case_status": ["in", list(_OPEN_CASE_STATUS)]})
+			frappe.db.count("Livestock Health Case", {"case_status": ["in", list(_OPEN_CASE_STATUS)]})
 		)
-		cases_month = flt(frappe.db.count("Animal Health Case", {"opened_date": [">=", this_start]}))
+		cases_month = flt(frappe.db.count("Livestock Health Case", {"opened_date": [">=", this_start]}))
 
 		def _repro(like):
 			return flt(
@@ -395,7 +395,7 @@ def get_reports() -> dict:
 
 		births = flt(
 			frappe.db.sql(
-				"""SELECT COUNT(*) FROM `tabAnimal Event`
+				"""SELECT COUNT(*) FROM `tabLivestock Event`
 				   WHERE event_date >= %s
 				     AND (LOWER(event_type) LIKE '%%calv%%' OR LOWER(event_type) LIKE '%%birth%%')""",
 				(this_start,),

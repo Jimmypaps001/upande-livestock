@@ -8,7 +8,7 @@ from frappe.model.document import Document
 class Animal(Document):
 	def on_update(self):
 		# Recompute Herd headcount when an Animal is created/updated.
-		# (Movement events are handled in AnimalEvent; this covers direct edits.)
+		# (Movement events are handled in LivestockEvent; this covers direct edits.)
 		# Ported from the "Number of animals in a Herd" Server Script.
 		current_herd = self.get("current_herd")
 		if current_herd:

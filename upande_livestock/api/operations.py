@@ -18,7 +18,7 @@ Contract for every endpoint here:
   * Success returns ``{"ok": True, ...}``.
 
 INSEMINATION INVARIANT — do not break:
-  Service / insemination / pregnancy-diagnosis create an **Animal Event only**.
+  Service / insemination / pregnancy-diagnosis create an **Livestock Event only**.
   There is deliberately NO Stock Entry (no semen-straw / consumable inventory
   movement) in any breeding path here. The only flows in this module that touch
   Stock Entry are feed (feeding.py) and milking (Milk Recording's after-submit
@@ -274,7 +274,7 @@ def event_options():
 				for a in animals
 			],
 			"herds": [{"name": n, "label": l} for n, l in sorted(labels.items(), key=lambda x: x[1])],
-			"calving_outcomes": _select_options("Animal Event", "custom_calving_outcome")
+			"calving_outcomes": _select_options("Livestock Event", "custom_calving_outcome")
 			or ["Live Birth", "Still Birth", "Abortion"],
 			"employee": _current_employee(),
 		}
@@ -282,8 +282,8 @@ def event_options():
 	return _run(go, "livestock event_options failed")
 
 
-def _new_animal_event(d, event_type):
-	doc = frappe.new_doc("Animal Event")
+def _new_livestock_event(d, event_type):
+	doc = frappe.new_doc("Livestock Event")
 	doc.animal = d.get("animal")
 	doc.event_type = event_type
 	doc.event_date = d.get("event_date") or today()
@@ -295,13 +295,13 @@ def _new_animal_event(d, event_type):
 @frappe.whitelist()
 def create_movement_event(payload):
 	def go():
-		_guard("Animal Event")
+		_guard("Livestock Event")
 		d = _ok(payload)
 		if not d.get("animal"):
 			frappe.throw(_("Select an animal."))
 		if not d.get("new_herd"):
 			frappe.throw(_("Select the destination herd."))
-		doc = _new_animal_event(d, "Movement")
+		doc = _new_livestock_event(d, "Movement")
 		doc.new_herd = d.get("new_herd")
 		doc.insert()
 		doc.submit()  # herd_movement_processor updates Animal.current_herd + headcounts
@@ -313,11 +313,11 @@ def create_movement_event(payload):
 @frappe.whitelist()
 def create_drying_off_event(payload):
 	def go():
-		_guard("Animal Event")
+		_guard("Livestock Event")
 		d = _ok(payload)
 		if not d.get("animal"):
 			frappe.throw(_("Select an animal."))
-		doc = _new_animal_event(d, "Drying Off")
+		doc = _new_livestock_event(d, "Drying Off")
 		doc.insert()
 		doc.submit()
 		return {"ok": True, "name": doc.name}
@@ -327,12 +327,12 @@ def create_drying_off_event(payload):
 
 @frappe.whitelist()
 def record_birth(payload):
-	"""Record a calving: a Calving Animal Event + (for live births) one Animal
+	"""Record a calving: a Calving Livestock Event + (for live births) one Animal
 	record and a Birth event per calf. Ports the "Record Livestock Birth" Server
 	Script into a permission-checked whitelist call. No Stock Entry involved."""
 
 	def go():
-		_guard("Animal Event")
+		_guard("Livestock Event")
 		_guard("Animal")
 		d = _ok(payload)
 		dam_name = d.get("dam") or d.get("animal")
@@ -352,14 +352,14 @@ def record_birth(payload):
 		sire = ""
 		if related_pregnancy:
 			try:
-				preg = frappe.get_doc("Animal Event", related_pregnancy)
+				preg = frappe.get_doc("Livestock Event", related_pregnancy)
 				if preg.related_service:
-					svc = frappe.get_doc("Animal Event", preg.related_service)
+					svc = frappe.get_doc("Livestock Event", preg.related_service)
 					sire = svc.sire or ""
 			except Exception:
 				pass
 
-		calving = frappe.new_doc("Animal Event")
+		calving = frappe.new_doc("Livestock Event")
 		calving.animal = dam_name
 		calving.event_type = "Calving"
 		calving.event_date = event_date
@@ -404,7 +404,7 @@ def record_birth(payload):
 					animal.breed = dam.breed
 				animal.insert()
 
-				birth = frappe.new_doc("Animal Event")
+				birth = frappe.new_doc("Livestock Event")
 				birth.animal = animal.name
 				birth.event_type = "Birth"
 				birth.event_date = event_date
@@ -448,7 +448,7 @@ def breeding_options():
 			{
 				r.sire
 				for r in frappe.get_all(
-					"Animal Event",
+					"Livestock Event",
 					filters=[["sire", "is", "set"]],
 					fields=["sire"],
 					limit_page_length=500,
@@ -467,8 +467,8 @@ def breeding_options():
 				}
 				for a in animals
 			],
-			"service_types": _select_options("Animal Event", "service_type") or ["A.I.", "Natural"],
-			"diagnosis_results": _select_options("Animal Event", "diagnosis_result")
+			"service_types": _select_options("Livestock Event", "service_type") or ["A.I.", "Natural"],
+			"diagnosis_results": _select_options("Livestock Event", "diagnosis_result")
 			or ["Confirmed", "Not Pregnant", "Aborted"],
 			"sires": sires,
 			"employee": _current_employee(),
@@ -487,7 +487,7 @@ def breeding_lists():
 		# 35-day check window has arrived.
 		due = frappe.db.sql(
 			"""SELECT name, animal, current_herd, service_date, pregnancy_check_due_date
-			   FROM `tabAnimal Event`
+			   FROM `tabLivestock Event`
 			   WHERE event_type = 'Service' AND docstatus = 1
 			     AND pregnancy_confirmation_status = 'Pending'
 			     AND IFNULL(pregnancy_check_due_date, service_date) <= %s
@@ -503,15 +503,15 @@ def breeding_lists():
 			   FROM `tabAnimal` a
 			   WHERE IFNULL(a.status,'') NOT IN ('Dead','Deceased','Sold','Culled','Disposed')
 			     AND NOT EXISTS (
-			       SELECT 1 FROM `tabAnimal Event` s
+			       SELECT 1 FROM `tabLivestock Event` s
 			       WHERE s.animal = a.name AND s.event_type='Service' AND s.docstatus=1
 			         AND s.pregnancy_confirmation_status IN ('Pending','Confirmed')
 			         AND NOT EXISTS (
-			           SELECT 1 FROM `tabAnimal Event` c
+			           SELECT 1 FROM `tabLivestock Event` c
 			           WHERE c.animal=s.animal AND c.event_type='Calving'
 			             AND c.custom_related_pregnancy=s.name AND c.docstatus=1))
 			     AND EXISTS (
-			       SELECT 1 FROM `tabAnimal Event` cal
+			       SELECT 1 FROM `tabLivestock Event` cal
 			       WHERE cal.animal=a.name AND cal.event_type='Calving' AND cal.docstatus=1
 			         AND IFNULL(cal.ready_for_service_date, cal.event_date) <= %s)
 			   ORDER BY a.tag_number ASC LIMIT 200""",
@@ -545,17 +545,17 @@ def breeding_lists():
 
 @frappe.whitelist()
 def create_service_event(payload):
-	"""Record a Service / insemination. Creates an Animal Event ONLY — no Stock
+	"""Record a Service / insemination. Creates an Livestock Event ONLY — no Stock
 	Entry, no semen-straw inventory movement (see module invariant). The
 	"VALIDATION FOR SERVICE EVENTS" Server Script enforces the breeding rules
 	and stamps the expected-calving / check-due / next-heat dates."""
 
 	def go():
-		_guard("Animal Event")
+		_guard("Livestock Event")
 		d = _ok(payload)
 		if not d.get("animal"):
 			frappe.throw(_("Select an animal."))
-		doc = _new_animal_event(d, "Service")
+		doc = _new_livestock_event(d, "Service")
 		doc.service_type = d.get("service_type")
 		doc.service_date = d.get("service_date") or today()
 		doc.sire = d.get("sire")
@@ -578,17 +578,17 @@ def create_service_event(payload):
 
 @frappe.whitelist()
 def create_pregnancy_diagnosis(payload):
-	"""Record a Pregnancy Diagnosis (Animal Event only). The Server Script
+	"""Record a Pregnancy Diagnosis (Livestock Event only). The Server Script
 	auto-links the related service when omitted and validates timing."""
 
 	def go():
-		_guard("Animal Event")
+		_guard("Livestock Event")
 		d = _ok(payload)
 		if not d.get("animal"):
 			frappe.throw(_("Select an animal."))
 		if not d.get("diagnosis_result"):
 			frappe.throw(_("Select a diagnosis result."))
-		doc = _new_animal_event(d, "Pregnancy Diagnosis")
+		doc = _new_livestock_event(d, "Pregnancy Diagnosis")
 		doc.diagnosis_date = d.get("diagnosis_date") or today()
 		doc.diagnosis_result = d.get("diagnosis_result")
 		doc.diagnosis_remarks = d.get("diagnosis_remarks")

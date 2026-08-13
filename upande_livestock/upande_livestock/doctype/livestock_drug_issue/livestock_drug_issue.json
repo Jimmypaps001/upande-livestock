@@ -1,0 +1,123 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-05-25 00:38:42.786310",
+ "description": "Child table on Livestock Event for recording multiple drugs/vaccines administered in a single event. Each row generates a Material Issue line.",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "sb_drug",
+  "item_code",
+  "item_name",
+  "qty",
+  "uom",
+  "source_warehouse",
+  "batch_no",
+  "sb_schedule",
+  "withdrawal_days",
+  "milk_safe_date",
+  "next_due_date",
+  "dosage",
+  "stock_entry_ref"
+ ],
+ "fields": [
+  {
+   "fieldname": "sb_drug",
+   "fieldtype": "Section Break",
+   "label": "Drug & Quantity"
+  },
+  {
+   "fieldname": "item_code",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Drug / Vaccine (Item)",
+   "options": "Item",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "item_code.item_name",
+   "fieldname": "item_name",
+   "fieldtype": "Data",
+   "label": "Item Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "qty",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Qty",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "item_code.stock_uom",
+   "fieldname": "uom",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "UOM",
+   "read_only": 1
+  },
+  {
+   "fieldname": "source_warehouse",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Issue from Warehouse",
+   "options": "Warehouse",
+   "reqd": 1
+  },
+  {
+   "fieldname": "batch_no",
+   "fieldtype": "Data",
+   "label": "Batch / Lot No."
+  },
+  {
+   "fieldname": "sb_schedule",
+   "fieldtype": "Section Break",
+   "label": "Withdrawal & Scheduling"
+  },
+  {
+   "fieldname": "withdrawal_days",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Withdrawal (days)"
+  },
+  {
+   "fieldname": "milk_safe_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Milk Safe From"
+  },
+  {
+   "fieldname": "next_due_date",
+   "fieldtype": "Date",
+   "label": "Next Due Date"
+  },
+  {
+   "fieldname": "dosage",
+   "fieldtype": "Data",
+   "label": "Dosage (dose given)"
+  },
+  {
+   "fieldname": "stock_entry_ref",
+   "fieldtype": "Link",
+   "label": "Stock Issue Ref",
+   "options": "Stock Entry",
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-05-25 00:38:42.786310",
+ "modified_by": "judah@upande.com",
+ "module": "Upande Livestock",
+ "name": "Livestock Drug Issue",
+ "owner": "judah@upande.com",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
