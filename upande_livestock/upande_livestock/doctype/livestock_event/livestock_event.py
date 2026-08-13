@@ -797,18 +797,23 @@ class LivestockEvent(Document):
 			if last_pregnancy:
 				last_pregnancy_date = last_pregnancy[0].diagnosis_date
 
-				# 2. Check if a Calving event happened AFTER that pregnancy
-				calving = frappe.db.exists(
+				# 2. Check if a Calving OR an Abortion closed out that pregnancy.
+				# An Abortion ends a pregnancy exactly as a Calving does — it
+				# just never produces a calf — so it must satisfy this rule the
+				# same way, or the cow could be re-served after an Abortion
+				# (per close_pregnancy_after_abortion / Service Rule 2) but her
+				# next pregnancy could never be confirmed.
+				closed = frappe.db.exists(
 					"Livestock Event",
 					{
 						"animal": self.animal,
-						"event_type": "Calving",
+						"event_type": ["in", ["Calving", "Abortion"]],
 						"event_date": [">", last_pregnancy_date],
 						"docstatus": 1
 					}
 				)
 
-				if not calving:
+				if not closed:
 					frappe.throw(
 						f"🐄 {self.animal} is already pregnant.\n\n"
 						"The cow must calve before a new pregnancy can be recorded."

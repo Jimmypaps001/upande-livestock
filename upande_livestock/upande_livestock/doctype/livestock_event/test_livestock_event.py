@@ -1260,3 +1260,76 @@ class TestLivestockEventAbortion(IntegrationTestCase):
 		service.insert()  # must not throw "Animal is Already Pregnant!"
 		self.addCleanup(_delete_and_commit, "Livestock Event", service.name)
 		self.assertTrue(service.name)
+
+	def test_new_pregnancy_can_be_confirmed_after_abortion(self):
+		"""Finding 2 (Important, whole-branch review): LivestockEvent.on_submit's
+		"cow must calve before a new pregnancy can be recorded" rule looks for a
+		Calving dated after the PREVIOUS Confirmed Pregnancy Diagnosis — and an
+		Abortion never produces a Calving. So even once the animal can be
+		re-served after an Abortion (test above), submitting her NEXT Confirmed
+		Pregnancy Diagnosis would throw "already pregnant... must calve" forever,
+		since no Calving will ever exist to satisfy the check. Proves the fix:
+		an Abortion dated after the previous Confirmed diagnosis satisfies the
+		rule exactly as a Calving would, and the Calving path is untouched.
+		"""
+		frappe.db.set_single_value("Livestock Settings", "post_abortion_min_service_days", 0)
+		frappe.clear_cache()
+		self._confirm_pregnancy(service_date="2026-01-10", diagnosis_date="2026-01-20")
+		self._abortion("2026-05-10")
+
+		service = frappe.get_doc(
+			{
+				"doctype": "Livestock Event",
+				"animal": self.animal,
+				"event_type": "Service",
+				"event_date": "2026-05-15",
+				"service_date": "2026-05-15",
+				"operator": self.operator,
+			}
+		)
+		service.insert()
+		self.addCleanup(_delete_and_commit, "Livestock Event", service.name)
+		service.submit()
+
+		diagnosis = frappe.get_doc(
+			{
+				"doctype": "Livestock Event",
+				"animal": self.animal,
+				"event_type": "Pregnancy Diagnosis",
+				"event_date": "2026-06-01",
+				"operator": self.operator,
+				"related_service": service.name,
+				"diagnosis_date": "2026-06-01",
+				"diagnosis_result": "Confirmed",
+			}
+		)
+		diagnosis.insert()
+		self.addCleanup(_delete_and_commit, "Livestock Event", diagnosis.name)
+		diagnosis.submit()  # must not throw "already pregnant... must calve"
+		self.assertEqual(diagnosis.docstatus, 1)
+
+
+class TestLivestockEventAbortionAwareServiceCheckJS(IntegrationTestCase):
+	"""Finding 1 (Important, whole-branch review) is client-side JS
+	(public/js/livestock_event.js) with no test harness in this app — there is
+	no way here to drive a browser and prove the desk form's own Service
+	validation actually stops throwing after an Abortion. See the fix report
+	for what remains genuinely unverified.
+
+	What CAN be pinned cheaply, and is pinned below: that the specific check
+	the fix targets was actually edited to know about Abortion at all, keyed
+	on the same custom_related_pregnancy linkage the server populates — rather
+	than the fix silently missing its target or drifting from that linkage.
+	This is a shape assertion over the source text, not behavioural proof.
+	"""
+
+	def test_service_pregnancy_check_js_knows_about_abortion(self):
+		js_path = frappe.get_app_path("upande_livestock", "public", "js", "livestock_event.js")
+		with open(js_path) as f:
+			source = f.read()
+		# The one block this fix touches: the desk form's "Check active
+		# pregnancy" Service validation (originally Calving-only).
+		marker = source.index("Check active pregnancy")
+		check_block = source[marker : marker + 1200]
+		self.assertIn("Abortion", check_block)
+		self.assertIn("custom_related_pregnancy", check_block)
