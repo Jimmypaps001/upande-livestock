@@ -6,6 +6,7 @@ from frappe.tests import IntegrationTestCase
 
 from upande_livestock.install import ensure_livestock_timing_defaults
 from upande_livestock.livestock_timings import get_timing
+from upande_livestock.livestock_timings_test_utils import ResetsLivestockTimings
 from upande_livestock.upande_livestock.doctype.livestock_settings.livestock_settings import (
 	ZERO_IS_INVALID,
 	ZERO_MEANS_DISABLED,
@@ -23,8 +24,16 @@ from upande_livestock.upande_livestock.doctype.livestock_settings.livestock_sett
 IGNORE_TEST_RECORD_DEPENDENCIES = ["Herds", "Warehouse", "Item", "Stock Entry Type", "Company", "Account"]
 
 
-class TestLivestockSettings(IntegrationTestCase):
+class TestLivestockSettings(ResetsLivestockTimings, IntegrationTestCase):
 	def setUp(self):
+		# super().setUp() registers the final timing reset first (see
+		# ResetsLivestockTimings), so every test in this class ends with the
+		# real 11 defaults restored regardless of what it configures below or
+		# whether it's the last test in the class — this class has no other
+		# test class running after it to repair a leftover None the way
+		# TestTimingsAreEnforcedServerSide used to rely on TestLivestockTimings
+		# doing.
+		super().setUp()
 		# Every timing field must already hold a real value before these tests
 		# start touching individual ones. Without this, an untouched field is
 		# still None going into doc.save(), and base_document's None -> 0 Int
