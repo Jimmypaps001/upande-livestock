@@ -1104,38 +1104,109 @@ Create `upande_livestock/patches/test_preserve_event_activity_cost.py`:
 import frappe
 from frappe.tests import IntegrationTestCase
 
+from upande_livestock.install import ensure_livestock_event_types
 from upande_livestock.patches.preserve_event_activity_cost import MARKER, execute
 
 
+def make_animal(tag):
+	if frappe.db.exists("Animal", tag):
+		return frappe.get_doc("Animal", tag)
+	return frappe.get_doc(
+		{"doctype": "Animal", "tag_number": tag, "burn_name": tag, "sex": "Female", "status": "Active"}
+	).insert()
+
+
 class TestPreserveEventActivityCost(IntegrationTestCase):
-	def test_every_costed_event_carries_the_marker(self):
-		execute()
-		missing = frappe.db.sql_list(
-			f"""SELECT name FROM `tabLivestock Event`
-			    WHERE IFNULL(custom_activity_cost, 0) > 0
-			      AND IFNULL(remarks, '') NOT LIKE '%{MARKER}%'"""
-		)
-		self.assertEqual(missing, [])
+	"""Drive the patch against a throwaway costed event.
 
-	def test_uncosted_events_are_untouched(self):
-		execute()
-		touched = frappe.db.sql_list(
-			f"""SELECT name FROM `tabLivestock Event`
-			    WHERE IFNULL(custom_activity_cost, 0) = 0
-			      AND IFNULL(remarks, '') LIKE '%{MARKER}%'"""
-		)
-		self.assertEqual(touched, [])
+	Asserting "every costed event carries the marker" would be hollow: once the
+	patch has run for real, that is permanently true and passes against a stubbed
+	execute(). Each test below creates its own un-marked costed row, so a stub
+	fails.
 
-	def test_patch_is_idempotent(self):
-		execute()
-		before = frappe.db.sql_list(
-			"SELECT remarks FROM `tabLivestock Event` WHERE IFNULL(custom_activity_cost, 0) > 0 ORDER BY name"
+	custom_activity_cost is removed from the DocType by this task, but Frappe does
+	not drop orphaned columns, so it is still writable via raw SQL — which is how
+	the fixture is built.
+	"""
+
+	def setUp(self):
+		ensure_livestock_event_types()
+		self.animal = make_animal("TEST-COST-1").name
+		self.operator = frappe.db.get_value("Employee", {}, "name")
+
+	def _costed_event(self, cost, remarks=None):
+		"""An event with a non-zero legacy activity cost and no migration marker."""
+		doc = frappe.get_doc(
+			{
+				"doctype": "Livestock Event",
+				"animal": self.animal,
+				"event_type": "Feeding",
+				"event_date": "2026-02-01",
+				"operator": self.operator,
+				"remarks": remarks,
+			}
 		)
-		execute()
-		after = frappe.db.sql_list(
-			"SELECT remarks FROM `tabLivestock Event` WHERE IFNULL(custom_activity_cost, 0) > 0 ORDER BY name"
+		doc.insert()
+		self.addCleanup(self._purge, doc.name)
+		frappe.db.sql(
+			"""UPDATE `tabLivestock Event`
+			   SET custom_activity_cost = %(cost)s, custom_expense_account = 'TEST-EXP',
+			       custom_cost_center = 'TEST-CC', custom_journal_entry = 'TEST-JE'
+			   WHERE name = %(name)s""",
+			{"cost": cost, "name": doc.name},
 		)
-		self.assertEqual(before, after)
+		frappe.db.commit()
+		return doc.name
+
+	def _purge(self, name):
+		frappe.delete_doc("Livestock Event", name, force=True, ignore_permissions=True)
+		frappe.db.commit()
+
+	def _remarks(self, name):
+		return frappe.db.get_value("Livestock Event", name, "remarks") or ""
+
+	def test_marker_and_details_are_written_onto_a_costed_event(self):
+		name = self._costed_event(1200)
+		self.assertNotIn(MARKER, self._remarks(name))
+		execute()
+		remarks = self._remarks(name)
+		self.assertIn(MARKER, remarks)
+		self.assertIn("1,200", remarks)
+		self.assertIn("TEST-EXP", remarks)
+		self.assertIn("TEST-CC", remarks)
+		self.assertIn("TEST-JE", remarks)
+
+	def test_existing_remarks_are_preserved_not_overwritten(self):
+		name = self._costed_event(50, remarks="Original operator note")
+		execute()
+		remarks = self._remarks(name)
+		self.assertIn("Original operator note", remarks)
+		self.assertIn(MARKER, remarks)
+
+	def test_uncosted_event_is_left_alone(self):
+		doc = frappe.get_doc(
+			{
+				"doctype": "Livestock Event",
+				"animal": self.animal,
+				"event_type": "Feeding",
+				"event_date": "2026-02-02",
+				"operator": self.operator,
+				"remarks": "no cost here",
+			}
+		)
+		doc.insert()
+		self.addCleanup(self._purge, doc.name)
+		frappe.db.commit()
+		execute()
+		self.assertEqual(self._remarks(doc.name), "no cost here")
+
+	def test_patch_is_idempotent_on_a_row_it_already_marked(self):
+		name = self._costed_event(75)
+		execute()
+		once = self._remarks(name)
+		execute()
+		self.assertEqual(self._remarks(name), once)
+		self.assertEqual(once.count(MARKER), 1)
 ```
 
 - [ ] **Step 2: Run it to verify it fails**
@@ -1216,7 +1287,10 @@ bench --site kaitet.local execute upande_livestock.patches.preserve_event_activi
 bench --site kaitet.local run-tests --module upande_livestock.patches.test_preserve_event_activity_cost
 ```
 
-Expected: `Preserved activity cost on 32 Livestock Event documents`, then PASS (3 tests).
+Expected: `Preserved activity cost on 32 Livestock Event documents`, then PASS (4 tests).
+
+Verify the live table is back to **576** rows afterwards — the tests create and delete their own
+events, and a leaked row would silently break later tasks' count assertions.
 
 - [ ] **Step 5: Strip the accounting fields from the DocType JSON**
 
@@ -4612,6 +4686,80 @@ Register it in `patches.txt` under `[post_model_sync]`:
 ```
 upande_livestock.patches.backfill_animal_disabled.execute
 ```
+
+- [ ] **Step 8b: Test the backfill patch**
+
+Create `upande_livestock/patches/test_backfill_animal_disabled.py`. Note this drives the patch
+against a throwaway animal rather than asserting "every retired animal is disabled" — once the
+patch has run for real that is permanently true and would pass against a stubbed `execute()`:
+
+```python
+# Copyright (c) 2026, Upande and contributors
+# For license information, please see license.txt
+
+import frappe
+from frappe.tests import IntegrationTestCase
+
+from upande_livestock.patches.backfill_animal_disabled import RETIRED_STATUSES, execute
+
+
+class TestBackfillAnimalDisabled(IntegrationTestCase):
+	def _animal(self, tag, status):
+		if frappe.db.exists("Animal", tag):
+			frappe.delete_doc("Animal", tag, force=True, ignore_permissions=True)
+		doc = frappe.get_doc(
+			{
+				"doctype": "Animal",
+				"tag_number": tag,
+				"burn_name": tag,
+				"sex": "Female",
+				"status": status,
+			}
+		).insert()
+		self.addCleanup(self._purge, tag)
+		# Force disabled back to 0 so the patch has something to do — inserting with a
+		# retired status does not itself set it.
+		frappe.db.set_value("Animal", tag, "disabled", 0, update_modified=False)
+		frappe.db.commit()
+		return doc
+
+	def _purge(self, tag):
+		if frappe.db.exists("Animal", tag):
+			frappe.delete_doc("Animal", tag, force=True, ignore_permissions=True)
+		frappe.db.commit()
+
+	def test_retired_statuses_list_matches_the_animal_select(self):
+		options = frappe.get_meta("Animal").get_field("status").options.split("\n")
+		for status in RETIRED_STATUSES:
+			self.assertIn(status, options, f"{status} is not a valid Animal status")
+
+	def test_backfill_disables_a_retired_animal(self):
+		self._animal("TEST-BACKFILL-DEAD", "Dead")
+		self.assertEqual(frappe.db.get_value("Animal", "TEST-BACKFILL-DEAD", "disabled"), 0)
+		execute()
+		self.assertEqual(frappe.db.get_value("Animal", "TEST-BACKFILL-DEAD", "disabled"), 1)
+
+	def test_backfill_leaves_an_active_animal_alone(self):
+		self._animal("TEST-BACKFILL-ACTIVE", "Active")
+		execute()
+		self.assertEqual(frappe.db.get_value("Animal", "TEST-BACKFILL-ACTIVE", "disabled"), 0)
+
+	def test_backfill_is_idempotent(self):
+		self._animal("TEST-BACKFILL-SOLD", "Sold")
+		execute()
+		execute()
+		self.assertEqual(frappe.db.get_value("Animal", "TEST-BACKFILL-SOLD", "disabled"), 1)
+```
+
+Run it:
+
+```bash
+cd /home/ubuntu/stive/code/frappe15
+bench --site kaitet.local run-tests --module upande_livestock.patches.test_backfill_animal_disabled
+```
+
+Expected: PASS (4 tests). A stubbed `execute(): pass` must fail
+`test_backfill_disables_a_retired_animal` and `test_backfill_is_idempotent` — verify that.
 
 - [ ] **Step 9: Apply, patch and test**
 
