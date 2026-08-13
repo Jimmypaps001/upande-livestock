@@ -89,9 +89,11 @@
   },
   {
    "fieldname": "event_type",
-   "fieldtype": "Select",
-   "label": "Event type",
-   "options": "\nMovement\nService\nPregnancy Diagnosis\nCalving\nDrying Off\nBirth",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Event Type",
+   "options": "Livestock Event Type",
    "reqd": 1
   },
   {
@@ -406,7 +408,9 @@
   }
  ],
  "row_format": "Dynamic",
+ "show_title_field_in_link": 1,
  "sort_field": "modified",
  "sort_order": "DESC",
- "states": []
+ "states": [],
+ "title_field": "event_type"
 }
