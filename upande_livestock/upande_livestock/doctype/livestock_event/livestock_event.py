@@ -205,6 +205,25 @@ class LivestockEvent(Document):
 
 	def validate(self):
 		# ============================================================
+		# CONDITIONAL MANDATORY: OPERATOR
+		# ============================================================
+		# operator carries mandatory_depends_on: "eval:!doc.reference_doctype"
+		# in the DocType JSON (for the desk form's dynamic asterisk), but
+		# Frappe's core Document._validate_mandatory() only ever checks
+		# static reqd == 1 DocFields — mandatory_depends_on is a client-side
+		# (desk UI) concept only and is never evaluated by server-side
+		# insert()/submit(), including via the REST API, bench console, data
+		# import or any other non-desk path. Without this explicit check, a
+		# hand-entered event (no reference_doctype) could be created with no
+		# operator through any of those paths, silently reintroducing the
+		# exact class of gap this field was hardened against.
+		if not self.reference_doctype and not self.operator:
+			frappe.throw(
+				_("{0} is mandatory for a hand-entered Livestock Event.").format(_("Operator(technician)")),
+				frappe.MandatoryError,
+			)
+
+		# ============================================================
 		# VALIDATION FOR SERVICE EVENTS
 		# ============================================================
 

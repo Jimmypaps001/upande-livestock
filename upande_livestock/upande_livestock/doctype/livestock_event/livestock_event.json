@@ -102,8 +102,8 @@
    "fieldname": "operator",
    "fieldtype": "Link",
    "label": "Operator(technician)",
-   "options": "Employee",
-   "reqd": 1
+   "mandatory_depends_on": "eval:!doc.reference_doctype",
+   "options": "Employee"
   },
   {
    "fieldname": "remarks",

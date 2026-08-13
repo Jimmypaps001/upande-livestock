@@ -156,6 +156,43 @@ class TestLivestockEventLink(IntegrationTestCase):
 		self.assertEqual(len(events), 1)
 		self.assertEqual(events[0].docstatus, 2)
 
+	def test_derived_event_submits_with_no_operator(self):
+		"""A Health Case with no opened_by legitimately has no operator to
+		carry onto its event — nobody performed a hand-entered "operation",
+		the case was just observed/opened. Livestock Event.operator is
+		mandatory_depends_on "eval:!doc.reference_doctype", so an event that
+		does carry a reference_doctype must submit cleanly with operator
+		unset. (Previously this only worked because sync_event_for set
+		flags.ignore_mandatory — silently overriding the schema constraint
+		rather than the schema correctly describing this case.)
+		"""
+		hc = self._new_health_case(opened_date="2026-04-08")
+		self.assertFalse(hc.opened_by)
+		hc.submit()
+		self._register_event_cleanup("Livestock Health Case", hc.name)
+		events = self._events_for("Livestock Health Case", hc.name)
+		self.assertEqual(len(events), 1)
+		self.assertEqual(events[0].docstatus, 1)
+		event = frappe.get_doc("Livestock Event", events[0].name)
+		self.assertFalse(event.operator)
+		self.assertEqual(event.reference_doctype, "Livestock Health Case")
+
+	def test_hand_entered_event_still_requires_an_operator(self):
+		"""The conditional mandatory rule must not make operator optional
+		everywhere — only for events derived from a health record. A plain,
+		hand-entered event (no reference_doctype) still needs one performed
+		it, and insert() must still fail without it."""
+		doc = frappe.get_doc(
+			{
+				"doctype": "Livestock Event",
+				"animal": self.animal,
+				"event_type": "Feeding",
+				"event_date": "2026-04-09",
+			}
+		)
+		with self.assertRaises(frappe.exceptions.MandatoryError):
+			doc.insert()
+
 	def test_health_case_lists_its_check_ups(self):
 		hc = self._new_health_case(opened_date="2026-04-05")
 		hc.submit()
