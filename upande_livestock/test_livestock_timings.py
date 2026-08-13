@@ -64,6 +64,17 @@ def _delete_and_commit(doctype, name):
 
 class TestTimingsAreEnforcedServerSide(IntegrationTestCase):
 	def setUp(self):
+		# Registered first, so per addCleanup's LIFO order it runs last —
+		# after every other cleanup this class or a test method registers,
+		# including the _delete_and_commit calls below (which commit, and
+		# therefore would otherwise permanently flush the two fields this
+		# class configures to whatever they were last left at — see
+		# _reset_livestock_timings' docstring). This class runs last in the
+		# module (alphabetically, confirmed empirically), so without this its
+		# leftover state is what a shared site is left with after every test
+		# run — silently re-arming the exact bug this task's hardening exists
+		# to close.
+		self.addCleanup(_reset_livestock_timings)
 		ensure_livestock_event_types()
 		if frappe.db.exists("Animal", "TEST-TIMING-1"):
 			frappe.delete_doc("Animal", "TEST-TIMING-1", force=True, ignore_permissions=True)
@@ -78,7 +89,8 @@ class TestTimingsAreEnforcedServerSide(IntegrationTestCase):
 			}
 		).insert()
 		# Registered before any event referencing this animal, so LIFO cleanup
-		# deletes the events first.
+		# deletes the events first (and before _reset_livestock_timings above,
+		# so it still runs before that final reset).
 		self.addCleanup(_delete_and_commit, "Animal", self.animal.name)
 		self.operator = frappe.db.get_value("Employee", {}, "name")
 
@@ -146,6 +158,40 @@ class TestTimingsAreEnforcedServerSide(IntegrationTestCase):
 		self.assertEqual(str(service.expected_calving_date), add_days("2026-05-01", 285))
 
 
+def _reset_livestock_timings():
+	"""Wipe every timing field, then reseed the true defaults.
+
+	Registered with addCleanup rather than left to a plain tearDown() body:
+	cleanups run in LIFO order after tearDown(), and — unlike code appended to
+	tearDown() — still run even if tearDown() itself were to raise. Both
+	TestTimingsAreEnforcedServerSide and TestLivestockTimingDefaultsSeeding
+	register this first in setUp() (before any wipe of their own), so per
+	LIFO it always runs last in each test, after every other cleanup either
+	class registers.
+
+	TestLivestockTimingDefaultsSeeding deliberately puts these fields into
+	the wiped, unseeded state this task's whole hardening exists to close;
+	TestTimingsAreEnforcedServerSide's own tearDown wipes two of them and
+	then, being the module's last-running class (alphabetically, confirmed
+	empirically), commits that wipe permanently via its other cleanups'
+	frappe.db.commit() calls. Either way, leaving the wipe uncorrected when
+	the test finishes would re-arm the exact bug on a real, shared site the
+	next time anyone opens Livestock Settings and clicks Save — which is
+	precisely the Important issue this function fixes.
+
+	Wipes before reseeding rather than reseeding alone:
+	ensure_livestock_timing_defaults() only fills a field that has no
+	configured value, so a field a test deliberately left at a real,
+	non-default value (a legitimate 285, or a legitimate 0) would otherwise
+	survive untouched — leaving the shared site's on-disk state visibly
+	different from the documented defaults after these classes run, instead
+	of reset to them.
+	"""
+	for key in TIMING_DEFAULTS:
+		frappe.db.set_single_value("Livestock Settings", key, None)
+	ensure_livestock_timing_defaults()
+
+
 class TestLivestockTimingDefaultsSeeding(IntegrationTestCase):
 	"""ensure_livestock_timing_defaults() and the platform bug it closes.
 
@@ -160,11 +206,10 @@ class TestLivestockTimingDefaultsSeeding(IntegrationTestCase):
 	"""
 
 	def setUp(self):
-		for key in TIMING_DEFAULTS:
-			frappe.db.set_single_value("Livestock Settings", key, None)
-		frappe.db.commit()
-
-	def tearDown(self):
+		# Registered before the wipe below — see _reset_livestock_timings'
+		# docstring for why that ordering, and why it must wipe-then-reseed
+		# rather than only reseed.
+		self.addCleanup(_reset_livestock_timings)
 		for key in TIMING_DEFAULTS:
 			frappe.db.set_single_value("Livestock Settings", key, None)
 		frappe.db.commit()
