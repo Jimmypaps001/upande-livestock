@@ -3978,6 +3978,54 @@ grep -n "create_calf" upande_livestock/api/operations.py
 
 If the only hit is the import line, delete it — `ruff` will flag it otherwise.
 
+- [ ] **Step 5c: Back the calf fields with a server-side check**
+
+`calf_tag_number` and `calf_sex` carry `mandatory_depends_on`, which Frappe 16 enforces **only in the
+browser** (it appears in `frappe/public/js/frappe/form/*.js` and nowhere in `frappe/model/`). Today
+they are enforced indirectly by `create_calf()`'s own guards — but those are skipped entirely
+whenever a Birth event arrives with `animal` already set, so a Birth event can be created via API or
+import with no tag number and no sex. This is the third and fourth instance of the same defect class
+that `operator` (Task 7) and `animal` (Task 8) already needed fixing for.
+
+It is fixed **here** rather than in Task 8 because this task is what finalises how Birth events come
+into existence: once `record_birth` delegates to `record_calf_births`, every Birth event is created
+either by that endpoint or by the desk form, and both set the calf fields. Writing the rule before
+that refactor would have broken `record_birth`'s then-current inline loop, which sets `animal`
+without the calf fields.
+
+Add to `LivestockEvent.validate()`, alongside the existing `animal` and `operator` checks:
+
+```python
+		# calf_tag_number / calf_sex carry mandatory_depends_on, which Frappe
+		# enforces only in the browser. A Birth event reaching us from the REST
+		# API, data import or the mobile client would otherwise be accepted with
+		# neither field set.
+		if self._type_creates_animal() and not self.is_stillborn:
+			if not self.calf_tag_number:
+				frappe.throw(
+					_("Calf Tag / Book Number is mandatory for a Birth event."),
+					frappe.MandatoryError,
+				)
+			if self.calf_sex not in ("Female", "Male"):
+				frappe.throw(
+					_("Calf Sex must be Female or Male for a Birth event."),
+					frappe.MandatoryError,
+				)
+```
+
+Scope the condition on `_type_creates_animal()` rather than on the literal string `"Birth"`, so it
+follows the `creates_animal` flag like the rest of the controller. And gate on `is_stillborn`, since a
+stillborn Birth legitimately has no calf.
+
+Tests — the negative ones are the point:
+- A Birth event with `animal` already set but no `calf_tag_number` **throws**. This is the path that
+  currently slips through, so it is the test that proves the fix.
+- A Birth event with no `calf_sex`, or with a junk value, throws.
+- A stillborn Birth still submits with neither field.
+- A `Feeding` event with neither field still submits — the rule must not leak to other types.
+
+Verify each negative test genuinely fails when the check is removed.
+
 - [ ] **Step 6: Add the Record Births button**
 
 Replace `.../livestock_event/livestock_event.js` with:
