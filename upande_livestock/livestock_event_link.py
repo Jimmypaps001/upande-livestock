@@ -54,7 +54,6 @@ def sync_event_for(doc, event_type):
 		event.current_herd = doc.current_herd
 	event.remarks = f"Auto-created from {doc.doctype} {doc.name}"
 	event.flags.ignore_permissions = True
-	event.flags.ignore_mandatory = True
 	event.insert(ignore_permissions=True)
 	event.submit()
 	return event.name
