@@ -3,16 +3,22 @@
 
 import frappe
 from frappe.tests import IntegrationTestCase
-from frappe.utils import add_days
+from frappe.utils import add_days, cint, flt
 
 from upande_livestock.install import ensure_livestock_event_types, ensure_livestock_timing_defaults
-from upande_livestock.livestock_timings import TIMING_DEFAULTS, get_timing, read_setting
+from upande_livestock.livestock_timings import (
+	ALL_TIMING_DEFAULTS,
+	FLOAT_TIMING_DEFAULTS,
+	TIMING_DEFAULTS,
+	get_timing,
+	read_setting,
+)
 from upande_livestock.livestock_timings_test_utils import ResetsLivestockTimings
 
 
 class TestLivestockTimings(ResetsLivestockTimings, IntegrationTestCase):
 	def tearDown(self):
-		for key in TIMING_DEFAULTS:
+		for key in ALL_TIMING_DEFAULTS:
 			frappe.db.set_single_value("Livestock Settings", key, None)
 
 	def test_defaults_match_the_previously_hardcoded_values(self):
@@ -27,6 +33,10 @@ class TestLivestockTimings(ResetsLivestockTimings, IntegrationTestCase):
 		self.assertEqual(TIMING_DEFAULTS["gestation_short_warning_days"], 260)
 		self.assertEqual(TIMING_DEFAULTS["gestation_long_warning_days"], 300)
 		self.assertEqual(TIMING_DEFAULTS["calving_alert_lead_days"], 7)
+		self.assertEqual(TIMING_DEFAULTS["min_dehorning_age_months"], 1)
+		self.assertEqual(TIMING_DEFAULTS["max_dehorning_age_months"], 6)
+		self.assertEqual(FLOAT_TIMING_DEFAULTS["default_calf_herd_min_age"], 0.0)
+		self.assertEqual(FLOAT_TIMING_DEFAULTS["default_calf_herd_max_age"], 2.0)
 
 	def test_unset_setting_falls_back_to_the_default(self):
 		self.assertEqual(get_timing("gestation_period_days"), 280)
@@ -45,8 +55,48 @@ class TestLivestockTimings(ResetsLivestockTimings, IntegrationTestCase):
 
 	def test_every_default_has_a_settings_field(self):
 		meta = frappe.get_meta("Livestock Settings")
-		for key in TIMING_DEFAULTS:
+		for key in ALL_TIMING_DEFAULTS:
 			self.assertIsNotNone(meta.get_field(key), f"Livestock Settings is missing {key}")
+
+	def test_every_int_or_float_field_is_covered_by_the_seeding_structure(self):
+		"""The enforcing test for I1: this, not the four fields it happens to
+		catch today, is the actual fix. min_dehorning_age_months,
+		max_dehorning_age_months, default_calf_herd_min_age and
+		default_calf_herd_max_age all escaped TIMING_DEFAULTS silently —
+		exactly once before (Task 5b's Critical) and then again — because
+		nothing ever checked the DocType meta against the dict that drives
+		seeding. Walking the meta as the source of truth, rather than
+		restating a field list here, is what makes this catch a fifth
+		occurrence instead of only re-verifying the four already known.
+		"""
+		meta = frappe.get_meta("Livestock Settings")
+		numeric_fields = {f.fieldname: f for f in meta.fields if f.fieldtype in ("Int", "Float")}
+
+		meta_fieldnames = set(numeric_fields)
+		covered_fieldnames = set(ALL_TIMING_DEFAULTS)
+		missing_from_defaults = meta_fieldnames - covered_fieldnames
+		missing_from_meta = covered_fieldnames - meta_fieldnames
+		self.assertEqual(
+			missing_from_defaults,
+			set(),
+			f"Int/Float fields on Livestock Settings with no seeding default: {missing_from_defaults}",
+		)
+		self.assertEqual(
+			missing_from_meta,
+			set(),
+			f"ALL_TIMING_DEFAULTS keys with no matching Livestock Settings field: {missing_from_meta}",
+		)
+
+		for fieldname, field in numeric_fields.items():
+			cast = cint if field.fieldtype == "Int" else flt
+			json_default = cast(field.default)
+			code_default = ALL_TIMING_DEFAULTS[fieldname]
+			self.assertEqual(
+				json_default,
+				code_default,
+				f"{fieldname}: DocType JSON default ({json_default}) != "
+				f"ALL_TIMING_DEFAULTS ({code_default})",
+			)
 
 
 def _delete_and_commit(doctype, name):
@@ -173,7 +223,7 @@ class TestLivestockTimingDefaultsSeeding(ResetsLivestockTimings, IntegrationTest
 		# super().setUp() registers the final timing reset before the wipe
 		# below, so it still runs (last, per LIFO) however this test ends.
 		super().setUp()
-		for key in TIMING_DEFAULTS:
+		for key in ALL_TIMING_DEFAULTS:
 			frappe.db.set_single_value("Livestock Settings", key, None)
 		frappe.db.commit()
 
@@ -186,6 +236,24 @@ class TestLivestockTimingDefaultsSeeding(ResetsLivestockTimings, IntegrationTest
 		for key, default in TIMING_DEFAULTS.items():
 			self.assertIsNotNone(read_setting(key), f"{key} was not seeded")
 			self.assertEqual(get_timing(key), default)
+
+	def test_seeds_the_float_calf_herd_fields_too(self):
+		"""default_calf_herd_min_age/max_age are Float, so get_timing() (which
+		cint()s) cannot be used to verify them — that would silently truncate
+		a fractional month and is exactly the "don't force floats through an
+		Int-shaped API" trap this pair was kept out of TIMING_DEFAULTS to
+		avoid. Verify via read_setting()/flt() instead, the same way
+		resolve_calf_herd() itself reads these fields.
+		"""
+		for key in FLOAT_TIMING_DEFAULTS:
+			self.assertIsNone(read_setting(key), f"{key} should start with no configured value")
+
+		ensure_livestock_timing_defaults()
+
+		for key, default in FLOAT_TIMING_DEFAULTS.items():
+			value = read_setting(key)
+			self.assertIsNotNone(value, f"{key} was not seeded")
+			self.assertEqual(flt(value), default)
 
 	def test_does_not_overwrite_a_configured_non_default_value(self):
 		frappe.db.set_single_value("Livestock Settings", "gestation_period_days", 285)

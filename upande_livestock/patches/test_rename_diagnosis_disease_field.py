@@ -78,3 +78,23 @@ class TestRenameDiagnosisDiseaseField(IntegrationTestCase):
 		execute()
 		execute()
 		self.assertEqual(self._suggested_disease(name), "Foot Rot")
+
+	def test_second_run_does_not_clobber_a_value_written_after_the_first(self):
+		"""I3: frappe.model.utils.rename_field()'s UPDATE has no WHERE clause,
+		and Frappe never drops the orphaned suggested_diagnosis column, so a
+		schema-based guard (has_column) stays permanently true — every future
+		migrate would re-run that blanket UPDATE and stomp anything entered
+		into suggested_disease since. Prove the row-scoped replacement does
+		not: migrate the pending row, simulate a user editing the (now real)
+		field directly afterwards, then run the patch again — the stale value
+		still sitting in the orphaned old column must not come back.
+		"""
+		name = self._unmigrated_row("Ringworm")
+		execute()
+		self.assertEqual(self._suggested_disease(name), "Ringworm")
+
+		frappe.db.set_value("Livestock Diagnosis", name, "suggested_disease", "Corrected Diagnosis")
+		frappe.db.commit()
+
+		execute()
+		self.assertEqual(self._suggested_disease(name), "Corrected Diagnosis")

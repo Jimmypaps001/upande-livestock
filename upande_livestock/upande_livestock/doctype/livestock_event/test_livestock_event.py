@@ -1022,24 +1022,54 @@ class TestLivestockEventAbortion(IntegrationTestCase):
 		frappe.db.set_single_value("Livestock Settings", "post_abortion_min_service_days", None)
 		frappe.clear_cache()
 
-	def _service(self, service_date):
-		doc = frappe.get_doc(
+	def _confirm_pregnancy(self, service_date="2026-01-10", diagnosis_date="2026-01-20"):
+		"""Create a submitted, Confirmed Service + Pregnancy Diagnosis for self.animal.
+
+		Built through real inserts (no flags.ignore_validate), so this is the
+		actual trail LivestockEvent.validate()'s ABORTION auto-link has to
+		resolve against — a Confirmed Service with no Calving recorded against
+		it — not a shortcut that would silently diverge from what production
+		callers produce. Returns the submitted Service doc.
+		"""
+		service = frappe.get_doc(
 			{
 				"doctype": "Livestock Event",
 				"animal": self.animal,
 				"event_type": "Service",
 				"event_date": service_date,
-				"service_date": service_date,
 				"operator": self.operator,
+				"service_type": "A.I.",
+				"service_date": service_date,
 			}
 		)
-		doc.flags.ignore_validate = True
-		doc.insert()
-		self.addCleanup(_delete_and_commit, "Livestock Event", doc.name)
-		doc.submit()
-		return doc
+		service.insert()
+		self.addCleanup(_delete_and_commit, "Livestock Event", service.name)
+		service.submit()
 
-	def _abortion(self, event_date, related_pregnancy=None, **kwargs):
+		diagnosis = frappe.get_doc(
+			{
+				"doctype": "Livestock Event",
+				"animal": self.animal,
+				"event_type": "Pregnancy Diagnosis",
+				"event_date": diagnosis_date,
+				"operator": self.operator,
+				"related_service": service.name,
+				"diagnosis_date": diagnosis_date,
+				"diagnosis_result": "Confirmed",
+			}
+		)
+		diagnosis.insert()
+		self.addCleanup(_delete_and_commit, "Livestock Event", diagnosis.name)
+		diagnosis.submit()
+		return service
+
+	def _abortion(self, event_date, **kwargs):
+		"""Insert an Abortion with no custom_related_pregnancy set — exactly
+		what every reachable caller (the desk form, since the client script no
+		longer nulls this field for Abortion; the REST API; data import)
+		actually sends. LivestockEvent.validate()'s ABORTION block is what
+		must resolve the link, not this helper.
+		"""
 		doc = frappe.get_doc(
 			{
 				"doctype": "Livestock Event",
@@ -1047,7 +1077,6 @@ class TestLivestockEventAbortion(IntegrationTestCase):
 				"event_type": "Abortion",
 				"event_date": event_date,
 				"operator": self.operator,
-				"custom_related_pregnancy": related_pregnancy,
 				"abortion_cause": "Unknown",
 				**kwargs,
 			}
@@ -1118,17 +1147,41 @@ class TestLivestockEventAbortion(IntegrationTestCase):
 			self.assertEqual(dam.custom_pregnancy_status, "Not Pregnant")
 		self.assertFalse(dam.expected_calving_date)
 
+	def test_abortion_auto_links_the_confirmed_pregnancy(self):
+		"""The regression test for C2: the desk form (and REST API, and data
+		import) never sets custom_related_pregnancy for an Abortion — the
+		client script no longer nulls it, but nothing populates it either.
+		LivestockEvent.validate()'s ABORTION block must resolve it on its own,
+		exactly like the pre-existing Calving auto-link.
+		"""
+		service = self._confirm_pregnancy(service_date="2026-01-10", diagnosis_date="2026-01-20")
+		abortion = self._abortion("2026-05-10")
+		self.assertEqual(abortion.custom_related_pregnancy, service.name)
+
 	def test_abortion_fails_the_related_service(self):
-		service = self._service("2026-01-10")
-		self._abortion("2026-05-10", related_pregnancy=service.name)
+		service = self._confirm_pregnancy(service_date="2026-01-10", diagnosis_date="2026-01-20")
+		self._abortion("2026-05-10")
 		service.reload()
 		self.assertEqual(service.service_status, "Failed")
 		self.assertEqual(service.pregnancy_confirmation_status, "Aborted")
 
 	def test_gestation_days_at_loss_is_computed(self):
-		service = self._service("2026-01-10")
-		abortion = self._abortion("2026-05-10", related_pregnancy=service.name)
+		self._confirm_pregnancy(service_date="2026-01-10", diagnosis_date="2026-01-20")
+		abortion = self._abortion("2026-05-10")
 		self.assertEqual(abortion.gestation_days_at_loss, 120)
+
+	def test_abortion_with_no_confirmed_pregnancy_proceeds_unlinked(self):
+		"""The judgement call behind the auto-link: when nothing resolves (no
+		Confirmed pregnancy on file for this animal at all), the Abortion must
+		still be recordable rather than thrown away. Throwing here would
+		protect against nothing — Service Rule 2 can only ever throw for a
+		Confirmed pregnancy with no linked Calving, and this is precisely the
+		case where no such row exists — while blocking a real loss for a cow
+		whose confirmation paperwork was never entered.
+		"""
+		abortion = self._abortion("2026-08-09")
+		self.assertFalse(abortion.custom_related_pregnancy)
+		self.assertFalse(abortion.gestation_days_at_loss)
 
 	def test_abortion_does_not_increment_parity(self):
 		before = frappe.db.get_value("Animal", self.animal, "parity") or 0
@@ -1174,5 +1227,36 @@ class TestLivestockEventAbortion(IntegrationTestCase):
 			}
 		)
 		service.insert()
+		self.addCleanup(_delete_and_commit, "Livestock Event", service.name)
+		self.assertTrue(service.name)
+
+	def test_service_after_abortion_succeeds_without_the_pregnancy_deadlock(self):
+		"""C2's actual user-visible bug, reproduced end to end: before the
+		auto-link existed, a desk-recorded Abortion carried no
+		custom_related_pregnancy, so the Confirmed Service it should have
+		closed out was never marked Failed/Aborted and never got a linked
+		Calving either — meaning Service Rule 2's NOT EXISTS check kept
+		matching that same Confirmed pregnancy forever, throwing "Animal is
+		Already Pregnant!" on every subsequent Service for that cow, with no
+		way to recover short of editing a submitted document. Proves the fix:
+		once the Abortion auto-links and fails the Service, a later Service
+		for the same animal must succeed.
+		"""
+		frappe.db.set_single_value("Livestock Settings", "post_abortion_min_service_days", 0)
+		frappe.clear_cache()
+		self._confirm_pregnancy(service_date="2026-01-10", diagnosis_date="2026-01-20")
+		self._abortion("2026-05-10")
+
+		service = frappe.get_doc(
+			{
+				"doctype": "Livestock Event",
+				"animal": self.animal,
+				"event_type": "Service",
+				"event_date": "2026-05-15",
+				"service_date": "2026-05-15",
+				"operator": self.operator,
+			}
+		)
+		service.insert()  # must not throw "Animal is Already Pregnant!"
 		self.addCleanup(_delete_and_commit, "Livestock Event", service.name)
 		self.assertTrue(service.name)
