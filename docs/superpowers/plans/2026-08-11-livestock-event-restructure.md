@@ -4352,10 +4352,14 @@ Add a post-abortion service guard. In `validate`, inside the existing `if self.e
 						)
 ```
 
-Wire the two new methods in. Append to `validate`:
+Wire the two new methods in. **`validate()` already ends with `check_guards(self)`** (added by
+Task 5b, which shipped before this task and could not call a method that did not yet exist).
+Insert the abortion call **immediately before** that line, not after it — `compute_abortion_dates`
+sets `ready_for_service_date`, and the guards must see the value this save is about to store:
 
 ```python
 		self.compute_abortion_dates()
+		check_guards(self)
 ```
 
 Append to `on_submit`:
