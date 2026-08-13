@@ -5,15 +5,14 @@ import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import add_days
 
-from upande_livestock.install import ensure_livestock_event_types
-from upande_livestock.livestock_timings import TIMING_DEFAULTS, get_timing
+from upande_livestock.install import ensure_livestock_event_types, ensure_livestock_timing_defaults
+from upande_livestock.livestock_timings import TIMING_DEFAULTS, get_timing, read_setting
 
 
 class TestLivestockTimings(IntegrationTestCase):
 	def tearDown(self):
 		for key in TIMING_DEFAULTS:
 			frappe.db.set_single_value("Livestock Settings", key, None)
-		frappe.clear_cache()
 
 	def test_defaults_match_the_previously_hardcoded_values(self):
 		self.assertEqual(TIMING_DEFAULTS["post_calving_min_service_days"], 45)
@@ -33,12 +32,10 @@ class TestLivestockTimings(IntegrationTestCase):
 
 	def test_configured_value_wins(self):
 		frappe.db.set_single_value("Livestock Settings", "gestation_period_days", 285)
-		frappe.clear_cache()
 		self.assertEqual(get_timing("gestation_period_days"), 285)
 
 	def test_zero_is_honoured_and_not_treated_as_unset(self):
 		frappe.db.set_single_value("Livestock Settings", "post_abortion_min_service_days", 0)
-		frappe.clear_cache()
 		self.assertEqual(get_timing("post_abortion_min_service_days"), 0)
 
 	def test_unknown_key_raises(self):
@@ -88,7 +85,6 @@ class TestTimingsAreEnforcedServerSide(IntegrationTestCase):
 	def tearDown(self):
 		frappe.db.set_single_value("Livestock Settings", "post_calving_min_service_days", None)
 		frappe.db.set_single_value("Livestock Settings", "gestation_period_days", None)
-		frappe.clear_cache()
 
 	def _calving(self, event_date):
 		doc = frappe.get_doc(
@@ -111,7 +107,6 @@ class TestTimingsAreEnforcedServerSide(IntegrationTestCase):
 	def test_configured_post_calving_block_is_enforced(self):
 		self._calving("2026-01-01")
 		frappe.db.set_single_value("Livestock Settings", "post_calving_min_service_days", 90)
-		frappe.clear_cache()
 		service = frappe.get_doc(
 			{
 				"doctype": "Livestock Event",
@@ -136,7 +131,6 @@ class TestTimingsAreEnforcedServerSide(IntegrationTestCase):
 
 	def test_configured_gestation_shifts_expected_calving_date(self):
 		frappe.db.set_single_value("Livestock Settings", "gestation_period_days", 285)
-		frappe.clear_cache()
 		service = frappe.get_doc(
 			{
 				"doctype": "Livestock Event",
@@ -150,3 +144,69 @@ class TestTimingsAreEnforcedServerSide(IntegrationTestCase):
 		service.insert()
 		self.addCleanup(_delete_and_commit, "Livestock Event", service.name)
 		self.assertEqual(str(service.expected_calving_date), add_days("2026-05-01", 285))
+
+
+class TestLivestockTimingDefaultsSeeding(IntegrationTestCase):
+	"""ensure_livestock_timing_defaults() and the platform bug it closes.
+
+	Livestock Settings is a Single. A timing field with no `tabSingles` row
+	loads as None; frappe.model.base_document's get_valid_dict() coerces that
+	None through cint() to 0 on the very next save of the doctype — editing
+	any unrelated field, for any reason. Verified directly against this site
+	before this fix existed: deleting every timing row, then loading and
+	saving Livestock Settings untouched, persisted gestation_period_days as
+	the string '0'. Seeding closes the gap by giving every field a real row
+	before anyone can ever save over it.
+	"""
+
+	def setUp(self):
+		for key in TIMING_DEFAULTS:
+			frappe.db.set_single_value("Livestock Settings", key, None)
+		frappe.db.commit()
+
+	def tearDown(self):
+		for key in TIMING_DEFAULTS:
+			frappe.db.set_single_value("Livestock Settings", key, None)
+		frappe.db.commit()
+
+	def test_seeds_every_field_that_has_no_row(self):
+		for key in TIMING_DEFAULTS:
+			self.assertIsNone(read_setting(key), f"{key} should start with no configured value")
+
+		ensure_livestock_timing_defaults()
+
+		for key, default in TIMING_DEFAULTS.items():
+			self.assertIsNotNone(read_setting(key), f"{key} was not seeded")
+			self.assertEqual(get_timing(key), default)
+
+	def test_does_not_overwrite_a_configured_non_default_value(self):
+		frappe.db.set_single_value("Livestock Settings", "gestation_period_days", 285)
+		frappe.db.commit()
+
+		ensure_livestock_timing_defaults()
+
+		self.assertEqual(get_timing("gestation_period_days"), 285)
+
+	def test_does_not_overwrite_a_configured_zero(self):
+		frappe.db.set_single_value("Livestock Settings", "post_abortion_min_service_days", 0)
+		frappe.db.commit()
+
+		ensure_livestock_timing_defaults()
+
+		self.assertEqual(get_timing("post_abortion_min_service_days"), 0)
+
+	def test_saving_livestock_settings_does_not_silently_zero_the_timings(self):
+		"""The regression that matters: reproduces the actual bug, not a stand-in.
+
+		A test that only checks Livestock Settings.validate() rejects a
+		hand-typed 0 would miss this entirely — validate() runs before the
+		None -> 0 coercion happens (that coercion is in get_valid_dict(), at
+		db_update() time), so it never sees the zero this bug produces.
+		"""
+		ensure_livestock_timing_defaults()
+
+		doc = frappe.get_single("Livestock Settings")
+		doc.save()  # touches no timing field
+
+		for key, default in TIMING_DEFAULTS.items():
+			self.assertEqual(get_timing(key), default, f"{key} was zeroed by an unrelated save")

@@ -6,6 +6,8 @@ deploy doesn't fail link validation.
 
 import frappe
 
+from upande_livestock.livestock_timings import TIMING_DEFAULTS, read_setting
+
 MILKING_STOCK_ENTRY_TYPE = "Milking"
 
 
@@ -92,6 +94,39 @@ def ensure_livestock_event_types():
 	frappe.db.commit()
 
 
+def ensure_livestock_timing_defaults():
+	"""Seed `tabSingles` with the real default for any timing field with no row.
+
+	Livestock Settings is a Single. A field with no row in `tabSingles` loads
+	as `None` in Python — and the next save of the doctype (through the desk
+	UI, editing any unrelated field, for any reason) coerces that `None`
+	through `cint()` and persists an explicit `0` (see
+	`frappe.model.base_document.BaseDocument.get_valid_dict`). That silently
+	disables every breeding timing (or worse: `gestation_period_days = 0`
+	makes the expected calving date equal the service date) the first time
+	anyone opens the settings page and clicks Save — indistinguishable
+	afterwards from a deliberate choice, since `get_timing()` correctly
+	honours a configured 0.
+
+	Only fills in fields with no row at all (per `read_setting`, not
+	`frappe.db.get_single_value`, for the same casting reason `get_timing`
+	avoids it) — never overwrites a farm's configured value, including a
+	deliberate 0. Idempotent: safe on every install and migrate.
+	"""
+	if not frappe.db.table_exists("Singles"):
+		return
+	if not frappe.get_meta("Livestock Settings").get_field("gestation_period_days"):
+		# Settings doctype not yet migrated to include the timing fields.
+		return
+
+	for fieldname, default in TIMING_DEFAULTS.items():
+		if read_setting(fieldname) in (None, ""):
+			frappe.db.set_single_value("Livestock Settings", fieldname, default)
+
+	frappe.db.commit()
+
+
 def after_install():
 	ensure_milking_stock_entry_type()
 	ensure_livestock_event_types()
+	ensure_livestock_timing_defaults()
