@@ -19,6 +19,7 @@ from frappe.model.document import Document
 from frappe.model.naming import make_autoname
 from frappe.utils import getdate, nowdate
 
+from upande_livestock.livestock_guards import check_guards
 from upande_livestock.livestock_timings import get_timing
 
 
@@ -486,6 +487,17 @@ class LivestockEvent(Document):
 			except Exception as e:
 				frappe.log_error(message=str(e), title="Herd Movement Error")
 				frappe.throw(f"Error: Could not update animal herd - {str(e)}")
+
+		# ============================================================
+		# AGE AND INTERVAL GUARDS
+		# ============================================================
+		# Not folded into the per-type blocks above: these seven rules apply
+		# uniformly across event types (age at Service/Calving; interval at
+		# Calving/Vaccination/Deworming/Hoof Trimming/Weight Recording) and are
+		# the one piece of validation that must also bind for the REST API,
+		# api/operations.record_birth, data import and the mobile client, not
+		# just the desk form the rest of this method was ported from.
+		check_guards(self)
 
 	def on_submit(self):
 		# --------------------------------------------
