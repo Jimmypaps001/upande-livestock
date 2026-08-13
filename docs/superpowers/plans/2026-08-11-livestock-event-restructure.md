@@ -2956,6 +2956,68 @@ In `.../livestock_health_case/livestock_health_case.json`, add `"links"` as a to
 
 This renders check-ups as a linked-documents section — deliberately not a child table, because a check-up legitimately exists standalone before it escalates into a case.
 
+- [ ] **Step 6b: Backfill the existing submitted health records**
+
+`on_submit` only fires for *new* submissions, so without this the timeline silently omits every
+health record that predates the deploy — 3 submitted `Livestock Diagnosis` and 25 submitted
+`Livestock Health Case` rows on kaitet.local. An empty event list reads as "this animal has never
+been ill", not "not migrated", which is worse than not shipping the timeline at all.
+
+Create `upande_livestock/patches/backfill_health_timeline_events.py`:
+
+```python
+# Copyright (c) 2026, Upande and contributors
+# For license information, please see license.txt
+
+"""Create timeline events for health records submitted before the timeline existed.
+
+sync_event_for is idempotent (it updates the document's existing event rather
+than creating a second one), so this patch is safe to re-run.
+"""
+
+import frappe
+
+from upande_livestock.install import ensure_livestock_event_types
+from upande_livestock.livestock_event_link import sync_event_for
+
+BACKFILL = (
+	("Livestock Diagnosis", "Check Up"),
+	("Livestock Health Case", "Health Case"),
+)
+
+
+def execute():
+	ensure_livestock_event_types()
+
+	created = 0
+	for doctype, event_type in BACKFILL:
+		if not frappe.db.table_exists(doctype):
+			continue
+		for name in frappe.db.get_all(doctype, filters={"docstatus": 1}, pluck="name"):
+			try:
+				doc = frappe.get_doc(doctype, name)
+				if not doc.animal:
+					continue
+				sync_event_for(doc, event_type)
+				created += 1
+			except Exception:
+				frappe.log_error(
+					message=frappe.get_traceback(),
+					title=f"Health timeline backfill failed: {doctype} {name}",
+				)
+
+	frappe.db.commit()
+	print(f"Backfilled timeline events for {created} health records")
+```
+
+Register it in `patches.txt` under `[post_model_sync]`, **after** `rename_livestock_event_docs`
+(the events it creates must be named by the current `autoname`, not renamed afterwards).
+
+Then run it and confirm the counts. Expected: 3 `Check Up`, 25 `Health Case`, and a total of
+**604**. Every later invariant check in this plan uses 604, not 576.
+
+Add a test asserting the patch is idempotent — run it twice, and the count must not change.
+
 - [ ] **Step 7: Apply the doctypes and run the tests**
 
 ```bash
