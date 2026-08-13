@@ -4,7 +4,7 @@
 """Shared test scaffolding for the Livestock Settings timing fields.
 
 Several IntegrationTestCase classes, in two different test modules, mutate
-the 11 TIMING_DEFAULTS singles fields directly (frappe.db.set_single_value,
+the ALL_TIMING_DEFAULTS singles fields directly (frappe.db.set_single_value,
 bypassing Livestock Settings.validate()) to set up unseeded-state
 preconditions such as "no row configured yet". IntegrationTestCase gives only
 one rollback, at class end — not one per test — so any test class whose
@@ -25,11 +25,11 @@ later.
 import frappe
 
 from upande_livestock.install import ensure_livestock_timing_defaults
-from upande_livestock.livestock_timings import TIMING_DEFAULTS
+from upande_livestock.livestock_timings import ALL_TIMING_DEFAULTS
 
 
 def reset_livestock_timings():
-	"""Wipe every timing field, then reseed the true defaults.
+	"""Wipe every timing field (Int and Float), then reseed the true defaults.
 
 	Wipes before reseeding rather than reseeding alone:
 	ensure_livestock_timing_defaults() only fills a field that has no
@@ -39,7 +39,7 @@ def reset_livestock_timings():
 	different from the documented defaults (280, 45, 30, 7, …) after the test
 	runs, instead of reset to them.
 	"""
-	for key in TIMING_DEFAULTS:
+	for key in ALL_TIMING_DEFAULTS:
 		frappe.db.set_single_value("Livestock Settings", key, None)
 	ensure_livestock_timing_defaults()
 

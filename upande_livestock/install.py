@@ -6,7 +6,7 @@ deploy doesn't fail link validation.
 
 import frappe
 
-from upande_livestock.livestock_timings import TIMING_DEFAULTS, read_setting
+from upande_livestock.livestock_timings import ALL_TIMING_DEFAULTS, read_setting
 
 MILKING_STOCK_ENTRY_TYPE = "Milking"
 
@@ -118,6 +118,11 @@ def ensure_livestock_timing_defaults():
 	field that already holds an explicit `'0'` written before it was covered
 	by `TIMING_DEFAULTS`. That case needs a one-time, narrow repair instead:
 	see `upande_livestock.patches.repair_zeroed_age_interval_settings`.
+
+	Seeds from `ALL_TIMING_DEFAULTS`, not `TIMING_DEFAULTS` — the merged dict
+	also covers the Float calf-herd age-bracket fields, which must be seeded
+	the same way but must never flow through `get_timing()`'s `cint()` or
+	through `ZERO_IS_INVALID` (see `livestock_timings.py`'s module docstring).
 	"""
 	if not frappe.db.table_exists("Singles"):
 		return
@@ -125,7 +130,7 @@ def ensure_livestock_timing_defaults():
 		# Settings doctype not yet migrated to include the timing fields.
 		return
 
-	for fieldname, default in TIMING_DEFAULTS.items():
+	for fieldname, default in ALL_TIMING_DEFAULTS.items():
 		if read_setting(fieldname) in (None, ""):
 			frappe.db.set_single_value("Livestock Settings", fieldname, default)
 

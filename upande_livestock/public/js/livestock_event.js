@@ -114,6 +114,7 @@ frappe.ui.form.on("Livestock Event", {
         let isService     = (et === "Service");
         let isDiagnosis   = (et === "Pregnancy Diagnosis");
         let isCalving     = (et === "Calving");
+        let isAbortion    = (et === "Abortion");
         let isBirth       = (et === "Birth");
         let isDryingOff   = (et === "Drying Off");
         let isVaccination = (et === "Vaccination");
@@ -397,7 +398,12 @@ frappe.ui.form.on("Livestock Event", {
             frm.set_value("custom_no_of_calves", null);
             frm.set_value("custom_calf_sex", null);
         }
-        if (!isCalving) {
+        // custom_related_pregnancy is also shown for Abortion (the server-side
+        // auto-link in LivestockEvent.validate() needs to see whatever the
+        // desk form already carries, and populates it from there when blank —
+        // nulling it here for Abortion would erase both the user's own
+        // selection and the point of that auto-link).
+        if (!isCalving && !isAbortion) {
             frm.set_value("custom_related_pregnancy", null);
         }
         // Husbandry fields — clear if not a husbandry/dehorning type
@@ -425,6 +431,7 @@ function toggle_event_fields(frm) {
     let isService     = (et === "Service");
     let isDiagnosis   = (et === "Pregnancy Diagnosis");
     let isCalving     = (et === "Calving");
+    let isAbortion    = (et === "Abortion");
     let isBirth       = (et === "Birth");
     let isDryingOff   = (et === "Drying Off");
     let isVaccination = (et === "Vaccination");
@@ -479,7 +486,12 @@ function toggle_event_fields(frm) {
     frm.set_df_property("custom_calving_outcome", "reqd", needsCalvInfo);
     frm.set_df_property("custom_no_of_calves", "hidden", !needsCalvInfo);
     frm.set_df_property("custom_calf_sex", "hidden", !needsCalvInfo);
-    frm.set_df_property("custom_related_pregnancy", "hidden", !isCalving);
+    // Shown (not hidden) for Abortion too, so a user can see/override the
+    // pregnancy the server-side auto-link will otherwise resolve for them —
+    // but not reqd for Abortion: unlike Calving, an Abortion must remain
+    // recordable even when nothing resolves (no Confirmed pregnancy on file
+    // is legitimate data, not an error — see LivestockEvent.validate()).
+    frm.set_df_property("custom_related_pregnancy", "hidden", !(isCalving || isAbortion));
     frm.set_df_property("custom_related_pregnancy", "reqd", isCalving);
 
     // ── Vaccine / Drug fields (Vaccination, Deworming, Dehorning) ──

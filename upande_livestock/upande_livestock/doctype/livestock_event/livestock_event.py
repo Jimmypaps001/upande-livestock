@@ -594,6 +594,62 @@ class LivestockEvent(Document):
 				frappe.throw("Please select the calving outcome: Live Birth, Still Birth, or Abortion")
 
 		# ============================================================
+		# VALIDATION FOR ABORTION
+		# ============================================================
+		# Auto-link mirrors the Calving block above (same query shape: most
+		# recent Confirmed Service with no Calving recorded against it), with
+		# one deliberate difference: Calving THROWS when nothing resolves,
+		# Abortion does not.
+		#
+		# Why the asymmetry is correct: a Calving's own math (parity,
+		# gestation length) is meaningless without a real pregnancy behind it.
+		# An Abortion's own math (gestation_days_at_loss, in
+		# compute_abortion_dates()) is already optional — guarded by
+		# `if self.custom_related_pregnancy` — so there is nothing that
+		# breaks by proceeding unlinked.
+		#
+		# Why throwing here would not even close the deadlock this auto-link
+		# exists to fix: this query is the mirror image of Service Rule 2's
+		# own query (a Confirmed pregnancy with no linked Calving). If this
+		# query finds nothing, there is, by construction, no such row for
+		# Rule 2 to ever throw on for this animal — so refusing to save the
+		# Abortion would protect nothing, while blocking a real loss from
+		# ever being recorded for a cow whose confirmation paperwork (a
+		# Pregnancy Diagnosis event) was never entered. That may be
+		# legitimate data this app must not refuse.
+		if self.event_type == "Abortion" and not self.custom_related_pregnancy:
+			pregnancy = frappe.db.sql("""
+                SELECT name, service_date
+                FROM `tabLivestock Event`
+                WHERE animal = %s
+                AND event_type = 'Service'
+                AND pregnancy_confirmation_status = 'Confirmed'
+                AND docstatus = 1
+                AND NOT EXISTS (
+                    SELECT 1 FROM `tabLivestock Event` c
+                    WHERE c.custom_related_pregnancy = `tabLivestock Event`.name
+                    AND c.event_type = 'Calving'
+                    AND c.docstatus = 1
+                )
+                ORDER BY service_date DESC
+                LIMIT 1
+            """, (self.animal,), as_dict=True)
+
+			if pregnancy:
+				self.custom_related_pregnancy = pregnancy[0].name
+				frappe.msgprint(f"""Auto-linked to pregnancy from service: <b>{pregnancy[0].name}</b>""", alert=True, indicator="blue")
+			else:
+				frappe.msgprint(
+					_(
+						"No confirmed pregnancy found to link this Abortion to. Recording "
+						"without a linked pregnancy — gestation length at loss will not be "
+						"calculated."
+					),
+					alert=True,
+					indicator="orange",
+				)
+
+		# ============================================================
 		# VALIDATION FOR MOVEMENT
 		# ============================================================
 
