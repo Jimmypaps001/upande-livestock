@@ -48,6 +48,8 @@ New standalone modules, each with one responsibility:
 | File | Responsibility |
 |---|---|
 | `upande_livestock/livestock_timings.py` | `TIMING_DEFAULTS` dict + `get_timing(key)`. The only place a breeding constant appears. |
+| `upande_livestock/livestock_guards.py` | `AGE_RULES`, `INTERVAL_RULES`, `check_guards(doc)`. Server-side enforcement of the rules that were browser-only. |
+| `upande_livestock/livestock_event_link.py` | `sync_event_for`, `cancel_event_for`. Keeps a health detail doc's Livestock Event row in step. |
 | `upande_livestock/api/animal.py` | `resolve_calf_herd()`, `create_calf(...)`, `animal_query(...)`. Shared by the Livestock Event controller and `api/operations.py`. |
 | `.../doctype/livestock_event_type/` | New master doctype. |
 | `upande_livestock/patches/rename_livestock_doctypes.py` | `pre_model_sync` — the nine DocType renames. |
@@ -374,7 +376,7 @@ from upande_livestock.install import SEED_EVENT_TYPES, ensure_livestock_event_ty
 class TestLivestockEventType(IntegrationTestCase):
 	def test_seeds_all_fifteen_types(self):
 		ensure_livestock_event_types()
-		self.assertEqual(len(SEED_EVENT_TYPES), 15)
+		self.assertEqual(len(SEED_EVENT_TYPES), 17)
 		for seed in SEED_EVENT_TYPES:
 			self.assertTrue(frappe.db.exists("Livestock Event Type", seed["name"]), seed["name"])
 
@@ -573,6 +575,8 @@ SEED_EVENT_TYPES = [
 	{"name": "Deworming", "creates_animal": 0, "detail_doctype": None},
 	{"name": "Heat Detection", "creates_animal": 0, "detail_doctype": None},
 	{"name": "Weight Recording", "creates_animal": 0, "detail_doctype": None},
+	{"name": "Hoof Trimming", "creates_animal": 0, "detail_doctype": None},
+	{"name": "Dehorning", "creates_animal": 0, "detail_doctype": None},
 	{"name": "Check Up", "creates_animal": 0, "detail_doctype": "Livestock Diagnosis"},
 	{"name": "Health Case", "creates_animal": 0, "detail_doctype": "Livestock Health Case"},
 ]
@@ -654,7 +658,7 @@ bench --site kaitet.local execute upande_livestock.install.ensure_livestock_even
 bench --site kaitet.local mariadb -e "SELECT name, creates_animal, detail_doctype FROM \`tabLivestock Event Type\` ORDER BY name;"
 ```
 
-Expected: 15 rows. `Birth` has `creates_animal = 1`; `Check Up` and `Health Case` carry their `detail_doctype`.
+Expected: 17 rows. `Birth` has `creates_animal = 1`; `Check Up` and `Health Case` carry their `detail_doctype`.
 
 - [ ] **Step 8: Run the test to verify it passes**
 
@@ -677,8 +681,9 @@ type name. Carries creates_animal and detail_doctype so the Livestock
 Event controller reads behaviour from data instead of comparing string
 literals.
 
-Seeded with 15 types — the 10 already present in live data plus
-Feeding, Milking, Check Up, Health Case and Abortion — and with any
+Seeded with 17 types — the 10 already present in live data plus
+Feeding, Milking, Check Up, Health Case, Abortion, Hoof Trimming and
+Dehorning — and with any
 event_type value already in the table, so no site ends up with a
 dangling Link.
 
@@ -1794,6 +1799,396 @@ Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
 
 ---
 
+### Task 5b: Enforce the age and interval rules server-side
+
+**Files:**
+- Create: `upande_livestock/livestock_guards.py`
+- Create: `upande_livestock/test_livestock_guards.py`
+- Modify: `.../doctype/livestock_event/livestock_event.py`
+
+**Interfaces:**
+- Consumes: `Livestock Event Type` from Task 2, `Livestock Event` from Task 3.
+- Produces:
+  - `upande_livestock.livestock_guards.INTERVAL_RULES` → `dict[str, dict]`, keyed by event type.
+  - `upande_livestock.livestock_guards.AGE_RULES` → `dict[str, dict]`, keyed by event type.
+  - `upande_livestock.livestock_guards.check_guards(doc)` → `None`. Throws on violation.
+  - `upande_livestock.livestock_guards.animal_age_months(animal, on_date)` → `float | None`.
+
+**Why this task exists:** spec §7 requires the existing settings to be *enforced*, not merely read. Today these seven rules live **only** in `public/js/animal_event.js` — bypassed by the REST API, `record_birth`, data import and the mobile client. Task 5 made the controller read the settings; this task makes the rules bind.
+
+- [ ] **Step 1: Write the failing test**
+
+Create `upande_livestock/test_livestock_guards.py`:
+
+```python
+# Copyright (c) 2026, Upande and contributors
+# For license information, please see license.txt
+
+import frappe
+from frappe.tests import IntegrationTestCase
+from frappe.utils import add_days, add_months, today
+
+from upande_livestock.install import ensure_livestock_event_types
+from upande_livestock.livestock_guards import AGE_RULES, INTERVAL_RULES, animal_age_months
+
+SETTINGS_KEYS = (
+	"min_service_age_months",
+	"min_calving_age_months",
+	"min_calving_interval_days",
+	"min_vaccination_interval_days",
+	"min_deworming_interval_days",
+	"min_weight_recording_interval_days",
+	"min_hoof_trimming_interval_days",
+)
+
+
+class TestLivestockGuards(IntegrationTestCase):
+	def setUp(self):
+		ensure_livestock_event_types()
+		for key in SETTINGS_KEYS:
+			frappe.db.set_single_value("Livestock Settings", key, None)
+		frappe.clear_cache()
+		self.operator = frappe.db.get_value("Employee", {}, "name")
+
+	def tearDown(self):
+		for key in SETTINGS_KEYS:
+			frappe.db.set_single_value("Livestock Settings", key, None)
+		frappe.clear_cache()
+
+	def _animal(self, tag, age_months):
+		if frappe.db.exists("Animal", tag):
+			frappe.delete_doc("Animal", tag, force=True, ignore_permissions=True)
+		return frappe.get_doc(
+			{
+				"doctype": "Animal",
+				"tag_number": tag,
+				"burn_name": tag,
+				"sex": "Female",
+				"status": "Active",
+				"date_of_birth": add_months(today(), -age_months),
+			}
+		).insert()
+
+	def _event(self, event_type, animal, event_date, **kwargs):
+		doc = frappe.get_doc(
+			{
+				"doctype": "Livestock Event",
+				"animal": animal,
+				"event_type": event_type,
+				"event_date": event_date,
+				"operator": self.operator,
+				**kwargs,
+			}
+		)
+		doc.insert()
+		return doc
+
+	def test_rule_tables_cover_the_documented_defaults(self):
+		self.assertEqual(AGE_RULES["Service"]["default"], 15)
+		self.assertEqual(AGE_RULES["Calving"]["default"], 24)
+		self.assertEqual(INTERVAL_RULES["Calving"]["default"], 270)
+		self.assertEqual(INTERVAL_RULES["Vaccination"]["default"], 21)
+		self.assertEqual(INTERVAL_RULES["Deworming"]["default"], 90)
+		self.assertEqual(INTERVAL_RULES["Hoof Trimming"]["default"], 90)
+		self.assertEqual(INTERVAL_RULES["Weight Recording"]["default"], 7)
+
+	def test_animal_age_months_is_computed_from_date_of_birth(self):
+		animal = self._animal("TEST-GUARD-AGE", 30)
+		self.assertAlmostEqual(animal_age_months(animal.name, today()), 30, delta=1)
+
+	def test_animal_with_no_dob_is_not_age_blocked(self):
+		tag = "TEST-GUARD-NODOB"
+		if frappe.db.exists("Animal", tag):
+			frappe.delete_doc("Animal", tag, force=True, ignore_permissions=True)
+		animal = frappe.get_doc(
+			{"doctype": "Animal", "tag_number": tag, "burn_name": tag, "sex": "Female", "status": "Active"}
+		).insert()
+		self.assertIsNone(animal_age_months(animal.name, today()))
+		doc = self._event("Service", animal.name, today(), service_date=today())
+		self.assertTrue(doc.name)
+
+	def test_service_below_minimum_age_is_blocked(self):
+		animal = self._animal("TEST-GUARD-YOUNG", 10)
+		with self.assertRaises(frappe.exceptions.ValidationError):
+			self._event("Service", animal.name, today(), service_date=today())
+
+	def test_service_at_or_above_minimum_age_passes(self):
+		animal = self._animal("TEST-GUARD-OLD", 20)
+		doc = self._event("Service", animal.name, today(), service_date=today())
+		self.assertTrue(doc.name)
+
+	def test_configured_minimum_age_is_honoured(self):
+		animal = self._animal("TEST-GUARD-OLD", 20)
+		frappe.db.set_single_value("Livestock Settings", "min_service_age_months", 24)
+		frappe.clear_cache()
+		with self.assertRaises(frappe.exceptions.ValidationError):
+			self._event("Service", animal.name, today(), service_date=today())
+
+	def test_vaccination_inside_the_interval_is_blocked(self):
+		animal = self._animal("TEST-GUARD-VAX", 30)
+		first = self._event("Vaccination", animal.name, add_days(today(), -5))
+		first.submit()
+		with self.assertRaises(frappe.exceptions.ValidationError):
+			self._event("Vaccination", animal.name, today())
+
+	def test_vaccination_outside_the_interval_passes(self):
+		animal = self._animal("TEST-GUARD-VAX2", 30)
+		first = self._event("Vaccination", animal.name, add_days(today(), -40))
+		first.submit()
+		doc = self._event("Vaccination", animal.name, today())
+		self.assertTrue(doc.name)
+
+	def test_draft_events_do_not_trigger_the_interval_rule(self):
+		animal = self._animal("TEST-GUARD-DRAFT", 30)
+		self._event("Vaccination", animal.name, add_days(today(), -5))  # left in draft
+		doc = self._event("Vaccination", animal.name, today())
+		self.assertTrue(doc.name)
+
+	def test_zero_setting_disables_an_interval_rule(self):
+		animal = self._animal("TEST-GUARD-ZERO", 30)
+		frappe.db.set_single_value("Livestock Settings", "min_vaccination_interval_days", 0)
+		frappe.clear_cache()
+		first = self._event("Vaccination", animal.name, add_days(today(), -1))
+		first.submit()
+		doc = self._event("Vaccination", animal.name, today())
+		self.assertTrue(doc.name)
+
+	def test_untyped_event_is_not_guarded(self):
+		animal = self._animal("TEST-GUARD-FEED", 3)
+		doc = self._event("Feeding", animal.name, today())
+		self.assertTrue(doc.name)
+```
+
+- [ ] **Step 2: Run it to verify it fails**
+
+```bash
+cd /home/ubuntu/stive/code/frappe15
+bench --site kaitet.local run-tests --module upande_livestock.test_livestock_guards
+```
+
+Expected: FAIL — `ModuleNotFoundError: No module named 'upande_livestock.livestock_guards'`.
+
+- [ ] **Step 3: Write the guards module**
+
+Create `upande_livestock/livestock_guards.py`:
+
+```python
+# Copyright (c) 2026, Upande and contributors
+# For license information, please see license.txt
+
+"""Server-side age and interval guards for Livestock Event.
+
+These rules previously lived only in public/js/animal_event.js, which meant the
+REST API, api/operations.record_birth, data import and the mobile client all
+bypassed them. The client script keeps its copies for fast feedback; this module
+is what actually binds.
+
+Every threshold reads a Livestock Settings field, falling back to the default the
+client script used, so no site's behaviour changes on deploy. A configured 0
+disables the rule.
+"""
+
+import frappe
+from frappe import _
+from frappe.utils import cint, date_diff, flt, getdate
+
+# event_type -> the Livestock Settings field and the client script's old default
+AGE_RULES = {
+	"Service": {"setting": "min_service_age_months", "default": 15, "label": "service"},
+	"Calving": {"setting": "min_calving_age_months", "default": 24, "label": "calving"},
+}
+
+# event_type -> minimum days since the last event of the same kind
+INTERVAL_RULES = {
+	"Calving": {
+		"setting": "min_calving_interval_days",
+		"default": 270,
+		"against": ("Calving",),
+		"label": "calving",
+	},
+	"Vaccination": {
+		"setting": "min_vaccination_interval_days",
+		"default": 21,
+		"against": ("Vaccination",),
+		"label": "vaccination",
+	},
+	"Deworming": {
+		"setting": "min_deworming_interval_days",
+		"default": 90,
+		"against": ("Deworming",),
+		"label": "deworming",
+	},
+	"Hoof Trimming": {
+		"setting": "min_hoof_trimming_interval_days",
+		"default": 90,
+		"against": ("Hoof Trimming",),
+		"label": "hoof trimming",
+	},
+	"Weight Recording": {
+		"setting": "min_weight_recording_interval_days",
+		"default": 7,
+		"against": ("Weight Recording",),
+		"label": "weight recording",
+	},
+}
+
+
+def _setting(fieldname, default):
+	value = frappe.db.get_single_value("Livestock Settings", fieldname)
+	if value in (None, ""):
+		return default
+	return cint(value)
+
+
+def animal_age_months(animal, on_date):
+	"""Age in months on `on_date`, or None when the animal has no date of birth.
+
+	A missing date of birth must not block recording — plenty of purchased animals
+	have never had one entered.
+	"""
+	dob = frappe.db.get_value("Animal", animal, "date_of_birth")
+	if not dob:
+		return None
+	return flt(date_diff(getdate(on_date), getdate(dob))) / 30.4375
+
+
+def _check_age(doc):
+	rule = AGE_RULES.get(doc.event_type)
+	if not rule:
+		return
+
+	minimum = _setting(rule["setting"], rule["default"])
+	if not minimum:
+		return
+
+	age = animal_age_months(doc.animal, doc.event_date)
+	if age is None or age >= minimum:
+		return
+
+	frappe.throw(
+		_(
+			"This animal is {0} months old. The minimum age for {1} is {2} months. "
+			"Change Livestock Settings → {3} if that is wrong."
+		).format(int(age), rule["label"], minimum, frappe.unscrub(rule["setting"]))
+	)
+
+
+def _check_interval(doc):
+	rule = INTERVAL_RULES.get(doc.event_type)
+	if not rule:
+		return
+
+	minimum = _setting(rule["setting"], rule["default"])
+	if not minimum or not doc.event_date:
+		return
+
+	previous = frappe.db.sql(
+		"""SELECT name, event_date FROM `tabLivestock Event`
+		   WHERE animal = %(animal)s
+		     AND event_type IN %(types)s
+		     AND docstatus = 1
+		     AND name != %(name)s
+		     AND event_date <= %(event_date)s
+		   ORDER BY event_date DESC LIMIT 1""",
+		{
+			"animal": doc.animal,
+			"types": rule["against"],
+			"name": doc.name or "new",
+			"event_date": doc.event_date,
+		},
+		as_dict=True,
+	)
+	if not previous:
+		return
+
+	days = date_diff(doc.event_date, previous[0].event_date)
+	if days >= minimum:
+		return
+
+	frappe.throw(
+		_(
+			"Last {0} for this animal was {1} ({2} days ago); the minimum interval is "
+			"{3} days. Change Livestock Settings → {4} if that is wrong."
+		).format(
+			rule["label"],
+			frappe.utils.formatdate(previous[0].event_date),
+			days,
+			minimum,
+			frappe.unscrub(rule["setting"]),
+		)
+	)
+
+
+def check_guards(doc):
+	"""Run every guard that applies to this event's type."""
+	if not doc.event_type or not doc.animal:
+		return
+	_check_age(doc)
+	_check_interval(doc)
+```
+
+Two deliberate departures from the client script, both because the client version cannot work as written:
+
+- The JS vaccination rule compares `custom_vaccine_drug_name`, a field that **does not exist** on the doctype — so in the browser it compares `undefined === undefined`, always true, making it a plain interval check. The server port is a plain interval check, matching actual behaviour.
+- The JS Birth rule applies the calving interval to `frm.doc.animal`. In the new model a Birth event's `animal` is the **calf**, so that rule would compare a newborn against itself. Birth is therefore absent from `INTERVAL_RULES`; the dam is already covered by the `Calving` rule.
+
+- [ ] **Step 4: Wire it into the controller**
+
+In `.../doctype/livestock_event/livestock_event.py`, add the import:
+
+```python
+from upande_livestock.livestock_guards import check_guards
+```
+
+And append to `validate`, after `self.compute_abortion_dates()`:
+
+```python
+		check_guards(self)
+```
+
+- [ ] **Step 5: Run the tests**
+
+```bash
+cd /home/ubuntu/stive/code/frappe15
+bench --site kaitet.local run-tests --module upande_livestock.test_livestock_guards
+bench --site kaitet.local run-tests --module upande_livestock.upande_livestock.doctype.livestock_event.test_livestock_event
+```
+
+Expected: PASS (12 guard tests), then the Livestock Event suite still passes. If an earlier Livestock Event test now fails on an age guard, give that test's animal a `date_of_birth` at least 24 months back — do **not** weaken the guard.
+
+- [ ] **Step 6: Commit**
+
+```bash
+cd /home/ubuntu/stive/code/frappe15/apps/upande_livestock
+git add -A
+git commit -m "feat(livestock): enforce age and interval rules server-side
+
+Seven rules — service and calving minimum age, and the calving,
+vaccination, deworming, hoof-trimming and weight-recording intervals —
+lived only in the client script, so the REST API, record_birth, data
+import and the mobile client all bypassed them. Task 5 made the
+controller read the settings; this makes them bind.
+
+Defaults match the client script's old fallbacks (15, 24, 270, 21, 90,
+90, 7) so no site changes behaviour on deploy, a configured 0 disables a
+rule, and each throw names the setting to change.
+
+Two departures from the client version, both because it cannot work as
+written: the vaccination rule drops its comparison against
+custom_vaccine_drug_name, a field that does not exist on the doctype (in
+the browser it compares undefined to undefined, so it was always a plain
+interval check); and Birth is excluded, because a Birth event's animal is
+now the calf, so the calving interval would compare a newborn against
+itself. The dam stays covered by the Calving rule.
+
+An animal with no date of birth is never age-blocked — plenty of
+purchased animals have none recorded.
+
+Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
+```
+
+---
+
 ### Task 6: Disease reference on Livestock Diagnosis
 
 **Files:**
@@ -2588,7 +2983,7 @@ form would create the calf twice.
 
 import frappe
 from frappe import _
-from frappe.utils import flt
+from frappe.utils import cint, flt
 
 
 def resolve_calf_herd():
@@ -2806,19 +3201,35 @@ Add this helper method and hook it into `before_insert`. Put the method just bel
 		)
 ```
 
-At the **top** of the existing `before_insert`, before the `frappe.get_doc("Animal", self.animal)` line, add:
+At the **top** of the existing `before_insert`, replace the current first line
+
+```python
+		animal = frappe.get_doc("Animal", self.animal)
+```
+
+with:
 
 ```python
 		self.create_calf_if_needed()
+
+		# A stillborn Birth event has no calf to point at, so there is no Animal to
+		# update. Everything below this line is per-animal status maintenance.
+		if not self.animal:
+			return
+
+		animal = frappe.get_doc("Animal", self.animal)
 ```
 
-`animal` is `reqd` on the doctype, and a stillborn Birth event has no calf to point at. Make `animal` non-mandatory for stillbirths by changing its field object in the JSON from `"reqd": 1` to:
+`animal` is `reqd` on the doctype today, and a stillborn Birth event has no calf. Make it conditional by removing the `"reqd": 1` key from the `animal` field object in the JSON and adding:
 
 ```json
    "mandatory_depends_on": "eval:!doc.is_stillborn",
 ```
 
-(remove the `"reqd": 1` key).
+**Lifecycle note — verified on this bench:** `Document.insert()` runs `_validate_links()` → `before_insert` → `set_new_name()` → `run_before_save_methods()` (`validate`, then mandatory checks). Two consequences the implementer must not get wrong:
+
+- `create_calf_if_needed` **must** live in `before_insert`, not `validate`. Mandatory validation runs after `before_insert`, so `animal` is populated in time; putting it in `validate` would be too late for `autoname` and too early for nothing.
+- Link validation has already run by the time `self.animal` is set, so the newly created calf is not re-validated as a link. That is harmless — `create_calf` inserted it, so it exists by construction.
 
 - [ ] **Step 7: Point `record_birth` at the shared helper**
 
@@ -3778,4 +4189,1058 @@ Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
 
 ---
 
-*Tasks 11–13 continue below.*
+### Task 11: Culling retires the animal
+
+**Files:**
+- Modify: `.../doctype/livestock_disposal/livestock_disposal.json`
+- Modify: `.../doctype/livestock_disposal/livestock_disposal.py`
+- Modify: `.../doctype/animal/animal.json`
+- Modify: `upande_livestock/api/animal.py`
+- Modify: `upande_livestock/hooks.py`
+- Create: `upande_livestock/patches/backfill_animal_disabled.py`
+- Modify: `upande_livestock/patches.txt`
+- Test: `.../doctype/livestock_disposal/test_livestock_disposal.py`
+
+**Interfaces:**
+- Consumes: `api/assets.py:scrap_livestock_asset()` and `sell_livestock_asset()` (both pre-existing), `api/animal.py` from Task 8.
+- Produces:
+  - `Animal.disabled` (Check, read-only)
+  - `Livestock Disposal.customer` (Link → Customer)
+  - `upande_livestock.api.animal.animal_query(doctype, txt, searchfield, start, page_len, filters)` → `list[tuple]`, registered as a `standard_queries` hook.
+  - `upande_livestock.api.animal.STATUS_BY_DISPOSAL_TYPE` → `dict[str, str]`
+
+**Note:** `livestock_disposal.py` is currently a `pass` stub, which is why `sale_journal_entry` and `writeoff_journal_entry` are never populated. `sell_livestock_asset()` throws without both `customer` and `selling_amount` (`api/assets.py:171-175`), and the doctype has only free-text `buyer_name` today — hence the new `customer` field.
+
+- [ ] **Step 1: Write the failing test**
+
+Create `.../doctype/livestock_disposal/test_livestock_disposal.py`:
+
+```python
+# Copyright (c) 2026, Upande and contributors
+# For license information, please see license.txt
+
+from unittest.mock import patch
+
+import frappe
+from frappe.tests import IntegrationTestCase
+
+from upande_livestock.api.animal import STATUS_BY_DISPOSAL_TYPE, animal_query
+
+
+def make_animal(tag):
+	if frappe.db.exists("Animal", tag):
+		doc = frappe.get_doc("Animal", tag)
+		doc.db_set("disabled", 0)
+		doc.db_set("status", "Active")
+		return doc
+	return frappe.get_doc(
+		{"doctype": "Animal", "tag_number": tag, "burn_name": tag, "sex": "Female", "status": "Active"}
+	).insert()
+
+
+class TestLivestockDisposal(IntegrationTestCase):
+	def setUp(self):
+		self.animal = make_animal("TEST-DISPOSE-1")
+
+	def _disposal(self, disposal_type, **kwargs):
+		doc = frappe.get_doc(
+			{
+				"doctype": "Livestock Disposal",
+				"animal": self.animal.name,
+				"disposal_date": "2026-09-01",
+				"disposal_type": disposal_type,
+				**kwargs,
+			}
+		)
+		doc.insert()
+		doc.submit()
+		return doc
+
+	def test_status_map_covers_every_disposal_type(self):
+		options = frappe.get_meta("Livestock Disposal").get_field("disposal_type").options
+		for option in [o for o in options.split("\n") if o.strip()]:
+			self.assertIn(option, STATUS_BY_DISPOSAL_TYPE, f"{option} has no status mapping")
+
+	def test_animal_gains_a_disabled_field_that_is_read_only(self):
+		field = frappe.get_meta("Animal").get_field("disabled")
+		self.assertIsNotNone(field)
+		self.assertTrue(field.read_only)
+
+	def test_sold_requires_a_customer(self):
+		doc = frappe.get_doc(
+			{
+				"doctype": "Livestock Disposal",
+				"animal": self.animal.name,
+				"disposal_date": "2026-09-01",
+				"disposal_type": "Sold",
+				"sale_price": 50000,
+			}
+		)
+		with self.assertRaises(frappe.exceptions.MandatoryError):
+			doc.insert()
+
+	@patch("upande_livestock.upande_livestock.doctype.livestock_disposal.livestock_disposal.scrap_livestock_asset")
+	def test_died_routes_to_scrap(self, mock_scrap):
+		self._disposal("Died — Disease")
+		mock_scrap.assert_called_once()
+
+	@patch("upande_livestock.upande_livestock.doctype.livestock_disposal.livestock_disposal.sell_livestock_asset")
+	def test_sold_routes_to_sell(self, mock_sell):
+		customer = frappe.db.get_value("Customer", {}, "name")
+		if not customer:
+			customer = frappe.get_doc(
+				{"doctype": "Customer", "customer_name": "TEST-BUYER"}
+			).insert().name
+		self._disposal("Sold", customer=customer, sale_price=50000)
+		mock_sell.assert_called_once()
+
+	@patch("upande_livestock.upande_livestock.doctype.livestock_disposal.livestock_disposal.scrap_livestock_asset")
+	def test_status_and_disabled_are_set(self, _mock_scrap):
+		self._disposal("Died — Accident")
+		self.animal.reload()
+		self.assertEqual(self.animal.status, "Dead")
+		self.assertTrue(self.animal.disabled)
+
+	@patch("upande_livestock.upande_livestock.doctype.livestock_disposal.livestock_disposal.scrap_livestock_asset")
+	def test_uncapitalised_animal_disposes_with_a_warning_not_a_throw(self, mock_scrap):
+		mock_scrap.side_effect = frappe.ValidationError("not capitalised")
+		doc = self._disposal("Culled (Farm Use)")
+		self.assertEqual(doc.docstatus, 1)
+		self.animal.reload()
+		self.assertTrue(self.animal.disabled)
+
+	@patch("upande_livestock.upande_livestock.doctype.livestock_disposal.livestock_disposal.scrap_livestock_asset")
+	def test_disabled_animal_is_hidden_from_link_search(self, _mock_scrap):
+		self._disposal("Died — Natural Causes")
+		results = animal_query("Animal", "TEST-DISPOSE-1", "name", 0, 20, {})
+		names = [row[0] for row in results]
+		self.assertNotIn("TEST-DISPOSE-1", names)
+
+	def test_active_animal_is_visible_in_link_search(self):
+		make_animal("TEST-VISIBLE-1")
+		results = animal_query("Animal", "TEST-VISIBLE-1", "name", 0, 20, {})
+		names = [row[0] for row in results]
+		self.assertIn("TEST-VISIBLE-1", names)
+```
+
+- [ ] **Step 2: Run it to verify it fails**
+
+```bash
+cd /home/ubuntu/stive/code/frappe15
+bench --site kaitet.local run-tests --module upande_livestock.upande_livestock.doctype.livestock_disposal.test_livestock_disposal
+```
+
+Expected: FAIL — `ImportError: cannot import name 'STATUS_BY_DISPOSAL_TYPE'`.
+
+- [ ] **Step 3: Add Animal.disabled**
+
+In `.../doctype/animal/animal.json`, add `"disabled"` to `field_order` immediately after `"status"`, and this field object:
+
+```json
+  {
+   "default": "0",
+   "description": "Set by a submitted Livestock Disposal. A disabled animal is hidden from every link search but keeps all its history.",
+   "fieldname": "disabled",
+   "fieldtype": "Check",
+   "label": "Disabled (Retired)",
+   "no_copy": 1,
+   "read_only": 1,
+   "search_index": 1
+  },
+```
+
+- [ ] **Step 4: Add the customer field to Livestock Disposal**
+
+In `.../doctype/livestock_disposal/livestock_disposal.json`, add `"customer"` to `field_order` immediately before `"buyer_name"`, and this field object:
+
+```json
+  {
+   "description": "Required for a Sold disposal — the fixed-asset sale posts against this Customer.",
+   "fieldname": "customer",
+   "fieldtype": "Link",
+   "label": "Customer",
+   "mandatory_depends_on": "eval:doc.disposal_type == \"Sold\"",
+   "options": "Customer"
+  },
+```
+
+Also make `sale_price` mandatory for a sale by adding to its existing field object:
+
+```json
+   "mandatory_depends_on": "eval:doc.disposal_type == \"Sold\"",
+```
+
+- [ ] **Step 5: Add the status map and link query**
+
+Append to `upande_livestock/api/animal.py`:
+
+```python
+STATUS_BY_DISPOSAL_TYPE = {
+	"Sold": "Sold",
+	"Culled (Farm Use)": "Culled",
+	"Died — Natural Causes": "Dead",
+	"Died — Disease": "Dead",
+	"Died — Accident": "Dead",
+	"Condemned": "Culled",
+	"Slaughtered": "Culled",
+}
+
+
+def retire_animal(animal, disposal_type):
+	"""Set the animal's final status and disable it. History is left intact."""
+	status = STATUS_BY_DISPOSAL_TYPE.get(disposal_type, "Culled")
+	herd = frappe.db.get_value("Animal", animal, "current_herd")
+	frappe.db.set_value("Animal", animal, {"status": status, "disabled": 1}, update_modified=False)
+	recompute_herd_count(herd)
+
+
+@frappe.whitelist()
+@frappe.validate_and_sanitize_search_inputs
+def animal_query(doctype, txt, searchfield, start, page_len, filters):
+	"""Default link search for Animal: never offer a retired animal.
+
+	Registered as a standard_queries hook, so it applies to every Animal link
+	field across the app. List views and reports are unaffected — a culled animal
+	keeps all its events, health cases and milk records.
+	"""
+	# Only forward filters that name a real Animal field, so a caller cannot inject
+	# arbitrary SQL through a filter key.
+	meta = frappe.get_meta("Animal")
+	conditions = ["IFNULL(a.disabled, 0) = 0"]
+	values = {"txt": f"%{txt}%", "start": cint(start), "page_len": cint(page_len)}
+
+	for key, value in (filters or {}).items():
+		if key == "disabled" or not meta.has_field(key):
+			continue
+		conditions.append(f"a.`{key}` = %({key})s")
+		values[key] = value
+
+	where = " AND ".join(conditions)
+	return frappe.db.sql(
+		f"""SELECT a.name, a.burn_name, a.current_herd
+		    FROM `tabAnimal` a
+		    WHERE {where}
+		      AND (a.name LIKE %(txt)s OR IFNULL(a.burn_name, '') LIKE %(txt)s)
+		    ORDER BY a.name
+		    LIMIT %(start)s, %(page_len)s""",
+		values,
+	)
+```
+
+- [ ] **Step 6: Register the standard query**
+
+In `upande_livestock/hooks.py`, add near the `doctype_js` block:
+
+```python
+# Default link-field search for Animal — hides retired (disabled) animals so a
+# culled animal can never be picked again, while keeping all its history.
+standard_queries = {"Animal": "upande_livestock.api.animal.animal_query"}
+```
+
+- [ ] **Step 7: Write the disposal controller**
+
+Replace `.../doctype/livestock_disposal/livestock_disposal.py` with:
+
+```python
+# Copyright (c) 2026, Upande and contributors
+# For license information, please see license.txt
+
+"""Livestock Disposal controller.
+
+On submit this both posts the asset accounting and permanently retires the
+animal. The asset work is delegated to api/assets.py, which already handles
+account resolution, the disposal Journal Entry and the Asset status — this
+controller only decides which of the two entry points to call.
+
+An asset failure is downgraded to a warning: an uncapitalised or already-disposed
+animal must still be recordable as dead or sold.
+"""
+
+import frappe
+from frappe import _
+from frappe.model.document import Document
+
+from upande_livestock.api.animal import retire_animal
+from upande_livestock.api.assets import scrap_livestock_asset, sell_livestock_asset
+
+SALE_TYPES = ("Sold",)
+
+
+class LivestockDisposal(Document):
+	def on_submit(self):
+		self.post_asset_disposal()
+		retire_animal(self.animal, self.disposal_type)
+
+	def post_asset_disposal(self):
+		"""Scrap or sell the linked Asset. Warn rather than throw on failure."""
+		if not frappe.db.get_value("Animal", self.animal, "asset_link"):
+			frappe.msgprint(
+				_("Animal {0} has no linked Asset; no asset postings were made.").format(self.animal),
+				alert=True,
+				indicator="orange",
+			)
+			return
+
+		try:
+			if self.disposal_type in SALE_TYPES:
+				sell_livestock_asset(
+					animal=self.animal,
+					customer=self.customer,
+					selling_amount=self.sale_price,
+					posting_date=self.disposal_date,
+				)
+			else:
+				scrap_livestock_asset(
+					animal=self.animal,
+					reason=self.disposal_type,
+					scrapping_date=self.disposal_date,
+				)
+		except Exception as e:
+			frappe.log_error(message=frappe.get_traceback(), title="Livestock disposal asset error")
+			frappe.msgprint(
+				_("Asset postings failed and were skipped: {0}").format(str(e)),
+				alert=True,
+				indicator="orange",
+			)
+```
+
+- [ ] **Step 8: Write the backfill patch**
+
+Create `upande_livestock/patches/backfill_animal_disabled.py`:
+
+```python
+# Copyright (c) 2026, Upande and contributors
+# For license information, please see license.txt
+
+"""Retire animals that were already culled before Animal.disabled existed.
+
+Without this, historical culls stay pickable in link fields while new ones do
+not — the same animal treated two different ways depending on when it left.
+"""
+
+import frappe
+
+RETIRED_STATUSES = ("Sold", "Dead", "Culled", "Transferred Out")
+
+
+def execute():
+	if not frappe.db.has_column("Animal", "disabled"):
+		return
+
+	frappe.db.sql(
+		"""UPDATE `tabAnimal`
+		   SET disabled = 1
+		   WHERE IFNULL(disabled, 0) = 0
+		     AND status IN %(statuses)s""",
+		{"statuses": RETIRED_STATUSES},
+	)
+	frappe.db.commit()
+```
+
+Register it in `patches.txt` under `[post_model_sync]`:
+
+```
+upande_livestock.patches.backfill_animal_disabled.execute
+```
+
+- [ ] **Step 9: Apply, patch and test**
+
+```bash
+cd /home/ubuntu/stive/code/frappe15
+bench --site kaitet.local console <<'EOF'
+import frappe
+from frappe.modules.import_file import import_file_by_path
+base = "apps/upande_livestock/upande_livestock/upande_livestock/doctype"
+for d in ("animal", "livestock_disposal"):
+    import_file_by_path(f"{base}/{d}/{d}.json", force=True)
+frappe.db.commit()
+EOF
+bench --site kaitet.local execute upande_livestock.patches.backfill_animal_disabled.execute
+bench --site kaitet.local mariadb -e "
+SELECT status, disabled, COUNT(*) n FROM \`tabAnimal\` GROUP BY status, disabled ORDER BY status;"
+bench --site kaitet.local run-tests --module upande_livestock.upande_livestock.doctype.livestock_disposal.test_livestock_disposal
+```
+
+Expected: every `Sold` / `Dead` / `Culled` / `Transferred Out` row has `disabled = 1`, every `Active` row has `disabled = 0`, then PASS (10 tests).
+
+- [ ] **Step 10: Commit**
+
+```bash
+cd /home/ubuntu/stive/code/frappe15/apps/upande_livestock
+git add -A
+git commit -m "feat(livestock): culling retires the animal and disposes the asset
+
+Livestock Disposal was a pass stub, which is why sale_journal_entry and
+writeoff_journal_entry were never populated. It now delegates to the
+existing api/assets.py entry points — sell_livestock_asset for Sold,
+scrap_livestock_asset for the died / condemned / culled types — then sets
+the animal's final status and ticks the new read-only Animal.disabled.
+
+Adds Livestock Disposal.customer (mandatory for Sold): the pre-existing
+sell_livestock_asset throws without a Customer and the doctype only had
+free-text buyer_name.
+
+A standard_queries hook hides disabled animals from every Animal link
+search, so a culled animal can never be picked again while keeping all
+its events, health cases and milk records. Asset failures are warnings,
+not throws, so an uncapitalised animal is still recordable as dead.
+
+A patch backfills disabled on animals already at a retired status, so
+historical culls behave like new ones.
+
+Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
+```
+
+---
+
+### Task 12: Build out Livestock Weight Record
+
+**Files:**
+- Modify: `.../doctype/livestock_weight_record/livestock_weight_record.json`
+- Modify: `.../doctype/livestock_weight_record/livestock_weight_record.py`
+- Test: `.../doctype/livestock_weight_record/test_livestock_weight_record.py`
+
+**Interfaces:**
+- Consumes: nothing from earlier tasks.
+- Produces: a submittable `Livestock Weight Record` with `autoname: WT-.YYYY.-.#####`, writing `Animal.last_weight_kg` and `Animal.last_bcs` on submit.
+
+**Note:** the doctype currently has **no fields at all**, a `pass` controller, no `autoname` and no `is_submittable` — an unfinished scaffold with zero documents. This is why `Animal.last_weight_kg` and `last_bcs` exist but are never populated by anything.
+
+- [ ] **Step 1: Write the failing test**
+
+Create `.../doctype/livestock_weight_record/test_livestock_weight_record.py`:
+
+```python
+# Copyright (c) 2026, Upande and contributors
+# For license information, please see license.txt
+
+import frappe
+from frappe.tests import IntegrationTestCase
+from frappe.utils import add_days, today
+
+
+def make_animal(tag="TEST-WEIGH-1"):
+	if frappe.db.exists("Animal", tag):
+		return frappe.get_doc("Animal", tag)
+	return frappe.get_doc(
+		{"doctype": "Animal", "tag_number": tag, "burn_name": tag, "sex": "Female", "status": "Active"}
+	).insert()
+
+
+class TestLivestockWeightRecord(IntegrationTestCase):
+	def setUp(self):
+		self.animal = make_animal().name
+		frappe.db.delete("Livestock Weight Record", {"animal": self.animal})
+		frappe.db.commit()
+
+	def _record(self, weight, weight_date, bcs=None, submit=True):
+		doc = frappe.get_doc(
+			{
+				"doctype": "Livestock Weight Record",
+				"animal": self.animal,
+				"weight_date": weight_date,
+				"weight_kg": weight,
+				"bcs": bcs,
+				"method": "Platform Scale",
+			}
+		)
+		doc.insert()
+		if submit:
+			doc.submit()
+		return doc
+
+	def test_naming_series_and_submittability(self):
+		doc = self._record(220.0, "2026-02-01")
+		self.assertRegex(doc.name, r"^WT-2026-\d{5}$")
+		self.assertEqual(doc.docstatus, 1)
+
+	def test_first_record_has_no_previous_weight(self):
+		doc = self._record(220.0, "2026-02-01")
+		self.assertFalse(doc.previous_weight_kg)
+		self.assertFalse(doc.daily_gain_kg)
+
+	def test_previous_weight_and_daily_gain_are_computed(self):
+		self._record(200.0, "2026-02-01")
+		second = self._record(230.0, "2026-03-03")
+		self.assertEqual(second.previous_weight_kg, 200.0)
+		self.assertEqual(str(second.previous_weight_date), "2026-02-01")
+		self.assertAlmostEqual(second.daily_gain_kg, 30.0 / 30, places=4)
+
+	def test_submit_writes_back_to_the_animal(self):
+		self._record(245.5, "2026-04-01", bcs=3.5)
+		animal = frappe.get_doc("Animal", self.animal)
+		self.assertEqual(animal.last_weight_kg, 245.5)
+		self.assertEqual(animal.last_bcs, 3.5)
+
+	def test_non_positive_weight_throws(self):
+		with self.assertRaises(frappe.exceptions.ValidationError):
+			self._record(0, "2026-04-02", submit=False)
+
+	def test_future_date_throws(self):
+		with self.assertRaises(frappe.exceptions.ValidationError):
+			self._record(250.0, add_days(today(), 3), submit=False)
+```
+
+- [ ] **Step 2: Run it to verify it fails**
+
+```bash
+cd /home/ubuntu/stive/code/frappe15
+bench --site kaitet.local run-tests --module upande_livestock.upande_livestock.doctype.livestock_weight_record.test_livestock_weight_record
+```
+
+Expected: FAIL — the doctype has no `weight_kg` field.
+
+- [ ] **Step 3: Write the doctype JSON**
+
+Replace `.../livestock_weight_record/livestock_weight_record.json` with:
+
+```json
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "WT-.YYYY.-.#####",
+ "creation": "2026-08-11 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "sb_animal",
+  "animal",
+  "animal_name",
+  "current_herd",
+  "company",
+  "cb_animal",
+  "weight_date",
+  "measured_by",
+  "method",
+  "sb_measure",
+  "weight_kg",
+  "bcs",
+  "heart_girth_cm",
+  "cb_measure",
+  "previous_weight_kg",
+  "previous_weight_date",
+  "daily_gain_kg",
+  "sb_notes",
+  "remarks",
+  "sb_amend",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "fieldname": "sb_animal",
+   "fieldtype": "Section Break",
+   "label": "Animal"
+  },
+  {
+   "fieldname": "animal",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Animal",
+   "options": "Animal",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "animal.burn_name",
+   "fieldname": "animal_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Animal Name",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "animal.current_herd",
+   "fieldname": "current_herd",
+   "fieldtype": "Link",
+   "label": "Current Herd",
+   "options": "Herds",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "animal.company",
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "read_only": 1
+  },
+  {
+   "fieldname": "cb_animal",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Today",
+   "fieldname": "weight_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Weight Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "measured_by",
+   "fieldtype": "Link",
+   "label": "Measured By",
+   "options": "Employee"
+  },
+  {
+   "default": "Platform Scale",
+   "fieldname": "method",
+   "fieldtype": "Select",
+   "label": "Method",
+   "options": "Weighbridge\nPlatform Scale\nHeart Girth Tape\nVisual Estimate"
+  },
+  {
+   "fieldname": "sb_measure",
+   "fieldtype": "Section Break",
+   "label": "Measurement"
+  },
+  {
+   "fieldname": "weight_kg",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Weight (kg)",
+   "reqd": 1
+  },
+  {
+   "description": "Body Condition Score.",
+   "fieldname": "bcs",
+   "fieldtype": "Float",
+   "label": "BCS"
+  },
+  {
+   "depends_on": "eval:doc.method == \"Heart Girth Tape\"",
+   "fieldname": "heart_girth_cm",
+   "fieldtype": "Float",
+   "label": "Heart Girth (cm)"
+  },
+  {
+   "fieldname": "cb_measure",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "previous_weight_kg",
+   "fieldtype": "Float",
+   "label": "Previous Weight (kg)",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "previous_weight_date",
+   "fieldtype": "Date",
+   "label": "Previous Weight Date",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
+   "description": "Average daily gain since the previous record.",
+   "fieldname": "daily_gain_kg",
+   "fieldtype": "Float",
+   "label": "Daily Gain (kg/day)",
+   "no_copy": 1,
+   "precision": "4",
+   "read_only": 1
+  },
+  {
+   "fieldname": "sb_notes",
+   "fieldtype": "Section Break",
+   "label": "Notes"
+  },
+  {
+   "fieldname": "remarks",
+   "fieldtype": "Small Text",
+   "label": "Remarks"
+  },
+  {
+   "fieldname": "sb_amend",
+   "fieldtype": "Section Break",
+   "label": "Amended From"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Livestock Weight Record",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2026-08-11 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Upande Livestock",
+ "name": "Livestock Weight Record",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Livestock Manager",
+   "select": 1,
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Farm Manager",
+   "select": 1,
+   "submit": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "animal_name"
+}
+```
+
+- [ ] **Step 4: Write the controller**
+
+Replace `.../livestock_weight_record/livestock_weight_record.py` with:
+
+```python
+# Copyright (c) 2026, Upande and contributors
+# For license information, please see license.txt
+
+"""Livestock Weight Record controller.
+
+Closes a real gap: Animal.last_weight_kg and Animal.last_bcs existed on the
+Animal doctype but nothing ever wrote to them, because this doctype was an empty
+scaffold.
+"""
+
+import frappe
+from frappe import _
+from frappe.model.document import Document
+from frappe.utils import date_diff, flt, getdate, today
+
+
+class LivestockWeightRecord(Document):
+	def validate(self):
+		if flt(self.weight_kg) <= 0:
+			frappe.throw(_("Weight must be greater than zero."))
+
+		if getdate(self.weight_date) > getdate(today()):
+			frappe.throw(_("Weight Date cannot be in the future."))
+
+		self.set_previous_weight()
+
+	def set_previous_weight(self):
+		"""Fill previous weight and average daily gain from the prior submitted record."""
+		self.previous_weight_kg = None
+		self.previous_weight_date = None
+		self.daily_gain_kg = 0
+
+		previous = frappe.db.sql(
+			"""SELECT weight_kg, weight_date
+			   FROM `tabLivestock Weight Record`
+			   WHERE animal = %(animal)s
+			     AND docstatus = 1
+			     AND name != %(name)s
+			     AND weight_date <= %(weight_date)s
+			   ORDER BY weight_date DESC, creation DESC
+			   LIMIT 1""",
+			{"animal": self.animal, "name": self.name or "new", "weight_date": self.weight_date},
+			as_dict=True,
+		)
+		if not previous:
+			return
+
+		self.previous_weight_kg = previous[0].weight_kg
+		self.previous_weight_date = previous[0].weight_date
+
+		days = date_diff(self.weight_date, previous[0].weight_date)
+		if days > 0:
+			self.daily_gain_kg = (flt(self.weight_kg) - flt(previous[0].weight_kg)) / days
+
+	def on_submit(self):
+		self.update_animal_snapshot()
+
+	def update_animal_snapshot(self):
+		values = {"last_weight_kg": flt(self.weight_kg)}
+		if self.bcs:
+			values["last_bcs"] = flt(self.bcs)
+		frappe.db.set_value("Animal", self.animal, values, update_modified=False)
+```
+
+- [ ] **Step 5: Apply and run the tests**
+
+```bash
+cd /home/ubuntu/stive/code/frappe15
+bench --site kaitet.local console <<'EOF'
+import frappe
+from frappe.modules.import_file import import_file_by_path
+import_file_by_path(
+    "apps/upande_livestock/upande_livestock/upande_livestock/doctype/"
+    "livestock_weight_record/livestock_weight_record.json",
+    force=True,
+)
+frappe.db.commit()
+EOF
+bench --site kaitet.local run-tests --module upande_livestock.upande_livestock.doctype.livestock_weight_record.test_livestock_weight_record
+```
+
+Expected: PASS (6 tests).
+
+- [ ] **Step 6: Commit**
+
+```bash
+cd /home/ubuntu/stive/code/frappe15/apps/upande_livestock
+git add -A
+git commit -m "feat(livestock): build out Livestock Weight Record
+
+The doctype was an unfinished scaffold — no fields, a pass controller,
+no autoname, not submittable — which is why Animal.last_weight_kg and
+Animal.last_bcs existed but were never populated by anything.
+
+Now WT-YYYY-##### and submittable, with 15 fields covering the animal,
+date, method, weight, BCS and heart girth. validate rejects a
+non-positive weight or a future date and computes previous weight and
+average daily gain from the prior submitted record; on_submit writes the
+weight and BCS back to the Animal.
+
+Zero existing documents, so no migration was needed.
+
+Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
+```
+
+---
+
+### Task 13: Sidebar, reference sweep and full verification
+
+**Files:**
+- Modify: `upande_livestock/workspace_sidebar/upande_livestock.json`
+- Modify: `upande_livestock/upande_livestock/workspace/upande_livestock/upande_livestock.json`
+- Modify: `upande_livestock/patches.txt` (final ordering check)
+
+**Interfaces:**
+- Consumes: everything from Tasks 1–12.
+- Produces: nothing new. This task proves the whole thing hangs together.
+
+- [ ] **Step 1: Regroup the sidebar**
+
+In `upande_livestock/workspace_sidebar/upande_livestock.json`, replace the `Health & Events` section break label with `Livestock Events`, and replace its two child links with four. The `items` entries become:
+
+```json
+  {
+   "child": 0,
+   "collapsible": 1,
+   "icon": "activity",
+   "indent": 1,
+   "keep_closed": 0,
+   "label": "Livestock Events",
+   "link_type": "",
+   "show_arrow": 0,
+   "type": "Section Break"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "icon": "list",
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Livestock Events",
+   "link_to": "Livestock Event",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "icon": "heart",
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Health Cases",
+   "link_to": "Livestock Health Case",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "icon": "search",
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Diagnoses",
+   "link_to": "Livestock Diagnosis",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+  {
+   "child": 1,
+   "collapsible": 1,
+   "icon": "book",
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Diseases",
+   "link_to": "Livestock Disease",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link"
+  },
+```
+
+`Livestock Diagnosis` and `Livestock Disease` were previously unreachable from the sidebar entirely.
+
+- [ ] **Step 2: Relabel the workspace shortcuts**
+
+In `upande_livestock/upande_livestock/workspace/upande_livestock/upande_livestock.json`, change the `"Animal Events"` label to `"Livestock Events"`. The `link_to` values were already rewritten by the Task 1 sweep — confirm they read `Livestock Event` and `Livestock Health Case`.
+
+- [ ] **Step 3: Confirm the final patch ordering**
+
+`upande_livestock/patches.txt` must read exactly:
+
+```
+[pre_model_sync]
+# Patches added in this section will be executed before doctypes are migrated
+# Read docs to understand patches: https://frappeframework.com/docs/v14/user/en/database-migrations
+upande_livestock.patches.rename_livestock_doctypes.execute
+upande_livestock.patches.preserve_event_activity_cost.execute
+upande_livestock.patches.rename_diagnosis_disease_field.execute
+
+[post_model_sync]
+# Patches added in this section will be executed after doctypes are migrated
+upande_livestock.patches.rename_livestock_event_docs.execute
+upande_livestock.patches.backfill_animal_disabled.execute
+upande_livestock.patches.migrate_animals_off_asset.execute
+```
+
+`rename_diagnosis_disease_field` moves to `pre_model_sync`: `rename_field` needs the **old** column to still exist, and model sync would have already added the new one.
+
+- [ ] **Step 4: Final reference sweep**
+
+```bash
+cd /home/ubuntu/stive/code/frappe15/apps/upande_livestock
+grep -rniE "animal[ _]?(event|health[ _]case|diagnosis|disease|disposal|weight[ _]record|drug[ _]issue|health[ _]treatment)" \
+  --include=*.py --include=*.js --include=*.json . \
+  | grep -v __pycache__ | grep -v '^./docs/' | grep -vi "livestock"
+```
+
+Expected: **no output**. Any hit is a missed rename.
+
+- [ ] **Step 5: Lint**
+
+```bash
+cd /home/ubuntu/stive/code/frappe15/apps/upande_livestock
+ruff check upande_livestock/
+ruff format --check upande_livestock/
+```
+
+Expected: both clean. If `format --check` complains, run `ruff format upande_livestock/` and re-inspect the diff — the repo uses **tab** indentation.
+
+- [ ] **Step 6: Run the whole app test suite**
+
+```bash
+cd /home/ubuntu/stive/code/frappe15
+bench --site kaitet.local run-tests --app upande_livestock
+```
+
+Expected: PASS. Record the exact totals in the commit message — do not claim a pass without reading the output.
+
+- [ ] **Step 7: Verify the migrated database end to end**
+
+```bash
+cd /home/ubuntu/stive/code/frappe15
+bench --site kaitet.local mariadb -e "
+SELECT COUNT(*) events_expect_576 FROM \`tabLivestock Event\`;
+SELECT COUNT(*) old_style_names_expect_0 FROM \`tabLivestock Event\`
+  WHERE name NOT REGEXP '^[A-Z0-9-]+-[0-9]{4}-[0-9]{5}\$';
+SELECT COUNT(*) dangling_types_expect_0 FROM \`tabLivestock Event\` e
+  LEFT JOIN \`tabLivestock Event Type\` t ON t.name = e.event_type WHERE t.name IS NULL;
+SELECT COUNT(*) stale_todos_expect_0 FROM \`tabToDo\` WHERE reference_type LIKE 'Animal %';
+SELECT COUNT(*) event_types_expect_17 FROM \`tabLivestock Event Type\`;
+SELECT COUNT(*) costed_without_note_expect_0 FROM \`tabLivestock Event\`
+  WHERE IFNULL(custom_activity_cost,0) > 0 AND IFNULL(remarks,'') NOT LIKE '%[migrated] Activity cost%';
+SELECT COUNT(*) retired_not_disabled_expect_0 FROM \`tabAnimal\`
+  WHERE status IN ('Sold','Dead','Culled','Transferred Out') AND IFNULL(disabled,0) = 0;
+SELECT COUNT(*) old_doctypes_expect_0 FROM tabDocType WHERE name LIKE 'Animal %' AND name != 'Animal';"
+```
+
+Every count must match the name in its column header.
+
+- [ ] **Step 8: Rebuild assets and smoke-test the desk**
+
+```bash
+cd /home/ubuntu/stive/code/frappe15
+bench --site kaitet.local clear-cache
+bench build --app upande_livestock
+```
+
+Then in the browser, confirm by hand:
+1. `/app/livestock-event` lists events named `MOVEMENT-2024-…`, titled by type, with the animal in its own column.
+2. Creating a Livestock Event offers the 17 types in the `event_type` link picker.
+3. A submitted Calving with outcome Live Birth shows the **Record Births** button.
+4. `/app/livestock-diagnosis/new` — picking a Suggested Disease fills the read-only Disease Reference section.
+5. The sidebar shows **Livestock Events** with all four links.
+6. An Animal link field does not offer any animal whose status is Dead, Sold or Culled.
+
+- [ ] **Step 9: Commit**
+
+```bash
+cd /home/ubuntu/stive/code/frappe15/apps/upande_livestock
+git add -A
+git commit -m "feat(livestock): regroup the sidebar and finalise the restructure
+
+The Health & Events sidebar section becomes Livestock Events and now
+surfaces all four doctypes — Livestock Diagnosis and Livestock Disease
+were previously unreachable from the sidebar entirely.
+
+Finalises patch ordering: rename_diagnosis_disease_field moves to
+pre_model_sync, because rename_field needs the old column to still exist
+and model sync would already have added the new one.
+
+Verified on kaitet.local: 576 events all on the new naming scheme, no
+dangling event types, no stale ToDo references, 17 event types seeded,
+all 32 costed events carrying their preserved note, and every retired
+animal disabled.
+
+Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
+```
+
+---
+
+## Known gaps NOT addressed by this plan
+
+Found while planning. Each is real and pre-existing; none is in the approved spec, so none has a task. Raise with the user before acting on any of them.
+
+1. **Vaccination and Deworming events have nowhere to record the drug.** `public/js/livestock_event.js` toggles six fields that **do not exist** on the doctype: `custom_vaccine_drug_name`, `custom_dosage`, `custom_batch_no`, `custom_withdrawal_period_days`, `custom_next_due_date`, `custom_weight`. `frm.set_df_property` on a missing field silently no-ops, so the toggles are dead code. There are **93 Vaccination events** and 1 Weight Recording event with no field capturing what was actually given. Fixing this means adding those fields back to `Livestock Event` — a design decision, not a mechanical one.
+
+2. **`Livestock Health Case` never computes its own totals.** `total_treatment_cost`, `duration_days`, `milk_safe_date` and `production_loss_value` are plain fields on a `pass` controller — nothing sums the `treatments` child table or derives the dates.
+
+3. **`Livestock Drug Issue.stock_entry_ref` is never populated.** The child table anticipates issuing drugs against a Stock Entry, but no code creates one.
+
+4. **`bench migrate` is broken site-wide** by the `lending` app patch. Worth fixing separately so livestock deploys stop needing the `import_file_by_path` workaround.
