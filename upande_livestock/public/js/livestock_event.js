@@ -173,11 +173,17 @@ frappe.ui.form.on("Livestock Event", {
                     callback: function(r) {
                         if (r.message && r.message.length > 0) {
                             let pregnancy = r.message[0];
+                            // A Calving OR an Abortion linked to this same pregnancy
+                            // (via custom_related_pregnancy — the same linkage the
+                            // server-side auto-link in LivestockEvent.validate()
+                            // populates for both event types) closes it out. Keying
+                            // on the linkage rather than on event type alone keeps
+                            // this correct if that linkage mechanism ever changes.
                             frappe.call({
                                 method: "frappe.client.get_list",
                                 args: {
                                     doctype: "Livestock Event",
-                                    filters: { animal: frm.doc.animal, event_type: "Calving", custom_related_pregnancy: pregnancy.related_service, docstatus: 1 },
+                                    filters: { animal: frm.doc.animal, event_type: ["in", ["Calving", "Abortion"]], custom_related_pregnancy: pregnancy.related_service, docstatus: 1 },
                                     fields: ["name"]
                                 },
                                 async: false,

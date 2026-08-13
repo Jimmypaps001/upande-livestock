@@ -18,18 +18,21 @@ UPDATE, overwriting any value entered into suggested_disease since the first
 run with whatever (possibly NULL, possibly stale) value still sits in the
 orphaned old column.
 
-(2) was checked before dropping it, not assumed away: on this site there are
-zero rows in tabProperty Setter and zero in tabCustom Field (both tables exist
-with no rows — never populated), no Report references suggested_diagnosis
-(tabReport has no reference_doctype column on this Frappe version to even
-query, and a source grep across the app's shipped fixtures/reports/doctype
-JSON turns up nothing), and the only shipped custom_field.json fixture targets
-Stock Entry, not Livestock Diagnosis. So skipping rename_field's ancillary
-work is safe here and, per the same reasoning, on any other site running this
-app version — none of them ship a Report, Property Setter or Custom Field
-naming this field either. If a future patch or fixture ever does reference
-suggested_diagnosis, that dependency must be re-checked before continuing to
-skip rename_field.
+(2) was checked before dropping it, not assumed away — re-verified directly
+against kaitet.local, not assumed from an earlier (mistaken) check: tabProperty
+Setter holds 406 rows and tabCustom Field holds 1319 rows site-wide, but zero
+of either are scoped to Livestock Diagnosis (`doc_type` / `dt` = 'Livestock
+Diagnosis' respectively). tabReport does have a `ref_doctype` column on this
+Frappe version (varchar(140)) — zero Reports have ref_doctype = 'Livestock
+Diagnosis', and zero have suggested_diagnosis appearing in their `json` or
+`query` columns. Zero `__UserSettings` rows mention the field either. A source
+grep across the app's shipped fixtures/reports/doctype JSON turns up nothing,
+and the only shipped custom_field.json fixture targets Stock Entry, not
+Livestock Diagnosis. So skipping rename_field's ancillary work is safe here
+and, per the same reasoning, on any other site running this app version —
+none of them ship a Report, Property Setter or Custom Field naming this field
+either. If a future patch or fixture ever does reference suggested_diagnosis,
+that dependency must be re-checked before continuing to skip rename_field.
 
 Idempotent by construction, not by a whole-table "has this run before" flag:
 the UPDATE below only ever touches a row that still holds a real value in the
