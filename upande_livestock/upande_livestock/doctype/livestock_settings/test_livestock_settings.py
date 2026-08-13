@@ -28,8 +28,9 @@ class TestLivestockSettings(ResetsLivestockTimings, IntegrationTestCase):
 	def setUp(self):
 		# super().setUp() registers the final timing reset first (see
 		# ResetsLivestockTimings), so every test in this class ends with the
-		# real 11 defaults restored regardless of what it configures below or
-		# whether it's the last test in the class — this class has no other
+		# real TIMING_DEFAULTS values restored regardless of what it
+		# configures below or whether it's the last test in the class — this
+		# class has no other
 		# test class running after it to repair a leftover None the way
 		# TestTimingsAreEnforcedServerSide used to rely on TestLivestockTimings
 		# doing.

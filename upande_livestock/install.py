@@ -102,7 +102,8 @@ def ensure_livestock_timing_defaults():
 	UI, editing any unrelated field, for any reason) coerces that `None`
 	through `cint()` and persists an explicit `0` (see
 	`frappe.model.base_document.BaseDocument.get_valid_dict`). That silently
-	disables every breeding timing (or worse: `gestation_period_days = 0`
+	disables every breeding timing and every age/interval guard in
+	`upande_livestock.livestock_guards` (or worse: `gestation_period_days = 0`
 	makes the expected calving date equal the service date) the first time
 	anyone opens the settings page and clicks Save — indistinguishable
 	afterwards from a deliberate choice, since `get_timing()` correctly
@@ -112,6 +113,11 @@ def ensure_livestock_timing_defaults():
 	`frappe.db.get_single_value`, for the same casting reason `get_timing`
 	avoids it) — never overwrites a farm's configured value, including a
 	deliberate 0. Idempotent: safe on every install and migrate.
+
+	This is deliberately blind to *why* a field has no row — including a
+	field that already holds an explicit `'0'` written before it was covered
+	by `TIMING_DEFAULTS`. That case needs a one-time, narrow repair instead:
+	see `upande_livestock.patches.repair_zeroed_age_interval_settings`.
 	"""
 	if not frappe.db.table_exists("Singles"):
 		return
