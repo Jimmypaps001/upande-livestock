@@ -35,5 +35,63 @@ def ensure_milking_stock_entry_type():
 	frappe.db.commit()
 
 
+SEED_EVENT_TYPES = [
+	{"name": "Feeding", "creates_animal": 0, "detail_doctype": None},
+	{"name": "Milking", "creates_animal": 0, "detail_doctype": None},
+	{"name": "Movement", "creates_animal": 0, "detail_doctype": None},
+	{"name": "Service", "creates_animal": 0, "detail_doctype": None},
+	{"name": "Pregnancy Diagnosis", "creates_animal": 0, "detail_doctype": None},
+	{"name": "Calving", "creates_animal": 0, "detail_doctype": None},
+	{"name": "Birth", "creates_animal": 1, "detail_doctype": None},
+	{"name": "Abortion", "creates_animal": 0, "detail_doctype": None},
+	{"name": "Drying Off", "creates_animal": 0, "detail_doctype": None},
+	{"name": "Vaccination", "creates_animal": 0, "detail_doctype": None},
+	{"name": "Deworming", "creates_animal": 0, "detail_doctype": None},
+	{"name": "Heat Detection", "creates_animal": 0, "detail_doctype": None},
+	{"name": "Weight Recording", "creates_animal": 0, "detail_doctype": None},
+	{"name": "Hoof Trimming", "creates_animal": 0, "detail_doctype": None},
+	{"name": "Dehorning", "creates_animal": 0, "detail_doctype": None},
+	{"name": "Check Up", "creates_animal": 0, "detail_doctype": "Livestock Diagnosis"},
+	{"name": "Health Case", "creates_animal": 0, "detail_doctype": "Livestock Health Case"},
+]
+
+
+def ensure_livestock_event_types():
+	"""Create the Livestock Event Type records the app relies on.
+
+	Idempotent. Also creates a record for any event_type value already present in
+	tabLivestock Event, so a site carrying a type we did not anticipate does not end
+	up with a dangling Link once event_type becomes a Link field.
+	"""
+	if not frappe.db.table_exists("Livestock Event Type"):
+		return
+
+	for seed in SEED_EVENT_TYPES:
+		if frappe.db.exists("Livestock Event Type", seed["name"]):
+			continue
+		doc = frappe.new_doc("Livestock Event Type")
+		doc.name = seed["name"]  # autoname is Prompt
+		doc.is_active = 1
+		doc.creates_animal = seed["creates_animal"]
+		if seed["detail_doctype"]:
+			doc.detail_doctype = seed["detail_doctype"]
+		doc.insert(ignore_permissions=True)
+
+	if frappe.db.table_exists("Livestock Event"):
+		existing = frappe.db.sql_list(
+			"SELECT DISTINCT event_type FROM `tabLivestock Event` WHERE IFNULL(event_type, '') != ''"
+		)
+		for event_type in existing:
+			if frappe.db.exists("Livestock Event Type", event_type):
+				continue
+			doc = frappe.new_doc("Livestock Event Type")
+			doc.name = event_type
+			doc.is_active = 1
+			doc.insert(ignore_permissions=True)
+
+	frappe.db.commit()
+
+
 def after_install():
 	ensure_milking_stock_entry_type()
+	ensure_livestock_event_types()
