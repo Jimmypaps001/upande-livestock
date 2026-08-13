@@ -44,13 +44,6 @@
   "cb_calving",
   "custom_calf_sex",
   "custom_related_pregnancy",
-  "tab_accounting",
-  "sb_accounting",
-  "custom_activity_cost",
-  "custom_expense_account",
-  "cb_accounting",
-  "custom_cost_center",
-  "custom_journal_entry",
   "tab_more",
   "sb_amended",
   "amended_from"
@@ -279,46 +272,6 @@
    "label": "Related Pregnancy",
    "fieldtype": "Link",
    "options": "Livestock Event"
-  },
-  {
-   "fieldname": "tab_accounting",
-   "fieldtype": "Tab Break",
-   "label": "Accounting"
-  },
-  {
-   "fieldname": "sb_accounting",
-   "fieldtype": "Section Break",
-   "label": "Accounting"
-  },
-  {
-   "fieldname": "custom_activity_cost",
-   "label": "Activity Cost",
-   "fieldtype": "Currency"
-  },
-  {
-   "fieldname": "custom_expense_account",
-   "label": "Expense Account",
-   "fieldtype": "Link",
-   "options": "Account",
-   "read_only": 1
-  },
-  {
-   "fieldname": "cb_accounting",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "custom_cost_center",
-   "label": "Cost Center",
-   "fieldtype": "Link",
-   "options": "Cost Center",
-   "read_only": 1
-  },
-  {
-   "fieldname": "custom_journal_entry",
-   "label": "Journal Entry",
-   "fieldtype": "Link",
-   "options": "Journal Entry",
-   "read_only": 1
   },
   {
    "fieldname": "tab_more",

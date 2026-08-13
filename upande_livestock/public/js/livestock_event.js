@@ -496,10 +496,6 @@ function toggle_event_fields(frm) {
     frm.set_df_property("custom_weight", "hidden", !isWeight);
     frm.set_df_property("custom_weight", "reqd", isWeight);
 
-    // ── Activity cost — visible for husbandry events ──
-    let showCost = needsDrug || isHoofTrim || isWeight || isHeat || isDryingOff;
-    frm.set_df_property("custom_activity_cost", "hidden", !showCost);
-
     // ── Remarks — always visible ──
     frm.set_df_property("remarks", "hidden", 0);
 }

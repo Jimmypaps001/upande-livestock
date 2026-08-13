@@ -157,3 +157,38 @@ class TestLivestockEventNaming(IntegrationTestCase):
 		doc.flags.ignore_mandatory = True
 		with self.assertRaisesRegex(frappe.exceptions.ValidationError, "Event Type is required"):
 			doc.insert()
+
+
+class TestLivestockEventAccountingRemoved(IntegrationTestCase):
+	def setUp(self):
+		ensure_livestock_event_types()
+		self.animal = make_animal("TEST-NOACCT-1").name
+		self.addCleanup(_delete_and_commit, "Animal", self.animal)
+
+	def test_accounting_fields_are_gone(self):
+		meta = frappe.get_meta("Livestock Event")
+		for fieldname in (
+			"custom_activity_cost",
+			"custom_expense_account",
+			"custom_cost_center",
+			"custom_journal_entry",
+		):
+			self.assertIsNone(meta.get_field(fieldname), f"{fieldname} still on the doctype")
+
+	def test_submitting_creates_no_journal_entry(self):
+		before = frappe.db.count("Journal Entry")
+		doc = make_event(
+			"Feeding", self.animal, "2026-03-04", operator=frappe.db.get_value("Employee", {}, "name")
+		)
+		# make_event() calls insert() itself, so register cleanup immediately
+		# after it returns — before submit() and the assertion below — the same
+		# ordering TestLivestockEventNaming.make_event() uses, so a failure here
+		# still leaves the row scheduled for deletion instead of leaking it into
+		# the live 576-row table. frappe.db.delete() is a raw SQL delete, so it
+		# removes the row regardless of docstatus once this submits it.
+		self.addCleanup(_delete_and_commit, "Livestock Event", doc.name)
+		doc.submit()
+		self.assertEqual(frappe.db.count("Journal Entry"), before)
+
+	def test_setting_is_gone_from_livestock_settings(self):
+		self.assertIsNone(frappe.get_meta("Livestock Settings").get_field("custom_auto_create_journal_entry"))
