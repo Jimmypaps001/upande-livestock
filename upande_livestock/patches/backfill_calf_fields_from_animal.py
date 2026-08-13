@@ -17,6 +17,16 @@ The true values are not missing, only not denormalised onto the event: each
 Birth event's own `animal` link already carries the real tag_number and sex.
 This patch copies them across, once, from that Animal.
 
+MUST RUN AFTER migrate_animals_off_asset in patches.txt: the lookup below
+(`frappe.db.get_value("Animal", row.animal, ...)`) only resolves once
+`Livestock Event.animal` actually holds an Animal name. On kaitet.local all
+5 Birth events' `animal` values were originally Asset names — equal to
+their eventual `Animal.asset_link` — and migrate_animals_off_asset is the
+patch that repoints them. Run this patch first and the lookup finds nothing,
+logs "Linked Animal ... no longer exists", and silently skips every row
+instead of raising, leaving Task 9's validate() to throw on the next resave
+of those events, weeks later, far from this patch.
+
 Deliberately narrow:
   - Only fills a *blank* calf_tag_number / calf_sex. A value already on the
     event is never overwritten, even if it disagrees with the Animal's — that
