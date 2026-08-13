@@ -331,3 +331,389 @@ class TestLivestockEventAnimalMandatory(IntegrationTestCase):
 		)
 		with self.assertRaises(frappe.exceptions.MandatoryError):
 			doc.insert()
+
+
+def _delete_animal_and_fix_herd(name):
+	"""Delete an Animal and recompute its herd's true count.
+
+	create_calf() bumps Herds.number_of_animals when the calf is created; a raw
+	frappe.db.delete of the Animal row would leave that count one too high
+	forever, breaking the "every Herd matches its true COUNT(*)" invariant.
+	Recomputing here (rather than assuming the calf landed in the test's own
+	throwaway TEST-BIRTH-CALVES herd) keeps the invariant intact even if
+	resolve_calf_herd() picked a real herd instead.
+	"""
+	from upande_livestock.api.animal import recompute_herd_count
+
+	herd = frappe.db.get_value("Animal", name, "current_herd")
+	frappe.db.delete("Animal", {"name": name})
+	frappe.db.commit()
+	if herd:
+		recompute_herd_count(herd)
+		frappe.db.commit()
+
+
+class TestLivestockEventMultipleBirths(IntegrationTestCase):
+	"""One Calving event, N Birth events — created together for twins/triplets.
+
+	IntegrationTestCase has no per-test rollback (see _delete_and_commit above),
+	so every Calving, Birth and calf Animal these tests create is registered for
+	cleanup immediately after it exists, in an order that respects the link
+	graph: Birth events (which reference both the Calving, via related_calving,
+	and the calf Animal, via .animal) are deleted before either of the docs they
+	reference; the dam Animal (referenced by every Calving and Birth here) and
+	the throwaway TEST-BIRTH-CALVES herd (referenced by every Animal's
+	current_herd) are deleted last, via setUp's own addCleanup calls, which —
+	being registered before any test body runs — sit at the bottom of the LIFO
+	cleanup stack and so always run after every per-test cleanup above them.
+	"""
+
+	def setUp(self):
+		ensure_livestock_event_types()
+		herd_created = not frappe.db.exists("Herds", "TEST-BIRTH-CALVES")
+		if herd_created:
+			frappe.get_doc(
+				{
+					"doctype": "Herds",
+					"herd_name": "TEST-BIRTH-CALVES",
+					"min_age": 0,
+					"max_age": 1,
+					"custom_is_calf_rearing": 1,
+				}
+			).insert()
+			self.addCleanup(_delete_and_commit, "Herds", "TEST-BIRTH-CALVES")
+		self.dam = make_animal("TEST-TRIPLET-DAM").name
+		self.addCleanup(_delete_and_commit, "Animal", self.dam)
+		self.operator = frappe.db.get_value("Employee", {}, "name")
+		for n in (1, 2, 3):
+			tag = f"TEST-TRIPLET-{n}"
+			if frappe.db.exists("Animal", tag):
+				frappe.delete_doc("Animal", tag, force=True, ignore_permissions=True)
+				frappe.db.commit()
+
+	def _calving(self, no_of_calves):
+		doc = frappe.get_doc(
+			{
+				"doctype": "Livestock Event",
+				"animal": self.dam,
+				"event_type": "Calving",
+				"event_date": "2026-07-01",
+				"operator": self.operator,
+				"custom_calving_outcome": "Live Birth",
+				"custom_no_of_calves": no_of_calves,
+			}
+		)
+		doc.flags.ignore_validate = True
+		doc.insert()
+		# Registered now, before any Birth event linked to this Calving exists —
+		# LIFO puts this cleanup at the bottom of this family's stack, so it runs
+		# only after every Birth event registered by _register_birth_family_cleanup
+		# below.
+		self.addCleanup(_delete_and_commit, "Livestock Event", doc.name)
+		doc.submit()
+		return doc
+
+	def _register_birth_family_cleanup(self, calving_name, created_animals):
+		"""Register cleanup for the calf Animals and Birth events a
+		record_calf_births() call (directly, or via record_birth) just produced.
+
+		Call after the calving's own cleanup is already registered (by _calving,
+		or explicitly for record_birth's own Calving). LIFO then runs: Birth
+		events first (registered last, below), then the calf Animals, then the
+		Calving.
+		"""
+		for animal in created_animals:
+			self.addCleanup(_delete_animal_and_fix_herd, animal)
+		for name in frappe.db.get_all(
+			"Livestock Event",
+			filters={"related_calving": calving_name, "event_type": "Birth"},
+			pluck="name",
+		):
+			self.addCleanup(_delete_and_commit, "Livestock Event", name)
+
+	def _confirm_pregnancy(self, service_date="2025-09-01", diagnosis_date="2025-10-05"):
+		"""Create a submitted, Confirmed Service + Pregnancy Diagnosis for self.dam.
+
+		record_birth's Calving creation (pre-existing, untouched by this task) does
+		not set flags.ignore_validate, so its own validate() runs in full — including
+		the "VALIDATION FOR CALVING" block that throws unless a Confirmed pregnancy
+		can be found or was passed in. A bare Animal with no breeding history is not
+		a realistic caller for record_birth in production (see the domain audit:
+		every real Calving traces back through a confirmed Service), so tests that
+		exercise record_birth directly must build that trail first, exactly as a
+		real farm would.
+
+		Cleanup order: registered here, before either doc exists, in Service-then-
+		Diagnosis order, so — LIFO — Diagnosis (which links back to Service via
+		related_service) is deleted first.
+		"""
+		service = frappe.get_doc(
+			{
+				"doctype": "Livestock Event",
+				"animal": self.dam,
+				"event_type": "Service",
+				"event_date": service_date,
+				"operator": self.operator,
+				"service_type": "A.I.",
+				"service_date": service_date,
+			}
+		)
+		service.insert()
+		self.addCleanup(_delete_and_commit, "Livestock Event", service.name)
+		service.submit()
+
+		diagnosis = frappe.get_doc(
+			{
+				"doctype": "Livestock Event",
+				"animal": self.dam,
+				"event_type": "Pregnancy Diagnosis",
+				"event_date": diagnosis_date,
+				"operator": self.operator,
+				"related_service": service.name,
+				"diagnosis_date": diagnosis_date,
+				"diagnosis_result": "Confirmed",
+			}
+		)
+		diagnosis.insert()
+		self.addCleanup(_delete_and_commit, "Livestock Event", diagnosis.name)
+		diagnosis.submit()
+		return service.name
+
+	def test_births_recorded_counts_linked_births(self):
+		from upande_livestock.api.operations import record_calf_births
+
+		calving = self._calving(3)
+		result = record_calf_births(
+			{
+				"calving": calving.name,
+				"calves": [
+					{"tag": "TEST-TRIPLET-1", "sex": "Female"},
+					{"tag": "TEST-TRIPLET-2", "sex": "Female"},
+					{"tag": "TEST-TRIPLET-3", "sex": "Male"},
+				],
+			}
+		)
+		self._register_birth_family_cleanup(calving.name, [c["animal"] for c in result["created"]])
+		calving.reload()
+		self.assertEqual(calving.births_recorded, 3)
+
+	def test_three_births_create_three_animals(self):
+		from upande_livestock.api.operations import record_calf_births
+
+		calving = self._calving(3)
+		result = record_calf_births(
+			{
+				"calving": calving.name,
+				"calves": [
+					{"tag": "TEST-TRIPLET-1", "sex": "Female"},
+					{"tag": "TEST-TRIPLET-2", "sex": "Female"},
+					{"tag": "TEST-TRIPLET-3", "sex": "Male"},
+				],
+			}
+		)
+		self._register_birth_family_cleanup(calving.name, [c["animal"] for c in result["created"]])
+		for n in (1, 2, 3):
+			self.assertTrue(frappe.db.exists("Animal", f"TEST-TRIPLET-{n}"))
+
+	def test_parity_increments_once_per_calving_not_per_birth(self):
+		from upande_livestock.api.operations import record_calf_births
+
+		before = frappe.db.get_value("Animal", self.dam, "parity") or 0
+		calving = self._calving(3)
+		result = record_calf_births(
+			{
+				"calving": calving.name,
+				"calves": [
+					{"tag": "TEST-TRIPLET-1", "sex": "Female"},
+					{"tag": "TEST-TRIPLET-2", "sex": "Female"},
+					{"tag": "TEST-TRIPLET-3", "sex": "Male"},
+				],
+			}
+		)
+		self._register_birth_family_cleanup(calving.name, [c["animal"] for c in result["created"]])
+		after = frappe.db.get_value("Animal", self.dam, "parity") or 0
+		self.assertEqual(after - before, 1)
+
+	def test_stillborn_row_records_a_birth_without_an_animal(self):
+		from upande_livestock.api.operations import record_calf_births
+
+		calving = self._calving(2)
+		result = record_calf_births(
+			{
+				"calving": calving.name,
+				"calves": [
+					{"tag": "TEST-TRIPLET-1", "sex": "Female"},
+					{"is_stillborn": 1},
+				],
+			}
+		)
+		self._register_birth_family_cleanup(calving.name, [c["animal"] for c in result["created"]])
+		calving.reload()
+		self.assertEqual(calving.births_recorded, 2)
+		self.assertEqual(len(result["created"]), 1)
+
+	def test_count_mismatch_warns_but_does_not_block(self):
+		from upande_livestock.api.operations import record_calf_births
+
+		calving = self._calving(3)
+		result = record_calf_births(
+			{"calving": calving.name, "calves": [{"tag": "TEST-TRIPLET-1", "sex": "Female"}]}
+		)
+		self._register_birth_family_cleanup(calving.name, [c["animal"] for c in result["created"]])
+		calving.reload()
+		self.assertEqual(calving.births_recorded, 1)
+		self.assertEqual(calving.custom_no_of_calves, 3)
+
+	def test_record_birth_creates_one_calving_and_n_births(self):
+		"""record_birth must delegate to record_calf_births, not carry its own loop."""
+		from upande_livestock.api.operations import record_birth
+
+		self._confirm_pregnancy()
+		result = record_birth(
+			{
+				"dam": self.dam,
+				"operator": self.operator,
+				"event_date": "2026-07-02",
+				"outcome": "Live Birth",
+				"calves": [
+					{"name": "TEST-TRIPLET-1", "sex": "Female"},
+					{"name": "TEST-TRIPLET-2", "sex": "Male"},
+				],
+			}
+		)
+		self.addCleanup(_delete_and_commit, "Livestock Event", result["name"])
+		self._register_birth_family_cleanup(result["name"], [c["animal"] for c in result["calves"]])
+		self.assertTrue(result["ok"])
+		self.assertEqual(len(result["calves"]), 2)
+		for n in (1, 2):
+			self.assertEqual(frappe.db.count("Animal", {"tag_number": f"TEST-TRIPLET-{n}"}), 1)
+
+	def test_record_birth_stillborn_sentinel_creates_no_animal(self):
+		from upande_livestock.api.operations import record_birth
+
+		self._confirm_pregnancy(service_date="2025-09-02", diagnosis_date="2025-10-06")
+		before = frappe.db.count("Animal")
+		result = record_birth(
+			{
+				"dam": self.dam,
+				"operator": self.operator,
+				"event_date": "2026-07-03",
+				"outcome": "Still Birth",
+				"calves": [{"name": "STILLBORN"}],
+			}
+		)
+		self.addCleanup(_delete_and_commit, "Livestock Event", result["name"])
+		self._register_birth_family_cleanup(result["name"], [c["animal"] for c in result["calves"]])
+		self.assertTrue(result["ok"])
+		self.assertEqual(frappe.db.count("Animal"), before)
+
+	def test_only_one_place_creates_a_calf_animal(self):
+		"""Guard against the two-paths regression this task exists to remove."""
+		import inspect
+
+		from upande_livestock.api import operations
+
+		src = inspect.getsource(operations)
+		self.assertNotIn('frappe.new_doc("Animal")', src)
+
+
+class TestLivestockEventCalfFieldsMandatory(IntegrationTestCase):
+	"""calf_tag_number / calf_sex carry mandatory_depends_on, which Frappe 16
+	enforces only in the browser (see LivestockEvent.validate()'s CALF TAG /
+	CALF SEX block). The negative tests below are the point: they exercise the
+	exact path that used to slip through — a Birth event that already has
+	`animal` set, so create_calf_if_needed() no-ops and never gets a chance to
+	enforce these fields itself (that enforcement lived only inside
+	create_calf(), which this path never reaches).
+	"""
+
+	def setUp(self):
+		ensure_livestock_event_types()
+		self.dam = make_animal("TEST-CALFFIELD-DAM").name
+		self.addCleanup(_delete_and_commit, "Animal", self.dam)
+		self.calf = make_animal("TEST-CALFFIELD-CALF").name
+		self.addCleanup(_delete_and_commit, "Animal", self.calf)
+		self.operator = frappe.db.get_value("Employee", {}, "name")
+
+	def _cleanup_by_remarks(self, marker):
+		self.addCleanup(
+			lambda: (frappe.db.delete("Livestock Event", {"remarks": marker}), frappe.db.commit())
+		)
+
+	def test_birth_with_animal_preset_and_no_tag_throws(self):
+		marker = f"calf-tag-mandatory-test-{frappe.generate_hash(length=8)}"
+		self._cleanup_by_remarks(marker)
+		doc = frappe.get_doc(
+			{
+				"doctype": "Livestock Event",
+				"event_type": "Birth",
+				"event_date": "2026-06-04",
+				"operator": self.operator,
+				"dam": self.dam,
+				"animal": self.calf,
+				"calf_sex": "Female",
+				"remarks": marker,
+			}
+		)
+		with self.assertRaises(frappe.exceptions.MandatoryError):
+			doc.insert()
+
+	def test_birth_with_animal_preset_and_no_sex_throws(self):
+		marker = f"calf-sex-mandatory-test-{frappe.generate_hash(length=8)}"
+		self._cleanup_by_remarks(marker)
+		doc = frappe.get_doc(
+			{
+				"doctype": "Livestock Event",
+				"event_type": "Birth",
+				"event_date": "2026-06-04",
+				"operator": self.operator,
+				"dam": self.dam,
+				"animal": self.calf,
+				"calf_tag_number": "TEST-CALFFIELD-CALF",
+				"remarks": marker,
+			}
+		)
+		with self.assertRaises(frappe.exceptions.MandatoryError):
+			doc.insert()
+
+	def test_birth_with_junk_calf_sex_throws(self):
+		marker = f"calf-sex-junk-test-{frappe.generate_hash(length=8)}"
+		self._cleanup_by_remarks(marker)
+		doc = frappe.get_doc(
+			{
+				"doctype": "Livestock Event",
+				"event_type": "Birth",
+				"event_date": "2026-06-04",
+				"operator": self.operator,
+				"dam": self.dam,
+				"animal": self.calf,
+				"calf_tag_number": "TEST-CALFFIELD-CALF",
+				"calf_sex": "Unknown",
+				"remarks": marker,
+			}
+		)
+		with self.assertRaises(frappe.exceptions.MandatoryError):
+			doc.insert()
+
+	def test_stillborn_birth_submits_with_neither_field(self):
+		doc = frappe.get_doc(
+			{
+				"doctype": "Livestock Event",
+				"event_type": "Birth",
+				"event_date": "2026-06-04",
+				"operator": self.operator,
+				"dam": self.dam,
+				"is_stillborn": 1,
+			}
+		)
+		doc.insert()
+		self.addCleanup(_delete_and_commit, "Livestock Event", doc.name)
+		self.assertFalse(doc.calf_tag_number)
+		self.assertFalse(doc.calf_sex)
+
+	def test_feeding_event_with_neither_field_still_submits(self):
+		"""The calf-field rule must not leak to other event types."""
+		doc = make_event("Feeding", self.dam, "2026-06-04", operator=self.operator)
+		self.addCleanup(_delete_and_commit, "Livestock Event", doc.name)
+		doc.submit()
+		self.assertEqual(doc.docstatus, 1)

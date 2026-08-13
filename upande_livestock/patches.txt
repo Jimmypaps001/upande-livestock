@@ -11,3 +11,4 @@ upande_livestock.patches.rename_livestock_event_docs.execute
 upande_livestock.patches.backfill_health_timeline_events.execute
 upande_livestock.patches.migrate_animals_off_asset.execute
 upande_livestock.patches.repair_zeroed_age_interval_settings.execute
+upande_livestock.patches.backfill_calf_fields_from_animal.execute

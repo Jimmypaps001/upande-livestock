@@ -43,6 +43,7 @@
   "sb_calving",
   "custom_calving_outcome",
   "custom_no_of_calves",
+  "births_recorded",
   "cb_calving",
   "custom_calf_sex",
   "custom_related_pregnancy",
@@ -286,6 +287,15 @@
    "fieldname": "custom_no_of_calves",
    "label": "No Of Calves",
    "fieldtype": "Int"
+  },
+  {
+   "default": "0",
+   "description": "Birth events linked to this calving.",
+   "fieldname": "births_recorded",
+   "fieldtype": "Int",
+   "label": "Births Recorded",
+   "no_copy": 1,
+   "read_only": 1
   },
   {
    "fieldname": "cb_calving",
