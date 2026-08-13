@@ -1,25 +1,228 @@
 {
  "actions": [],
  "allow_rename": 1,
- "creation": "2026-05-25 00:38:45.589897",
+ "autoname": "WT-.YYYY.-.#####",
+ "creation": "2026-08-11 00:00:00.000000",
  "doctype": "DocType",
- "editable_grid": 1,
  "engine": "InnoDB",
- "field_order": [],
- "fields": [],
+ "field_order": [
+  "sb_animal",
+  "animal",
+  "animal_name",
+  "current_herd",
+  "company",
+  "cb_animal",
+  "weight_date",
+  "measured_by",
+  "method",
+  "sb_measure",
+  "weight_kg",
+  "bcs",
+  "heart_girth_cm",
+  "cb_measure",
+  "previous_weight_kg",
+  "previous_weight_date",
+  "daily_gain_kg",
+  "sb_notes",
+  "remarks",
+  "sb_amend",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "fieldname": "sb_animal",
+   "fieldtype": "Section Break",
+   "label": "Animal"
+  },
+  {
+   "fieldname": "animal",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Animal",
+   "options": "Animal",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "animal.burn_name",
+   "fieldname": "animal_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Animal Name",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "animal.current_herd",
+   "fieldname": "current_herd",
+   "fieldtype": "Link",
+   "label": "Current Herd",
+   "options": "Herds",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "animal.company",
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "read_only": 1
+  },
+  {
+   "fieldname": "cb_animal",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Today",
+   "fieldname": "weight_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Weight Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "measured_by",
+   "fieldtype": "Link",
+   "label": "Measured By",
+   "options": "Employee"
+  },
+  {
+   "default": "Platform Scale",
+   "fieldname": "method",
+   "fieldtype": "Select",
+   "label": "Method",
+   "options": "Weighbridge\nPlatform Scale\nHeart Girth Tape\nVisual Estimate"
+  },
+  {
+   "fieldname": "sb_measure",
+   "fieldtype": "Section Break",
+   "label": "Measurement"
+  },
+  {
+   "fieldname": "weight_kg",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Weight (kg)",
+   "reqd": 1
+  },
+  {
+   "description": "Body Condition Score.",
+   "fieldname": "bcs",
+   "fieldtype": "Float",
+   "label": "BCS"
+  },
+  {
+   "depends_on": "eval:doc.method == \"Heart Girth Tape\"",
+   "fieldname": "heart_girth_cm",
+   "fieldtype": "Float",
+   "label": "Heart Girth (cm)"
+  },
+  {
+   "fieldname": "cb_measure",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "previous_weight_kg",
+   "fieldtype": "Float",
+   "label": "Previous Weight (kg)",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "previous_weight_date",
+   "fieldtype": "Date",
+   "label": "Previous Weight Date",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
+   "description": "Average daily gain since the previous record.",
+   "fieldname": "daily_gain_kg",
+   "fieldtype": "Float",
+   "label": "Daily Gain (kg/day)",
+   "no_copy": 1,
+   "precision": "4",
+   "read_only": 1
+  },
+  {
+   "fieldname": "sb_notes",
+   "fieldtype": "Section Break",
+   "label": "Notes"
+  },
+  {
+   "fieldname": "remarks",
+   "fieldtype": "Small Text",
+   "label": "Remarks"
+  },
+  {
+   "fieldname": "sb_amend",
+   "fieldtype": "Section Break",
+   "label": "Amended From"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Livestock Weight Record",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  }
+ ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
- "istable": 1,
+ "is_submittable": 1,
  "links": [],
- "modified": "2026-05-25 00:38:45.589897",
- "modified_by": "judah@upande.com",
+ "modified": "2026-08-11 00:00:00.000000",
+ "modified_by": "Administrator",
  "module": "Upande Livestock",
  "name": "Livestock Weight Record",
- "owner": "judah@upande.com",
- "permissions": [],
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Livestock Manager",
+   "select": 1,
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Farm Manager",
+   "select": 1,
+   "submit": 1,
+   "write": 1
+  }
+ ],
  "row_format": "Dynamic",
- "rows_threshold_for_grid_search": 20,
  "sort_field": "modified",
  "sort_order": "DESC",
- "states": []
+ "states": [],
+ "title_field": "animal_name"
 }
