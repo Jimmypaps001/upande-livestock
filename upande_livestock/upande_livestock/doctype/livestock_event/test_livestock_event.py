@@ -333,6 +333,83 @@ class TestLivestockEventAnimalMandatory(IntegrationTestCase):
 			doc.insert()
 
 
+class TestLivestockEventDateClearDetection(IntegrationTestCase):
+	"""LivestockEvent.validate()'s EVENT DATE block (see the CLEAR-DETECTION
+	comment there).
+
+	event_date carries `"default": "Today"` in the DocType JSON, so
+	Document.insert() always repopulates a blank event_date before
+	validate() ever runs — a document cannot reach insert() with event_date
+	genuinely blank, on any path (desk, REST, data import, mobile). A
+	previous version of this check special-cased self.is_new(), which could
+	therefore never fire. The only way event_date IS NULL ever reached this
+	project's live data was a later SAVE that cleared an already-stored
+	date — exactly what produced the 5 (now 3) NULL rows on kaitet.local.
+	These tests exercise that real path.
+	"""
+
+	def setUp(self):
+		ensure_livestock_event_types()
+		self.animal = make_animal("TEST-EVENTDATE-1").name
+		self.addCleanup(_delete_and_commit, "Animal", self.animal)
+		self.operator = frappe.db.get_value("Employee", {}, "name")
+
+	def test_insert_with_no_event_date_gets_todays_date(self):
+		"""Pins the DocType JSON's `"default": "Today"` behaviour that makes
+		the old is_new() branch unreachable: if that default is ever removed
+		from the JSON, this must fail loudly rather than silently reopen the
+		gap it currently closes on insert.
+		"""
+		doc = frappe.get_doc(
+			{
+				"doctype": "Livestock Event",
+				"animal": self.animal,
+				"event_type": "Feeding",
+				"operator": self.operator,
+			}
+		)
+		doc.insert()
+		self.addCleanup(_delete_and_commit, "Livestock Event", doc.name)
+		self.assertEqual(str(doc.event_date), frappe.utils.today())
+
+	def test_blanking_a_stored_event_date_on_update_throws(self):
+		"""The damaging transition this check exists to block: a stored date
+		cleared on an ordinary save — exactly how the duplicate Client-
+		Script-era validate handlers in public/js/livestock_event.js produced
+		the 5 NULL rows this project found.
+		"""
+		doc = make_event("Feeding", self.animal, "2026-06-10", operator=self.operator)
+		self.addCleanup(_delete_and_commit, "Livestock Event", doc.name)
+		doc.event_date = None
+		with self.assertRaises(frappe.exceptions.MandatoryError):
+			doc.save()
+
+	def test_already_null_event_date_can_still_be_saved(self):
+		"""Grandfathering, proven without touching any of the 3 real
+		production Calving rows this project deliberately left NULL (no
+		recoverable date — see backfill_event_date_from_twin_field.py,
+		which is why those rows are never used directly in an automated
+		test). Reconstructs the same state those rows are actually in: a row
+		whose event_date is NULL not because it was ever accepted blank
+		through validate() (impossible, per the default above) but because
+		something outside the ORM's own defaulting cleared it after
+		insert — a raw frappe.db.set_value here, exactly mirroring the real
+		JS bug's effect. A resave that leaves event_date blank must not be
+		blocked: nothing stored is being cleared by this save, since
+		nothing is stored to begin with.
+		"""
+		doc = make_event("Feeding", self.animal, "2026-06-11", operator=self.operator)
+		self.addCleanup(_delete_and_commit, "Livestock Event", doc.name)
+		frappe.db.set_value("Livestock Event", doc.name, "event_date", None, update_modified=False)
+		doc.reload()
+		self.assertFalse(doc.event_date)
+
+		doc.remarks = "grandfathered-null-event-date-resave-test"
+		doc.save()  # must not raise
+		doc.reload()
+		self.assertFalse(doc.event_date)
+
+
 def _delete_animal_and_fix_herd(name):
 	"""Delete an Animal and recompute its herd's true count.
 

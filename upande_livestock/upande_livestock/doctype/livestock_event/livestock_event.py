@@ -357,38 +357,53 @@ class LivestockEvent(Document):
 			)
 
 		# ============================================================
-		# CONDITIONAL MANDATORY: EVENT DATE (new documents only)
+		# CLEAR-DETECTION: EVENT DATE (reject blanking a stored date)
 		# ============================================================
 		# event_date has no reqd/mandatory_depends_on in the DocType JSON at
-		# all, so — same gap class as operator/animal/calf fields/
-		# abortion_cause above — nothing server-side ever required it. Worse,
-		# it was ACTIVELY wiped: three duplicate Client-Script-era
-		# `frappe.ui.form.on("Livestock Event", ...)` registrations in
-		# public/js/livestock_event.js each fire their own `validate` handler,
-		# and two of them unconditionally did
-		# `frm.set_value("event_date", null)` whenever the event type was not
-		# Movement — silently blanking the date on every desk save. That JS
-		# bug is fixed alongside this check, but the REST API, data import and
-		# the mobile client never went through that JS at all, so a
-		# structural, server-side requirement is the only thing that closes
-		# the gap for every path.
+		# all, but it does carry `"default": "Today"` — and
+		# Document.insert() always calls _set_defaults() before validate()
+		# ever runs, on every path. That means a brand-new document can
+		# never actually reach this method with a blank event_date:
+		# verified directly against this site — frappe.get_doc({...}) with
+		# no event_date, frappe.get_doc({..., "event_date": None}),
+		# doc.event_date = None set before insert(), and a
+		# frappe.client.insert REST call with event_date: None were all
+		# silently repopulated to today before validate() saw them. A
+		# previous version of this block special-cased self.is_new() to
+		# require event_date on new documents; that branch could never
+		# fire and was dead code.
 		#
-		# This matters beyond the missing date: livestock_guards.py's age and
-		# interval rules return early whenever event_date is falsy, so an
-		# event with no date silently escapes every guard this project built.
+		# The real gap is on UPDATE: the field default only reapplies while
+		# a document is still new, so once a row exists, setting
+		# event_date = None and calling save() persists the NULL —
+		# verified the same way. That is exactly how the 5 NULL rows on
+		# kaitet.local were produced: two of the three duplicate
+		# Client-Script-era `frappe.ui.form.on("Livestock Event", ...)`
+		# registrations in public/js/livestock_event.js unconditionally did
+		# `frm.set_value("event_date", null)` on a later desk save. That JS
+		# bug is fixed alongside this check, but the REST API, data import
+		# and the mobile client never went through that JS at all, so a
+		# structural, server-side guard on the update path is what actually
+		# closes the gap.
 		#
-		# Scoped to new documents only (self.is_new()), not every save: 5
-		# rows on kaitet.local already carry a NULL event_date from before
-		# this check existed. Patch backfill_event_date_from_twin_field
-		# recovers 2 of them from their own service_date/diagnosis_date; the
-		# remaining 3 Calving rows have no non-guessed source, and inventing a
-		# date for them is worse than leaving them NULL. Enforcing this
-		# unconditionally would retroactively invalidate those real,
-		# already-submitted records on their next ordinary save (edit, cancel,
-		# update-after-submit) — the same defect class this project has
-		# already hit repeatedly. A document that does not exist yet, from any
-		# path, must supply it; a pre-existing record is grandfathered.
-		if self.is_new() and not self.event_date:
+		# This matters beyond the missing date: livestock_guards.py's age
+		# and interval rules return early whenever event_date is falsy, so
+		# an event with no date silently escapes every guard this project
+		# built.
+		#
+		# Reject only the transition that actually causes damage: a stored
+		# date being cleared. self.get_doc_before_save() holds exactly the
+		# pre-update row here — check_if_latest() (called from both
+		# insert() and _save(), before run_before_save_methods() ever calls
+		# validate()) always populates it ahead of validate() whenever this
+		# is not a new document, and is None for a new/nonexistent
+		# document, so this skips cleanly on insert with no separate
+		# is_new() check needed. A row that is already NULL (the 3
+		# remaining Calving rows with no recoverable date) is not being
+		# cleared by this save, so nothing here blocks it from being
+		# resaved.
+		stored = self.get_doc_before_save()
+		if stored and stored.event_date and not self.event_date:
 			frappe.throw(
 				_("{0} is mandatory for a Livestock Event.").format(_("Event Date")),
 				frappe.MandatoryError,
