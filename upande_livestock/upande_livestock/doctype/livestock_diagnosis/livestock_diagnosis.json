@@ -32,7 +32,15 @@
   "sb_checks",
   "system_checks",
   "sb_dx",
-  "suggested_diagnosis",
+  "suggested_disease",
+  "sb_disease_ref",
+  "disease_typical_symptoms",
+  "disease_typical_severity",
+  "disease_standard_protocol",
+  "cb_disease_ref",
+  "disease_milk_withdrawal_days",
+  "disease_is_zoonotic",
+  "disease_is_notifiable",
   "cb_dx",
   "differential_notes",
   "tab_outcome",
@@ -201,11 +209,66 @@
    "label": "Suggested Diagnosis"
   },
   {
-   "description": "Optional pick from the Livestock Disease catalogue.",
-   "fieldname": "suggested_diagnosis",
+   "fieldname": "suggested_disease",
    "fieldtype": "Link",
-   "label": "Suggested Diagnosis",
+   "in_list_view": 1,
+   "label": "Suggested Disease",
    "options": "Livestock Disease"
+  },
+  {
+   "collapsible": 1,
+   "depends_on": "suggested_disease",
+   "fieldname": "sb_disease_ref",
+   "fieldtype": "Section Break",
+   "label": "Disease Reference"
+  },
+  {
+   "fetch_from": "suggested_disease.typical_symptoms",
+   "fieldname": "disease_typical_symptoms",
+   "fieldtype": "Text",
+   "label": "Typical Symptoms",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "suggested_disease.typical_severity",
+   "fieldname": "disease_typical_severity",
+   "fieldtype": "Data",
+   "label": "Typical Severity",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "suggested_disease.standard_protocol",
+   "fieldname": "disease_standard_protocol",
+   "fieldtype": "Text",
+   "label": "Standard Treatment Protocol",
+   "read_only": 1
+  },
+  {
+   "fieldname": "cb_disease_ref",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fetch_from": "suggested_disease.expected_milk_withdrawal_days",
+   "fieldname": "disease_milk_withdrawal_days",
+   "fieldtype": "Int",
+   "label": "Typical Milk Withdrawal (days)",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fetch_from": "suggested_disease.is_zoonotic",
+   "fieldname": "disease_is_zoonotic",
+   "fieldtype": "Check",
+   "label": "Zoonotic",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fetch_from": "suggested_disease.is_notifiable",
+   "fieldname": "disease_is_notifiable",
+   "fieldtype": "Check",
+   "label": "Notifiable to Authorities",
+   "read_only": 1
   },
   {
    "fieldname": "cb_dx",
@@ -287,7 +350,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-07-01 07:08:25.587023",
+ "modified": "2026-08-13 00:00:00.000000",
  "modified_by": "Administrator",
  "module": "Upande Livestock",
  "name": "Livestock Diagnosis",
@@ -352,7 +415,7 @@
  ],
  "row_format": "Dynamic",
  "rows_threshold_for_grid_search": 20,
- "search_fields": "animal,animal_name,suggested_diagnosis,current_herd",
+ "search_fields": "animal,animal_name,suggested_disease,current_herd",
  "show_title_field_in_link": 1,
  "sort_field": "diagnosis_date",
  "sort_order": "DESC",
