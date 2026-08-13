@@ -103,3 +103,35 @@ def create_calf(dam, tag_number, sex, event_date, birth_weight=None, burn_name=N
 
 	recompute_herd_count(target_herd)
 	return calf.name
+
+
+STATUS_BY_DISPOSAL_TYPE = {
+	"Sold": "Sold",
+	"Culled (Farm Use)": "Culled",
+	"Died — Natural Causes": "Dead",
+	"Died — Disease": "Dead",
+	"Died — Accident": "Dead",
+	"Condemned": "Culled",
+	"Slaughtered": "Culled",
+}
+
+
+def retire_animal(animal, disposal_type):
+	"""Set the animal's final status and disable it. History is left intact."""
+	status = STATUS_BY_DISPOSAL_TYPE.get(disposal_type, "Culled")
+	herd = frappe.db.get_value("Animal", animal, "current_herd")
+	frappe.db.set_value("Animal", animal, {"status": status, "disabled": 1}, update_modified=False)
+	recompute_herd_count(herd)
+
+
+# NOTE: there is deliberately no custom link query here. Frappe's default link
+# search already excludes a record whose `disabled` Check field is set —
+# frappe/desk/search.py:215-217:
+#
+#     if meta.get("fields", {"fieldname": "disabled", "fieldtype": "Check"}):
+#         filters.append([doctype, "disabled", "!=", 1])
+#
+# so naming the field `disabled` is the whole implementation. A hand-rolled
+# standard_queries function would have to re-implement user-permission
+# enforcement, search_fields, title-field matching and as_dict handling, and
+# would silently lose them — a permissions regression dressed up as a feature.
