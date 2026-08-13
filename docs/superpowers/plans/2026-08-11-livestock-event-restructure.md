@@ -5438,16 +5438,29 @@ In `upande_livestock/upande_livestock/workspace/upande_livestock/upande_livestoc
 # Read docs to understand patches: https://frappeframework.com/docs/v14/user/en/database-migrations
 upande_livestock.patches.rename_livestock_doctypes.execute
 upande_livestock.patches.preserve_event_activity_cost.execute
-upande_livestock.patches.rename_diagnosis_disease_field.execute
 
 [post_model_sync]
 # Patches added in this section will be executed after doctypes are migrated
+upande_livestock.patches.rename_diagnosis_disease_field.execute
 upande_livestock.patches.rename_livestock_event_docs.execute
 upande_livestock.patches.backfill_animal_disabled.execute
 upande_livestock.patches.migrate_animals_off_asset.execute
 ```
 
-`rename_diagnosis_disease_field` moves to `pre_model_sync`: `rename_field` needs the **old** column to still exist, and model sync would have already added the new one.
+`rename_diagnosis_disease_field` stays in `post_model_sync`. `rename_field` needs **both** the new
+field present in DocType meta **and** the old column still present in the table — its own docstring
+says *"This functions assumes that doctype is already synced"*, and it bails out with a bare `print`
+(no exception) when the new field is missing:
+
+```python
+if not new_field:
+    print("rename_field: " + new_fieldname + " not found in " + doctype)
+    return
+```
+
+`post_model_sync` satisfies both conditions, because Frappe never drops the orphaned old column.
+Running it `pre_model_sync` silently no-ops — it prints and returns, the patch is recorded as
+successfully executed, and the old values are stranded. Verified empirically in Task 6.
 
 - [ ] **Step 4: Final reference sweep**
 
