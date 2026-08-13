@@ -14,6 +14,7 @@
 - **Test base class:** `from frappe.tests import IntegrationTestCase`. Do **not** use `from frappe.tests.utils import FrappeTestCase` — it only survives via a v16 deprecation shim and the existing stubs using it must be updated.
 - **Site for all commands:** `kaitet.local`. Bench root: `/home/ubuntu/stive/code/frappe15`. App root: `/home/ubuntu/stive/code/frappe15/apps/upande_livestock`.
 - **`developer_mode` is OFF** on this site. All DocType JSON is authored **by hand in source files**, never through the desk UI. Apply changes with `frappe.modules.import_file.import_file_by_path(path, force=True)`.
+- **`bench console` runs with cwd = `sites/`, not the bench root.** Use absolute paths in `import_file_by_path` calls, or the glob silently matches nothing and imports zero doctypes. Verified in Task 1.
 - **`bench migrate` is unusable** on this site: it aborts in the `lending` app's patch phase (`create_custom_field_loan_accrual_rate_for_company` → `ValidationError: Script Type cannot be "Workflow Task"`). Pre-existing, unrelated. Apply schema with `import_file_by_path` and run patches individually with `bench --site kaitet.local execute upande_livestock.patches.<module>.execute`.
 - **Code style (ruff, from `pyproject.toml`):** `line-length = 110`, `target-version = "py310"`, `quote-style = "double"`, **`indent-style = "tab"`**. Python files in this app are tab-indented — match that exactly.
 - **Copyright header** on every new `.py` / `.js` file:
@@ -21,6 +22,8 @@
   # Copyright (c) 2026, Upande and contributors
   # For license information, please see license.txt
   ```
+- **`frappe.rename_doc` has no `ignore_permissions` parameter** on 16.26.3 — the top-level wrapper dropped it. Import the inner one: `from frappe.model.rename_doc import rename_doc`, called with keyword args. Verified in Task 1.
+- **Renaming a standard DocType requires `frappe.flags.in_patch`** (or developer_mode). Since `bench migrate` is unusable here and `bench execute` does not set that flag, a rename patch must set and restore it itself. Verified in Task 1.
 - **Never rename** `Animal` or `Herds`.
 - **Timing defaults must equal today's hardcoded values** so an unconfigured site behaves identically: 45, 60, 280, 35, 21, 21, 70, 260, 300, 7.
 - **Commit after every task.** Do not squash tasks together.
@@ -962,6 +965,7 @@ import re
 
 import frappe
 from frappe.model.naming import make_autoname
+from frappe.model.rename_doc import rename_doc
 from frappe.utils import getdate, nowdate
 
 from upande_livestock.install import ensure_livestock_event_types
@@ -996,10 +1000,13 @@ def execute():
 			)
 			continue
 		try:
-			frappe.rename_doc(
-				"Livestock Event",
-				row.name,
-				build_name(row.event_type, row.event_date),
+			# frappe.rename_doc (the top-level wrapper) has no ignore_permissions
+			# parameter on Frappe 16.26.3 — only the inner frappe.model.rename_doc
+			# does. Confirmed in Task 1.
+			rename_doc(
+				doctype="Livestock Event",
+				old=row.name,
+				new=build_name(row.event_type, row.event_date),
 				force=True,
 				ignore_permissions=True,
 				show_alert=False,
