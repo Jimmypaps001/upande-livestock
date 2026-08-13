@@ -1,21 +1,21 @@
 [pre_model_sync]
 # Patches added in this section will be executed before doctypes are migrated
 # Read docs to understand patches: https://frappeframework.com/docs/v14/user/en/database-migrations
-upande_livestock.patches.rename_livestock_doctypes.execute
-upande_livestock.patches.preserve_event_activity_cost.execute
+upande_livestock.patches.rename_livestock_doctypes
+upande_livestock.patches.preserve_event_activity_cost
 
 [post_model_sync]
 # Patches added in this section will be executed after doctypes are migrated
-upande_livestock.patches.rename_diagnosis_disease_field.execute
-upande_livestock.patches.rename_livestock_event_docs.execute
-upande_livestock.patches.backfill_health_timeline_events.execute
-upande_livestock.patches.migrate_animals_off_asset.execute
-upande_livestock.patches.repair_zeroed_age_interval_settings.execute
+upande_livestock.patches.rename_diagnosis_disease_field
+upande_livestock.patches.rename_livestock_event_docs
+upande_livestock.patches.backfill_health_timeline_events
+upande_livestock.patches.migrate_animals_off_asset
+upande_livestock.patches.repair_zeroed_age_interval_settings
 # Must run after migrate_animals_off_asset: it resolves Livestock Event.animal
 # as an Animal name (frappe.db.get_value("Animal", row.animal, ...)), and
 # migrate_animals_off_asset is what repoints that field from an Asset name to
 # an Animal name in the first place. Reordering this earlier would make the
 # lookup silently miss (row.animal still an Asset name), logging "Linked
 # Animal ... no longer exists" and skipping every row instead of raising.
-upande_livestock.patches.backfill_calf_fields_from_animal.execute
-upande_livestock.patches.backfill_animal_disabled.execute
+upande_livestock.patches.backfill_calf_fields_from_animal
+upande_livestock.patches.backfill_animal_disabled
