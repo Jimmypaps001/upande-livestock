@@ -68,17 +68,24 @@ class TestRenameLivestockEventDocs(IntegrationTestCase):
 			}
 		).insert()
 
-		legacy_name = f"{animal}-Feeding-{frappe.generate_hash(length=6)}"
-		frappe.db.sql("UPDATE `tabLivestock Event` SET name = %s WHERE name = %s", (legacy_name, doc.name))
-		frappe.db.commit()
-
 		def _cleanup():
+			# Look the row up by its remarks marker rather than any specific name:
+			# it may still carry the name insert() gave it (if the UPDATE below
+			# never ran or never committed), the forced legacy name, or the name
+			# execute() renamed it to. Safe (a no-op) if the row was never created.
 			current_name = frappe.db.get_value("Livestock Event", {"remarks": marker}, "name")
 			if current_name:
 				frappe.db.delete("Livestock Event", {"name": current_name})
 				frappe.db.commit()
 
+		# Registered immediately after insert() returns — before the UPDATE/commit
+		# below, which could itself raise — so this throwaway row (against a real
+		# production Animal) can never survive an error in this test uncleaned.
 		self.addCleanup(_cleanup)
+
+		legacy_name = f"{animal}-Feeding-{frappe.generate_hash(length=6)}"
+		frappe.db.sql("UPDATE `tabLivestock Event` SET name = %s WHERE name = %s", (legacy_name, doc.name))
+		frappe.db.commit()
 
 		self.assertTrue(frappe.db.exists("Livestock Event", legacy_name))
 		self.assertFalse(NEW_NAME_RE.match(legacy_name))

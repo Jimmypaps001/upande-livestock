@@ -98,6 +98,12 @@ class TestLivestockEventNaming(IntegrationTestCase):
 
 	def test_animal_name_is_not_in_the_document_name(self):
 		doc = self.make_event("Feeding", "2026-03-04")
+		# Assert the positive naming contract, not just the tag's absence: a
+		# fallback hash name (autoname() missing/no-op) also never contains the
+		# animal tag, so that alone would pass without exercising autoname() at
+		# all. Only a real TYPE-YEAR-##### name for this event's type satisfies
+		# both.
+		self.assertRegex(doc.name, r"^FEEDING-2026-\d{5}$")
 		self.assertNotIn(self.animal, doc.name)
 
 	def test_title_field_is_event_type(self):
@@ -116,5 +122,11 @@ class TestLivestockEventNaming(IntegrationTestCase):
 		doc = frappe.get_doc(
 			{"doctype": "Livestock Event", "animal": self.animal, "event_date": "2026-03-04"}
 		)
-		with self.assertRaises(frappe.exceptions.ValidationError):
+		# event_type's own reqd=1 would raise a MandatoryError (also a
+		# ValidationError) later in the insert flow, which would satisfy a bare
+		# assertRaises(ValidationError) without ever reaching autoname()'s guard.
+		# Bypass mandatory validation so this test proves that guard specifically
+		# fires, by asserting on the exact message autoname() raises.
+		doc.flags.ignore_mandatory = True
+		with self.assertRaisesRegex(frappe.exceptions.ValidationError, "Event Type is required"):
 			doc.insert()
