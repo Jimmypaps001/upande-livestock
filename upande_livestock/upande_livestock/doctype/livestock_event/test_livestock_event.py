@@ -192,3 +192,85 @@ class TestLivestockEventAccountingRemoved(IntegrationTestCase):
 
 	def test_setting_is_gone_from_livestock_settings(self):
 		self.assertIsNone(frappe.get_meta("Livestock Settings").get_field("custom_auto_create_journal_entry"))
+
+
+class TestLivestockEventBirth(IntegrationTestCase):
+	def setUp(self):
+		ensure_livestock_event_types()
+		if not frappe.db.exists("Herds", "TEST-BIRTH-CALVES"):
+			frappe.get_doc(
+				{
+					"doctype": "Herds",
+					"herd_name": "TEST-BIRTH-CALVES",
+					"min_age": 0,
+					"max_age": 1,
+					"custom_is_calf_rearing": 1,
+				}
+			).insert()
+			self.addCleanup(_delete_and_commit, "Herds", "TEST-BIRTH-CALVES")
+		self.dam = make_animal("TEST-BIRTH-DAM").name
+		self.addCleanup(_delete_and_commit, "Animal", self.dam)
+		self.operator = frappe.db.get_value("Employee", {}, "name")
+		for tag in ("TEST-BIRTH-CALF-1", "TEST-BIRTH-CALF-2"):
+			if frappe.db.exists("Animal", tag):
+				frappe.delete_doc("Animal", tag, force=True, ignore_permissions=True)
+				frappe.db.commit()
+			self.addCleanup(_delete_and_commit, "Animal", tag)
+
+	def _birth(self, tag, sex="Female", **kwargs):
+		doc = frappe.get_doc(
+			{
+				"doctype": "Livestock Event",
+				"event_type": "Birth",
+				"event_date": "2026-06-01",
+				"operator": self.operator,
+				"dam": self.dam,
+				"calf_tag_number": tag,
+				"calf_sex": sex,
+				**kwargs,
+			}
+		)
+		doc.insert()
+		self.addCleanup(_delete_and_commit, "Livestock Event", doc.name)
+		return doc
+
+	def test_birth_creates_the_calf_in_the_calf_herd(self):
+		event = self._birth("TEST-BIRTH-CALF-1")
+		self.assertEqual(event.animal, "TEST-BIRTH-CALF-1")
+		calf = frappe.get_doc("Animal", event.animal)
+		self.assertEqual(calf.current_herd, "TEST-BIRTH-CALVES")
+		self.assertEqual(calf.dam, self.dam)
+		self.assertEqual(calf.repro_status, "Calf")
+
+	def test_birth_bumps_the_herd_count(self):
+		self._birth("TEST-BIRTH-CALF-1")
+		expected = frappe.db.count("Animal", {"current_herd": "TEST-BIRTH-CALVES", "docstatus": ["!=", 2]})
+		self.assertEqual(frappe.db.get_value("Herds", "TEST-BIRTH-CALVES", "number_of_animals"), expected)
+
+	def test_duplicate_calf_tag_throws(self):
+		self._birth("TEST-BIRTH-CALF-1")
+		with self.assertRaises(frappe.exceptions.ValidationError):
+			self._birth("TEST-BIRTH-CALF-1")
+
+	def test_stillborn_birth_creates_no_animal(self):
+		before = frappe.db.count("Animal")
+		doc = frappe.get_doc(
+			{
+				"doctype": "Livestock Event",
+				"event_type": "Birth",
+				"event_date": "2026-06-02",
+				"operator": self.operator,
+				"dam": self.dam,
+				"is_stillborn": 1,
+			}
+		)
+		doc.insert()
+		self.addCleanup(_delete_and_commit, "Livestock Event", doc.name)
+		self.assertFalse(doc.animal)
+		self.assertEqual(frappe.db.count("Animal"), before)
+
+	def test_resubmitting_does_not_double_create(self):
+		event = self._birth("TEST-BIRTH-CALF-1")
+		event.submit()
+		event.reload()
+		self.assertEqual(frappe.db.count("Animal", {"tag_number": "TEST-BIRTH-CALF-1"}), 1)
