@@ -32,7 +32,21 @@ class TestPreserveEventActivityCost(IntegrationTestCase):
 	def setUp(self):
 		ensure_livestock_event_types()
 		self.animal = make_animal("TEST-COST-1").name
+		# Registered before any per-event addCleanup below (in _costed_event /
+		# test_uncosted_event_is_left_alone), so LIFO ordering runs this last —
+		# after every event referencing this animal has already been purged by
+		# its own cleanup. Without this, the Animal fixture is a permanent,
+		# idempotently-recreated resident of the live tabAnimal table: the same
+		# class of leak as an un-cleaned-up Livestock Event, just in a different
+		# doctype.
+		self.addCleanup(self._purge_animal, self.animal)
 		self.operator = frappe.db.get_value("Employee", {}, "name")
+
+	def _purge_animal(self, name):
+		"""Delete the Animal fixture, tolerant of it already being gone."""
+		if frappe.db.exists("Animal", name):
+			frappe.delete_doc("Animal", name, force=True, ignore_permissions=True)
+			frappe.db.commit()
 
 	def _costed_event(self, cost, remarks=None):
 		"""An event with a non-zero legacy activity cost and no migration marker."""
