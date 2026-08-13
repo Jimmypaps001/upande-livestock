@@ -668,7 +668,6 @@ frappe.ui.form.on("Livestock Event", {
         if (!isMovement) {
             frm.set_value("current_herd", null);
             frm.set_value("new_herd", null);
-            frm.set_value("event_date", null);
         }
         if (!isService) {
             frm.set_value("sire", null);
@@ -796,7 +795,6 @@ frappe.ui.form.on("Livestock Event", {
         if (!isMovement) {
             frm.set_value("current_herd", null);
             frm.set_value("new_herd", null);
-            frm.set_value("event_date", null);
         }
 
         // If not Service, clear service fields

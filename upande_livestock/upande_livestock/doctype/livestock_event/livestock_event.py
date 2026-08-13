@@ -357,6 +357,44 @@ class LivestockEvent(Document):
 			)
 
 		# ============================================================
+		# CONDITIONAL MANDATORY: EVENT DATE (new documents only)
+		# ============================================================
+		# event_date has no reqd/mandatory_depends_on in the DocType JSON at
+		# all, so — same gap class as operator/animal/calf fields/
+		# abortion_cause above — nothing server-side ever required it. Worse,
+		# it was ACTIVELY wiped: three duplicate Client-Script-era
+		# `frappe.ui.form.on("Livestock Event", ...)` registrations in
+		# public/js/livestock_event.js each fire their own `validate` handler,
+		# and two of them unconditionally did
+		# `frm.set_value("event_date", null)` whenever the event type was not
+		# Movement — silently blanking the date on every desk save. That JS
+		# bug is fixed alongside this check, but the REST API, data import and
+		# the mobile client never went through that JS at all, so a
+		# structural, server-side requirement is the only thing that closes
+		# the gap for every path.
+		#
+		# This matters beyond the missing date: livestock_guards.py's age and
+		# interval rules return early whenever event_date is falsy, so an
+		# event with no date silently escapes every guard this project built.
+		#
+		# Scoped to new documents only (self.is_new()), not every save: 5
+		# rows on kaitet.local already carry a NULL event_date from before
+		# this check existed. Patch backfill_event_date_from_twin_field
+		# recovers 2 of them from their own service_date/diagnosis_date; the
+		# remaining 3 Calving rows have no non-guessed source, and inventing a
+		# date for them is worse than leaving them NULL. Enforcing this
+		# unconditionally would retroactively invalidate those real,
+		# already-submitted records on their next ordinary save (edit, cancel,
+		# update-after-submit) — the same defect class this project has
+		# already hit repeatedly. A document that does not exist yet, from any
+		# path, must supply it; a pre-existing record is grandfathered.
+		if self.is_new() and not self.event_date:
+			frappe.throw(
+				_("{0} is mandatory for a Livestock Event.").format(_("Event Date")),
+				frappe.MandatoryError,
+			)
+
+		# ============================================================
 		# VALIDATION FOR SERVICE EVENTS
 		# ============================================================
 
