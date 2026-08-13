@@ -34,7 +34,6 @@
   "custom_milk_target_warehouse",
   "custom_milk_discard_warehouse",
   "sb_accounting",
-  "custom_auto_create_journal_entry",
   "custom_default_company",
   "custom_default_credit_account"
  ],
@@ -207,11 +206,6 @@
    "fieldname": "sb_accounting",
    "fieldtype": "Section Break",
    "label": "Accounting"
-  },
-  {
-   "fieldname": "custom_auto_create_journal_entry",
-   "fieldtype": "Check",
-   "label": "Auto-create Journal Entry on Livestock Event"
   },
   {
    "fieldname": "custom_default_company",
