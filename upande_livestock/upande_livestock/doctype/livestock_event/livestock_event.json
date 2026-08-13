@@ -14,6 +14,8 @@
   "event_date",
   "operator",
   "remarks",
+  "reference_doctype",
+  "reference_name",
   "tab_service",
   "sb_service",
   "sire",
@@ -107,6 +109,25 @@
    "fieldname": "remarks",
    "fieldtype": "Small Text",
    "label": "Remarks"
+  },
+  {
+   "fieldname": "reference_doctype",
+   "fieldtype": "Link",
+   "label": "Reference DocType",
+   "no_copy": 1,
+   "options": "DocType",
+   "print_hide": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "reference_name",
+   "fieldtype": "Dynamic Link",
+   "label": "Reference Document",
+   "no_copy": 1,
+   "options": "reference_doctype",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
   },
   {
    "fieldname": "tab_service",
