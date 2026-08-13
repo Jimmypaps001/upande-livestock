@@ -24,6 +24,37 @@ from upande_livestock.livestock_guards import check_guards
 from upande_livestock.livestock_timings import get_timing
 
 
+def warn_on_calving_mismatch(calving_name):
+	"""Warn, never block, when a calving's expected and recorded birth counts
+	disagree.
+
+	A module-level function, not a method, so it has one caller-agnostic
+	definition shared by both places that need it: LivestockEvent's own
+	refresh_calving_birth_count (fired once per Birth submit/cancel outside a
+	batch) and api.operations.record_calf_births (fired once after its whole
+	multi-calf loop finishes, not per calf — see refresh_calving_birth_count's
+	docstring for why per-calf would produce false alarms on an in-progress,
+	ultimately-correct batch). Reads both counts fresh from the database rather
+	than trusting an in-memory doc, since the caller may hold either the
+	Calving or a Birth event.
+	"""
+	if not calving_name:
+		return
+	expected, recorded = frappe.db.get_value(
+		"Livestock Event", calving_name, ["custom_no_of_calves", "births_recorded"]
+	)
+	expected = expected or 0
+	recorded = recorded or 0
+	if expected and recorded and expected != recorded:
+		frappe.msgprint(
+			_("This calving expects {0} calves but {1} Birth events are recorded.").format(
+				expected, recorded
+			),
+			alert=True,
+			indicator="orange",
+		)
+
+
 class LivestockEvent(Document):
 	def autoname(self):
 		"""Name as TYPE-YEAR-#####, e.g. FEEDING-2026-00001.
@@ -668,6 +699,16 @@ class LivestockEvent(Document):
 		never actually see a mismatch. This is a warning, not a throw: farms
 		legitimately record calves the next morning, and blocking submission
 		would push staff to falsify custom_no_of_calves instead.
+
+		The count refresh below is unconditional — births_recorded must stay
+		accurate after every single Birth submit or cancel, batch or not. Only
+		the *message* is suppressed mid-batch: api.operations.record_calf_births
+		sets frappe.flags.suppress_calving_mismatch_warning around its own loop,
+		so that inserting calf 1 of an eventual 3 does not warn about a mismatch
+		that the batch itself is about to resolve two calves later. A single
+		Birth submitted or cancelled outside that loop — from the desk form, or
+		via a one-calf record_calf_births call — still warns immediately, since
+		flags.suppress_calving_mismatch_warning is unset (falsy) on that path.
 		"""
 		if not self.related_calving:
 			return
@@ -679,12 +720,5 @@ class LivestockEvent(Document):
 			"Livestock Event", self.related_calving, "births_recorded", count, update_modified=False
 		)
 
-		expected = frappe.db.get_value("Livestock Event", self.related_calving, "custom_no_of_calves") or 0
-		if expected and count and expected != count:
-			frappe.msgprint(
-				_("This calving expects {0} calves but {1} Birth events are recorded.").format(
-					expected, count
-				),
-				alert=True,
-				indicator="orange",
-			)
+		if not frappe.flags.get("suppress_calving_mismatch_warning"):
+			warn_on_calving_mismatch(self.related_calving)
