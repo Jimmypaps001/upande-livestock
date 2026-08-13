@@ -32,6 +32,9 @@ from frappe import _
 from frappe.utils import add_days, flt, nowtime, today
 
 from upande_livestock.api import feeding
+from upande_livestock.upande_livestock.doctype.livestock_event.livestock_event import (
+	warn_on_calving_mismatch,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -695,33 +698,53 @@ def record_calf_births(payload):
 		dam = frappe.get_doc("Animal", dam_name)
 		created = []
 
-		for calf in calves:
-			stillborn = bool(calf.get("is_stillborn"))
-			birth = frappe.new_doc("Livestock Event")
-			birth.event_type = "Birth"
-			birth.event_date = calving.event_date
-			birth.operator = calving.operator
-			birth.dam = dam_name
-			birth.related_calving = calving.name
-			birth.sire = calving.sire
-			birth.is_stillborn = 1 if stillborn else 0
+		# Suppress the per-Birth mismatch warning for the duration of this loop:
+		# each Birth's own on_submit recounts against the calving's FULL expected
+		# total, so without this a 3-calf batch would warn "expects 3, got 1"
+		# after the first calf and "expects 3, got 2" after the second — false
+		# alarms on a batch that is about to complete correctly. births_recorded
+		# itself is still refreshed on every single Birth submit regardless (see
+		# LivestockEvent.refresh_calving_birth_count); only the message is held
+		# back here, evaluated once, after the whole batch, against the final
+		# count. The finally ensures an exception mid-loop can't leave the flag
+		# set for the rest of the request.
+		frappe.flags.suppress_calving_mismatch_warning = True
+		try:
+			for calf in calves:
+				stillborn = bool(calf.get("is_stillborn"))
+				birth = frappe.new_doc("Livestock Event")
+				birth.event_type = "Birth"
+				birth.event_date = calving.event_date
+				birth.operator = calving.operator
+				birth.dam = dam_name
+				birth.related_calving = calving.name
+				birth.sire = calving.sire
+				birth.is_stillborn = 1 if stillborn else 0
 
-			if stillborn:
-				birth.remarks = f"Stillborn. Dam: {dam.tag_number or dam.burn_name}"
-			else:
-				birth.calf_tag_number = (calf.get("tag") or "").strip().upper()
-				birth.calf_sex = calf.get("sex") if calf.get("sex") in ("Female", "Male") else "Female"
-				birth.calf_burn_name = calf.get("burn_name") or birth.calf_tag_number
-				birth.calf_birth_weight_kg = flt(calf.get("birth_weight"))
-				# An empty/omitted herd must still fall back to resolve_calf_herd() —
-				# create_calf_if_needed() treats a falsy herd the same as "not given".
-				birth.calf_herd = calf.get("herd") or ""
-				birth.remarks = f"Dam: {dam.tag_number or dam.burn_name}"
+				if stillborn:
+					birth.remarks = f"Stillborn. Dam: {dam.tag_number or dam.burn_name}"
+				else:
+					birth.calf_tag_number = (calf.get("tag") or "").strip().upper()
+					birth.calf_sex = calf.get("sex") if calf.get("sex") in ("Female", "Male") else "Female"
+					birth.calf_burn_name = calf.get("burn_name") or birth.calf_tag_number
+					birth.calf_birth_weight_kg = flt(calf.get("birth_weight"))
+					# An empty/omitted herd must still fall back to resolve_calf_herd() —
+					# create_calf_if_needed() treats a falsy herd the same as "not given".
+					birth.calf_herd = calf.get("herd") or ""
+					birth.remarks = f"Dam: {dam.tag_number or dam.burn_name}"
 
-			birth.insert()
-			birth.submit()
-			if not stillborn:
-				created.append({"animal": birth.animal, "tag": birth.calf_tag_number, "sex": birth.calf_sex})
+				birth.insert()
+				birth.submit()
+				if not stillborn:
+					created.append(
+						{"animal": birth.animal, "tag": birth.calf_tag_number, "sex": birth.calf_sex}
+					)
+		finally:
+			frappe.flags.suppress_calving_mismatch_warning = False
+
+		# One evaluation for the whole batch, against the final, settled count —
+		# not one per calf (see the comment above the loop).
+		warn_on_calving_mismatch(calving.name)
 
 		calving.reload()
 		return {"ok": True, "created": created, "births_recorded": calving.births_recorded}

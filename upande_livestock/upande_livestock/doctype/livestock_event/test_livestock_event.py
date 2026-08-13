@@ -575,6 +575,16 @@ class TestLivestockEventMultipleBirths(IntegrationTestCase):
 		test_count_mismatch_warns_but_does_not_block does) would pass even if this
 		method were never called at all, so this test captures frappe.msgprint
 		directly.
+
+		This is a 1-of-3 batch — the whole batch is exactly one calf, so it
+		completes (and must warn) after that single Birth. Asserting call_count
+		== 1, not just "called", is what distinguishes "warned once, correctly"
+		from "warned once per Birth", which would be indistinguishable from this
+		batch's perspective alone;
+		test_no_mismatch_warning_mid_batch_when_the_batch_completes and
+		test_exactly_one_warning_for_a_1_of_3_batch below are the ones that
+		actually exercise a multi-calf batch and would catch the per-calf-warning
+		regression this could otherwise hide.
 		"""
 		from unittest.mock import patch
 
@@ -586,12 +596,129 @@ class TestLivestockEventMultipleBirths(IntegrationTestCase):
 				{"calving": calving.name, "calves": [{"tag": "TEST-TRIPLET-1", "sex": "Female"}]}
 			)
 		self._register_birth_family_cleanup(calving.name, [c["animal"] for c in result["created"]])
-		self.assertTrue(mock_msgprint.called)
+		self.assertEqual(mock_msgprint.call_count, 1)
 		messages = [str(call.args[0]) for call in mock_msgprint.call_args_list if call.args]
 		self.assertTrue(
 			any("3" in m and "1" in m for m in messages),
 			f"Expected a mismatch warning mentioning 3 and 1, got: {messages}",
 		)
+
+	def test_no_mismatch_warning_mid_batch_when_the_batch_completes(self):
+		"""A 3-of-3 batch (submitted in one record_calf_births call) must produce
+		NO mismatch message at all — not one for calf 1 ("expects 3, got 1"),
+		one for calf 2 ("expects 3, got 2"), and silence only once the batch
+		settles at 3. Each Birth's own on_submit recounts against the calving's
+		full expected total before the rest of the same request's calves have
+		been inserted; without suppressing the message mid-batch (only the
+		births_recorded count itself must stay unconditional), a batch that
+		completes perfectly would still emit two false alarms — training staff
+		to dismiss a warning that, on an actual gap, is the whole point of this
+		feature.
+		"""
+		from unittest.mock import patch
+
+		from upande_livestock.api.operations import record_calf_births
+
+		calving = self._calving(3)
+		with patch("frappe.msgprint") as mock_msgprint:
+			result = record_calf_births(
+				{
+					"calving": calving.name,
+					"calves": [
+						{"tag": "TEST-TRIPLET-1", "sex": "Female"},
+						{"tag": "TEST-TRIPLET-2", "sex": "Female"},
+						{"tag": "TEST-TRIPLET-3", "sex": "Male"},
+					],
+				}
+			)
+		self._register_birth_family_cleanup(calving.name, [c["animal"] for c in result["created"]])
+		self.assertEqual(mock_msgprint.call_count, 0)
+		calving.reload()
+		self.assertEqual(calving.births_recorded, 3)
+
+	def test_exactly_one_warning_for_a_1_of_3_batch(self):
+		"""A 1-of-3 batch (three expected, one submitted in this call) must
+		produce exactly ONE mismatch message — not zero (the message must not
+		be swallowed entirely by the mid-batch suppression) and not more than
+		one (no double-firing).
+		"""
+		from unittest.mock import patch
+
+		from upande_livestock.api.operations import record_calf_births
+
+		calving = self._calving(3)
+		with patch("frappe.msgprint") as mock_msgprint:
+			result = record_calf_births(
+				{"calving": calving.name, "calves": [{"tag": "TEST-TRIPLET-1", "sex": "Female"}]}
+			)
+		self._register_birth_family_cleanup(calving.name, [c["animal"] for c in result["created"]])
+		self.assertEqual(mock_msgprint.call_count, 1)
+		calving.reload()
+		self.assertEqual(calving.births_recorded, 1)
+
+	def test_single_birth_against_a_3_calf_calving_warns_immediately(self):
+		"""A lone Birth event, inserted and submitted directly (not through
+		record_calf_births at all — the desk-form path), must still warn right
+		away: telling the operator immediately that 1 of 3 is recorded is the
+		whole point when there is no batch to wait for.
+		"""
+		from unittest.mock import patch
+
+		calving = self._calving(3)
+		with patch("frappe.msgprint") as mock_msgprint:
+			birth = frappe.get_doc(
+				{
+					"doctype": "Livestock Event",
+					"event_type": "Birth",
+					"event_date": "2026-07-01",
+					"operator": self.operator,
+					"dam": self.dam,
+					"related_calving": calving.name,
+					"calf_tag_number": "TEST-TRIPLET-1",
+					"calf_sex": "Female",
+				}
+			)
+			birth.insert()
+			self.addCleanup(_delete_animal_and_fix_herd, birth.animal)
+			self.addCleanup(_delete_and_commit, "Livestock Event", birth.name)
+			birth.submit()
+		self.assertEqual(mock_msgprint.call_count, 1)
+		calving.reload()
+		self.assertEqual(calving.births_recorded, 1)
+
+	def test_cancelling_a_birth_from_a_complete_set_warns(self):
+		"""Cancelling one Birth out of a complete set of 3 genuinely reopens a
+		gap (2 of 3 now recorded) and must warn — cancellation is never part of
+		a record_calf_births batch, so nothing suppresses it.
+		"""
+		from unittest.mock import patch
+
+		from upande_livestock.api.operations import record_calf_births
+
+		calving = self._calving(3)
+		result = record_calf_births(
+			{
+				"calving": calving.name,
+				"calves": [
+					{"tag": "TEST-TRIPLET-1", "sex": "Female"},
+					{"tag": "TEST-TRIPLET-2", "sex": "Female"},
+					{"tag": "TEST-TRIPLET-3", "sex": "Male"},
+				],
+			}
+		)
+		self._register_birth_family_cleanup(calving.name, [c["animal"] for c in result["created"]])
+		calving.reload()
+		self.assertEqual(calving.births_recorded, 3)
+
+		one_birth = frappe.db.get_value(
+			"Livestock Event",
+			{"related_calving": calving.name, "event_type": "Birth", "calf_tag_number": "TEST-TRIPLET-1"},
+		)
+		with patch("frappe.msgprint") as mock_msgprint:
+			frappe.get_doc("Livestock Event", one_birth).cancel()
+		self.assertEqual(mock_msgprint.call_count, 1)
+		calving.reload()
+		self.assertEqual(calving.births_recorded, 2)
 
 	def test_created_calf_entries_carry_animal_tag_and_sex(self):
 		"""result["created"][i] is the contract callers (mobile/web) read from.
