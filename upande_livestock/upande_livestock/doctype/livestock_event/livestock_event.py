@@ -19,6 +19,7 @@ from frappe.model.document import Document
 from frappe.model.naming import make_autoname
 from frappe.utils import getdate, nowdate
 
+from upande_livestock.api.animal import create_calf
 from upande_livestock.livestock_guards import check_guards
 from upande_livestock.livestock_timings import get_timing
 
@@ -38,7 +39,44 @@ class LivestockEvent(Document):
 		year = getdate(self.event_date or nowdate()).year
 		self.name = make_autoname(f"{prefix}-{year}-.#####")
 
+	def _type_creates_animal(self):
+		if not self.event_type:
+			return False
+		return bool(frappe.db.get_value("Livestock Event Type", self.event_type, "creates_animal"))
+
+	def create_calf_if_needed(self):
+		"""For a Birth event with no animal yet, create the calf and point at it.
+
+		api/operations.py:record_birth creates the Animal itself and passes `animal`
+		in, so this is a no-op on that path — which is what stops a form-booked birth
+		creating the calf twice.
+		"""
+		if not self._type_creates_animal():
+			return
+		if self.animal:
+			return
+		if self.is_stillborn:
+			return
+		if not self.dam:
+			frappe.throw(_("Select the dam for a Birth event."))
+
+		self.animal = create_calf(
+			dam=self.dam,
+			tag_number=self.calf_tag_number,
+			sex=self.calf_sex,
+			event_date=self.event_date,
+			birth_weight=self.calf_birth_weight_kg,
+			burn_name=self.calf_burn_name,
+		)
+
 	def before_insert(self):
+		self.create_calf_if_needed()
+
+		# A stillborn Birth event has no calf to point at, so there is no Animal to
+		# update. Everything below this line is per-animal status maintenance.
+		if not self.animal:
+			return
+
 		# ============================================================
 		# UPDATE ANIMAL STATUS ON ASSET
 		# ============================================================

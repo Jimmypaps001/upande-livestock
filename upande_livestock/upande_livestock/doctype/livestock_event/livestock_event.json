@@ -46,6 +46,15 @@
   "cb_calving",
   "custom_calf_sex",
   "custom_related_pregnancy",
+  "sb_calf",
+  "calf_tag_number",
+  "calf_sex",
+  "is_stillborn",
+  "cb_calf",
+  "calf_burn_name",
+  "calf_birth_weight_kg",
+  "dam",
+  "related_calving",
   "tab_more",
   "sb_amended",
   "amended_from"
@@ -61,8 +70,8 @@
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Animal",
-   "options": "Animal",
-   "reqd": 1
+   "mandatory_depends_on": "eval:!doc.is_stillborn",
+   "options": "Animal"
   },
   {
    "fetch_from": "animal.current_herd",
@@ -260,7 +269,7 @@
   {
    "fieldname": "tab_calving",
    "fieldtype": "Tab Break",
-   "label": "Calving"
+   "label": "Calving & Birth"
   },
   {
    "fieldname": "sb_calving",
@@ -292,6 +301,59 @@
    "fieldname": "custom_related_pregnancy",
    "label": "Related Pregnancy",
    "fieldtype": "Link",
+   "options": "Livestock Event"
+  },
+  {
+   "depends_on": "eval:doc.event_type == \"Birth\"",
+   "fieldname": "sb_calf",
+   "fieldtype": "Section Break",
+   "label": "Calf"
+  },
+  {
+   "description": "Farms tag calves physically, so tags are never auto-generated.",
+   "fieldname": "calf_tag_number",
+   "fieldtype": "Data",
+   "label": "Calf Tag / Book Number",
+   "mandatory_depends_on": "eval:doc.event_type == \"Birth\" && !doc.is_stillborn"
+  },
+  {
+   "fieldname": "calf_sex",
+   "fieldtype": "Select",
+   "label": "Calf Sex",
+   "mandatory_depends_on": "eval:doc.event_type == \"Birth\" && !doc.is_stillborn",
+   "options": "\nFemale\nMale"
+  },
+  {
+   "default": "0",
+   "description": "A stillborn calf is recorded but no Animal is created.",
+   "fieldname": "is_stillborn",
+   "fieldtype": "Check",
+   "label": "Stillborn"
+  },
+  {
+   "fieldname": "cb_calf",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "calf_burn_name",
+   "fieldtype": "Data",
+   "label": "Calf Burn Name (Display)"
+  },
+  {
+   "fieldname": "calf_birth_weight_kg",
+   "fieldtype": "Float",
+   "label": "Birth Weight (kg)"
+  },
+  {
+   "fieldname": "dam",
+   "fieldtype": "Link",
+   "label": "Dam (Mother)",
+   "options": "Animal"
+  },
+  {
+   "fieldname": "related_calving",
+   "fieldtype": "Link",
+   "label": "Related Calving",
    "options": "Livestock Event"
   },
   {
