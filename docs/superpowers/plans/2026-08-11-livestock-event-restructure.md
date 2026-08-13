@@ -2847,7 +2847,7 @@ Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
 - Create: `upande_livestock/api/test_animal.py`
 - Modify: `.../doctype/livestock_event/livestock_event.json`
 - Modify: `.../doctype/livestock_event/livestock_event.py`
-- Modify: `upande_livestock/api/operations.py:376-415` (the calf-creation loop in `record_birth`)
+- Modify: `upande_livestock/api/operations.py` (import only — the `record_birth` loop is removed in Task 9)
 
 **Interfaces:**
 - Consumes: `default_calf_herd` setting from Task 5, `Livestock Event Type.creates_animal` from Task 2.
@@ -2857,7 +2857,7 @@ Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
   - `upande_livestock.api.animal.recompute_herd_count(herd)` → `None`
   - Fields `Livestock Event.calf_tag_number`, `calf_sex`, `calf_burn_name`, `calf_birth_weight_kg`, `dam`, `is_stillborn`, `related_calving`
 
-**Critical:** `api/operations.py:326` `record_birth` **already** creates calf Animals and Birth events. If the controller also created Animals, every birth booked through the web or mobile form would create the calf twice. This task extracts the shared helper and points both paths at it.
+**Critical:** `api/operations.py:326` `record_birth` **already** creates calf Animals and Birth events. If the controller also created Animals, every birth booked through the web or mobile form would create the calf twice. This task extracts the shared helper and wires the desk-form path; **Task 9 Step 5b** then removes `record_birth`'s own loop so there is exactly one calf-creation path.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -3231,52 +3231,20 @@ with:
 - `create_calf_if_needed` **must** live in `before_insert`, not `validate`. Mandatory validation runs after `before_insert`, so `animal` is populated in time; putting it in `validate` would be too late for `autoname` and too early for nothing.
 - Link validation has already run by the time `self.animal` is set, so the newly created calf is not re-validated as a link. That is harmless — `create_calf` inserted it, so it exists by construction.
 
-- [ ] **Step 7: Point `record_birth` at the shared helper**
+- [ ] **Step 7: Leave `record_birth` alone, and confirm it still works**
 
-In `upande_livestock/api/operations.py`, inside `record_birth`, replace the inline Animal creation (originally lines 376–402, from `animal = frappe.new_doc("Animal")` through `animal.insert()`) with:
+Do **not** change `record_birth` in this task. Its inline loop sets `birth.animal` explicitly, so `create_calf_if_needed` short-circuits and no calf is created twice — the two paths coexist correctly for now.
 
-```python
-				animal_name = create_calf(
-					dam=dam_name,
-					tag_number=calf_id,
-					sex=sex,
-					event_date=event_date,
-					birth_weight=weight,
-					burn_name=calf_id,
-					herd=calf.get("herd") or None,
-				)
+Task 9 removes that loop and makes `record_birth` delegate to `record_calf_births`, so there is one calf-creation path. Doing it there rather than here keeps this task's commit self-contained: splitting the refactor across two tasks would leave `record_birth` calling a function that does not exist yet.
+
+Confirm the coexistence holds:
+
+```bash
+cd /home/ubuntu/stive/code/frappe15/apps/upande_livestock
+grep -n "birth.animal = \|frappe.new_doc(\"Animal\")" upande_livestock/api/operations.py
 ```
 
-Then change the Birth event block that follows to reference `animal_name` and link the calving:
-
-```python
-				birth = frappe.new_doc("Livestock Event")
-				birth.animal = animal_name
-				birth.event_type = "Birth"
-				birth.event_date = event_date
-				birth.current_herd = frappe.db.get_value("Animal", animal_name, "current_herd")
-				birth.dam = dam_name
-				birth.related_calving = calving.name
-				birth.calf_tag_number = calf_id
-				birth.calf_sex = sex
-				birth.calf_birth_weight_kg = weight
-				birth.sire = sire
-				birth.operator = operator
-				birth.remarks = "Dam: {0}. Birth weight: {1} kg".format(
-					dam.tag_number or dam.burn_name, weight
-				)
-				birth.insert()
-				birth.submit()
-				created.append({"animal": animal_name, "tag": calf_id, "sex": sex})
-```
-
-Add the import at the top of `api/operations.py`:
-
-```python
-from upande_livestock.api.animal import create_calf
-```
-
-Note `create_calf` now resolves the calf herd when `calf.get("herd")` is empty, replacing the old `dam.current_herd` fallback — calves no longer land in the milking herd.
+Expected: `record_birth` still creates its own Animal and assigns `birth.animal`. That assignment is what makes the controller skip.
 
 - [ ] **Step 8: Write the Birth event test**
 
@@ -3418,7 +3386,7 @@ Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
 - Modify: `.../doctype/livestock_event/livestock_event.json`
 - Modify: `.../doctype/livestock_event/livestock_event.py`
 - Modify: `.../doctype/livestock_event/livestock_event.js`
-- Modify: `upande_livestock/api/operations.py`
+- Modify: `upande_livestock/api/operations.py` (add `record_calf_births` + `_calf_row`; delete `record_birth`'s calf loop)
 - Test: `.../doctype/livestock_event/test_livestock_event.py`
 
 **Interfaces:**
@@ -3548,6 +3516,52 @@ class TestLivestockEventMultipleBirths(IntegrationTestCase):
 		calving.reload()
 		self.assertEqual(calving.births_recorded, 1)
 		self.assertEqual(calving.custom_no_of_calves, 3)
+
+	def test_record_birth_creates_one_calving_and_n_births(self):
+		"""record_birth must delegate to record_calf_births, not carry its own loop."""
+		from upande_livestock.api.operations import record_birth
+
+		result = record_birth(
+			{
+				"dam": self.dam,
+				"operator": self.operator,
+				"event_date": "2026-07-02",
+				"outcome": "Live Birth",
+				"calves": [
+					{"name": "TEST-TRIPLET-1", "sex": "Female"},
+					{"name": "TEST-TRIPLET-2", "sex": "Male"},
+				],
+			}
+		)
+		self.assertTrue(result["ok"])
+		self.assertEqual(len(result["calves"]), 2)
+		for n in (1, 2):
+			self.assertEqual(frappe.db.count("Animal", {"tag_number": f"TEST-TRIPLET-{n}"}), 1)
+
+	def test_record_birth_stillborn_sentinel_creates_no_animal(self):
+		from upande_livestock.api.operations import record_birth
+
+		before = frappe.db.count("Animal")
+		result = record_birth(
+			{
+				"dam": self.dam,
+				"operator": self.operator,
+				"event_date": "2026-07-03",
+				"outcome": "Still Birth",
+				"calves": [{"name": "STILLBORN"}],
+			}
+		)
+		self.assertTrue(result["ok"])
+		self.assertEqual(frappe.db.count("Animal"), before)
+
+	def test_only_one_place_creates_a_calf_animal(self):
+		"""Guard against the two-paths regression this task exists to remove."""
+		import inspect
+
+		from upande_livestock.api import operations
+
+		src = inspect.getsource(operations)
+		self.assertNotIn('frappe.new_doc("Animal")', src)
 ```
 
 - [ ] **Step 2: Run it to verify it fails**
@@ -3691,6 +3705,51 @@ def record_calf_births(payload):
 ```
 
 The controller's `create_calf_if_needed` creates each Animal, so this endpoint never touches `frappe.new_doc("Animal")` directly.
+
+- [ ] **Step 5b: Collapse `record_birth` onto the same path**
+
+`record_birth` and `record_calf_births` must not each carry their own per-calf loop — one operation, one code path, one place that creates a calf Animal.
+
+In `record_birth`, **delete** the entire `created = []` / `if outcome == "Live Birth":` block (originally lines 376–415, from `created = []` down to and including `created.append({"animal": animal.name, ...})`) and replace it with:
+
+```python
+		# One calf-creation path: record_calf_births owns the per-calf loop and lets
+		# the Livestock Event controller create each Animal. A second copy of this
+		# loop here is what would make a form-booked birth create the calf twice.
+		created = record_calf_births(
+			{
+				"calving": calving.name,
+				"calves": [_calf_row(c, outcome) for c in calves],
+			}
+		)["created"]
+```
+
+And add this helper above `record_birth`, which translates the old `"STILLBORN"` tag sentinel into the explicit flag so the sentinel stops leaking further into the system:
+
+```python
+def _calf_row(calf, outcome):
+	"""Normalise one incoming calf dict for record_calf_births."""
+	tag = (calf.get("name") or "").strip().upper()
+	stillborn = outcome != "Live Birth" or not tag or tag == "STILLBORN"
+	return {
+		"tag": tag,
+		"sex": calf.get("sex"),
+		"burn_name": tag,
+		"birth_weight": calf.get("birth_weight"),
+		"is_stillborn": 1 if stillborn else 0,
+	}
+```
+
+`record_birth` now creates only the Calving event and delegates every calf to `record_calf_births`. The `sire` it resolved is already on the calving, and `record_calf_births` reads it from there.
+
+Remove the now-unused `create_calf` import from `api/operations.py` if nothing else in the file calls it:
+
+```bash
+cd /home/ubuntu/stive/code/frappe15/apps/upande_livestock
+grep -n "create_calf" upande_livestock/api/operations.py
+```
+
+If the only hit is the import line, delete it — `ruff` will flag it otherwise.
 
 - [ ] **Step 6: Add the Record Births button**
 
