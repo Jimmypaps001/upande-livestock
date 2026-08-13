@@ -156,8 +156,15 @@ after_install = "upande_livestock.install.after_install"
 # Ensure the "Milking" Stock Entry Type exists before any migrate-time save of
 # Livestock Settings (whose custom_milking_stock_entry_type defaults to
 # "Milking"), and again afterwards as a safety net on redeploys.
-before_migrate = "upande_livestock.install.ensure_milking_stock_entry_type"
-after_migrate = "upande_livestock.install.ensure_milking_stock_entry_type"
+#
+# ensure_livestock_event_types runs only after_migrate: on a fresh site the
+# Livestock Event Type table does not exist until model sync, so running it
+# before_migrate would be a silent no-op (guarded by table_exists) anyway.
+before_migrate = ["upande_livestock.install.ensure_milking_stock_entry_type"]
+after_migrate = [
+	"upande_livestock.install.ensure_milking_stock_entry_type",
+	"upande_livestock.install.ensure_livestock_event_types",
+]
 
 # Uninstallation
 # ------------
