@@ -31,6 +31,7 @@
   "current_herd",
   "company",
   "status",
+  "disabled",
   "cb_placement",
   "repro_status",
   "parity",
@@ -201,6 +202,16 @@
    "in_list_view": 1,
    "label": "Status",
    "options": "Active\nDry\nDead\nSold\nCulled\nTransferred Out",
+   "search_index": 1
+  },
+  {
+   "default": "0",
+   "description": "Set by a submitted Livestock Disposal. A disabled animal is hidden from every link search but keeps all its history.",
+   "fieldname": "disabled",
+   "fieldtype": "Check",
+   "label": "Disabled (Retired)",
+   "no_copy": 1,
+   "read_only": 1,
    "search_index": 1
   },
   {
