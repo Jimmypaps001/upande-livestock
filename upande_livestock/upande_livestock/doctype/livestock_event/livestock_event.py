@@ -19,6 +19,8 @@ from frappe.model.document import Document
 from frappe.model.naming import make_autoname
 from frappe.utils import getdate, nowdate
 
+from upande_livestock.livestock_timings import get_timing
+
 
 class LivestockEvent(Document):
 	def autoname(self):
@@ -107,7 +109,9 @@ class LivestockEvent(Document):
 
 					# Create calving alert
 					if service.meta.has_field("expected_calving_date") and service.expected_calving_date:
-						alert_date = frappe.utils.add_days(service.expected_calving_date, -7)
+						alert_date = frappe.utils.add_days(
+							service.expected_calving_date, -get_timing("calving_alert_lead_days")
+						)
 
 						existing_calving_todo = frappe.db.exists({
 							"doctype": "ToDo",
@@ -270,8 +274,8 @@ class LivestockEvent(Document):
 			if last_calving:
 				calving = last_calving[0]
 				days_since_calving = frappe.utils.date_diff(self.service_date, calving.event_date)
-				minimum_days = 45
-				optimal_days = 60
+				minimum_days = get_timing("post_calving_min_service_days")
+				optimal_days = get_timing("post_calving_optimal_service_days")
 
 				if days_since_calving < minimum_days:
 					frappe.throw(f"""<b>⚠️ Too Early for Service!</b><br><br>
@@ -339,15 +343,15 @@ class LivestockEvent(Document):
 			days_since_service = frappe.utils.date_diff(self.diagnosis_date, service.service_date)
 
 			# Check timing appropriateness
-			if days_since_service < 21:
+			if days_since_service < get_timing("diagnosis_earliest_days"):
 				frappe.msgprint(f"""<b>⚠️ Very Early Diagnosis</b><br><br>
                     Days since service: <b>{days_since_service}</b><br>
-                    Recommended minimum: <b>21 days</b><br><br>
+                    Recommended minimum: <b>{get_timing("diagnosis_earliest_days")} days</b><br><br>
                     <i>Note: Pregnancy detection accuracy is lower before 21 days.</i>""", alert=True, indicator="orange")
-			elif days_since_service > 70:
+			elif days_since_service > get_timing("diagnosis_latest_days"):
 				frappe.msgprint(f"""<b>⚠️ Very Late Diagnosis</b><br><br>
                     Days since service: <b>{days_since_service}</b><br>
-                    Recommended maximum: <b>70 days</b><br><br>
+                    Recommended maximum: <b>{get_timing("diagnosis_latest_days")} days</b><br><br>
                     <i>Note: This diagnosis is overdue.</i>""", alert=True, indicator="red")
 
 			# Validate diagnosis result
@@ -396,12 +400,12 @@ class LivestockEvent(Document):
 			if service.service_date:
 				gestation_days = frappe.utils.date_diff(self.event_date, service.service_date)
 
-				if gestation_days < 260:
+				if gestation_days < get_timing("gestation_short_warning_days"):
 					frappe.msgprint(f"""<b>⚠️ Short Gestation Period!</b><br><br>
                         Gestation Length: <b>{gestation_days} days</b><br>
                         Normal Range: <b>270-290 days</b><br><br>
                         <i>Note: This may indicate premature birth or abortion.</i>""", alert=True, indicator="orange")
-				elif gestation_days > 300:
+				elif gestation_days > get_timing("gestation_long_warning_days"):
 					frappe.msgprint(f"""<b>⚠️ Long Gestation Period!</b><br><br>
                         Gestation Length: <b>{gestation_days} days</b><br>
                         Normal Range: <b>270-290 days</b><br><br>
@@ -433,18 +437,24 @@ class LivestockEvent(Document):
 		# ============================================================
 
 		if self.event_type == "Service" and self.service_date:
-			# Calculate expected calving date (280 days)
-			self.expected_calving_date = frappe.utils.add_days(self.service_date, 280)
+			# Calculate expected calving date
+			self.expected_calving_date = frappe.utils.add_days(
+				self.service_date, get_timing("gestation_period_days")
+			)
 
-			# Calculate pregnancy check due date (35 days optimal)
-			self.pregnancy_check_due_date = frappe.utils.add_days(self.service_date, 35)
+			# Calculate pregnancy check due date
+			self.pregnancy_check_due_date = frappe.utils.add_days(
+				self.service_date, get_timing("pregnancy_check_days_after_service")
+			)
 
-			# Calculate next expected heat if fails (21-day cycle)
-			self.next_expected_heat = frappe.utils.add_days(self.service_date, 21)
+			# Calculate next expected heat if fails
+			self.next_expected_heat = frappe.utils.add_days(self.service_date, get_timing("heat_cycle_days"))
 
 		if self.event_type == "Calving" and self.event_date:
-			# Calculate when ready for re-breeding (60 days post-partum)
-			self.ready_for_service_date = frappe.utils.add_days(self.event_date, 60)
+			# Calculate when ready for re-breeding
+			self.ready_for_service_date = frappe.utils.add_days(
+				self.event_date, get_timing("post_calving_optimal_service_days")
+			)
 
 		# ============================================================
 		# HERD MOVEMENT PROCESSOR
