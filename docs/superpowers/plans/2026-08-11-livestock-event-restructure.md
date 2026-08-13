@@ -2050,6 +2050,57 @@ bench --site kaitet.local run-tests --module upande_livestock.test_livestock_gua
 
 Expected: FAIL — `ModuleNotFoundError: No module named 'upande_livestock.livestock_guards'`.
 
+- [ ] **Step 2b: Export a correct single-value reader from `livestock_timings.py`**
+
+Task 5 discovered that `frappe.db.get_single_value` runs `cast_fieldtype` on its result, so an
+**unset** field comes back as a typed zero rather than `None`:
+
+| fieldtype | unset value returned |
+|---|---|
+| `Int` | `0` |
+| `Float` / `Currency` | `0.0` |
+| `Check` | `0` |
+| `Link` / `Data` / `Small Text` | `''` |
+
+For an Int setting that means "never configured" and "deliberately set to 0" are the same value,
+which would silently disable every rule keyed on it. Task 5's `get_timing` already works around
+this by reading `tabSingles` directly; promote that read into a named, reusable function so this
+module and `api/animal.py` share one correct implementation instead of three copies.
+
+In `upande_livestock/livestock_timings.py`, extract the raw read:
+
+```python
+def read_setting(fieldname):
+	"""The raw stored value of a Livestock Settings field, or None if never set.
+
+	Deliberately NOT frappe.db.get_single_value: that casts the result by
+	fieldtype, so an unset Int returns 0 and an unset Float returns 0.0 —
+	indistinguishable from a deliberately configured zero. Callers that need to
+	tell "unset" from "zero" must use this.
+	"""
+	rows = frappe.db.sql(
+		"select `value` from `tabSingles` where doctype=%s and field=%s",
+		("Livestock Settings", fieldname),
+	)
+	return rows[0][0] if rows else None
+```
+
+Then make `get_timing` call it, so there is exactly one place that knows how to read an unset
+single value:
+
+```python
+def get_timing(key):
+	default = TIMING_DEFAULTS[key]
+	value = read_setting(key)
+	if value in (None, ""):
+		return default
+	return int(value)
+```
+
+This is a pure refactor of Task 5's committed behaviour — `get_timing` must return exactly what it
+returned before. Re-run `bench --site kaitet.local run-tests --module upande_livestock.test_livestock_timings`
+(8/8 must still pass) before moving on.
+
 - [ ] **Step 3: Write the guards module**
 
 Create `upande_livestock/livestock_guards.py`:
@@ -2073,6 +2124,8 @@ disables the rule.
 import frappe
 from frappe import _
 from frappe.utils import cint, date_diff, flt, getdate
+
+from upande_livestock.livestock_timings import read_setting
 
 # event_type -> the Livestock Settings field and the client script's old default
 AGE_RULES = {
@@ -2116,7 +2169,15 @@ INTERVAL_RULES = {
 
 
 def _setting(fieldname, default):
-	value = frappe.db.get_single_value("Livestock Settings", fieldname)
+	"""The configured value for `fieldname`, or `default` when it was never set.
+
+	Uses livestock_timings.read_setting rather than frappe.db.get_single_value:
+	that helper runs cast_fieldtype on the result, so an unset Int comes back as
+	0 — indistinguishable from a deliberately configured 0. Reading it that way
+	would silently disable every rule in this module on any site that had never
+	saved Livestock Settings.
+	"""
+	value = read_setting(fieldname)
 	if value in (None, ""):
 		return default
 	return cint(value)
@@ -2932,7 +2993,7 @@ Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
 - Modify: `upande_livestock/api/operations.py` (import only — the `record_birth` loop is removed in Task 9)
 
 **Interfaces:**
-- Consumes: `default_calf_herd` setting from Task 5, `Livestock Event Type.creates_animal` from Task 2.
+- Consumes: `default_calf_herd` setting from Task 5, `Livestock Event Type.creates_animal` from Task 2, and `read_setting` from Task 5b.
 - Produces:
   - `upande_livestock.api.animal.resolve_calf_herd()` → `str | None`
   - `upande_livestock.api.animal.create_calf(dam, tag_number, sex, event_date, birth_weight=None, burn_name=None, herd=None)` → `str` (the new Animal's name)
@@ -3067,6 +3128,8 @@ import frappe
 from frappe import _
 from frappe.utils import flt
 
+from upande_livestock.livestock_timings import read_setting
+
 
 def resolve_calf_herd():
 	"""The herd a newborn calf belongs in, or None if nothing resolves.
@@ -3083,9 +3146,13 @@ def resolve_calf_herd():
 	if flagged:
 		return flagged
 
-	min_age = frappe.db.get_single_value("Livestock Settings", "default_calf_herd_min_age")
-	max_age = frappe.db.get_single_value("Livestock Settings", "default_calf_herd_max_age")
-	if min_age is not None and max_age is not None:
+	# read_setting, not get_single_value: these are Float fields, and
+	# get_single_value casts an unset Float to 0.0 — so `is not None` would always
+	# be true and this branch would silently query for a herd with min_age=0,
+	# max_age=0 instead of being skipped when the setting was never configured.
+	min_age = read_setting("default_calf_herd_min_age")
+	max_age = read_setting("default_calf_herd_max_age")
+	if min_age not in (None, "") and max_age not in (None, ""):
 		bracketed = frappe.db.get_value(
 			"Herds", {"min_age": flt(min_age), "max_age": flt(max_age)}, "name"
 		)
