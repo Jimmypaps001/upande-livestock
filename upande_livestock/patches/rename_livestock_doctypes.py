@@ -17,6 +17,11 @@ The Frappe patch runner normally sets that flag for the duration of
 lending patch), so this patch is invoked directly via `bench execute` instead,
 which does not set the flag. We set it ourselves for the duration of the
 rename and restore the previous value afterwards.
+
+The same flag also makes DocType.after_rename() skip
+rename_files_and_folders() — exactly what we want here, since Step 1 of this
+rename already used `git mv` to move each doctype's directory and files on
+disk before this patch ever runs.
 """
 
 import frappe
@@ -36,6 +41,15 @@ RENAMES = [
 
 
 def execute():
+	"""Rename each (old, new) pair in RENAMES, honoring the in_patch developer-mode bypass.
+
+	If old is missing, the pair is treated as already renamed and skipped —
+	this keeps re-runs after a transient failure safe. If both old and new
+	exist, that is an unrecoverable conflict: skipping it here would let the
+	patch report success while one rename silently never happened (leaving
+	rows stranded in the old table), so we throw instead and require manual
+	resolution before the patch can be re-run.
+	"""
 	previous_in_patch = frappe.flags.get("in_patch")
 	frappe.flags.in_patch = True
 	try:
@@ -43,11 +57,12 @@ def execute():
 			if not frappe.db.exists("DocType", old):
 				continue
 			if frappe.db.exists("DocType", new):
-				frappe.log_error(
-					message=f"Both {old} and {new} exist; skipping rename.",
+				frappe.throw(
+					f"Both '{old}' and '{new}' DocType records exist. This rename cannot "
+					"proceed automatically — resolve the conflict manually (merge or "
+					"delete one of them) before re-running this patch.",
 					title="Livestock rename conflict",
 				)
-				continue
 			rename_doc(doctype="DocType", old=old, new=new, force=True, ignore_permissions=True)
 	finally:
 		frappe.flags.in_patch = previous_in_patch
