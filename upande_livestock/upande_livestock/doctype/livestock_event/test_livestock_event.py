@@ -823,15 +823,21 @@ class TestLivestockEventMultipleBirths(IntegrationTestCase):
 		self.assertEqual(set(result["calves"][0].keys()), {"animal", "tag", "sex"})
 		self.assertEqual(result["calves"][0]["sex"], "Female")
 
-	def test_record_birth_abortion_creates_no_birth_events(self):
-		"""Every outcome used to run through record_calf_births after the Task 9
-		collapse — including Abortion, which never created a calf loop before
-		this task and is out of its scope (Task 10 removes the option). This is
-		the regression test for that gate.
+	def test_record_birth_rejects_abortion_as_an_outcome(self):
+		"""Before Task 10, Abortion ran through this same "no calf loop" gate as a
+		custom_calving_outcome value (see test_record_birth_still_birth_creates_no_birth_events
+		for the sibling case that still applies). Task 10 removed Abortion from that
+		Select entirely — pregnancy loss is now its own Livestock Event Type, recorded
+		directly (see TestLivestockEventAbortion) rather than through record_birth's
+		outcome parameter. record_birth must now fail cleanly for that outcome —
+		via the Select's own "cannot be Abortion" validation surfacing as an error,
+		not a crash — and create no Calving row at all, rather than silently
+		succeeding with zero calves as it used to.
 		"""
 		from upande_livestock.api.operations import record_birth
 
 		self._confirm_pregnancy(service_date="2025-09-11", diagnosis_date="2025-10-15")
+		before = frappe.db.count("Livestock Event", {"event_type": "Calving"})
 		result = record_birth(
 			{
 				"dam": self.dam,
@@ -841,13 +847,10 @@ class TestLivestockEventMultipleBirths(IntegrationTestCase):
 				"calves": [{"name": "N-A"}],
 			}
 		)
-		self.addCleanup(_delete_and_commit, "Livestock Event", result["name"])
-		self.assertTrue(result["ok"])
-		self.assertEqual(len(result["calves"]), 0)
-		self.assertEqual(
-			frappe.db.count("Livestock Event", {"related_calving": result["name"], "event_type": "Birth"}),
-			0,
-		)
+		self.assertNotIn("ok", result)
+		self.assertIn("error", result)
+		self.assertIn("Abortion", result["error"])
+		self.assertEqual(frappe.db.count("Livestock Event", {"event_type": "Calving"}), before)
 
 	def test_record_birth_still_birth_creates_no_birth_events(self):
 		"""Same gate as Abortion, exercised with a real (non-sentinel) calf tag —
@@ -1004,3 +1007,172 @@ class TestLivestockEventCalfFieldsMandatory(IntegrationTestCase):
 		self.addCleanup(_delete_and_commit, "Livestock Event", doc.name)
 		doc.submit()
 		self.assertEqual(doc.docstatus, 1)
+
+
+class TestLivestockEventAbortion(IntegrationTestCase):
+	def setUp(self):
+		ensure_livestock_event_types()
+		self.animal = make_animal("TEST-ABORT-1").name
+		self.addCleanup(_delete_and_commit, "Animal", self.animal)
+		self.operator = frappe.db.get_value("Employee", {}, "name")
+		frappe.db.set_single_value("Livestock Settings", "post_abortion_min_service_days", None)
+		frappe.clear_cache()
+
+	def tearDown(self):
+		frappe.db.set_single_value("Livestock Settings", "post_abortion_min_service_days", None)
+		frappe.clear_cache()
+
+	def _service(self, service_date):
+		doc = frappe.get_doc(
+			{
+				"doctype": "Livestock Event",
+				"animal": self.animal,
+				"event_type": "Service",
+				"event_date": service_date,
+				"service_date": service_date,
+				"operator": self.operator,
+			}
+		)
+		doc.flags.ignore_validate = True
+		doc.insert()
+		self.addCleanup(_delete_and_commit, "Livestock Event", doc.name)
+		doc.submit()
+		return doc
+
+	def _abortion(self, event_date, related_pregnancy=None, **kwargs):
+		doc = frappe.get_doc(
+			{
+				"doctype": "Livestock Event",
+				"animal": self.animal,
+				"event_type": "Abortion",
+				"event_date": event_date,
+				"operator": self.operator,
+				"custom_related_pregnancy": related_pregnancy,
+				"abortion_cause": "Unknown",
+				**kwargs,
+			}
+		)
+		doc.insert()
+		self.addCleanup(_delete_and_commit, "Livestock Event", doc.name)
+		doc.submit()
+		return doc
+
+	def test_abortion_is_a_seeded_event_type_that_creates_no_animal(self):
+		self.assertTrue(frappe.db.exists("Livestock Event Type", "Abortion"))
+		self.assertFalse(frappe.db.get_value("Livestock Event Type", "Abortion", "creates_animal"))
+
+	def test_abortion_removed_from_calving_outcome_options(self):
+		field = frappe.get_meta("Livestock Event").get_field("custom_calving_outcome")
+		self.assertNotIn("Abortion", (field.options or "").split("\n"))
+
+	def test_abortion_creates_no_animal(self):
+		before = frappe.db.count("Animal")
+		self._abortion("2026-08-01")
+		self.assertEqual(frappe.db.count("Animal"), before)
+
+	def test_abortion_without_cause_throws(self):
+		"""abortion_cause carries mandatory_depends_on, which Frappe 16 enforces
+		only in the browser (see LivestockEvent.validate()'s ABORTION CAUSE
+		block). This is the regression test for the exact gap that pattern has
+		already shipped once for operator/animal/calf_tag_number/calf_sex: a
+		hand-built doc (REST API, data import, mobile client) reaching insert()
+		with the field unset.
+		"""
+		marker = f"abortion-cause-mandatory-test-{frappe.generate_hash(length=8)}"
+		self.addCleanup(
+			lambda: (frappe.db.delete("Livestock Event", {"remarks": marker}), frappe.db.commit())
+		)
+		doc = frappe.get_doc(
+			{
+				"doctype": "Livestock Event",
+				"animal": self.animal,
+				"event_type": "Abortion",
+				"event_date": "2026-08-07",
+				"operator": self.operator,
+				"remarks": marker,
+			}
+		)
+		with self.assertRaises(frappe.exceptions.MandatoryError):
+			doc.insert()
+
+	def test_abortion_closes_the_pregnancy_on_the_dam(self):
+		# A freshly created Animal already starts at repro_status "Open" with no
+		# expected_calving_date (see make_animal/Animal defaults) — asserting
+		# those two values straight off self.animal would pass trivially even
+		# with close_pregnancy_after_abortion stubbed to a no-op, since there
+		# would be nothing to "close" in the first place. Set the dam to a
+		# served/pregnant state first so this test actually exercises the reset.
+		frappe.db.set_value("Animal", self.animal, "repro_status", "Pregnant")
+		frappe.db.set_value("Animal", self.animal, "expected_calving_date", "2026-12-01")
+		self._abortion("2026-08-02")
+		dam = frappe.get_doc("Animal", self.animal)
+		self.assertEqual(dam.repro_status, "Open")
+		# custom_pregnancy_status does not exist on Animal on this site (no DocField,
+		# no Custom Field — confirmed via meta and a direct DESCRIBE of tabAnimal),
+		# even though close_pregnancy_after_abortion() and several pre-existing
+		# call sites (before_insert's Service/Pregnancy Diagnosis/Calving blocks)
+		# all guard it the same way. Assert the guarded behaviour only when the
+		# field is actually present, so this test exercises the real setter on any
+		# site that does carry the field, without hard-failing on one that doesn't.
+		if dam.meta.has_field("custom_pregnancy_status"):
+			self.assertEqual(dam.custom_pregnancy_status, "Not Pregnant")
+		self.assertFalse(dam.expected_calving_date)
+
+	def test_abortion_fails_the_related_service(self):
+		service = self._service("2026-01-10")
+		self._abortion("2026-05-10", related_pregnancy=service.name)
+		service.reload()
+		self.assertEqual(service.service_status, "Failed")
+		self.assertEqual(service.pregnancy_confirmation_status, "Aborted")
+
+	def test_gestation_days_at_loss_is_computed(self):
+		service = self._service("2026-01-10")
+		abortion = self._abortion("2026-05-10", related_pregnancy=service.name)
+		self.assertEqual(abortion.gestation_days_at_loss, 120)
+
+	def test_abortion_does_not_increment_parity(self):
+		before = frappe.db.get_value("Animal", self.animal, "parity") or 0
+		self._abortion("2026-08-03")
+		after = frappe.db.get_value("Animal", self.animal, "parity") or 0
+		self.assertEqual(after, before)
+
+	def test_ready_for_service_date_uses_the_setting(self):
+		frappe.db.set_single_value("Livestock Settings", "post_abortion_min_service_days", 40)
+		frappe.clear_cache()
+		abortion = self._abortion("2026-08-04")
+		self.assertEqual(str(abortion.ready_for_service_date), frappe.utils.add_days("2026-08-04", 40))
+
+	def test_service_before_the_abortion_window_is_blocked(self):
+		frappe.db.set_single_value("Livestock Settings", "post_abortion_min_service_days", 30)
+		frappe.clear_cache()
+		self._abortion("2026-08-05")
+		service = frappe.get_doc(
+			{
+				"doctype": "Livestock Event",
+				"animal": self.animal,
+				"event_type": "Service",
+				"event_date": "2026-08-15",
+				"service_date": "2026-08-15",
+				"operator": self.operator,
+			}
+		)
+		with self.assertRaises(frappe.exceptions.ValidationError):
+			service.insert()
+
+	def test_zero_setting_disables_the_block(self):
+		frappe.db.set_single_value("Livestock Settings", "post_abortion_min_service_days", 0)
+		frappe.clear_cache()
+		self._abortion("2026-08-06")
+		service = frappe.get_doc(
+			{
+				"doctype": "Livestock Event",
+				"animal": self.animal,
+				"event_type": "Service",
+				"event_date": "2026-08-16",
+				"service_date": "2026-08-16",
+				"operator": self.operator,
+			}
+		)
+		service.insert()
+		self.addCleanup(_delete_and_commit, "Livestock Event", service.name)
+		self.assertTrue(service.name)
