@@ -54,7 +54,7 @@ New standalone modules, each with one responsibility:
 | `upande_livestock/livestock_timings.py` | `TIMING_DEFAULTS` dict + `get_timing(key)`. The only place a breeding constant appears. |
 | `upande_livestock/livestock_guards.py` | `AGE_RULES`, `INTERVAL_RULES`, `check_guards(doc)`. Server-side enforcement of the rules that were browser-only. |
 | `upande_livestock/livestock_event_link.py` | `sync_event_for`, `cancel_event_for`. Keeps a health detail doc's Livestock Event row in step. |
-| `upande_livestock/api/animal.py` | `resolve_calf_herd()`, `create_calf(...)`, `animal_query(...)`. Shared by the Livestock Event controller and `api/operations.py`. |
+| `upande_livestock/api/animal.py` | `resolve_calf_herd()`, `create_calf(...)`, `retire_animal(...)`. Shared by the Livestock Event controller and `api/operations.py`. |
 | `.../doctype/livestock_event_type/` | New master doctype. |
 | `upande_livestock/patches/rename_livestock_doctypes.py` | `pre_model_sync` — the nine DocType renames. |
 | `upande_livestock/patches/preserve_event_activity_cost.py` | `pre_model_sync` — fold 32 rows of cost data into `remarks`. |
@@ -2991,7 +2991,7 @@ form would create the calf twice.
 
 import frappe
 from frappe import _
-from frappe.utils import cint, flt
+from frappe.utils import flt
 
 
 def resolve_calf_herd():
@@ -4273,7 +4273,6 @@ Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
 - Modify: `.../doctype/livestock_disposal/livestock_disposal.py`
 - Modify: `.../doctype/animal/animal.json`
 - Modify: `upande_livestock/api/animal.py`
-- Modify: `upande_livestock/hooks.py`
 - Create: `upande_livestock/patches/backfill_animal_disabled.py`
 - Modify: `upande_livestock/patches.txt`
 - Test: `.../doctype/livestock_disposal/test_livestock_disposal.py`
@@ -4283,8 +4282,9 @@ Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
 - Produces:
   - `Animal.disabled` (Check, read-only)
   - `Livestock Disposal.customer` (Link → Customer)
-  - `upande_livestock.api.animal.animal_query(doctype, txt, searchfield, start, page_len, filters)` → `list[tuple]`, registered as a `standard_queries` hook.
+  - `upande_livestock.api.animal.retire_animal(animal, disposal_type)` → `None`
   - `upande_livestock.api.animal.STATUS_BY_DISPOSAL_TYPE` → `dict[str, str]`
+  - **No** custom link query and **no** `standard_queries` hook — Frappe filters `disabled` natively.
 
 **Note:** `livestock_disposal.py` is currently a `pass` stub, which is why `sale_journal_entry` and `writeoff_journal_entry` are never populated. `sell_livestock_asset()` throws without both `customer` and `selling_amount` (`api/assets.py:171-175`), and the doctype has only free-text `buyer_name` today — hence the new `customer` field.
 
@@ -4301,7 +4301,9 @@ from unittest.mock import patch
 import frappe
 from frappe.tests import IntegrationTestCase
 
-from upande_livestock.api.animal import STATUS_BY_DISPOSAL_TYPE, animal_query
+from frappe.desk.search import search_link
+
+from upande_livestock.api.animal import STATUS_BY_DISPOSAL_TYPE
 
 
 def make_animal(tag):
@@ -4389,15 +4391,13 @@ class TestLivestockDisposal(IntegrationTestCase):
 	@patch("upande_livestock.upande_livestock.doctype.livestock_disposal.livestock_disposal.scrap_livestock_asset")
 	def test_disabled_animal_is_hidden_from_link_search(self, _mock_scrap):
 		self._disposal("Died — Natural Causes")
-		results = animal_query("Animal", "TEST-DISPOSE-1", "name", 0, 20, {})
-		names = [row[0] for row in results]
-		self.assertNotIn("TEST-DISPOSE-1", names)
+		found = [r["value"] for r in search_link("Animal", "TEST-DISPOSE-1")]
+		self.assertNotIn("TEST-DISPOSE-1", found)
 
 	def test_active_animal_is_visible_in_link_search(self):
 		make_animal("TEST-VISIBLE-1")
-		results = animal_query("Animal", "TEST-VISIBLE-1", "name", 0, 20, {})
-		names = [row[0] for row in results]
-		self.assertIn("TEST-VISIBLE-1", names)
+		found = [r["value"] for r in search_link("Animal", "TEST-VISIBLE-1")]
+		self.assertIn("TEST-VISIBLE-1", found)
 ```
 
 - [ ] **Step 2: Run it to verify it fails**
@@ -4471,48 +4471,41 @@ def retire_animal(animal, disposal_type):
 	recompute_herd_count(herd)
 
 
-@frappe.whitelist()
-@frappe.validate_and_sanitize_search_inputs
-def animal_query(doctype, txt, searchfield, start, page_len, filters):
-	"""Default link search for Animal: never offer a retired animal.
-
-	Registered as a standard_queries hook, so it applies to every Animal link
-	field across the app. List views and reports are unaffected — a culled animal
-	keeps all its events, health cases and milk records.
-	"""
-	# Only forward filters that name a real Animal field, so a caller cannot inject
-	# arbitrary SQL through a filter key.
-	meta = frappe.get_meta("Animal")
-	conditions = ["IFNULL(a.disabled, 0) = 0"]
-	values = {"txt": f"%{txt}%", "start": cint(start), "page_len": cint(page_len)}
-
-	for key, value in (filters or {}).items():
-		if key == "disabled" or not meta.has_field(key):
-			continue
-		conditions.append(f"a.`{key}` = %({key})s")
-		values[key] = value
-
-	where = " AND ".join(conditions)
-	return frappe.db.sql(
-		f"""SELECT a.name, a.burn_name, a.current_herd
-		    FROM `tabAnimal` a
-		    WHERE {where}
-		      AND (a.name LIKE %(txt)s OR IFNULL(a.burn_name, '') LIKE %(txt)s)
-		    ORDER BY a.name
-		    LIMIT %(start)s, %(page_len)s""",
-		values,
-	)
+# NOTE: there is deliberately no custom link query here. Frappe's default link
+# search already excludes a record whose `disabled` Check field is set —
+# frappe/desk/search.py:215-217:
+#
+#     if meta.get("fields", {"fieldname": "disabled", "fieldtype": "Check"}):
+#         filters.append([doctype, "disabled", "!=", 1])
+#
+# so naming the field `disabled` is the whole implementation. A hand-rolled
+# standard_queries function would have to re-implement user-permission
+# enforcement, search_fields, title-field matching and as_dict handling, and
+# would silently lose them — a permissions regression dressed up as a feature.
 ```
 
-- [ ] **Step 6: Register the standard query**
+- [ ] **Step 6: Do NOT register a standard query — verify the native behaviour instead**
 
-In `upande_livestock/hooks.py`, add near the `doctype_js` block:
+No `hooks.py` change. Naming the field `disabled` is sufficient: `frappe/desk/search.py:215-217`
+already appends `[doctype, "disabled", "!=", 1]` to every link search for any doctype that has a
+`disabled` Check field, and it honours `include_disabled` when a caller genuinely wants them.
 
-```python
-# Default link-field search for Animal — hides retired (disabled) animals so a
-# culled animal can never be picked again, while keeping all its history.
-standard_queries = {"Animal": "upande_livestock.api.animal.animal_query"}
+Confirm it holds for `Animal` before moving on:
+
+```bash
+cd /home/ubuntu/stive/code/frappe15
+bench --site kaitet.local console <<'EOF'
+import frappe
+from frappe.desk.search import search_link
+frappe.set_user("Administrator")
+a = frappe.db.get_value("Animal", {"disabled": 0}, "name")
+d = frappe.db.get_value("Animal", {"disabled": 1}, "name")
+print("active  :", a, "->", any(r["value"] == a for r in search_link("Animal", a or "zzz")))
+print("disabled:", d, "->", any(r["value"] == d for r in search_link("Animal", d or "zzz")))
+EOF
 ```
+
+Expected: the active animal is found (`True`); the disabled one is not (`False`).
 
 - [ ] **Step 7: Write the disposal controller**
 
@@ -4657,10 +4650,13 @@ Adds Livestock Disposal.customer (mandatory for Sold): the pre-existing
 sell_livestock_asset throws without a Customer and the doctype only had
 free-text buyer_name.
 
-A standard_queries hook hides disabled animals from every Animal link
-search, so a culled animal can never be picked again while keeping all
-its events, health cases and milk records. Asset failures are warnings,
-not throws, so an uncapitalised animal is still recordable as dead.
+Naming the field `disabled` is all that is needed to hide a culled animal
+from every link search: frappe/desk/search.py already filters it for any
+doctype carrying that Check field, while keeping all the animal's events,
+health cases and milk records. No custom standard_queries function — one
+would have had to re-implement user-permission enforcement and would have
+silently lost it. Asset failures are warnings, not throws, so an
+uncapitalised animal is still recordable as dead.
 
 A patch backfills disabled on animals already at a retired status, so
 historical culls behave like new ones.
