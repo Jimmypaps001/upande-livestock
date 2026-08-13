@@ -114,18 +114,45 @@ class TestLivestockEventNaming(IntegrationTestCase):
 		self.assertEqual(field.fieldtype, "Link")
 		self.assertEqual(field.options, "Livestock Event Type")
 
+	def _cleanup_by_remarks(self, marker):
+		"""Register a cleanup that deletes any Livestock Event carrying `marker`
+		in its remarks, whatever name it ended up with (hash-named, TYPE-YEAR-,
+		or never created at all).
+
+		Used by tests that expect insert() to raise: if the guard they're testing
+		is ever removed or broken, insert() succeeds instead of raising, and
+		without this the resulting row — hash-named, since it never reached a
+		working autoname() — would have no name to clean up by and would be left
+		behind in the live table forever. This is not speculative: exactly this
+		happened during development when autoname() was temporarily stubbed to
+		verify these tests actually catch its absence.
+		"""
+		self.addCleanup(
+			lambda: (frappe.db.delete("Livestock Event", {"remarks": marker}), frappe.db.commit())
+		)
+
 	def test_unknown_event_type_is_rejected(self):
+		marker = f"unknown-event-type-test-{frappe.generate_hash(length=8)}"
+		self._cleanup_by_remarks(marker)
 		with self.assertRaises(frappe.exceptions.LinkValidationError):
-			make_event("Not A Real Type", self.animal, "2026-03-04")
+			make_event("Not A Real Type", self.animal, "2026-03-04", remarks=marker)
 
 	def test_missing_event_type_throws_a_clear_message(self):
+		marker = f"missing-event-type-test-{frappe.generate_hash(length=8)}"
+		self._cleanup_by_remarks(marker)
 		doc = frappe.get_doc(
-			{"doctype": "Livestock Event", "animal": self.animal, "event_date": "2026-03-04"}
+			{
+				"doctype": "Livestock Event",
+				"animal": self.animal,
+				"event_date": "2026-03-04",
+				"remarks": marker,
+			}
 		)
 		# event_type's own reqd=1 would raise a MandatoryError (also a
-		# ValidationError) later in the insert flow, which would satisfy a bare
-		# assertRaises(ValidationError) without ever reaching autoname()'s guard.
-		# Bypass mandatory validation so this test proves that guard specifically
+		# ValidationError) later in the insert flow if autoname()'s own guard
+		# were ever deleted, which would still satisfy a bare
+		# assertRaises(ValidationError) without that guard existing at all.
+		# Bypass mandatory validation so this test proves the guard itself
 		# fires, by asserting on the exact message autoname() raises.
 		doc.flags.ignore_mandatory = True
 		with self.assertRaisesRegex(frappe.exceptions.ValidationError, "Event Type is required"):
