@@ -3784,6 +3784,12 @@ frappe.ui.form.on("Livestock Event", {
 
 function open_births_dialog(frm) {
 	const expected = frm.doc.custom_no_of_calves || 1;
+	// One pre-seeded row per expected calf. This array IS the grid's backing store —
+	// the Table control mutates it in place, so read it back after the dialog closes.
+	// Do not add a `get_data` callback: Frappe's Table control takes `data` only
+	// (see erpnext/public/js/utils.js:577), and a `get_data` returning undefined
+	// breaks the grid.
+	const calf_rows = Array.from({ length: expected }, () => ({ sex: "Female" }));
 	const dialog = new frappe.ui.Dialog({
 		title: __("Record Births"),
 		size: "large",
@@ -3794,8 +3800,7 @@ function open_births_dialog(frm) {
 				label: __("Calves"),
 				cannot_add_rows: false,
 				in_place_edit: true,
-				data: Array.from({ length: expected }, () => ({ sex: "Female" })),
-				get_data: () => dialog.calves_data,
+				data: calf_rows,
 				fields: [
 					{
 						fieldname: "tag",
@@ -3838,10 +3843,15 @@ function open_births_dialog(frm) {
 			},
 		],
 		primary_action_label: __("Create Birth Events"),
-		primary_action(values) {
+		primary_action() {
+			const rows = (calf_rows || []).filter((r) => r.tag || r.is_stillborn);
+			if (!rows.length) {
+				frappe.msgprint(__("Enter a tag number, or tick Stillborn, for at least one calf."));
+				return;
+			}
 			frappe.call({
 				method: "upande_livestock.api.operations.record_calf_births",
-				args: { payload: { calving: frm.doc.name, calves: values.calves || [] } },
+				args: { payload: { calving: frm.doc.name, calves: rows } },
 				freeze: true,
 				freeze_message: __("Recording births..."),
 				callback(r) {
