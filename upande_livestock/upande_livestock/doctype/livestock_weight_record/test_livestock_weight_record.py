@@ -105,6 +105,54 @@ class TestLivestockWeightRecord(IntegrationTestCase):
 		self.assertNotEqual(animal.last_weight_kg, 199.0)
 		self.assertNotEqual(animal.last_bcs, 1.0)
 
+	def test_backdated_record_does_not_regress_the_snapshot(self):
+		# A, then B (later-dated, submitted 2nd) correctly advances the
+		# snapshot; C is backdated paperwork submitted 3rd, dated BEFORE both
+		# A and B. Ordinary farm behaviour (late paperwork for an old
+		# weighing) must not silently drop the animal's current weight to an
+		# older, lower value.
+		self._record(300.0, "2026-04-01")  # A
+		self._record(320.0, "2026-05-01")  # B
+		animal = frappe.get_doc("Animal", self.animal)
+		self.assertEqual(animal.last_weight_kg, 320.0)
+
+		self._record(280.0, "2026-03-01")  # C, backdated
+		animal.reload()
+		self.assertEqual(animal.last_weight_kg, 320.0)
+
+	def test_snapshot_updates_when_submitted_in_chronological_order(self):
+		self._record(300.0, "2026-01-01")
+		self.assertEqual(frappe.db.get_value("Animal", self.animal, "last_weight_kg"), 300.0)
+
+		self._record(310.0, "2026-02-01")
+		self.assertEqual(frappe.db.get_value("Animal", self.animal, "last_weight_kg"), 310.0)
+
+		self._record(320.0, "2026-03-01")
+		self.assertEqual(frappe.db.get_value("Animal", self.animal, "last_weight_kg"), 320.0)
+
+	def test_same_date_snapshot_resolves_deterministically(self):
+		# Two records dated the same day: the later-entered one (higher
+		# `creation`) wins, since weight_date alone can't order them.
+		self._record(300.0, "2026-06-01")
+		self._record(305.0, "2026-06-01")
+		self.assertEqual(frappe.db.get_value("Animal", self.animal, "last_weight_kg"), 305.0)
+
+	def test_cancelling_the_latest_record_moves_snapshot_back(self):
+		self._record(300.0, "2026-04-01")
+		later = self._record(320.0, "2026-05-01")
+		self.assertEqual(frappe.db.get_value("Animal", self.animal, "last_weight_kg"), 320.0)
+
+		later.cancel()
+		self.assertEqual(frappe.db.get_value("Animal", self.animal, "last_weight_kg"), 300.0)
+
+	def test_cancelling_the_only_record_leaves_the_snapshot_as_is(self):
+		# With nothing submitted left, the snapshot is left untouched rather
+		# than zeroed: zeroing would assert the animal weighs nothing, which
+		# is never true.
+		only = self._record(300.0, "2026-04-01")
+		only.cancel()
+		self.assertEqual(frappe.db.get_value("Animal", self.animal, "last_weight_kg"), 300.0)
+
 	def test_non_positive_weight_throws(self):
 		with self.assertRaises(frappe.exceptions.ValidationError):
 			self._record(0, "2026-04-02", submit=False)
