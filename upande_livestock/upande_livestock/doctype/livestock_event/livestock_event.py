@@ -11,11 +11,30 @@ Ported from sandboxed Frappe Server Scripts into real DocType-event hooks:
 The sandboxed scripts used `doc` for the current document; here that is `self`.
 """
 
+import re
+
 import frappe
+from frappe import _
 from frappe.model.document import Document
+from frappe.model.naming import make_autoname
+from frappe.utils import getdate, nowdate
 
 
 class LivestockEvent(Document):
+	def autoname(self):
+		"""Name as TYPE-YEAR-#####, e.g. FEEDING-2026-00001.
+
+		The animal is a field on this document, so it has no business being in the
+		name. The year comes from event_date rather than today, so a backdated entry
+		files under the year it happened.
+		"""
+		if not self.event_type:
+			frappe.throw(_("Event Type is required to name a Livestock Event"))
+
+		prefix = re.sub(r"[^A-Z0-9]+", "-", self.event_type.upper()).strip("-")
+		year = getdate(self.event_date or nowdate()).year
+		self.name = make_autoname(f"{prefix}-{year}-.#####")
+
 	def before_insert(self):
 		# ============================================================
 		# UPDATE ANIMAL STATUS ON ASSET
