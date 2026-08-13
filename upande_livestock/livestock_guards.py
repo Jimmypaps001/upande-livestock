@@ -167,13 +167,22 @@ def _check_interval(doc):
 	# doc with no value in that field shares nothing with anything, so it is
 	# still compared against every prior row — only a genuine shared,
 	# non-null match is exempted.
+	#
+	# NULLIF(..., '') on both sides, not a bare IS NOT NULL: a Link field
+	# cleared through some UI or import path can land as '' rather than NULL,
+	# and '' IS NOT NULL is true in SQL. Without this, two genuinely unrelated
+	# Calving rows that both happened to hold '' would satisfy
+	# `field = shared_value` ('' = '') and be silently exempted from the
+	# interval check — the same failure class this exemption exists to avoid.
+	# read_setting()/_setting() already treat `value in (None, "")` as unset;
+	# this clause is the same rule, just expressed in SQL.
 	exempt_clause = ""
 	exempt_field = rule.get("exempt_when_shared")
 	if exempt_field:
 		exempt_clause = f"""AND NOT (
-			%(shared_value)s IS NOT NULL
-			AND `{exempt_field}` IS NOT NULL
-			AND `{exempt_field}` = %(shared_value)s
+			NULLIF(%(shared_value)s, '') IS NOT NULL
+			AND NULLIF(`{exempt_field}`, '') IS NOT NULL
+			AND NULLIF(`{exempt_field}`, '') = NULLIF(%(shared_value)s, '')
 		)"""
 		params["shared_value"] = doc.get(exempt_field)
 

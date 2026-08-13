@@ -283,3 +283,19 @@ class TestLivestockGuards(ResetsLivestockTimings, IntegrationTestCase):
 		current = self._unsaved_calving(animal.name, today(), pregnancy=anchor_b.name)
 		with self.assertRaises(frappe.exceptions.ValidationError):
 			check_guards(current)
+
+	def test_empty_string_pregnancy_link_does_not_falsely_exempt(self):
+		"""'' IS NOT NULL is true in SQL, so a bare IS NOT NULL check would
+		treat two unrelated Calving rows that both happen to hold '' (a Link
+		field cleared through some UI or import path, rather than left NULL)
+		as sharing a pregnancy and wrongly exempt them — the same failure
+		class as the NULL case above, just via a different sentinel. Verified
+		separately that frappe stores '' as given here rather than
+		normalising it to NULL on insert, so the ORM path is enough; no raw
+		SQL workaround needed to reproduce this shape.
+		"""
+		animal = self._animal("TEST-GUARD-EMPTYPREG", 30)
+		self._background_calving(animal.name, today(), pregnancy="")
+		current = self._unsaved_calving(animal.name, today(), pregnancy="")
+		with self.assertRaises(frappe.exceptions.ValidationError):
+			check_guards(current)
