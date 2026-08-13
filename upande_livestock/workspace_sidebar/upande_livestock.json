@@ -118,7 +118,7 @@
    "indent": 0,
    "keep_closed": 0,
    "label": "Health Cases",
-   "link_to": "Animal Health Case",
+   "link_to": "Livestock Health Case",
    "link_type": "DocType",
    "show_arrow": 0,
    "type": "Link"
@@ -129,8 +129,8 @@
    "icon": "calendar",
    "indent": 0,
    "keep_closed": 0,
-   "label": "Animal Events",
-   "link_to": "Animal Event",
+   "label": "Livestock Events",
+   "link_to": "Livestock Event",
    "link_type": "DocType",
    "show_arrow": 0,
    "type": "Link"

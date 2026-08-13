@@ -211,7 +211,7 @@
   {
    "fieldname": "custom_auto_create_journal_entry",
    "fieldtype": "Check",
-   "label": "Auto-create Journal Entry on Animal Event"
+   "label": "Auto-create Journal Entry on Livestock Event"
   },
   {
    "fieldname": "custom_default_company",

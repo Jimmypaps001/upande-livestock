@@ -1,0 +1,250 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "field:disease_name",
+ "creation": "2026-06-08 00:00:00",
+ "description": "Catalogue of livestock diseases and clinical conditions used by Livestock Health Case. Separate from the generic Agriculture 'Disease' doctype which targets crops.",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "sb_identity",
+  "disease_name",
+  "common_name",
+  "cb_identity",
+  "category",
+  "affected_systems",
+  "sb_clinical",
+  "typical_symptoms",
+  "typical_severity",
+  "cb_clinical",
+  "is_zoonotic",
+  "is_notifiable",
+  "is_chronic",
+  "sb_treatment",
+  "standard_protocol",
+  "typical_duration_days",
+  "cb_treatment",
+  "expected_milk_withdrawal_days",
+  "expected_meat_withdrawal_days",
+  "sb_notes",
+  "notes",
+  "is_active"
+ ],
+ "fields": [
+  {
+   "fieldname": "sb_identity",
+   "fieldtype": "Section Break",
+   "label": "Identity"
+  },
+  {
+   "description": "Canonical name e.g. Mastitis, Foot Rot, Lumpy Skin Disease",
+   "fieldname": "disease_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Disease / Condition Name",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "description": "Vernacular or alternative name (Swahili / herder term)",
+   "fieldname": "common_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Common / Local Name"
+  },
+  {
+   "fieldname": "cb_identity",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "category",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Category",
+   "options": "\nInfectious - Bacterial\nInfectious - Viral\nInfectious - Parasitic\nInfectious - Fungal\nMetabolic\nReproductive\nNutritional\nLocomotor / Musculoskeletal\nMastitis\nReproductive Tract\nCalf Disease\nInjury / Trauma\nOther",
+   "reqd": 1
+  },
+  {
+   "description": "Comma-separated: Udder, Locomotor, Digestive, Respiratory, Reproductive, Skin, Eye, General",
+   "fieldname": "affected_systems",
+   "fieldtype": "Small Text",
+   "label": "Body Systems Affected"
+  },
+  {
+   "fieldname": "sb_clinical",
+   "fieldtype": "Section Break",
+   "label": "Clinical Profile"
+  },
+  {
+   "fieldname": "typical_symptoms",
+   "fieldtype": "Text",
+   "label": "Typical Symptoms"
+  },
+  {
+   "default": "Moderate",
+   "fieldname": "typical_severity",
+   "fieldtype": "Select",
+   "label": "Typical Severity",
+   "options": "\nMild\nModerate\nSevere\nVariable"
+  },
+  {
+   "fieldname": "cb_clinical",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_zoonotic",
+   "fieldtype": "Check",
+   "label": "Zoonotic (transmissible to humans)"
+  },
+  {
+   "default": "0",
+   "description": "Government must be informed (e.g. FMD, Rinderpest)",
+   "fieldname": "is_notifiable",
+   "fieldtype": "Check",
+   "label": "Notifiable to Veterinary Authority"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_chronic",
+   "fieldtype": "Check",
+   "label": "Tends to be Chronic / Recurring"
+  },
+  {
+   "fieldname": "sb_treatment",
+   "fieldtype": "Section Break",
+   "label": "Standard Treatment Protocol"
+  },
+  {
+   "description": "Default treatment outline; specific protocols set per case in Livestock Health Case",
+   "fieldname": "standard_protocol",
+   "fieldtype": "Text",
+   "label": "Standard Treatment Protocol"
+  },
+  {
+   "fieldname": "typical_duration_days",
+   "fieldtype": "Int",
+   "label": "Typical Treatment Duration (days)"
+  },
+  {
+   "fieldname": "cb_treatment",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Default; actual depends on drugs administered",
+   "fieldname": "expected_milk_withdrawal_days",
+   "fieldtype": "Int",
+   "label": "Typical Milk Withdrawal (days)"
+  },
+  {
+   "fieldname": "expected_meat_withdrawal_days",
+   "fieldtype": "Int",
+   "label": "Typical Meat Withdrawal (days)"
+  },
+  {
+   "fieldname": "sb_notes",
+   "fieldtype": "Section Break",
+   "label": "Notes"
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Text Editor",
+   "label": "Reference Notes"
+  },
+  {
+   "default": "1",
+   "fieldname": "is_active",
+   "fieldtype": "Check",
+   "label": "Is Active (selectable in cases)"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-07-01 05:39:01.253131",
+ "modified_by": "Administrator",
+ "module": "Upande Livestock",
+ "name": "Livestock Disease",
+ "naming_rule": "By fieldname",
+ "owner": "james@upande.com",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "HOD Dairy",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Dairy Supervisor",
+   "share": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Livestock Manager",
+   "select": 1,
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Dairy Secretary",
+   "select": 1,
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Farm Manager",
+   "select": 1,
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "disease_name",
+ "sort_order": "ASC",
+ "states": [],
+ "title_field": "disease_name",
+ "track_changes": 1
+}

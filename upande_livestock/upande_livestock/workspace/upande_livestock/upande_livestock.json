@@ -56,15 +56,15 @@
    "color": "Orange",
    "doc_view": "List",
    "label": "Health Cases",
-   "link_to": "Animal Health Case",
+   "link_to": "Livestock Health Case",
    "stats_filter": "[]",
    "type": "DocType"
   },
   {
    "color": "Grey",
    "doc_view": "List",
-   "label": "Animal Events",
-   "link_to": "Animal Event",
+   "label": "Livestock Events",
+   "link_to": "Livestock Event",
    "stats_filter": "[]",
    "type": "DocType"
   }

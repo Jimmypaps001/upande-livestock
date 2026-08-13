@@ -1,0 +1,130 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-06-08 00:00:00.000000",
+ "description": "Child table for Livestock Health Case — records each individual treatment administered during a clinical case.",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "treatment_date",
+  "treatment_time",
+  "col_break_1",
+  "drug_item",
+  "drug_name_text",
+  "section_break_1",
+  "dosage",
+  "route",
+  "withdrawal_period_days",
+  "col_break_2",
+  "administered_by",
+  "cost",
+  "section_break_2",
+  "response_observed",
+  "notes"
+ ],
+ "fields": [
+  {
+   "description": "Date the treatment was administered",
+   "fieldname": "treatment_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "treatment_time",
+   "fieldtype": "Time",
+   "in_list_view": 1,
+   "label": "Time"
+  },
+  {
+   "fieldname": "col_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Stock item if drug is in inventory; otherwise leave blank and use 'Drug Name' free text",
+   "fieldname": "drug_item",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Drug (Item)",
+   "options": "Item"
+  },
+  {
+   "description": "Free-text drug name if not a stock item",
+   "fieldname": "drug_name_text",
+   "fieldtype": "Data",
+   "label": "Drug Name (free text)"
+  },
+  {
+   "fieldname": "section_break_1",
+   "fieldtype": "Section Break"
+  },
+  {
+   "description": "e.g. 20 ml, 4 tabs, 2 g/100 kg",
+   "fieldname": "dosage",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Dosage"
+  },
+  {
+   "fieldname": "route",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Route of Administration",
+   "options": "\nIM (Intramuscular)\nIV (Intravenous)\nSC (Subcutaneous)\nOral / PO\nTopical\nIntramammary\nIntrauterine\nOphthalmic\nOther"
+  },
+  {
+   "description": "Days milk must be discarded after this drug. Drives milk_safe_date on the parent case.",
+   "fieldname": "withdrawal_period_days",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Milk Withdrawal (days)"
+  },
+  {
+   "fieldname": "col_break_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "administered_by",
+   "fieldtype": "Link",
+   "label": "Administered By",
+   "options": "Employee"
+  },
+  {
+   "fieldname": "cost",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Cost (KES)"
+  },
+  {
+   "fieldname": "section_break_2",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "response_observed",
+   "fieldtype": "Select",
+   "label": "Response Observed",
+   "options": "\nImproving\nNo Change\nWorsening\nResolved\nNot Yet Assessed"
+  },
+  {
+   "description": "What the operator/vet noted at this visit",
+   "fieldname": "notes",
+   "fieldtype": "Small Text",
+   "label": "Notes"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-06-08 00:00:00.000000",
+ "modified_by": "james@upande.com",
+ "module": "Upande Livestock",
+ "name": "Livestock Health Treatment",
+ "owner": "james@upande.com",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

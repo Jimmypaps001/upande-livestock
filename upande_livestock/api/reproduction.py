@@ -20,7 +20,7 @@ def get_animal_reproductive_summary(animal=None):
     last_service = frappe.db.sql("""
         SELECT name, service_date, service_type, pregnancy_confirmation_status,
                expected_calving_date
-        FROM `tabAnimal Event`
+        FROM `tabLivestock Event`
         WHERE animal = %s
         AND event_type = 'Service'
         AND docstatus = 1
@@ -35,7 +35,7 @@ def get_animal_reproductive_summary(animal=None):
     # Get pending checks
     pending_checks = frappe.db.sql("""
         SELECT name, service_date, pregnancy_check_due_date
-        FROM `tabAnimal Event`
+        FROM `tabLivestock Event`
         WHERE animal = %s
         AND event_type = 'Service'
         AND pregnancy_confirmation_status = 'Pending'
@@ -47,7 +47,7 @@ def get_animal_reproductive_summary(animal=None):
     # Get last calving
     last_calving = frappe.db.sql("""
         SELECT name, event_date, custom_calving_outcome
-        FROM `tabAnimal Event`
+        FROM `tabLivestock Event`
         WHERE animal = %s
         AND event_type = 'Calving'
         AND docstatus = 1
@@ -60,13 +60,13 @@ def get_animal_reproductive_summary(animal=None):
         summary["days_since_calving"] = frappe.utils.date_diff(frappe.utils.nowdate(), last_calving[0].event_date)
 
     # Get service performance
-    total_services = frappe.db.count("Animal Event", {
+    total_services = frappe.db.count("Livestock Event", {
         "animal": animal,
         "event_type": "Service",
         "docstatus": 1
     })
 
-    successful_services = frappe.db.count("Animal Event", {
+    successful_services = frappe.db.count("Livestock Event", {
         "animal": animal,
         "event_type": "Service",
         "service_status": "Successful",
@@ -92,13 +92,13 @@ def get_animals_ready_for_service():
             ae.event_date as calving_date,
             DATEDIFF(CURDATE(), ae.event_date) as days_since_calving,
             ae.ready_for_service_date
-        FROM `tabAnimal Event` ae
+        FROM `tabLivestock Event` ae
         LEFT JOIN `tabAnimal` a ON ae.animal = a.name
         WHERE ae.event_type = 'Calving'
         AND ae.docstatus = 1
         AND DATEDIFF(CURDATE(), ae.event_date) >= 60
         AND NOT EXISTS (
-            SELECT 1 FROM `tabAnimal Event` service
+            SELECT 1 FROM `tabLivestock Event` service
             WHERE service.animal = ae.animal
             AND service.event_type = 'Service'
             AND service.service_date > ae.event_date
@@ -128,7 +128,7 @@ def get_animals_needing_pregnancy_check():
             END as urgency,
             a.burn_name AS asset_name,
             a.current_herd AS custom_current_herd
-        FROM `tabAnimal Event` ae
+        FROM `tabLivestock Event` ae
         LEFT JOIN `tabAnimal` a ON ae.animal = a.name
         WHERE ae.event_type = 'Service'
         AND ae.pregnancy_confirmation_status = 'Pending'
