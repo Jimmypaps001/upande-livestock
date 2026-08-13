@@ -4557,7 +4557,8 @@ Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>"
   - `upande_livestock.api.animal.STATUS_BY_DISPOSAL_TYPE` → `dict[str, str]`
   - **No** custom link query and **no** `standard_queries` hook — Frappe filters `disabled` natively.
 
-**Note:** `livestock_disposal.py` is currently a `pass` stub, which is why `sale_journal_entry` and `writeoff_journal_entry` are never populated. `sell_livestock_asset()` throws without both `customer` and `selling_amount` (`api/assets.py:171-175`), and the doctype has only free-text `buyer_name` today — hence the new `customer` field.
+**Note:** `livestock_disposal.py` is currently a `pass` stub, which is why `sale_journal_entry` and `writeoff_journal_entry` are never populated. `sell_livestock_asset()` throws without both `customer` and `selling_amount` (`api/assets.py:171-175`), and the doctype has only free-text `buyer_name` today — hence the new `customer` field, which is
+**optional** (see Step 4 for why).
 
 - [ ] **Step 1: Write the failing test**
 
@@ -4703,20 +4704,27 @@ In `.../doctype/livestock_disposal/livestock_disposal.json`, add `"customer"` to
 
 ```json
   {
-   "description": "Required for a Sold disposal — the fixed-asset sale posts against this Customer.",
+   "description": "Optional. When set on a Sold disposal the fixed-asset sale posts against this Customer; left blank, the posting is skipped with a warning and buyer_name alone records who bought the animal.",
    "fieldname": "customer",
    "fieldtype": "Link",
    "label": "Customer",
-   "mandatory_depends_on": "eval:doc.disposal_type == \"Sold\"",
    "options": "Customer"
   },
 ```
 
-Also make `sale_price` mandatory for a sale by adding to its existing field object:
+**`customer` is deliberately optional, with no `mandatory_depends_on` and no server-side check.**
+This site has **zero** `Customer` records, and all 10 existing `Sold` disposals carry only a
+free-text `buyer_name` (`cowcare` ×6, `John Rono` ×4). Requiring a Customer would block every future
+sale until the farm creates master data, and would make those 10 rows throw on amend — the same
+retroactive-invalidation problem that produced Criticals in Tasks 5b and 9.
 
-```json
-   "mandatory_depends_on": "eval:doc.disposal_type == \"Sold\"",
-```
+Leave `sale_price` optional too. Do **not** add a `mandatory_depends_on` to either field.
+
+A `Sold` disposal therefore **always** records and retires the animal, and posts the asset sale
+**only** when both `customer` and `sale_price` are present — otherwise it warns and skips the
+posting. The controller is a `pass` stub today, so nothing posts at all; this is strictly an
+improvement, and posting starts working the moment a farm creates Customer records, with no code
+change.
 
 - [ ] **Step 5: Add the status map and link query**
 
@@ -4813,7 +4821,21 @@ class LivestockDisposal(Document):
 		retire_animal(self.animal, self.disposal_type)
 
 	def post_asset_disposal(self):
-		"""Scrap or sell the linked Asset. Warn rather than throw on failure."""
+		"""Scrap or sell the linked Asset. Warn rather than throw on failure.
+
+		A Sold disposal with no customer or no sale_price skips the sale posting
+		with a warning rather than throwing: sell_livestock_asset() requires both,
+		this site has no Customer records yet, and the disposal itself must still
+		record and retire the animal.
+		"""
+		if self.disposal_type in SALE_TYPES and not (self.customer and self.sale_price):
+			frappe.msgprint(
+				_("No Customer or sale price set, so the asset sale was not posted."),
+				alert=True,
+				indicator="orange",
+			)
+			return
+
 		if not frappe.db.get_value("Animal", self.animal, "asset_link"):
 			frappe.msgprint(
 				_("Animal {0} has no linked Asset; no asset postings were made.").format(self.animal),
