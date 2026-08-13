@@ -289,6 +289,25 @@ class LivestockEvent(Document):
 			)
 
 		# ============================================================
+		# CONDITIONAL MANDATORY: CALF TAG / CALF SEX
+		# ============================================================
+		# calf_tag_number / calf_sex carry mandatory_depends_on, which Frappe
+		# enforces only in the browser. A Birth event reaching us from the REST
+		# API, data import or the mobile client would otherwise be accepted with
+		# neither field set.
+		if self._type_creates_animal() and not self.is_stillborn:
+			if not self.calf_tag_number:
+				frappe.throw(
+					_("Calf Tag / Book Number is mandatory for a Birth event."),
+					frappe.MandatoryError,
+				)
+			if self.calf_sex not in ("Female", "Male"):
+				frappe.throw(
+					_("Calf Sex must be Female or Male for a Birth event."),
+					frappe.MandatoryError,
+				)
+
+		# ============================================================
 		# VALIDATION FOR SERVICE EVENTS
 		# ============================================================
 
@@ -624,3 +643,40 @@ class LivestockEvent(Document):
 						f"🐄 {self.animal} is already pregnant.\n\n"
 						"The cow must calve before a new pregnancy can be recorded."
 					)
+
+		self.refresh_calving_birth_count()
+		self.warn_on_birth_count_mismatch()
+
+	def on_cancel(self):
+		self.refresh_calving_birth_count()
+
+	def refresh_calving_birth_count(self):
+		"""Recount the Birth events linked to this event's related calving."""
+		if not self.related_calving:
+			return
+		count = frappe.db.count(
+			"Livestock Event",
+			{"related_calving": self.related_calving, "event_type": "Birth", "docstatus": 1},
+		)
+		frappe.db.set_value(
+			"Livestock Event", self.related_calving, "births_recorded", count, update_modified=False
+		)
+
+	def warn_on_birth_count_mismatch(self):
+		"""Warn, never block, when births recorded do not match the expected count.
+
+		Farms legitimately record calves the next morning. Blocking submission would
+		push staff to falsify custom_no_of_calves instead.
+		"""
+		if self.event_type != "Calving":
+			return
+		expected = self.custom_no_of_calves or 0
+		recorded = self.births_recorded or 0
+		if expected and recorded and expected != recorded:
+			frappe.msgprint(
+				_("This calving expects {0} calves but {1} Birth events are recorded.").format(
+					expected, recorded
+				),
+				alert=True,
+				indicator="orange",
+			)

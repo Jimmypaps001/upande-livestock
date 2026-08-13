@@ -325,6 +325,19 @@ def create_drying_off_event(payload):
 	return _run(go, "livestock create_drying_off_event failed")
 
 
+def _calf_row(calf, outcome):
+	"""Normalise one incoming calf dict for record_calf_births."""
+	tag = (calf.get("name") or "").strip().upper()
+	stillborn = outcome != "Live Birth" or not tag or tag == "STILLBORN"
+	return {
+		"tag": tag,
+		"sex": calf.get("sex"),
+		"burn_name": tag,
+		"birth_weight": calf.get("birth_weight"),
+		"is_stillborn": 1 if stillborn else 0,
+	}
+
+
 @frappe.whitelist()
 def record_birth(payload):
 	"""Record a calving: a Calving Livestock Event + (for live births) one Animal
@@ -376,47 +389,15 @@ def record_birth(payload):
 		calving.insert()
 		calving.submit()
 
-		created = []
-		if outcome == "Live Birth":
-			for calf in calves:
-				calf_id = (calf.get("name") or "").strip().upper()
-				if not calf_id or calf_id == "STILLBORN":
-					continue
-				sex = calf.get("sex") if calf.get("sex") in ("Female", "Male") else "Female"
-				weight = flt(calf.get("birth_weight"))
-				herd = calf.get("herd") or dam.current_herd or ""
-				animal = frappe.new_doc("Animal")
-				animal.tag_number = calf_id
-				animal.burn_name = calf_id
-				animal.sex = sex
-				animal.date_of_birth = event_date
-				animal.current_herd = herd
-				animal.company = dam.company or frappe.db.get_single_value(
-					"Livestock Settings", "custom_default_company"
-				)
-				animal.dam = dam_name
-				animal.sire_name = sire
-				animal.birth_weight_kg = weight
-				animal.origin = "Born on Farm"
-				animal.status = "Active"
-				animal.repro_status = "Calf"
-				if dam.breed:
-					animal.breed = dam.breed
-				animal.insert()
-
-				birth = frappe.new_doc("Livestock Event")
-				birth.animal = animal.name
-				birth.event_type = "Birth"
-				birth.event_date = event_date
-				birth.current_herd = herd
-				birth.sire = sire
-				birth.operator = operator
-				birth.remarks = "Dam: {0}. Birth weight: {1} kg".format(
-					dam.tag_number or dam.burn_name, weight
-				)
-				birth.insert()
-				birth.submit()
-				created.append({"animal": animal.name, "tag": calf_id, "sex": sex})
+		# One calf-creation path: record_calf_births owns the per-calf loop and lets
+		# the Livestock Event controller create each Animal. A second copy of this
+		# loop here is what would make a form-booked birth create the calf twice.
+		created = record_calf_births(
+			{
+				"calving": calving.name,
+				"calves": [_calf_row(c, outcome) for c in calves],
+			}
+		)["created"]
 
 		return {
 			"ok": True,
@@ -670,3 +651,66 @@ def create_parlour_checksheet(payload):
 		return {"ok": True, "name": doc.name, "rows": len(items)}
 
 	return _run(go, "livestock create_parlour_checksheet failed")
+
+
+# ===========================================================================
+# MULTIPLE BIRTHS  (twins/triplets — one Calving, N Birth events)
+# ===========================================================================
+
+@frappe.whitelist()
+def record_calf_births(payload):
+	"""Create one Birth event per calf for an existing Calving event.
+
+	A dam bearing triplets gets one Calving event and three Birth events. Stillborn
+	rows are recorded as Birth events that create no Animal, so the calving's count
+	stays honest without inflating herd numbers.
+	"""
+
+	def go():
+		_guard("Livestock Event")
+		_guard("Animal")
+		d = _ok(payload)
+		calving_name = d.get("calving")
+		if not calving_name:
+			frappe.throw(_("Select the calving event."))
+		calves = d.get("calves") or []
+		if not isinstance(calves, list) or not calves:
+			frappe.throw(_("Add at least one calf."))
+
+		calving = frappe.get_doc("Livestock Event", calving_name)
+		if calving.event_type != "Calving":
+			frappe.throw(_("{0} is not a Calving event.").format(calving_name))
+
+		dam_name = calving.animal
+		dam = frappe.get_doc("Animal", dam_name)
+		created = []
+
+		for calf in calves:
+			stillborn = bool(calf.get("is_stillborn"))
+			birth = frappe.new_doc("Livestock Event")
+			birth.event_type = "Birth"
+			birth.event_date = calving.event_date
+			birth.operator = calving.operator
+			birth.dam = dam_name
+			birth.related_calving = calving.name
+			birth.sire = calving.sire
+			birth.is_stillborn = 1 if stillborn else 0
+
+			if stillborn:
+				birth.remarks = f"Stillborn. Dam: {dam.tag_number or dam.burn_name}"
+			else:
+				birth.calf_tag_number = (calf.get("tag") or "").strip().upper()
+				birth.calf_sex = calf.get("sex") if calf.get("sex") in ("Female", "Male") else "Female"
+				birth.calf_burn_name = calf.get("burn_name") or birth.calf_tag_number
+				birth.calf_birth_weight_kg = flt(calf.get("birth_weight"))
+				birth.remarks = f"Dam: {dam.tag_number or dam.burn_name}"
+
+			birth.insert()
+			birth.submit()
+			if not stillborn:
+				created.append({"animal": birth.animal, "tag": birth.calf_tag_number})
+
+		calving.reload()
+		return {"ok": True, "created": created, "births_recorded": calving.births_recorded}
+
+	return _run(go, "livestock record_calf_births failed")
