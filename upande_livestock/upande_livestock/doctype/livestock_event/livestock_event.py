@@ -344,6 +344,19 @@ class LivestockEvent(Document):
 				)
 
 		# ============================================================
+		# CONDITIONAL MANDATORY: ABORTION CAUSE
+		# ============================================================
+		# abortion_cause carries mandatory_depends_on, which Frappe enforces only
+		# in the browser (same gap as operator/animal/calf_tag_number/calf_sex
+		# above). Without this, an Abortion event reaching us from the REST API,
+		# data import or the mobile client could be recorded with no cause at all.
+		if self.event_type == "Abortion" and not self.abortion_cause:
+			frappe.throw(
+				_("{0} is mandatory for an Abortion event.").format(_("Probable Cause")),
+				frappe.MandatoryError,
+			)
+
+		# ============================================================
 		# VALIDATION FOR SERVICE EVENTS
 		# ============================================================
 
@@ -429,6 +442,31 @@ class LivestockEvent(Document):
                         Days since calving: <b>{days_since_calving}</b><br>
                         Optimal waiting period: <b>{optimal_days} days</b><br><br>
                         <i>Note: Service is allowed but conception rates improve after {optimal_days} days.</i>""", alert=True, indicator="orange")
+
+			# Rule 4: post-abortion waiting period (0 disables it)
+			abortion_wait = get_timing("post_abortion_min_service_days")
+			if abortion_wait:
+				last_abortion = frappe.db.sql(
+					"""SELECT name, event_date FROM `tabLivestock Event`
+					   WHERE animal = %s AND event_type = 'Abortion' AND docstatus = 1
+					   ORDER BY event_date DESC LIMIT 1""",
+					(self.animal,),
+					as_dict=True,
+				)
+				if last_abortion:
+					days_since = frappe.utils.date_diff(self.service_date, last_abortion[0].event_date)
+					if days_since < abortion_wait:
+						frappe.throw(
+							_(
+								"Too early for service. Last abortion was {0} ({1} days ago); "
+								"this farm requires {2} days. Adjust "
+								"Livestock Settings → Minimum Days to Service After Abortion to change this."
+							).format(
+								frappe.utils.formatdate(last_abortion[0].event_date),
+								days_since,
+								abortion_wait,
+							)
+						)
 
 			# Set initial pregnancy status
 			if not self.pregnancy_confirmation_status:
@@ -636,7 +674,47 @@ class LivestockEvent(Document):
 		# the one piece of validation that must also bind for the REST API,
 		# api/operations.record_birth, data import and the mobile client, not
 		# just the desk form the rest of this method was ported from.
+		self.compute_abortion_dates()
 		check_guards(self)
+
+	def compute_abortion_dates(self):
+		"""Gestation length at loss, and when the dam may be served again."""
+		if self.event_type != "Abortion":
+			return
+
+		if self.custom_related_pregnancy:
+			service_date = frappe.db.get_value(
+				"Livestock Event", self.custom_related_pregnancy, "service_date"
+			)
+			if service_date:
+				self.gestation_days_at_loss = frappe.utils.date_diff(self.event_date, service_date)
+
+		wait_days = get_timing("post_abortion_min_service_days")
+		if wait_days:
+			self.ready_for_service_date = frappe.utils.add_days(self.event_date, wait_days)
+
+	def close_pregnancy_after_abortion(self):
+		"""Reopen the dam and fail the lost service. Parity is NOT incremented."""
+		if self.event_type != "Abortion":
+			return
+
+		animal = frappe.get_doc("Animal", self.animal)
+		if animal.meta.has_field("repro_status"):
+			animal.db_set("repro_status", "Open", update_modified=False)
+		if animal.meta.has_field("custom_pregnancy_status"):
+			animal.db_set("custom_pregnancy_status", "Not Pregnant", update_modified=False)
+		if animal.meta.has_field("expected_calving_date"):
+			animal.db_set("expected_calving_date", None, update_modified=False)
+
+		if not self.custom_related_pregnancy:
+			return
+
+		service = frappe.get_doc("Livestock Event", self.custom_related_pregnancy)
+		service.db_set("service_status", "Failed", update_modified=False)
+		service.db_set("pregnancy_confirmation_status", "Aborted", update_modified=False)
+		if service.meta.has_field("custom_status_after_test"):
+			service.db_set("custom_status_after_test", "Failed", update_modified=False)
+		service.add_comment("Info", text=f"Pregnancy lost — recorded by Abortion event {self.name}")
 
 	def on_submit(self):
 		# --------------------------------------------
@@ -681,6 +759,7 @@ class LivestockEvent(Document):
 					)
 
 		self.refresh_calving_birth_count()
+		self.close_pregnancy_after_abortion()
 
 	def on_cancel(self):
 		self.refresh_calving_birth_count()

@@ -278,7 +278,7 @@ def event_options():
 			],
 			"herds": [{"name": n, "label": l} for n, l in sorted(labels.items(), key=lambda x: x[1])],
 			"calving_outcomes": _select_options("Livestock Event", "custom_calving_outcome")
-			or ["Live Birth", "Still Birth", "Abortion"],
+			or ["Live Birth", "Still Birth"],
 			"employee": _current_employee(),
 		}
 
@@ -398,11 +398,12 @@ def record_birth(payload):
 		# loop here is what would make a form-booked birth create the calf twice.
 		#
 		# Gated on outcome, matching the pre-Task-9 behaviour exactly: a Still
-		# Birth or Abortion creates only the Calving, with no Birth events at all.
-		# custom_calving_outcome still offers "Abortion" (Task 10 removes it), and
-		# without this gate every outcome — including Abortion — would create a
-		# submitted, is_stillborn Birth event linked to the calving: data that
-		# never existed before this task and is out of this task's scope.
+		# Birth creates only the Calving, with no Birth events at all. Abortion
+		# used to reach this same gate as a custom_calving_outcome value; Task 10
+		# removed it from that Select entirely (pregnancy loss is now its own
+		# Abortion event type — see LivestockEvent.close_pregnancy_after_abortion),
+		# so calving.insert() above now rejects outcome="Abortion" itself, before
+		# this gate is even reached.
 		created = []
 		if outcome == "Live Birth":
 			created = record_calf_births(

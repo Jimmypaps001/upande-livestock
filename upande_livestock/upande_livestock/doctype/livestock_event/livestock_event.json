@@ -57,6 +57,11 @@
   "calf_herd",
   "dam",
   "related_calving",
+  "sb_abortion",
+  "abortion_cause",
+  "gestation_days_at_loss",
+  "cb_abortion",
+  "abortion_notes",
   "tab_more",
   "sb_amended",
   "amended_from"
@@ -271,7 +276,7 @@
   {
    "fieldname": "tab_calving",
    "fieldtype": "Tab Break",
-   "label": "Calving & Birth"
+   "label": "Calving, Birth & Abortion"
   },
   {
    "fieldname": "sb_calving",
@@ -282,7 +287,7 @@
    "fieldname": "custom_calving_outcome",
    "label": "Calving outcome",
    "fieldtype": "Select",
-   "options": "Live Birth\nStill Birth\nAbortion"
+   "options": "Live Birth\nStill Birth"
   },
   {
    "fieldname": "custom_no_of_calves",
@@ -374,6 +379,35 @@
    "fieldtype": "Link",
    "label": "Related Calving",
    "options": "Livestock Event"
+  },
+  {
+   "depends_on": "eval:doc.event_type == \"Abortion\"",
+   "fieldname": "sb_abortion",
+   "fieldtype": "Section Break",
+   "label": "Abortion"
+  },
+  {
+   "fieldname": "abortion_cause",
+   "fieldtype": "Select",
+   "label": "Probable Cause",
+   "mandatory_depends_on": "eval:doc.event_type == \"Abortion\"",
+   "options": "\nInfectious\nNutritional\nTraumatic\nCongenital\nUnknown\nOther"
+  },
+  {
+   "description": "Days from the service date to the loss.",
+   "fieldname": "gestation_days_at_loss",
+   "fieldtype": "Int",
+   "label": "Gestation Days at Loss",
+   "read_only": 1
+  },
+  {
+   "fieldname": "cb_abortion",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "abortion_notes",
+   "fieldtype": "Small Text",
+   "label": "Abortion Notes"
   },
   {
    "fieldname": "tab_more",
