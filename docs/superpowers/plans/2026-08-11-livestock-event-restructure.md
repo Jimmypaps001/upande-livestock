@@ -17,6 +17,7 @@
 - **`bench console` runs with cwd = `sites/`, not the bench root.** Use absolute paths in `import_file_by_path` calls, or the glob silently matches nothing and imports zero doctypes. Verified in Task 1.
 - **`bench migrate` is unusable** on this site: it aborts in the `lending` app's patch phase (`create_custom_field_loan_accrual_rate_for_company` → `ValidationError: Script Type cannot be "Workflow Task"`). Pre-existing, unrelated. Apply schema with `import_file_by_path` and run patches individually with `bench --site kaitet.local execute upande_livestock.patches.<module>.execute`.
 - **Code style (ruff, from `pyproject.toml`):** `line-length = 110`, `target-version = "py310"`, `quote-style = "double"`, **`indent-style = "tab"`**. Python files in this app are tab-indented — match that exactly.
+- **`ruff` is not on `PATH`.** Use `/home/ubuntu/stive/code/frappe15/env/bin/ruff` (installed at `0.8.1`, the version `.pre-commit-config.yaml` pins). The repo has **16 pre-existing `ruff check` errors and 11 files `ruff format` would rewrite** at the branch point; the standard is *do not add new ones*, not *make it clean*. Never bulk-reformat files this plan does not otherwise touch.
 - **Copyright header** on every new `.py` / `.js` file:
   ```python
   # Copyright (c) 2026, Upande and contributors
@@ -5228,15 +5229,37 @@ grep -rniE "animal[ _]?(event|health[ _]case|diagnosis|disease|disposal|weight[ 
 
 Expected: **no output**. Any hit is a missed rename.
 
-- [ ] **Step 5: Lint**
+- [ ] **Step 5: Lint — no regression versus the merge base**
+
+`ruff` is not on `PATH`; use the bench venv copy, pinned to the version
+`.pre-commit-config.yaml` declares (`v0.8.1`):
 
 ```bash
+R=/home/ubuntu/stive/code/frappe15/env/bin/ruff
 cd /home/ubuntu/stive/code/frappe15/apps/upande_livestock
-ruff check upande_livestock/
-ruff format --check upande_livestock/
+$R check upande_livestock/ 2>&1 | tail -2
+$R format --check upande_livestock/ 2>&1 | tail -1
 ```
 
-Expected: both clean. If `format --check` complains, run `ruff format upande_livestock/` and re-inspect the diff — the repo uses **tab** indentation.
+**The gate is "no new findings", not "clean".** This repo carries **16 pre-existing
+`ruff check` errors and 11 files that `ruff format` would reformat**, measured at the
+branch point — mostly `UP032` (%-format → f-string) in files this plan does not touch.
+Do not "fix" them: that would bury the restructure's diff in unrelated churn.
+
+Compare against the branch point rather than eyeballing it:
+
+```bash
+R=/home/ubuntu/stive/code/frappe15/env/bin/ruff
+TMP=$(mktemp -d)
+git worktree add -q --detach $TMP $(git merge-base main HEAD)
+echo "BEFORE:"; (cd $TMP && $R check upande_livestock/ 2>&1 | tail -1; $R format --check upande_livestock/ 2>&1 | tail -1)
+echo "AFTER:";  $R check upande_livestock/ 2>&1 | tail -1; $R format --check upande_livestock/ 2>&1 | tail -1
+git worktree remove --force $TMP
+```
+
+Expected: the error count and the reformat count are **no higher** after than before.
+Any increase is this plan's fault and must be fixed — the repo uses **tab** indentation,
+so a space-indented block is the usual cause.
 
 - [ ] **Step 6: Run the whole app test suite**
 
