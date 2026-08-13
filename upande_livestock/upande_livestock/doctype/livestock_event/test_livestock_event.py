@@ -564,6 +564,92 @@ class TestLivestockEventMultipleBirths(IntegrationTestCase):
 		self.assertEqual(calving.births_recorded, 1)
 		self.assertEqual(calving.custom_no_of_calves, 3)
 
+	def test_birth_count_mismatch_actually_fires_a_warning(self):
+		"""The warning has to live in refresh_calving_birth_count (fired from the
+		Birth event's own submit), not in the Calving's on_submit: a Calving must
+		already be submitted, with births_recorded still 0, before any Birth event
+		can reference it, and a Birth's on_submit updates the parent via a raw
+		db.set_value that never re-triggers the Calving's own on_submit — so a
+		check placed only on Calving submission could never actually fire.
+		Asserting only that submission succeeds (as
+		test_count_mismatch_warns_but_does_not_block does) would pass even if this
+		method were never called at all, so this test captures frappe.msgprint
+		directly.
+		"""
+		from unittest.mock import patch
+
+		from upande_livestock.api.operations import record_calf_births
+
+		calving = self._calving(3)
+		with patch("frappe.msgprint") as mock_msgprint:
+			result = record_calf_births(
+				{"calving": calving.name, "calves": [{"tag": "TEST-TRIPLET-1", "sex": "Female"}]}
+			)
+		self._register_birth_family_cleanup(calving.name, [c["animal"] for c in result["created"]])
+		self.assertTrue(mock_msgprint.called)
+		messages = [str(call.args[0]) for call in mock_msgprint.call_args_list if call.args]
+		self.assertTrue(
+			any("3" in m and "1" in m for m in messages),
+			f"Expected a mismatch warning mentioning 3 and 1, got: {messages}",
+		)
+
+	def test_created_calf_entries_carry_animal_tag_and_sex(self):
+		"""result["created"][i] is the contract callers (mobile/web) read from.
+		Dropping `sex` here silently gives every caller `undefined`/None instead
+		of an error, so pin the exact key set as well as the value.
+		"""
+		from upande_livestock.api.operations import record_calf_births
+
+		calving = self._calving(1)
+		result = record_calf_births(
+			{"calving": calving.name, "calves": [{"tag": "TEST-TRIPLET-1", "sex": "Female"}]}
+		)
+		self._register_birth_family_cleanup(calving.name, [c["animal"] for c in result["created"]])
+		self.assertEqual(len(result["created"]), 1)
+		self.assertEqual(set(result["created"][0].keys()), {"animal", "tag", "sex"})
+		self.assertEqual(result["created"][0]["sex"], "Female")
+
+	def test_specified_herd_wins_over_resolution(self):
+		"""A per-calf herd choice (as the Livestock Operations widget already
+		sends) must reach create_calf(), not be silently discarded by
+		resolve_calf_herd() picking something else.
+		"""
+		from upande_livestock.api.operations import record_calf_births
+
+		alt_herd = "TEST-TRIPLET-ALT-HERD"
+		if not frappe.db.exists("Herds", alt_herd):
+			frappe.get_doc({"doctype": "Herds", "herd_name": alt_herd, "min_age": 50, "max_age": 60}).insert()
+			self.addCleanup(_delete_and_commit, "Herds", alt_herd)
+
+		calving = self._calving(1)
+		result = record_calf_births(
+			{
+				"calving": calving.name,
+				"calves": [{"tag": "TEST-TRIPLET-1", "sex": "Female", "herd": alt_herd}],
+			}
+		)
+		self._register_birth_family_cleanup(calving.name, [c["animal"] for c in result["created"]])
+		self.assertEqual(frappe.db.get_value("Animal", "TEST-TRIPLET-1", "current_herd"), alt_herd)
+
+	def test_empty_herd_falls_back_to_resolution(self):
+		"""An empty/omitted herd must behave exactly as if none were given at
+		all — resolved the same way create_calf_if_needed's own callers with no
+		opinion on herd already rely on.
+		"""
+		from upande_livestock.api.animal import resolve_calf_herd
+		from upande_livestock.api.operations import record_calf_births
+
+		expected_herd = resolve_calf_herd()
+		calving = self._calving(1)
+		result = record_calf_births(
+			{
+				"calving": calving.name,
+				"calves": [{"tag": "TEST-TRIPLET-1", "sex": "Female", "herd": ""}],
+			}
+		)
+		self._register_birth_family_cleanup(calving.name, [c["animal"] for c in result["created"]])
+		self.assertEqual(frappe.db.get_value("Animal", "TEST-TRIPLET-1", "current_herd"), expected_herd)
+
 	def test_record_birth_creates_one_calving_and_n_births(self):
 		"""record_birth must delegate to record_calf_births, not carry its own loop."""
 		from upande_livestock.api.operations import record_birth
@@ -587,6 +673,80 @@ class TestLivestockEventMultipleBirths(IntegrationTestCase):
 		self.assertEqual(len(result["calves"]), 2)
 		for n in (1, 2):
 			self.assertEqual(frappe.db.count("Animal", {"tag_number": f"TEST-TRIPLET-{n}"}), 1)
+
+	def test_record_birth_calves_entries_carry_animal_tag_and_sex(self):
+		"""Same per-item contract as record_calf_births' own "created" list —
+		record_birth returns it under the "calves" key instead.
+		"""
+		from upande_livestock.api.operations import record_birth
+
+		self._confirm_pregnancy(service_date="2025-09-10", diagnosis_date="2025-10-14")
+		result = record_birth(
+			{
+				"dam": self.dam,
+				"operator": self.operator,
+				"event_date": "2026-07-07",
+				"outcome": "Live Birth",
+				"calves": [{"name": "TEST-TRIPLET-1", "sex": "Female"}],
+			}
+		)
+		self.addCleanup(_delete_and_commit, "Livestock Event", result["name"])
+		self._register_birth_family_cleanup(result["name"], [c["animal"] for c in result["calves"]])
+		self.assertEqual(len(result["calves"]), 1)
+		self.assertEqual(set(result["calves"][0].keys()), {"animal", "tag", "sex"})
+		self.assertEqual(result["calves"][0]["sex"], "Female")
+
+	def test_record_birth_abortion_creates_no_birth_events(self):
+		"""Every outcome used to run through record_calf_births after the Task 9
+		collapse — including Abortion, which never created a calf loop before
+		this task and is out of its scope (Task 10 removes the option). This is
+		the regression test for that gate.
+		"""
+		from upande_livestock.api.operations import record_birth
+
+		self._confirm_pregnancy(service_date="2025-09-11", diagnosis_date="2025-10-15")
+		result = record_birth(
+			{
+				"dam": self.dam,
+				"operator": self.operator,
+				"event_date": "2026-07-08",
+				"outcome": "Abortion",
+				"calves": [{"name": "N-A"}],
+			}
+		)
+		self.addCleanup(_delete_and_commit, "Livestock Event", result["name"])
+		self.assertTrue(result["ok"])
+		self.assertEqual(len(result["calves"]), 0)
+		self.assertEqual(
+			frappe.db.count("Livestock Event", {"related_calving": result["name"], "event_type": "Birth"}),
+			0,
+		)
+
+	def test_record_birth_still_birth_creates_no_birth_events(self):
+		"""Same gate as Abortion, exercised with a real (non-sentinel) calf tag —
+		Still Birth must create zero Birth events too, matching pre-Task-9
+		behaviour exactly.
+		"""
+		from upande_livestock.api.operations import record_birth
+
+		self._confirm_pregnancy(service_date="2025-09-12", diagnosis_date="2025-10-16")
+		result = record_birth(
+			{
+				"dam": self.dam,
+				"operator": self.operator,
+				"event_date": "2026-07-09",
+				"outcome": "Still Birth",
+				"calves": [{"name": "TEST-TRIPLET-1", "sex": "Female"}],
+			}
+		)
+		self.addCleanup(_delete_and_commit, "Livestock Event", result["name"])
+		self.assertTrue(result["ok"])
+		self.assertEqual(len(result["calves"]), 0)
+		self.assertEqual(
+			frappe.db.count("Livestock Event", {"related_calving": result["name"], "event_type": "Birth"}),
+			0,
+		)
+		self.assertFalse(frappe.db.exists("Animal", "TEST-TRIPLET-1"))
 
 	def test_record_birth_stillborn_sentinel_creates_no_animal(self):
 		from upande_livestock.api.operations import record_birth

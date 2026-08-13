@@ -47,9 +47,11 @@ class LivestockEvent(Document):
 	def create_calf_if_needed(self):
 		"""For a Birth event with no animal yet, create the calf and point at it.
 
-		api/operations.py:record_birth creates the Animal itself and passes `animal`
-		in, so this is a no-op on that path — which is what stops a form-booked birth
-		creating the calf twice.
+		This is the one place a calf Animal is created. api/operations.py's
+		record_birth and record_calf_births both build a Birth event with `animal`
+		left unset and let this method create it, rather than creating the Animal
+		themselves — a second calf-creation path is what would let a form-booked
+		or API-booked birth create the calf twice.
 		"""
 		if not self._type_creates_animal():
 			return
@@ -67,6 +69,9 @@ class LivestockEvent(Document):
 			event_date=self.event_date,
 			birth_weight=self.calf_birth_weight_kg,
 			burn_name=self.calf_burn_name,
+			# An empty/unset calf_herd must still fall back to resolve_calf_herd()
+			# inside create_calf() — only a real herd name should override it.
+			herd=self.calf_herd or None,
 		)
 
 	def before_insert(self):
@@ -645,13 +650,25 @@ class LivestockEvent(Document):
 					)
 
 		self.refresh_calving_birth_count()
-		self.warn_on_birth_count_mismatch()
 
 	def on_cancel(self):
 		self.refresh_calving_birth_count()
 
 	def refresh_calving_birth_count(self):
-		"""Recount the Birth events linked to this event's related calving."""
+		"""Recount the Birth events linked to this event's related calving, and
+		warn (never block) if that leaves the calving's recorded and expected
+		counts disagreeing.
+
+		The warning has to fire from here — a Birth event's own submit/cancel —
+		rather than from the Calving's on_submit. A Calving must already be
+		submitted, with births_recorded still 0, before any Birth event can even
+		reference it via related_calving; and this method updates the parent via
+		a raw db.set_value, which does not re-trigger the Calving's own
+		on_submit. A check placed only on Calving submission could therefore
+		never actually see a mismatch. This is a warning, not a throw: farms
+		legitimately record calves the next morning, and blocking submission
+		would push staff to falsify custom_no_of_calves instead.
+		"""
 		if not self.related_calving:
 			return
 		count = frappe.db.count(
@@ -662,20 +679,11 @@ class LivestockEvent(Document):
 			"Livestock Event", self.related_calving, "births_recorded", count, update_modified=False
 		)
 
-	def warn_on_birth_count_mismatch(self):
-		"""Warn, never block, when births recorded do not match the expected count.
-
-		Farms legitimately record calves the next morning. Blocking submission would
-		push staff to falsify custom_no_of_calves instead.
-		"""
-		if self.event_type != "Calving":
-			return
-		expected = self.custom_no_of_calves or 0
-		recorded = self.births_recorded or 0
-		if expected and recorded and expected != recorded:
+		expected = frappe.db.get_value("Livestock Event", self.related_calving, "custom_no_of_calves") or 0
+		if expected and count and expected != count:
 			frappe.msgprint(
 				_("This calving expects {0} calves but {1} Birth events are recorded.").format(
-					expected, recorded
+					expected, count
 				),
 				alert=True,
 				indicator="orange",
