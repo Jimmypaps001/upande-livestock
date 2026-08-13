@@ -335,6 +335,7 @@ def _calf_row(calf, outcome):
 		"burn_name": tag,
 		"birth_weight": calf.get("birth_weight"),
 		"is_stillborn": 1 if stillborn else 0,
+		"herd": calf.get("herd"),
 	}
 
 
@@ -392,12 +393,21 @@ def record_birth(payload):
 		# One calf-creation path: record_calf_births owns the per-calf loop and lets
 		# the Livestock Event controller create each Animal. A second copy of this
 		# loop here is what would make a form-booked birth create the calf twice.
-		created = record_calf_births(
-			{
-				"calving": calving.name,
-				"calves": [_calf_row(c, outcome) for c in calves],
-			}
-		)["created"]
+		#
+		# Gated on outcome, matching the pre-Task-9 behaviour exactly: a Still
+		# Birth or Abortion creates only the Calving, with no Birth events at all.
+		# custom_calving_outcome still offers "Abortion" (Task 10 removes it), and
+		# without this gate every outcome — including Abortion — would create a
+		# submitted, is_stillborn Birth event linked to the calving: data that
+		# never existed before this task and is out of this task's scope.
+		created = []
+		if outcome == "Live Birth":
+			created = record_calf_births(
+				{
+					"calving": calving.name,
+					"calves": [_calf_row(c, outcome) for c in calves],
+				}
+			)["created"]
 
 		return {
 			"ok": True,
@@ -703,12 +713,15 @@ def record_calf_births(payload):
 				birth.calf_sex = calf.get("sex") if calf.get("sex") in ("Female", "Male") else "Female"
 				birth.calf_burn_name = calf.get("burn_name") or birth.calf_tag_number
 				birth.calf_birth_weight_kg = flt(calf.get("birth_weight"))
+				# An empty/omitted herd must still fall back to resolve_calf_herd() —
+				# create_calf_if_needed() treats a falsy herd the same as "not given".
+				birth.calf_herd = calf.get("herd") or ""
 				birth.remarks = f"Dam: {dam.tag_number or dam.burn_name}"
 
 			birth.insert()
 			birth.submit()
 			if not stillborn:
-				created.append({"animal": birth.animal, "tag": birth.calf_tag_number})
+				created.append({"animal": birth.animal, "tag": birth.calf_tag_number, "sex": birth.calf_sex})
 
 		calving.reload()
 		return {"ok": True, "created": created, "births_recorded": calving.births_recorded}

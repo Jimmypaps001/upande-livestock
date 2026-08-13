@@ -54,6 +54,7 @@
   "cb_calf",
   "calf_burn_name",
   "calf_birth_weight_kg",
+  "calf_herd",
   "dam",
   "related_calving",
   "tab_more",
@@ -353,6 +354,14 @@
    "fieldname": "calf_birth_weight_kg",
    "fieldtype": "Float",
    "label": "Birth Weight (kg)"
+  },
+  {
+   "description": "Leave blank to resolve the herd automatically (Default Calf Herd, calf-rearing flag, or age bracket).",
+   "fieldname": "calf_herd",
+   "fieldtype": "Link",
+   "label": "Calf Herd",
+   "no_copy": 1,
+   "options": "Herds"
   },
   {
    "fieldname": "dam",

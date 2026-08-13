@@ -3,10 +3,13 @@
 
 """Shared Animal helpers used by more than one entry path.
 
-Calf creation lives here rather than in the Livestock Event controller because
-api/operations.py:record_birth already owns the multi-calf loop for the web and
-mobile forms. If both created Animals independently, a birth booked through the
-form would create the calf twice.
+Calf creation lives here, in one function, rather than duplicated in the
+Livestock Event controller and in api/operations.py: every Birth event —
+whether inserted from the desk form, or created by record_birth /
+record_calf_births — leaves `animal` unset and lets
+LivestockEvent.create_calf_if_needed() call create_calf() here. If more than
+one path created Animals independently, a birth booked through any of them
+could create the calf twice.
 """
 
 import frappe

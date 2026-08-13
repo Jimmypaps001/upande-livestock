@@ -68,6 +68,15 @@ function open_births_dialog(frm) {
 						columns: 2,
 					},
 					{
+						fieldname: "herd",
+						fieldtype: "Link",
+						options: "Herds",
+						label: __("Herd"),
+						description: __("Leave blank to resolve automatically."),
+						in_list_view: 1,
+						columns: 2,
+					},
+					{
 						fieldname: "is_stillborn",
 						fieldtype: "Check",
 						label: __("Stillborn"),
