@@ -262,6 +262,33 @@ class LivestockEvent(Document):
 			)
 
 		# ============================================================
+		# CONDITIONAL MANDATORY: ANIMAL
+		# ============================================================
+		# animal carries mandatory_depends_on: "eval:!doc.is_stillborn" in the
+		# DocType JSON (for the desk form's dynamic asterisk), but — same as
+		# operator above — mandatory_depends_on is a client-side (desk UI)
+		# concept only and is never evaluated by server-side insert()/submit(),
+		# including via the REST API, bench console, data import or any other
+		# non-desk path. Without this explicit check, any event of any type
+		# could be created with no animal through those paths.
+		#
+		# The only legitimate animal-less event is a stillborn Birth, so the
+		# exemption is deliberately scoped to "this type creates animals AND
+		# is_stillborn is set" rather than a bare "is_stillborn" check —
+		# is_stillborn is only meaningful for Birth, and a bare check would let
+		# a stillborn-flagged Feeding or Movement through animal-less too.
+		#
+		# create_calf_if_needed() runs in before_insert(), which the Frappe
+		# insert() lifecycle runs before validate() — so for a non-stillborn
+		# Birth, self.animal is already populated with the newly created calf
+		# by the time this check runs.
+		if not self.animal and not (self._type_creates_animal() and self.is_stillborn):
+			frappe.throw(
+				_("{0} is mandatory for this Livestock Event.").format(_("Animal")),
+				frappe.MandatoryError,
+			)
+
+		# ============================================================
 		# VALIDATION FOR SERVICE EVENTS
 		# ============================================================
 
