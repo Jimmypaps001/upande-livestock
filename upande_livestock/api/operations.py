@@ -41,6 +41,7 @@ from upande_livestock.upande_livestock.doctype.livestock_event.livestock_event i
 # helpers
 # ---------------------------------------------------------------------------
 
+
 def _guard(doctype: str):
 	"""Raise a clean PermissionError-style throw if the user can't create `doctype`."""
 	if not frappe.has_permission(doctype, "create"):
@@ -81,14 +82,69 @@ def _select_options(doctype, fieldname):
 
 
 def _herd_label_map():
-	return {
-		h.name: (h.herd_name or h.name)
-		for h in frappe.get_all("Herds", fields=["name", "herd_name"])
-	}
+	return {h.name: (h.herd_name or h.name) for h in frappe.get_all("Herds", fields=["name", "herd_name"])}
 
 
 def _animal_label(row):
 	return row.get("tag_number") or row.get("burn_name") or row.get("name")
+
+
+# A retired animal must never be offered as a data-entry target. retire_animal()
+# (api/animal.py) sets `disabled` alongside the final status, and `disabled` is the
+# canonical flag — it is also what Frappe's own link search honours. The status
+# list is kept as a second predicate so an animal that reached a final status
+# without being disabled, or was disabled by any other route, is excluded either
+# way.
+_RETIRED_STATUSES = ["Dead", "Deceased", "Sold", "Culled", "Disposed"]
+
+_ANIMAL_FIELDS = ["name", "tag_number", "burn_name", "current_herd", "repro_status"]
+
+
+def _active_animals():
+	"""Every animal still eligible to receive an event, newest tag order."""
+	return frappe.get_all(
+		"Animal",
+		filters=[["status", "not in", _RETIRED_STATUSES], ["disabled", "=", 0]],
+		fields=_ANIMAL_FIELDS,
+		order_by="tag_number asc",
+		limit_page_length=5000,
+	)
+
+
+def _animal_choices(animals, labels):
+	return [
+		{
+			"name": a.name,
+			"label": _animal_label(a),
+			"herd": a.current_herd,
+			"herd_label": labels.get(a.current_herd or "", a.current_herd or ""),
+			"repro": a.repro_status,
+		}
+		for a in animals
+	]
+
+
+def _default_company():
+	"""The company to stamp on livestock documents.
+
+	Livestock Settings wins so a farm can pin its own company, then the user's
+	default, then the site-wide Global Defaults value — the same last resort
+	patches/migrate_animals_off_asset.py uses. Without the Global Defaults step the
+	health, weight and disposal forms fail with "No company configured" on any site
+	that never filled in the livestock-specific setting.
+	"""
+	return (
+		frappe.db.get_single_value("Livestock Settings", "custom_default_company")
+		or frappe.defaults.get_user_default("company")
+		or frappe.db.get_single_value("Global Defaults", "default_company")
+	)
+
+
+def _company_or_throw(company=None):
+	company = company or _default_company()
+	if not company:
+		frappe.throw(_("No company configured (Livestock Settings > Default Company)."))
+	return company
 
 
 def _run(fn, log_title):
@@ -107,6 +163,7 @@ def _run(fn, log_title):
 # ===========================================================================
 # FEED
 # ===========================================================================
+
 
 @frappe.whitelist()
 def feed_options():
@@ -170,18 +227,16 @@ def issue_feed(herd, qty, employee=None):
 # MILKING
 # ===========================================================================
 
+
 @frappe.whitelist()
 def milking_options():
 	def go():
-		herds = frappe.get_all(
-			"Herds", fields=["name", "herd_name", "cost_center"], order_by="herd_name asc"
-		)
+		herds = frappe.get_all("Herds", fields=["name", "herd_name", "cost_center"], order_by="herd_name asc")
 		return {
 			"ok": True,
 			"herds": [{"name": h.name, "label": h.herd_name or h.name} for h in herds],
 			"sessions": _select_options("Milk Recording", "session"),
-			"company": frappe.db.get_single_value("Livestock Settings", "custom_default_company")
-			or frappe.defaults.get_user_default("company"),
+			"company": _default_company(),
 			"employee": _current_employee(),
 		}
 
@@ -253,29 +308,15 @@ def create_milk_recording(payload):
 # EVENTS  (Movement · Drying Off · Calving/Birth)
 # ===========================================================================
 
+
 @frappe.whitelist()
 def event_options():
 	def go():
 		labels = _herd_label_map()
-		animals = frappe.get_all(
-			"Animal",
-			filters=[["status", "not in", ["Dead", "Deceased", "Sold", "Culled", "Disposed"]]],
-			fields=["name", "tag_number", "burn_name", "current_herd", "repro_status"],
-			order_by="tag_number asc",
-			limit_page_length=5000,
-		)
+		animals = _active_animals()
 		return {
 			"ok": True,
-			"animals": [
-				{
-					"name": a.name,
-					"label": _animal_label(a),
-					"herd": a.current_herd,
-					"herd_label": labels.get(a.current_herd or "", a.current_herd or ""),
-					"repro": a.repro_status,
-				}
-				for a in animals
-			],
+			"animals": _animal_choices(animals, labels),
 			"herds": [{"name": n, "label": l} for n, l in sorted(labels.items(), key=lambda x: x[1])],
 			"calving_outcomes": _select_options("Livestock Event", "custom_calving_outcome")
 			or ["Live Birth", "Still Birth"],
@@ -285,11 +326,21 @@ def event_options():
 	return _run(go, "livestock event_options failed")
 
 
-def _new_livestock_event(d, event_type):
+def _new_livestock_event(d, event_type, date_key=None):
+	"""Build an unsaved Livestock Event of `event_type`.
+
+	`event_date` is the canonical date for every event type: livestock_guards.py
+	keys its age and interval rules on it, and the desk form relabels it per type
+	("Service Date", "Movement Date", "Diagnosis Date"). A form that collects only
+	the type-specific date therefore passes `date_key` so that date also becomes
+	`event_date`. Without it a backdated entry stored the right `service_date` and
+	an `event_date` of today, leaving the two out of step and the interval guards
+	reading the wrong day.
+	"""
 	doc = frappe.new_doc("Livestock Event")
 	doc.animal = d.get("animal")
 	doc.event_type = event_type
-	doc.event_date = d.get("event_date") or today()
+	doc.event_date = d.get("event_date") or (d.get(date_key) if date_key else None) or today()
 	doc.operator = _employee_or_throw(d.get("operator"))
 	doc.remarks = d.get("remarks")
 	return doc
@@ -428,17 +479,12 @@ def record_birth(payload):
 # BREEDING  (Service/Insemination · Pregnancy Diagnosis)  — NO Stock Entry
 # ===========================================================================
 
+
 @frappe.whitelist()
 def breeding_options():
 	def go():
 		labels = _herd_label_map()
-		animals = frappe.get_all(
-			"Animal",
-			filters=[["status", "not in", ["Dead", "Deceased", "Sold", "Culled", "Disposed"]]],
-			fields=["name", "tag_number", "burn_name", "current_herd", "repro_status"],
-			order_by="tag_number asc",
-			limit_page_length=5000,
-		)
+		animals = _active_animals()
 		sires = sorted(
 			{
 				r.sire
@@ -453,15 +499,7 @@ def breeding_options():
 		)
 		return {
 			"ok": True,
-			"animals": [
-				{
-					"name": a.name,
-					"label": _animal_label(a),
-					"herd_label": labels.get(a.current_herd or "", a.current_herd or ""),
-					"repro": a.repro_status,
-				}
-				for a in animals
-			],
+			"animals": _animal_choices(animals, labels),
 			"service_types": _select_options("Livestock Event", "service_type") or ["A.I.", "Natural"],
 			"diagnosis_results": _select_options("Livestock Event", "diagnosis_result")
 			or ["Confirmed", "Not Pregnant", "Aborted"],
@@ -550,7 +588,7 @@ def create_service_event(payload):
 		d = _ok(payload)
 		if not d.get("animal"):
 			frappe.throw(_("Select an animal."))
-		doc = _new_livestock_event(d, "Service")
+		doc = _new_livestock_event(d, "Service", date_key="service_date")
 		doc.service_type = d.get("service_type")
 		doc.service_date = d.get("service_date") or today()
 		doc.sire = d.get("sire")
@@ -583,7 +621,7 @@ def create_pregnancy_diagnosis(payload):
 			frappe.throw(_("Select an animal."))
 		if not d.get("diagnosis_result"):
 			frappe.throw(_("Select a diagnosis result."))
-		doc = _new_livestock_event(d, "Pregnancy Diagnosis")
+		doc = _new_livestock_event(d, "Pregnancy Diagnosis", date_key="diagnosis_date")
 		doc.diagnosis_date = d.get("diagnosis_date") or today()
 		doc.diagnosis_result = d.get("diagnosis_result")
 		doc.diagnosis_remarks = d.get("diagnosis_remarks")
@@ -599,6 +637,7 @@ def create_pregnancy_diagnosis(payload):
 # ===========================================================================
 # PARLOUR  (Milking Parlour CFU checksheet)
 # ===========================================================================
+
 
 @frappe.whitelist()
 def parlour_options():
@@ -670,6 +709,7 @@ def create_parlour_checksheet(payload):
 # ===========================================================================
 # MULTIPLE BIRTHS  (twins/triplets — one Calving, N Birth events)
 # ===========================================================================
+
 
 @frappe.whitelist()
 def record_calf_births(payload):
@@ -751,3 +791,279 @@ def record_calf_births(payload):
 		return {"ok": True, "created": created, "births_recorded": calving.births_recorded}
 
 	return _run(go, "livestock record_calf_births failed")
+
+
+# ===========================================================================
+# ABORTION
+# ===========================================================================
+
+
+@frappe.whitelist()
+def create_abortion_event(payload):
+	"""Record an Abortion as a first-class Livestock Event.
+
+	`abortion_cause` is enforced by LivestockEvent.validate() rather than by a
+	reqd flag on the field (mandatory_depends_on is browser-only in Frappe 16), so
+	it is checked here too — otherwise the failure surfaces as a validation throw
+	from deep in the controller instead of a clean message on the form.
+
+	The pregnancy link is deliberately not required: the controller auto-links the
+	animal's open Confirmed pregnancy when `custom_related_pregnancy` is blank, and
+	an abortion with no pregnancy on file is legitimate data rather than an error.
+	"""
+
+	def go():
+		_guard("Livestock Event")
+		d = _ok(payload)
+		if not d.get("animal"):
+			frappe.throw(_("Select an animal."))
+		if not d.get("abortion_cause"):
+			frappe.throw(_("Select the cause of abortion."))
+		doc = _new_livestock_event(d, "Abortion")
+		doc.abortion_cause = d.get("abortion_cause")
+		doc.abortion_notes = d.get("abortion_notes")
+		if d.get("related_pregnancy"):
+			doc.custom_related_pregnancy = d.get("related_pregnancy")
+		doc.insert()
+		doc.submit()
+		doc.reload()
+		return {
+			"ok": True,
+			"name": doc.name,
+			"related_pregnancy": doc.custom_related_pregnancy or "",
+			"ready_for_service_date": str(doc.ready_for_service_date or ""),
+		}
+
+	return _run(go, "livestock create_abortion_event failed")
+
+
+# ===========================================================================
+# DISPOSAL  (sold / died / culled)
+# ===========================================================================
+
+
+@frappe.whitelist()
+def disposal_options():
+	def go():
+		labels = _herd_label_map()
+		return {
+			"ok": True,
+			"animals": _animal_choices(_active_animals(), labels),
+			"disposal_types": _select_options("Livestock Disposal", "disposal_type"),
+			"customers": [
+				c.name
+				for c in frappe.get_all(
+					"Customer", fields=["name"], order_by="name asc", limit_page_length=500
+				)
+			],
+			"company": _default_company(),
+		}
+
+	return _run(go, "livestock disposal_options failed")
+
+
+@frappe.whitelist()
+def record_disposal(payload):
+	"""Retire an animal by creating and submitting a Livestock Disposal.
+
+	All the consequences live in LivestockDisposal.on_submit(): it posts the asset
+	sale or scrap through api/assets.py and calls retire_animal(), which sets the
+	final status, sets `disabled`, and recomputes the herd headcount. This endpoint
+	deliberately adds none of that itself — one submit is the whole flow.
+	"""
+
+	def go():
+		_guard("Livestock Disposal")
+		d = _ok(payload)
+		if not d.get("animal"):
+			frappe.throw(_("Select an animal."))
+		if not d.get("disposal_type"):
+			frappe.throw(_("Select how the animal left the herd."))
+		doc = frappe.new_doc("Livestock Disposal")
+		doc.animal = d.get("animal")
+		doc.disposal_date = d.get("disposal_date") or today()
+		doc.disposal_type = d.get("disposal_type")
+		doc.sale_price = flt(d.get("sale_price")) or None
+		doc.customer = d.get("customer") or None
+		doc.buyer_name = d.get("buyer_name")
+		doc.reason_details = d.get("reason_details")
+		doc.witness = d.get("witness")
+		doc.insert()
+		doc.submit()
+		doc.reload()
+		status, disabled = frappe.db.get_value("Animal", doc.animal, ["status", "disabled"])
+		return {
+			"ok": True,
+			"name": doc.name,
+			"animal_status": status,
+			"animal_disabled": int(disabled or 0),
+		}
+
+	return _run(go, "livestock record_disposal failed")
+
+
+# ===========================================================================
+# WEIGHT RECORDING
+# ===========================================================================
+
+
+@frappe.whitelist()
+def weight_options():
+	def go():
+		labels = _herd_label_map()
+		return {
+			"ok": True,
+			"animals": _animal_choices(_active_animals(), labels),
+			"methods": _select_options("Livestock Weight Record", "method"),
+			"employee": _current_employee(),
+		}
+
+	return _run(go, "livestock weight_options failed")
+
+
+@frappe.whitelist()
+def create_weight_record(payload):
+	"""Record a weighing as a Livestock Weight Record.
+
+	The doctype owns the derived columns (previous weight, daily gain) and the
+	minimum-interval guard, so this endpoint only carries the measurement across.
+	"""
+
+	def go():
+		_guard("Livestock Weight Record")
+		d = _ok(payload)
+		if not d.get("animal"):
+			frappe.throw(_("Select an animal."))
+		weight = flt(d.get("weight_kg"))
+		if weight <= 0:
+			frappe.throw(_("Weight must be greater than zero."))
+		doc = frappe.new_doc("Livestock Weight Record")
+		doc.animal = d.get("animal")
+		doc.company = _company_or_throw(d.get("company"))
+		doc.weight_date = d.get("weight_date") or today()
+		doc.measured_by = d.get("measured_by") or _current_employee()
+		doc.method = d.get("method") or None
+		doc.weight_kg = weight
+		doc.bcs = flt(d.get("bcs")) or None
+		doc.heart_girth_cm = flt(d.get("heart_girth_cm")) or None
+		doc.remarks = d.get("remarks")
+		doc.insert()
+		doc.submit()
+		doc.reload()
+		return {
+			"ok": True,
+			"name": doc.name,
+			"weight_kg": doc.weight_kg,
+			"daily_gain_kg": doc.daily_gain_kg,
+			"previous_weight_kg": doc.previous_weight_kg,
+		}
+
+	return _run(go, "livestock create_weight_record failed")
+
+
+# ===========================================================================
+# HEALTH  (Check Up = Livestock Diagnosis, Health Case = Livestock Health Case)
+# ===========================================================================
+
+
+@frappe.whitelist()
+def health_options():
+	def go():
+		labels = _herd_label_map()
+		return {
+			"ok": True,
+			"animals": _animal_choices(_active_animals(), labels),
+			"diseases": [
+				r.name
+				for r in frappe.get_all(
+					"Livestock Disease", fields=["name"], order_by="name asc", limit_page_length=500
+				)
+			],
+			"abortion_causes": _select_options("Livestock Event", "abortion_cause"),
+			"appearances": _select_options("Livestock Diagnosis", "appearance"),
+			"hydrations": _select_options("Livestock Diagnosis", "hydration"),
+			"actions": _select_options("Livestock Diagnosis", "action_taken"),
+			"case_statuses": _select_options("Livestock Health Case", "case_status"),
+			"severities": _select_options("Livestock Health Case", "severity"),
+			"employee": _current_employee(),
+			"company": _default_company(),
+		}
+
+	return _run(go, "livestock health_options failed")
+
+
+@frappe.whitelist()
+def create_check_up(payload):
+	"""Record a routine check-up as a Livestock Diagnosis.
+
+	LivestockDiagnosis.on_submit() calls sync_event_for(self, "Check Up"), so the
+	animal's timeline event is created by the doctype — not here.
+	"""
+
+	def go():
+		_guard("Livestock Diagnosis")
+		d = _ok(payload)
+		if not d.get("animal"):
+			frappe.throw(_("Select an animal."))
+		if not d.get("action_taken"):
+			frappe.throw(_("Select the action taken."))
+		doc = frappe.new_doc("Livestock Diagnosis")
+		doc.animal = d.get("animal")
+		doc.company = _company_or_throw(d.get("company"))
+		doc.diagnosis_date = d.get("diagnosis_date") or today()
+		doc.operator = _employee_or_throw(d.get("operator"))
+		doc.reason_for_check = d.get("reason_for_check")
+		doc.appearance = d.get("appearance") or None
+		doc.hydration = d.get("hydration") or None
+		doc.temperature_c = flt(d.get("temperature_c")) or None
+		doc.respiration_rate = int(flt(d.get("respiration_rate"))) or None
+		doc.heart_rate = int(flt(d.get("heart_rate"))) or None
+		doc.bcs = flt(d.get("bcs")) or None
+		doc.lameness_score = int(flt(d.get("lameness_score"))) or None
+		doc.suggested_disease = d.get("suggested_disease") or None
+		doc.differential_notes = d.get("differential_notes")
+		doc.action_taken = d.get("action_taken")
+		doc.action_notes = d.get("action_notes")
+		doc.follow_up_date = d.get("follow_up_date") or None
+		doc.insert()
+		doc.submit()
+		doc.reload()
+		return {"ok": True, "name": doc.name, "action_taken": doc.action_taken}
+
+	return _run(go, "livestock create_check_up failed")
+
+
+@frappe.whitelist()
+def create_health_case(payload):
+	"""Open a Livestock Health Case.
+
+	LivestockHealthCase.on_submit() calls sync_event_for(self, "Health Case"), so
+	the timeline event is the doctype's job. Treatments are added on the case
+	itself afterwards — this endpoint opens the case, it does not close it.
+	"""
+
+	def go():
+		_guard("Livestock Health Case")
+		d = _ok(payload)
+		if not d.get("animal"):
+			frappe.throw(_("Select an animal."))
+		if not d.get("presenting_symptoms"):
+			frappe.throw(_("Describe the presenting symptoms."))
+		doc = frappe.new_doc("Livestock Health Case")
+		doc.animal = d.get("animal")
+		doc.company = _company_or_throw(d.get("company"))
+		doc.opened_date = d.get("opened_date") or today()
+		doc.opened_by = d.get("opened_by") or _current_employee()
+		doc.case_status = d.get("case_status") or "Open"
+		doc.presenting_symptoms = d.get("presenting_symptoms")
+		doc.body_systems = d.get("body_systems")
+		doc.provisional_diagnosis = d.get("provisional_diagnosis") or None
+		doc.severity = d.get("severity") or None
+		doc.vet_called = 1 if d.get("vet_called") else 0
+		doc.vet_name = d.get("vet_name")
+		doc.insert()
+		doc.submit()
+		doc.reload()
+		return {"ok": True, "name": doc.name, "case_status": doc.case_status}
+
+	return _run(go, "livestock create_health_case failed")
