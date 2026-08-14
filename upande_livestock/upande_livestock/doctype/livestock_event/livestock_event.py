@@ -338,7 +338,17 @@ class LivestockEvent(Document):
 		# insert() lifecycle runs before validate() — so for a non-stillborn
 		# Birth, self.animal is already populated with the newly created calf
 		# by the time this check runs.
-		if not self.animal and not (self._type_creates_animal() and self.is_stillborn):
+		# A Feeding is the second legitimate animal-less event, and for a different
+		# reason: feed is issued to a whole herd, not to one animal. Recording it per
+		# animal would mean 119 identical rows for a single trough. The exemption is
+		# scoped to "Feeding AND a herd is named" so it cannot become a way to save
+		# an event with neither an animal nor a herd attached to anything.
+		herd_level_feeding = self.event_type == "Feeding" and bool(self.current_herd)
+		if (
+			not self.animal
+			and not (self._type_creates_animal() and self.is_stillborn)
+			and not herd_level_feeding
+		):
 			frappe.throw(
 				_("{0} is mandatory for this Livestock Event.").format(_("Animal")),
 				frappe.MandatoryError,
