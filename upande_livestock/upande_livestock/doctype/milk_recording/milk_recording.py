@@ -6,6 +6,32 @@ from frappe.model.document import Document
 from frappe.utils import flt
 
 
+def _item_account(item_code, company, fieldname):
+	"""Resolve an item's account the way Frappe 16 does: Item Defaults, then the
+	Item Group's defaults. Returns None when neither level defines it.
+
+	Kept as a module function rather than a method so api/operations.py and the
+	drug/feed flows can reuse the same resolution order.
+	"""
+	if not (item_code and company):
+		return None
+	value = frappe.db.get_value(
+		"Item Default",
+		{"parent": item_code, "parenttype": "Item", "company": company},
+		fieldname,
+	)
+	if value:
+		return value
+	item_group = frappe.db.get_value("Item", item_code, "item_group")
+	if not item_group:
+		return None
+	return frappe.db.get_value(
+		"Item Default",
+		{"parent": item_group, "parenttype": "Item Group", "company": company},
+		fieldname,
+	)
+
+
 class MilkRecording(Document):
 	def validate(self):
 		# The whole point of a milk record is the amount milked. Frappe's `reqd`
@@ -33,7 +59,12 @@ class MilkRecording(Document):
 		se_type = (
 			frappe.db.get_single_value("Livestock Settings", "custom_milking_stock_entry_type") or "Milking"
 		)
-		income_acct = self.income_account
+		# Frappe 16 resolves an item's accounts from its Item Defaults, falling back to
+		# its Item Group's — so when the record does not name an income account, look
+		# it up the same way rather than silently skipping the revenue JE (which is
+		# what happened before: income_account is not a required field and nothing
+		# ever populated it).
+		income_acct = self.income_account or _item_account(milk_item, company, "income_account")
 		credit_acct = frappe.db.get_single_value("Livestock Settings", "custom_default_credit_account")
 		cost_center = self.cost_center
 		net_yield = flt(self.net_yield_kg)
@@ -62,28 +93,49 @@ class MilkRecording(Document):
 			self.herd, self.milking_time, self.recording_date
 		)
 
-		if net_yield > 0:
-			r1 = se.append("items", {})
-			r1.item_code = milk_item
-			r1.qty = net_yield
-			r1.t_warehouse = target_wh
+		# A Material Receipt of milk needs a valuation, and milk has no purchase price
+		# — it is produced by the herd. The Item's own valuation_rate is the standard
+		# cost to use; when a site has not set one, the row is flagged
+		# allow_zero_valuation_rate so the receipt still posts. Without either, ERPNext
+		# throws "Valuation Rate for the Item ... is required" and the whole Stock
+		# Entry is lost.
+		valuation = flt(frappe.db.get_value("Item", milk_item, "valuation_rate"))
+
+		def _milk_row(qty, warehouse):
+			row = se.append("items", {})
+			row.item_code = milk_item
+			row.qty = qty
+			row.t_warehouse = warehouse
+			if valuation > 0:
+				row.basic_rate = valuation
+			else:
+				row.allow_zero_valuation_rate = 1
 			if cost_center:
-				r1.cost_center = cost_center
+				row.cost_center = cost_center
+			return row
+
+		if net_yield > 0:
+			_milk_row(net_yield, target_wh)
 
 		if discarded > 0 and discard_wh:
-			r2 = se.append("items", {})
-			r2.item_code = milk_item
-			r2.qty = discarded
-			r2.t_warehouse = discard_wh
-			if cost_center:
-				r2.cost_center = cost_center
+			_milk_row(discarded, discard_wh)
 
 		try:
 			se.insert(ignore_permissions=True)
 			se.submit()
 			frappe.db.set_value("Milk Recording", self.name, "stock_entry", se.name)
 		except Exception as e:
-			frappe.log_error("Milk Recording", "Stock Entry creation failed: " + str(e))
+			# Previously this only wrote to the Error Log, so the user was told
+			# "Stock Entry created" while no stock had moved at all. Tell them.
+			frappe.log_error(
+				message=frappe.get_traceback(), title="Milk Recording Stock Entry creation failed"
+			)
+			frappe.msgprint(
+				"The milk was recorded but no stock was posted: {0}".format(str(e)),
+				alert=True,
+				indicator="red",
+				title="Stock Entry failed",
+			)
 
 		# 2. Revenue JE (best-effort — skipped unless an income account is configured)
 		if revenue > 0 and income_acct and credit_acct:
@@ -106,9 +158,19 @@ class MilkRecording(Document):
 				je.submit()
 				frappe.db.set_value("Milk Recording", self.name, "journal_entry", je.name)
 			except Exception as e:
-				frappe.log_error("Milk Recording", "Revenue JE failed: " + str(e))
+				frappe.log_error(message=frappe.get_traceback(), title="Milk Recording revenue JE failed")
+				frappe.msgprint(
+					"The milk was recorded but the revenue Journal Entry did not post: {0}".format(str(e)),
+					alert=True,
+					indicator="orange",
+					title="Revenue JE failed",
+				)
 
-		se_ref = frappe.db.get_value("Milk Recording", self.name, "stock_entry") or "pending"
+		se_ref = frappe.db.get_value("Milk Recording", self.name, "stock_entry")
+		if not se_ref:
+			# Do not claim a Stock Entry that does not exist; the failure above already
+			# said what went wrong.
+			return
 		frappe.msgprint(
 			"Stock Entry "
 			+ se_ref

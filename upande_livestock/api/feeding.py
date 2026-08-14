@@ -15,7 +15,7 @@ Stage B (feed_herd): issue a chosen quantity of the manufactured feed out of
 """
 
 import frappe
-from frappe.utils import flt
+from frappe.utils import flt, today
 from erpnext.manufacturing.doctype.work_order.work_order import make_stock_entry
 
 DEFAULT_FEED_STORE = "Concentrate Mixing Store - KR"
@@ -197,10 +197,15 @@ def feed_herd(herd, qty, employee=None):
 	se.remarks = "Animal feeding - {0} - {1} - {2} {3}".format(herd, item, qty, bom.uom or "")
 	se.insert(ignore_permissions=True)
 	se.submit()
-	frappe.db.commit()
+	# No frappe.db.commit() here: it stranded the Stock Entry when the Livestock
+	# Event below failed, and defeats the rollback api/operations._run() relies on.
+	# The request (or the caller) owns the commit.
+
+	event = _record_feeding_event(herd, item, qty, bom.uom, employee, se.name)
 
 	return {
 		"stock_entry": se.name,
+		"livestock_event": event,
 		"herd": herd,
 		"production_item": item,
 		"issued_qty": qty,
@@ -208,3 +213,36 @@ def feed_herd(herd, qty, employee=None):
 		"store": store,
 		"employee": employee,
 	}
+
+
+def _record_feeding_event(herd, item, qty, uom, employee, stock_entry):
+	"""Put the feeding on the herd's timeline as a Feeding Livestock Event.
+
+	Herd-level, with no animal: feed goes to a trough, not to one cow, and
+	LivestockEvent.validate() has a matching exemption for exactly this case. One
+	event per animal would mean 119 identical rows for a single feed issue.
+
+	The event is best-effort. The feed has physically left the store once the Stock
+	Entry submits, so a timeline write that fails must not roll that back and leave
+	the books disagreeing with the yard — it warns instead.
+	"""
+	try:
+		doc = frappe.new_doc("Livestock Event")
+		doc.event_type = "Feeding"
+		doc.event_date = today()
+		doc.current_herd = herd
+		doc.operator = employee
+		doc.stock_entry = stock_entry
+		doc.remarks = "Feed issued: {0} {1} of {2}".format(qty, uom or "", item)
+		doc.flags.ignore_permissions = True
+		doc.insert(ignore_permissions=True)
+		doc.submit()
+		return doc.name
+	except Exception as e:
+		frappe.log_error(message=frappe.get_traceback(), title="Livestock feeding event failed")
+		frappe.msgprint(
+			"Feed was issued ({0}), but the Feeding event was not recorded: {1}".format(stock_entry, str(e)),
+			alert=True,
+			indicator="orange",
+		)
+		return None
