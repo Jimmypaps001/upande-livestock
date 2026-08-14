@@ -19,16 +19,38 @@ from frappe.utils import add_days, add_months, flt, get_first_day, today
 # Animal.status values that should NOT count as "active" livestock.
 _INACTIVE_STATUS = ("Dead", "Deceased", "Sold", "Culled", "Disposed")
 
+
+def _is_active(row) -> bool:
+	"""Whether an Animal row counts as active livestock.
+
+	`disabled` is the canonical retirement flag — retire_animal() sets it together
+	with the final status — so it is checked alongside the status list. Keeping both
+	predicates means an animal retired by any route drops out of the counts, and it
+	matches _active_animals() in api/operations.py so the dashboard and the
+	data-entry dropdowns cannot disagree about what "active" means.
+	"""
+	return not row.get("disabled") and (row.get("status") or "") not in _INACTIVE_STATUS
+
+
+def _active_animal_count() -> float:
+	placeholders = ", ".join(["%s"] * len(_INACTIVE_STATUS))
+	return flt(
+		frappe.db.sql(
+			f"""SELECT COUNT(*) FROM `tabAnimal`
+			    WHERE IFNULL(disabled, 0) = 0
+			      AND IFNULL(status, '') NOT IN ({placeholders})""",
+			_INACTIVE_STATUS,
+		)[0][0]
+	)
+
+
 # Health-case statuses treated as still open / needing attention.
 _OPEN_CASE_STATUS = ("Open", "Under Treatment", "Chronic")
 
 
 def _herd_labels() -> dict:
 	"""Map Herds.name -> display label (herd_name, falling back to name)."""
-	return {
-		h.name: (h.herd_name or h.name)
-		for h in frappe.get_all("Herds", fields=["name", "herd_name"])
-	}
+	return {h.name: (h.herd_name or h.name) for h in frappe.get_all("Herds", fields=["name", "herd_name"])}
 
 
 def _zeros() -> dict:
@@ -63,14 +85,7 @@ def _build() -> dict:
 	k = out["kpis"]
 
 	# ---- KPI: active animals + distinct herds ----------------------------
-	placeholders = ", ".join(["%s"] * len(_INACTIVE_STATUS))
-	k["active_animals"] = flt(
-		frappe.db.sql(
-			f"""SELECT COUNT(*) FROM `tabAnimal`
-			    WHERE IFNULL(status, '') NOT IN ({placeholders})""",
-			_INACTIVE_STATUS,
-		)[0][0]
-	)
+	k["active_animals"] = _active_animal_count()
 	k["herds_count"] = flt(
 		frappe.db.sql(
 			"""SELECT COUNT(DISTINCT current_herd) FROM `tabAnimal`
@@ -91,9 +106,7 @@ def _build() -> dict:
 
 	# ---- KPI: health events this week ------------------------------------
 	week_ago = add_days(today(), -7)
-	k["health_events"] = flt(
-		frappe.db.count("Livestock Health Case", {"opened_date": [">=", week_ago]})
-	)
+	k["health_events"] = flt(frappe.db.count("Livestock Health Case", {"opened_date": [">=", week_ago]}))
 
 	# ---- KPI: births this month ------------------------------------------
 	month_start = today()[:8] + "01"
@@ -200,15 +213,25 @@ def get_animals() -> dict:
 		rows = frappe.get_all(
 			"Animal",
 			fields=[
-				"name", "tag_number", "burn_name", "sex", "species", "breed",
-				"current_herd", "status", "repro_status", "days_in_milk", "parity",
+				"name",
+				"tag_number",
+				"burn_name",
+				"sex",
+				"species",
+				"breed",
+				"current_herd",
+				"status",
+				"repro_status",
+				"days_in_milk",
+				"parity",
+				"disabled",
 			],
 			order_by="tag_number asc",
 			limit_page_length=1000,
 		)
 		for r in rows:
 			r["herd_label"] = herds.get(r.get("current_herd") or "", r.get("current_herd") or "")
-		active = [r for r in rows if (r.get("status") or "") not in _INACTIVE_STATUS]
+		active = [r for r in rows if _is_active(r)]
 		summary = {
 			"total": len(rows),
 			"active": len(active),
@@ -238,9 +261,18 @@ def get_production() -> dict:
 		rows = frappe.get_all(
 			"Milk Recording",
 			fields=[
-				"name", "recording_date", "session", "herd", "cows_milked",
-				"total_yield_kg", "discarded_kg", "net_yield_kg", "fat_percent",
-				"protein_percent", "bulk_scc", "milk_revenue",
+				"name",
+				"recording_date",
+				"session",
+				"herd",
+				"cows_milked",
+				"total_yield_kg",
+				"discarded_kg",
+				"net_yield_kg",
+				"fat_percent",
+				"protein_percent",
+				"bulk_scc",
+				"milk_revenue",
 			],
 			order_by="recording_date desc, creation desc",
 			limit_page_length=200,
@@ -285,9 +317,18 @@ def get_health() -> dict:
 		rows = frappe.get_all(
 			"Livestock Health Case",
 			fields=[
-				"name", "animal", "animal_name", "current_herd", "opened_date",
-				"case_status", "severity", "provisional_diagnosis",
-				"confirmed_diagnosis", "vet_called", "is_zoonotic", "is_notifiable",
+				"name",
+				"animal",
+				"animal_name",
+				"current_herd",
+				"opened_date",
+				"case_status",
+				"severity",
+				"provisional_diagnosis",
+				"confirmed_diagnosis",
+				"vet_called",
+				"is_zoonotic",
+				"is_notifiable",
 			],
 			order_by="opened_date desc",
 			limit_page_length=300,
@@ -326,9 +367,16 @@ def get_events() -> dict:
 		rows = frappe.get_all(
 			"Livestock Event",
 			fields=[
-				"name", "animal", "current_herd", "new_herd", "event_type",
-				"event_date", "service_type", "service_status",
-				"pregnancy_confirmation_status", "diagnosis_result",
+				"name",
+				"animal",
+				"current_herd",
+				"new_herd",
+				"event_type",
+				"event_date",
+				"service_type",
+				"service_status",
+				"pregnancy_confirmation_status",
+				"diagnosis_result",
 			],
 			order_by="event_date desc, creation desc",
 			limit_page_length=300,
@@ -369,14 +417,7 @@ def get_reports() -> dict:
 		m_now_kg, m_now_rev = _milk_between(this_start, next_start)
 		m_prev_kg, m_prev_rev = _milk_between(last_start, this_start)
 
-		placeholders = ", ".join(["%s"] * len(_INACTIVE_STATUS))
-		active = flt(
-			frappe.db.sql(
-				f"""SELECT COUNT(*) FROM `tabAnimal`
-				    WHERE IFNULL(status, '') NOT IN ({placeholders})""",
-				_INACTIVE_STATUS,
-			)[0][0]
-		)
+		active = _active_animal_count()
 
 		open_cases = flt(
 			frappe.db.count("Livestock Health Case", {"case_status": ["in", list(_OPEN_CASE_STATUS)]})
@@ -437,6 +478,9 @@ def get_reports() -> dict:
 	except Exception:
 		frappe.log_error(title="livestock get_reports failed")
 		return {
-			"production": {}, "health": {}, "reproduction": {}, "herds": [],
+			"production": {},
+			"health": {},
+			"reproduction": {},
+			"herds": [],
 			"error": "Could not load reports.",
 		}
