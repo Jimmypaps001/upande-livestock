@@ -49,6 +49,11 @@
   "custom_dairy_col",
   "custom_milk_target_warehouse",
   "custom_milk_discard_warehouse",
+  "sb_husbandry_stock",
+  "drug_warehouse",
+  "semen_warehouse",
+  "cb_husbandry_stock",
+  "semen_item",
   "sb_accounting",
   "custom_default_company",
   "custom_default_credit_account"
@@ -332,6 +337,36 @@
    "fieldtype": "Link",
    "label": "Default Credit Account (Livestock JE)",
    "options": "Account"
+  },
+  {
+   "fieldname": "sb_husbandry_stock",
+   "fieldtype": "Section Break",
+   "label": "Drug & Semen Stores"
+  },
+  {
+   "description": "Default source warehouse for vaccination and deworming drug issues. Each drug row can override it.",
+   "fieldname": "drug_warehouse",
+   "fieldtype": "Link",
+   "label": "Drug Store",
+   "options": "Warehouse"
+  },
+  {
+   "description": "Warehouse the semen straws are issued from. Falls back to the Drug Store when unset.",
+   "fieldname": "semen_warehouse",
+   "fieldtype": "Link",
+   "label": "Semen Store",
+   "options": "Warehouse"
+  },
+  {
+   "fieldname": "cb_husbandry_stock",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Default straw item for a Service when none is chosen on the event.",
+   "fieldname": "semen_item",
+   "fieldtype": "Link",
+   "label": "Default Semen Item",
+   "options": "Item"
   }
  ],
  "grid_page_length": 50,

@@ -17,7 +17,9 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.model.naming import make_autoname
-from frappe.utils import getdate, nowdate
+from frappe.utils import flt, getdate, nowdate
+
+from upande_livestock import livestock_stock
 
 from upande_livestock.api.animal import create_calf
 from upande_livestock.livestock_guards import check_guards
@@ -130,28 +132,32 @@ class LivestockEvent(Document):
 
 			# Create pregnancy check alert/reminder
 			if self.pregnancy_check_due_date:
-				existing_todo = frappe.db.exists({
-					"doctype": "ToDo",
-					"reference_type": "Livestock Event",
-					"reference_name": self.name,
-					"status": ["!=", "Cancelled"]
-				})
+				existing_todo = frappe.db.exists(
+					{
+						"doctype": "ToDo",
+						"reference_type": "Livestock Event",
+						"reference_name": self.name,
+						"status": ["!=", "Cancelled"],
+					}
+				)
 
 				if not existing_todo:
-					todo = frappe.get_doc({
-						"doctype": "ToDo",
-						"description": f"""<b>🔍 Pregnancy Check Due</b><br>
+					todo = frappe.get_doc(
+						{
+							"doctype": "ToDo",
+							"description": f"""<b>🔍 Pregnancy Check Due</b><br>
                             Animal: {self.animal}<br>
                             Service Date: {frappe.utils.formatdate(self.service_date)}<br>
                             Check Due: {frappe.utils.formatdate(self.pregnancy_check_due_date)}<br>
                             Event: {self.name}""",
-						"reference_type": "Livestock Event",
-						"reference_name": self.name,
-						"assigned_by": frappe.session.user,
-						"priority": "Medium",
-						"date": self.pregnancy_check_due_date,
-						"status": "Open"
-					})
+							"reference_type": "Livestock Event",
+							"reference_name": self.name,
+							"assigned_by": frappe.session.user,
+							"priority": "Medium",
+							"date": self.pregnancy_check_due_date,
+							"status": "Open",
+						}
+					)
 
 					# Assign to operator if exists
 					if self.operator:
@@ -179,8 +185,12 @@ class LivestockEvent(Document):
 						animal.db_set("repro_status", "Pregnant", update_modified=False)
 					if animal.meta.has_field("custom_pregnancy_status"):
 						animal.db_set("custom_pregnancy_status", "Confirmed", update_modified=False)
-					if animal.meta.has_field("expected_calving_date") and service.meta.has_field("expected_calving_date"):
-						animal.db_set("expected_calving_date", service.expected_calving_date, update_modified=False)
+					if animal.meta.has_field("expected_calving_date") and service.meta.has_field(
+						"expected_calving_date"
+					):
+						animal.db_set(
+							"expected_calving_date", service.expected_calving_date, update_modified=False
+						)
 
 					# Create calving alert
 					if service.meta.has_field("expected_calving_date") and service.expected_calving_date:
@@ -188,33 +198,39 @@ class LivestockEvent(Document):
 							service.expected_calving_date, -get_timing("calving_alert_lead_days")
 						)
 
-						existing_calving_todo = frappe.db.exists({
-							"doctype": "ToDo",
-							"reference_type": "Livestock Event",
-							"reference_name": self.related_service,
-							"description": ["like", "%Calving Expected%"],
-							"status": ["!=", "Cancelled"]
-						})
+						existing_calving_todo = frappe.db.exists(
+							{
+								"doctype": "ToDo",
+								"reference_type": "Livestock Event",
+								"reference_name": self.related_service,
+								"description": ["like", "%Calving Expected%"],
+								"status": ["!=", "Cancelled"],
+							}
+						)
 
 						if not existing_calving_todo:
-							todo = frappe.get_doc({
-								"doctype": "ToDo",
-								"description": f"""<b>🐄 Calving Expected Soon</b><br>
+							todo = frappe.get_doc(
+								{
+									"doctype": "ToDo",
+									"description": f"""<b>🐄 Calving Expected Soon</b><br>
                                     Animal: {self.animal}<br>
                                     Expected Date: {frappe.utils.formatdate(service.expected_calving_date)}<br>
                                     Service: {self.related_service}<br><br>
                                     <i>Prepare calving area and monitor closely.</i>""",
-								"reference_type": "Livestock Event",
-								"reference_name": self.related_service,
-								"priority": "High",
-								"date": alert_date,
-								"status": "Open"
-							})
+									"reference_type": "Livestock Event",
+									"reference_name": self.related_service,
+									"priority": "High",
+									"date": alert_date,
+									"status": "Open",
+								}
+							)
 							todo.insert(ignore_permissions=True)
 							pass
 
 				elif self.diagnosis_result in ["Not Pregnant", "Aborted"]:
-					service.db_set("pregnancy_confirmation_status", self.diagnosis_result, update_modified=False)
+					service.db_set(
+						"pregnancy_confirmation_status", self.diagnosis_result, update_modified=False
+					)
 					service.db_set("service_status", "Failed", update_modified=False)
 					if service.meta.has_field("custom_status_after_test"):
 						service.db_set("custom_status_after_test", "Failed", update_modified=False)
@@ -245,28 +261,32 @@ class LivestockEvent(Document):
 
 			# Create re-breeding alert
 			if self.meta.has_field("ready_for_service_date") and self.ready_for_service_date:
-				existing_rebreeding_todo = frappe.db.exists({
-					"doctype": "ToDo",
-					"reference_type": "Livestock Event",
-					"reference_name": self.name,
-					"description": ["like", "%Ready for Re-breeding%"],
-					"status": ["!=", "Cancelled"]
-				})
+				existing_rebreeding_todo = frappe.db.exists(
+					{
+						"doctype": "ToDo",
+						"reference_type": "Livestock Event",
+						"reference_name": self.name,
+						"description": ["like", "%Ready for Re-breeding%"],
+						"status": ["!=", "Cancelled"],
+					}
+				)
 
 				if not existing_rebreeding_todo:
-					todo = frappe.get_doc({
-						"doctype": "ToDo",
-						"description": f"""<b>🔄 Ready for Re-breeding</b><br>
+					todo = frappe.get_doc(
+						{
+							"doctype": "ToDo",
+							"description": f"""<b>🔄 Ready for Re-breeding</b><br>
                             Animal: {self.animal}<br>
                             Calved: {frappe.utils.formatdate(self.event_date)}<br>
                             Ready from: {frappe.utils.formatdate(self.ready_for_service_date)}<br><br>
                             <i>Animal has completed voluntary waiting period.</i>""",
-						"reference_type": "Livestock Event",
-						"reference_name": self.name,
-						"priority": "Medium",
-						"date": self.ready_for_service_date,
-						"status": "Open"
-					})
+							"reference_type": "Livestock Event",
+							"reference_name": self.name,
+							"priority": "Medium",
+							"date": self.ready_for_service_date,
+							"status": "Open",
+						}
+					)
 					todo.insert(ignore_permissions=True)
 					pass
 
@@ -415,7 +435,8 @@ class LivestockEvent(Document):
 
 		if self.event_type == "Service":
 			# Rule 1: No second service without feedback on first service
-			pending_services = frappe.db.sql("""
+			pending_services = frappe.db.sql(
+				"""
                 SELECT name, service_date, pregnancy_confirmation_status
                 FROM `tabLivestock Event`
                 WHERE animal = %s
@@ -425,7 +446,10 @@ class LivestockEvent(Document):
                 AND name != %s
                 ORDER BY service_date DESC
                 LIMIT 1
-            """, (self.animal, self.name or "new"), as_dict=True)
+            """,
+				(self.animal, self.name or "new"),
+				as_dict=True,
+			)
 
 			if pending_services:
 				last_service = pending_services[0]
@@ -437,7 +461,8 @@ class LivestockEvent(Document):
                     <i>Tip: Go to Livestock Events → Find service → Record pregnancy diagnosis</i>""")
 
 			# Rule 2: Check if animal is already confirmed pregnant
-			active_pregnancy = frappe.db.sql("""
+			active_pregnancy = frappe.db.sql(
+				"""
                 SELECT ae.name, ae.service_date, ae.expected_calving_date
                 FROM `tabLivestock Event` ae
                 WHERE ae.animal = %s
@@ -453,12 +478,19 @@ class LivestockEvent(Document):
                 )
                 ORDER BY ae.service_date DESC
                 LIMIT 1
-            """, (self.animal,), as_dict=True)
+            """,
+				(self.animal,),
+				as_dict=True,
+			)
 
 			if active_pregnancy:
 				pregnancy = active_pregnancy[0]
 				expected_calving = pregnancy.get("expected_calving_date")
-				days_until = frappe.utils.date_diff(expected_calving, frappe.utils.nowdate()) if expected_calving else 0
+				days_until = (
+					frappe.utils.date_diff(expected_calving, frappe.utils.nowdate())
+					if expected_calving
+					else 0
+				)
 
 				frappe.throw(f"""<b>🤰 Animal is Already Pregnant!</b><br><br>
                     Service Date: <b>{frappe.utils.formatdate(pregnancy.service_date)}</b><br>
@@ -467,7 +499,8 @@ class LivestockEvent(Document):
                     <b>Action:</b> Cannot service pregnant animals. Wait for calving.""")
 
 			# Rule 3: Check post-partum waiting period
-			last_calving = frappe.db.sql("""
+			last_calving = frappe.db.sql(
+				"""
                 SELECT name, event_date, custom_calving_outcome
                 FROM `tabLivestock Event`
                 WHERE animal = %s
@@ -475,7 +508,10 @@ class LivestockEvent(Document):
                 AND docstatus = 1
                 ORDER BY event_date DESC
                 LIMIT 1
-            """, (self.animal,), as_dict=True)
+            """,
+				(self.animal,),
+				as_dict=True,
+			)
 
 			if last_calving:
 				calving = last_calving[0]
@@ -491,10 +527,14 @@ class LivestockEvent(Document):
                         <b>Reason:</b> Animal needs time for uterine involution and recovery.<br>
                         <b>Recommendation:</b> Wait at least {minimum_days} days post-calving.""")
 				elif days_since_calving < optimal_days:
-					frappe.msgprint(f"""<b>⚠️ Early Service Warning</b><br><br>
+					frappe.msgprint(
+						f"""<b>⚠️ Early Service Warning</b><br><br>
                         Days since calving: <b>{days_since_calving}</b><br>
                         Optimal waiting period: <b>{optimal_days} days</b><br><br>
-                        <i>Note: Service is allowed but conception rates improve after {optimal_days} days.</i>""", alert=True, indicator="orange")
+                        <i>Note: Service is allowed but conception rates improve after {optimal_days} days.</i>""",
+						alert=True,
+						indicator="orange",
+					)
 
 			# Rule 4: post-abortion waiting period (0 disables it)
 			abortion_wait = get_timing("post_abortion_min_service_days")
@@ -536,7 +576,8 @@ class LivestockEvent(Document):
 			# Must have related service
 			if not self.related_service:
 				# Try to auto-find most recent pending service
-				recent_service = frappe.db.sql("""
+				recent_service = frappe.db.sql(
+					"""
                     SELECT name, service_date
                     FROM `tabLivestock Event`
                     WHERE animal = %s
@@ -545,11 +586,18 @@ class LivestockEvent(Document):
                     AND pregnancy_confirmation_status = 'Pending'
                     ORDER BY service_date DESC
                     LIMIT 1
-                """, (self.animal,), as_dict=True)
+                """,
+					(self.animal,),
+					as_dict=True,
+				)
 
 				if recent_service:
 					self.related_service = recent_service[0].name
-					frappe.msgprint(f"""Auto-linked to most recent service: <b>{recent_service[0].name}</b> from {frappe.utils.formatdate(recent_service[0].service_date)}""", alert=True, indicator="blue")
+					frappe.msgprint(
+						f"""Auto-linked to most recent service: <b>{recent_service[0].name}</b> from {frappe.utils.formatdate(recent_service[0].service_date)}""",
+						alert=True,
+						indicator="blue",
+					)
 				else:
 					frappe.throw("""<b>❌ No Related Service Found!</b><br><br>
                         This animal has no pending service to diagnose.<br><br>
@@ -575,15 +623,23 @@ class LivestockEvent(Document):
 
 			# Check timing appropriateness
 			if days_since_service < get_timing("diagnosis_earliest_days"):
-				frappe.msgprint(f"""<b>⚠️ Very Early Diagnosis</b><br><br>
+				frappe.msgprint(
+					f"""<b>⚠️ Very Early Diagnosis</b><br><br>
                     Days since service: <b>{days_since_service}</b><br>
                     Recommended minimum: <b>{get_timing("diagnosis_earliest_days")} days</b><br><br>
-                    <i>Note: Pregnancy detection accuracy is lower before 21 days.</i>""", alert=True, indicator="orange")
+                    <i>Note: Pregnancy detection accuracy is lower before 21 days.</i>""",
+					alert=True,
+					indicator="orange",
+				)
 			elif days_since_service > get_timing("diagnosis_latest_days"):
-				frappe.msgprint(f"""<b>⚠️ Very Late Diagnosis</b><br><br>
+				frappe.msgprint(
+					f"""<b>⚠️ Very Late Diagnosis</b><br><br>
                     Days since service: <b>{days_since_service}</b><br>
                     Recommended maximum: <b>{get_timing("diagnosis_latest_days")} days</b><br><br>
-                    <i>Note: This diagnosis is overdue.</i>""", alert=True, indicator="red")
+                    <i>Note: This diagnosis is overdue.</i>""",
+					alert=True,
+					indicator="red",
+				)
 
 			# Validate diagnosis result
 			if not self.diagnosis_result:
@@ -597,7 +653,8 @@ class LivestockEvent(Document):
 			# Must link to pregnancy
 			if not self.custom_related_pregnancy:
 				# Try to auto-find confirmed pregnancy
-				pregnancy = frappe.db.sql("""
+				pregnancy = frappe.db.sql(
+					"""
                     SELECT name, service_date, expected_calving_date
                     FROM `tabLivestock Event`
                     WHERE animal = %s
@@ -612,11 +669,18 @@ class LivestockEvent(Document):
                     )
                     ORDER BY service_date DESC
                     LIMIT 1
-                """, (self.animal,), as_dict=True)
+                """,
+					(self.animal,),
+					as_dict=True,
+				)
 
 				if pregnancy:
 					self.custom_related_pregnancy = pregnancy[0].name
-					frappe.msgprint(f"""Auto-linked to pregnancy from service: <b>{pregnancy[0].name}</b>""", alert=True, indicator="blue")
+					frappe.msgprint(
+						f"""Auto-linked to pregnancy from service: <b>{pregnancy[0].name}</b>""",
+						alert=True,
+						indicator="blue",
+					)
 				else:
 					frappe.throw("""<b>❌ No Active Pregnancy Found!</b><br><br>
                         This animal has no confirmed pregnancy to calve from.<br><br>
@@ -632,15 +696,23 @@ class LivestockEvent(Document):
 				gestation_days = frappe.utils.date_diff(self.event_date, service.service_date)
 
 				if gestation_days < get_timing("gestation_short_warning_days"):
-					frappe.msgprint(f"""<b>⚠️ Short Gestation Period!</b><br><br>
+					frappe.msgprint(
+						f"""<b>⚠️ Short Gestation Period!</b><br><br>
                         Gestation Length: <b>{gestation_days} days</b><br>
                         Normal Range: <b>270-290 days</b><br><br>
-                        <i>Note: This may indicate premature birth or abortion.</i>""", alert=True, indicator="orange")
+                        <i>Note: This may indicate premature birth or abortion.</i>""",
+						alert=True,
+						indicator="orange",
+					)
 				elif gestation_days > get_timing("gestation_long_warning_days"):
-					frappe.msgprint(f"""<b>⚠️ Long Gestation Period!</b><br><br>
+					frappe.msgprint(
+						f"""<b>⚠️ Long Gestation Period!</b><br><br>
                         Gestation Length: <b>{gestation_days} days</b><br>
                         Normal Range: <b>270-290 days</b><br><br>
-                        <i>Note: Verify the dates are correct.</i>""", alert=True, indicator="orange")
+                        <i>Note: Verify the dates are correct.</i>""",
+						alert=True,
+						indicator="orange",
+					)
 
 			# Validate calving outcome
 			if not self.custom_calving_outcome:
@@ -671,7 +743,8 @@ class LivestockEvent(Document):
 		# Pregnancy Diagnosis event) was never entered. That may be
 		# legitimate data this app must not refuse.
 		if self.event_type == "Abortion" and not self.custom_related_pregnancy:
-			pregnancy = frappe.db.sql("""
+			pregnancy = frappe.db.sql(
+				"""
                 SELECT name, service_date
                 FROM `tabLivestock Event`
                 WHERE animal = %s
@@ -686,11 +759,18 @@ class LivestockEvent(Document):
                 )
                 ORDER BY service_date DESC
                 LIMIT 1
-            """, (self.animal,), as_dict=True)
+            """,
+				(self.animal,),
+				as_dict=True,
+			)
 
 			if pregnancy:
 				self.custom_related_pregnancy = pregnancy[0].name
-				frappe.msgprint(f"""Auto-linked to pregnancy from service: <b>{pregnancy[0].name}</b>""", alert=True, indicator="blue")
+				frappe.msgprint(
+					f"""Auto-linked to pregnancy from service: <b>{pregnancy[0].name}</b>""",
+					alert=True,
+					indicator="blue",
+				)
 			else:
 				frappe.msgprint(
 					_(
@@ -759,14 +839,20 @@ class LivestockEvent(Document):
 
 					# Update OLD herd count (if there was a previous herd)
 					if previous_herd:
-						old_count = frappe.db.count("Animal", {"current_herd": previous_herd, "docstatus": ["!=", 2]})
+						old_count = frappe.db.count(
+							"Animal", {"current_herd": previous_herd, "docstatus": ["!=", 2]}
+						)
 						frappe.db.set_value("Herds", previous_herd, "number_of_animals", old_count)
 
 					# Update NEW herd count
-					new_count = frappe.db.count("Animal", {"current_herd": self.new_herd, "docstatus": ["!=", 2]})
+					new_count = frappe.db.count(
+						"Animal", {"current_herd": self.new_herd, "docstatus": ["!=", 2]}
+					)
 					frappe.db.set_value("Herds", self.new_herd, "number_of_animals", new_count)
 
-					frappe.msgprint(f"Animal {self.animal} successfully moved from {previous_herd or 'no herd'} to {self.new_herd}")
+					frappe.msgprint(
+						f"Animal {self.animal} successfully moved from {previous_herd or 'no herd'} to {self.new_herd}"
+					)
 				else:
 					frappe.msgprint("No herd change detected")
 
@@ -831,7 +917,6 @@ class LivestockEvent(Document):
 		# --------------------------------------------
 
 		if self.event_type == "Pregnancy Diagnosis" and self.diagnosis_result == "Confirmed":
-
 			# 1. Get last confirmed pregnancy BEFORE this one
 			last_pregnancy = frappe.db.get_list(
 				"Livestock Event",
@@ -844,7 +929,7 @@ class LivestockEvent(Document):
 				},
 				fields=["name", "diagnosis_date"],
 				order_by="diagnosis_date desc",
-				limit=1
+				limit=1,
 			)
 
 			if last_pregnancy:
@@ -862,8 +947,8 @@ class LivestockEvent(Document):
 						"animal": self.animal,
 						"event_type": ["in", ["Calving", "Abortion"]],
 						"event_date": [">", last_pregnancy_date],
-						"docstatus": 1
-					}
+						"docstatus": 1,
+					},
 				)
 
 				if not closed:
@@ -874,9 +959,69 @@ class LivestockEvent(Document):
 
 		self.refresh_calving_birth_count()
 		self.close_pregnancy_after_abortion()
+		self.post_stock_issue()
 
 	def on_cancel(self):
 		self.refresh_calving_birth_count()
+
+	def post_stock_issue(self):
+		"""Issue whatever this event consumed out of stock.
+
+		Vaccination and Deworming issue their `drug_issues` rows; a Service issues
+		the semen straw. Both go through try_issue_items, so a store that cannot
+		satisfy the issue costs a warning rather than the clinical record — see
+		livestock_stock.try_issue_items for why.
+
+		Guarded by `self.stock_entry` so an amend or a re-submit cannot post a
+		second issue for the same event.
+		"""
+		if self.stock_entry:
+			return
+
+		rows, what = [], None
+		if self.event_type in ("Vaccination", "Deworming"):
+			what = self.event_type
+			default_wh = livestock_stock.drug_warehouse()
+			for row in self.drug_issues or []:
+				rows.append(
+					{
+						"item_code": row.item_code,
+						"qty": row.qty,
+						"warehouse": row.source_warehouse or default_wh,
+						"batch_no": row.batch_no,
+						"uom": row.uom,
+					}
+				)
+		elif self.event_type == "Service":
+			what = "Service"
+			item = self.semen_item or livestock_stock.default_semen_item()
+			if item:
+				rows.append(
+					{
+						"item_code": item,
+						# A Service with no straw count still consumes one straw.
+						"qty": flt(self.semen_qty) or 1,
+						"warehouse": livestock_stock.semen_warehouse(),
+					}
+				)
+
+		if not rows:
+			return
+
+		name = livestock_stock.try_issue_items(
+			rows,
+			remarks=f"Livestock {what} - {self.animal} - {self.name}",
+			what=what,
+			posting_date=self.event_date,
+			employee=self.operator,
+		)
+		if name:
+			self.db_set("stock_entry", name, update_modified=False)
+			# Each drug row keeps its own pointer at the issue, which is what
+			# Livestock Drug Issue.stock_entry_ref exists for.
+			for row in self.drug_issues or []:
+				if row.item_code:
+					row.db_set("stock_entry_ref", name, update_modified=False)
 
 	def refresh_calving_birth_count(self):
 		"""Recount the Birth events linked to this event's related calving, and

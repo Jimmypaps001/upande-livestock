@@ -50,18 +50,25 @@ class LivestockDisposal(Document):
 
 		try:
 			if self.disposal_type in SALE_TYPES:
-				sell_livestock_asset(
+				result = sell_livestock_asset(
 					animal=self.animal,
 					customer=self.customer,
 					selling_amount=self.sale_price,
 					posting_date=self.disposal_date,
 				)
+				# A sale posts a Sales Invoice, not a Journal Entry. The old
+				# sale_journal_entry field (Link -> Journal Entry) could never hold
+				# this name, which is why it sat empty on every disposal ever made.
+				if (result or {}).get("sales_invoice"):
+					self.db_set("sales_invoice", result["sales_invoice"], update_modified=False)
 			else:
-				scrap_livestock_asset(
+				result = scrap_livestock_asset(
 					animal=self.animal,
 					reason=self.disposal_type,
 					scrapping_date=self.disposal_date,
 				)
+				if (result or {}).get("journal_entry"):
+					self.db_set("writeoff_journal_entry", result["journal_entry"], update_modified=False)
 		except Exception as e:
 			frappe.log_error(message=frappe.get_traceback(), title="Livestock disposal asset error")
 			frappe.msgprint(

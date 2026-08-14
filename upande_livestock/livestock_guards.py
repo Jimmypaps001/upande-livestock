@@ -13,12 +13,18 @@ client script used, so no site's behaviour changes on deploy. A configured 0
 disables the rule.
 
 The old client-side vaccination rule compared frm.doc.custom_vaccine_drug_name
-against itself — a field that does not exist on the doctype, so in the browser
-it always compared undefined to undefined and was, in practice, a plain
-interval check with no real vaccine-identity comparison behind it. That is why
+against itself — a field that did not exist on the doctype, so in the browser it
+always compared undefined to undefined and was, in practice, a plain interval
+check with no real vaccine-identity comparison behind it. That is why
 INTERVAL_RULES has no Vaccination entry below: ported as written, it would
 reject same-visit multi-vaccine recording on real data (see the comment above
-INTERVAL_RULES). It returns once a real vaccine field exists to compare on.
+INTERVAL_RULES).
+
+That blocker has since been lifted — Livestock Event now carries a `drug_issues`
+child table whose rows name an actual `item_code`, so "the same vaccine again too
+soon" is finally expressible. The rule is still not implemented here, because no
+historical row has drug_issues data to compare against and the check would only
+bind on newly recorded events; it is a deliberate to-do, not an oversight.
 """
 
 import frappe
@@ -88,6 +94,37 @@ INTERVAL_RULES = {
 		"against": ("Weight Recording",),
 		"label": "weight recording",
 	},
+}
+
+
+# event_type -> a min/max age window, both ends inclusive. Distinct from
+# AGE_RULES, which only has a floor.
+AGE_WINDOW_RULES = {
+	"Dehorning": {
+		"min_setting": "min_dehorning_age_months",
+		"min_default": TIMING_DEFAULTS["min_dehorning_age_months"],
+		"max_setting": "max_dehorning_age_months",
+		"max_default": TIMING_DEFAULTS["max_dehorning_age_months"],
+		"label": "dehorning",
+	},
+}
+
+# Event types that can only genuinely happen once for an animal on a given day.
+#
+# The list is deliberately short. Excluded on purpose:
+#   * Birth — record_calf_births() creates one Birth event PER CALF for the same
+#     dam on the same day. Guarding it would break multiple-birth recording, which
+#     is the whole point of that flow.
+#   * Vaccination / Deworming — several different drugs in one visit is normal.
+#   * Check Up / Health Case — these are created from a reference document, and an
+#     animal can legitimately be seen twice in a day.
+#   * Service — double insemination within one day is a real practice.
+#   * Milking / Feeding — herd-level, not per-animal.
+DUPLICATE_ONCE_PER_DAY = {
+	"Calving": "custom_related_pregnancy",
+	"Abortion": "custom_related_pregnancy",
+	"Drying Off": None,
+	"Pregnancy Diagnosis": None,
 }
 
 
@@ -219,9 +256,108 @@ def _check_interval(doc):
 	)
 
 
+def _check_age_window(doc):
+	"""Reject an event whose animal is outside the type's permitted age window.
+
+	Dehorning is the only such rule today. It existed for months as a browser-only
+	check in public/js/livestock_event.js, which every non-desk path — REST, the
+	Operations block, data import, the mobile client — walked straight past.
+
+	A 0 on either end disables that end, matching how _setting treats the floor
+	rules. An animal with no date of birth is never blocked, as in _check_age.
+	"""
+	rule = AGE_WINDOW_RULES.get(doc.event_type)
+	if not rule or not doc.event_date:
+		return
+
+	low = _setting(rule["min_setting"], rule["min_default"])
+	high = _setting(rule["max_setting"], rule["max_default"])
+	age = animal_age_months(doc.animal, doc.event_date)
+	if age is None:
+		return
+
+	if low and age < low:
+		frappe.throw(
+			_(
+				"This animal is {0} months old — too young for {1}, which starts at {2} months. "
+				"Change Livestock Settings → {3} if that is wrong."
+			).format(int(age), rule["label"], low, frappe.unscrub(rule["min_setting"]))
+		)
+	if high and age > high:
+		frappe.throw(
+			_(
+				"This animal is {0} months old — past the {1} window, which ends at {2} months. "
+				"Change Livestock Settings → {3} if that is wrong."
+			).format(int(age), rule["label"], high, frappe.unscrub(rule["max_setting"]))
+		)
+
+
+def _check_duplicate(doc):
+	"""Reject a second event of a once-per-day type for the same animal and date.
+
+	Motivated by real data: CALVING-2026-00002 and CALVING-2026-00003 are both
+	Calvings for SHAWN-129539, created 61 minutes apart. Neither has an event_date,
+	which is why this guard would not have caught them at the time — event_date is
+	mandatory for new events now, so the recurrence is what this closes.
+
+	Where a type names an exemption field, two rows sharing a non-null value in it
+	are one event split across records (a multiple birth), not a duplicate — the
+	same rule, and the same NULLIF('') care, as _check_interval's
+	`exempt_when_shared`.
+	"""
+	if doc.event_type not in DUPLICATE_ONCE_PER_DAY or not doc.event_date:
+		return
+
+	params = {
+		"animal": doc.animal,
+		"event_type": doc.event_type,
+		"event_date": doc.event_date,
+		"name": doc.name or "new",
+	}
+	exempt_clause = ""
+	exempt_field = DUPLICATE_ONCE_PER_DAY[doc.event_type]
+	if exempt_field:
+		exempt_clause = f"""AND NOT (
+			NULLIF(%(shared_value)s, '') IS NOT NULL
+			AND NULLIF(`{exempt_field}`, '') IS NOT NULL
+			AND NULLIF(`{exempt_field}`, '') = NULLIF(%(shared_value)s, '')
+		)"""
+		params["shared_value"] = doc.get(exempt_field)
+
+	existing = frappe.db.sql(
+		f"""SELECT name FROM `tabLivestock Event`
+		    WHERE animal = %(animal)s
+		      AND event_type = %(event_type)s
+		      AND event_date = %(event_date)s
+		      AND docstatus = 1
+		      AND name != %(name)s
+		      {exempt_clause}
+		    LIMIT 1""",
+		params,
+		as_dict=True,
+	)
+	if not existing:
+		return
+
+	frappe.throw(
+		_(
+			"{0} already has a submitted {1} on {2} ({3}). Cancel or amend that one "
+			"instead of recording a second."
+		).format(
+			doc.animal,
+			doc.event_type,
+			frappe.utils.formatdate(doc.event_date),
+			existing[0].name,
+		),
+		frappe.DuplicateEntryError,
+	)
+
+
 def check_guards(doc):
 	"""Run every guard that applies to this event's type."""
 	if not doc.event_type or not doc.animal:
 		return
 	_check_age(doc)
+	_check_age_window(doc)
 	_check_interval(doc)
+	_check_duplicate(doc)

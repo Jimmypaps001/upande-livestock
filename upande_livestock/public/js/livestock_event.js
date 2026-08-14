@@ -276,29 +276,6 @@ frappe.ui.form.on("Livestock Event", {
                 });
             }
 
-            // ── 6. VACCINATION — minimum interval check ──
-            if (isVaccination) {
-                let min_days = settings.min_vaccination_interval_days || 21;
-                frappe.call({
-                    method: "frappe.client.get_list",
-                    args: {
-                        doctype: "Livestock Event",
-                        filters: { animal: frm.doc.animal, event_type: "Vaccination", docstatus: 1, name: ["!=", frm.doc.name || ""] },
-                        fields: ["name", "event_date", "custom_vaccine_drug_name"],
-                        order_by: "event_date desc", limit: 1
-                    },
-                    async: false,
-                    callback: function(r) {
-                        if (r.message && r.message.length > 0 && r.message[0].event_date && frm.doc.event_date) {
-                            let diff = frappe.datetime.get_diff(frm.doc.event_date, r.message[0].event_date);
-                            if (diff < min_days && frm.doc.custom_vaccine_drug_name === r.message[0].custom_vaccine_drug_name) {
-                                frappe.throw("Same vaccine was given " + diff + " days ago. Minimum interval is " + min_days + " days.");
-                            }
-                        }
-                    }
-                });
-            }
-
             // ── 7. DEWORMING — minimum interval check ──
             if (isDeworming) {
                 let min_days = settings.min_deworming_interval_days || 90;
@@ -366,10 +343,6 @@ frappe.ui.form.on("Livestock Event", {
                         }
                     }
                 });
-                // Weight must be positive
-                if (frm.doc.custom_weight && frm.doc.custom_weight <= 0) {
-                    frappe.throw("Weight must be a positive number.");
-                }
             }
 
         }); // end load_livestock_settings
@@ -412,17 +385,10 @@ frappe.ui.form.on("Livestock Event", {
         if (!isCalving && !isAbortion) {
             frm.set_value("custom_related_pregnancy", null);
         }
-        // Husbandry fields — clear if not a husbandry/dehorning type
-        if (!isHusbandry && !isVaccination && !isDeworming) {
-            frm.set_value("custom_vaccine_drug_name", null);
-            frm.set_value("custom_dosage", null);
-            frm.set_value("custom_batch_no", null);
-            frm.set_value("custom_withdrawal_period_days", null);
-            frm.set_value("custom_next_due_date", null);
-        }
-        // Weight — clear if not weight recording
-        if (!isWeight) {
-            frm.set_value("custom_weight", null);
+        // Drugs — clear the child table when the type cannot consume drugs.
+        if (!isVaccination && !isDeworming) {
+            frm.clear_table("drug_issues");
+            frm.refresh_field("drug_issues");
         }
     }
 });
@@ -500,19 +466,14 @@ function toggle_event_fields(frm) {
     frm.set_df_property("custom_related_pregnancy", "hidden", !(isCalving || isAbortion));
     frm.set_df_property("custom_related_pregnancy", "reqd", isCalving);
 
-    // ── Vaccine / Drug fields (Vaccination, Deworming, Dehorning) ──
-    frm.set_df_property("custom_vaccine_drug_name", "hidden", !needsDrug);
-    frm.set_df_property("custom_vaccine_drug_name", "reqd", isVaccination || isDeworming);
-    frm.set_df_property("custom_vaccine_drug_name", "label", isDehorning ? "Method / Tool" : "Vaccine / Drug Name");
-    frm.set_df_property("custom_dosage", "hidden", !(isVaccination || isDeworming));
-    frm.set_df_property("custom_dosage", "reqd", isVaccination || isDeworming);
-    frm.set_df_property("custom_batch_no", "hidden", !(isVaccination || isDeworming));
-    frm.set_df_property("custom_withdrawal_period_days", "hidden", !(isVaccination || isDeworming));
-    frm.set_df_property("custom_next_due_date", "hidden", !(isVaccination || isDeworming || isHoofTrim));
-
-    // ── Weight field ──
-    frm.set_df_property("custom_weight", "hidden", !isWeight);
-    frm.set_df_property("custom_weight", "reqd", isWeight);
+    // ── Drugs issued (Vaccination, Deworming) ──
+    // The drug_issues child table replaced five flat custom_* fields that never
+    // existed on the doctype. Its visibility comes from depends_on in the DocType
+    // JSON, so there is nothing to toggle here — only the label is worth setting.
+    frm.set_df_property(
+        "drug_issues", "label",
+        isVaccination ? "Vaccines Issued" : isDeworming ? "Dewormers Issued" : "Drugs Issued"
+    );
 
     // ── Remarks — always visible ──
     frm.set_df_property("remarks", "hidden", 0);

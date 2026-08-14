@@ -22,6 +22,15 @@ IGNORE_TEST_RECORD_DEPENDENCIES = [
 	"Account",
 	"Cost Center",
 	"Journal Entry",
+	"Stock Entry",
+	"Stock Entry Type",
+	"Item",
+	"Warehouse",
+	"Department",
+	"Livestock Drug Issue",
+	"Sales Invoice",
+	"Asset",
+	"Item Group",
 ]
 
 

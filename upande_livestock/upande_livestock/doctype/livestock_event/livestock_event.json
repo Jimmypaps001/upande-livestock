@@ -19,6 +19,8 @@
   "tab_service",
   "sb_service",
   "sire",
+  "semen_item",
+  "semen_qty",
   "service_type",
   "service_date",
   "cb_service",
@@ -62,6 +64,11 @@
   "gestation_days_at_loss",
   "cb_abortion",
   "abortion_notes",
+  "tab_husbandry",
+  "sb_drugs",
+  "drug_issues",
+  "sb_event_stock",
+  "stock_entry",
   "tab_more",
   "sb_amended",
   "amended_from"
@@ -182,12 +189,12 @@
    "options": "Pending\nSuccessfull\nFailed"
   },
   {
-   "fieldname": "custom_status_after_test",
-   "label": "Status after test",
-   "fieldtype": "Select",
-   "options": "Pending\nSuccessfull\nFailed",
+   "allow_on_submit": 1,
    "default": "Pending",
-   "allow_on_submit": 1
+   "fieldname": "custom_status_after_test",
+   "fieldtype": "Select",
+   "label": "Status after test",
+   "options": "Pending\nSuccessfull\nFailed"
   },
   {
    "fieldname": "pregnancy_confirmation_status",
@@ -206,36 +213,36 @@
    "label": "Breeding Schedule"
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "expected_calving_date",
-   "label": "Expected Calving Date",
    "fieldtype": "Date",
-   "read_only": 1,
-   "allow_on_submit": 1
+   "label": "Expected Calving Date",
+   "read_only": 1
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "pregnancy_check_due_date",
-   "label": "Pregnancy Check Due Date",
    "fieldtype": "Date",
-   "read_only": 1,
-   "allow_on_submit": 1
+   "label": "Pregnancy Check Due Date",
+   "read_only": 1
   },
   {
    "fieldname": "cb_breeding",
    "fieldtype": "Column Break"
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "next_expected_heat",
-   "label": "Next Expected Heat",
    "fieldtype": "Date",
-   "read_only": 1,
-   "allow_on_submit": 1
+   "label": "Next Expected Heat",
+   "read_only": 1
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "ready_for_service_date",
-   "label": "Ready For Service Date",
    "fieldtype": "Date",
-   "read_only": 1,
-   "allow_on_submit": 1
+   "label": "Ready For Service Date",
+   "read_only": 1
   },
   {
    "fieldname": "tab_diagnosis",
@@ -285,14 +292,14 @@
   },
   {
    "fieldname": "custom_calving_outcome",
-   "label": "Calving outcome",
    "fieldtype": "Select",
+   "label": "Calving outcome",
    "options": "Live Birth\nStill Birth"
   },
   {
    "fieldname": "custom_no_of_calves",
-   "label": "No Of Calves",
-   "fieldtype": "Int"
+   "fieldtype": "Int",
+   "label": "No Of Calves"
   },
   {
    "default": "0",
@@ -309,14 +316,14 @@
   },
   {
    "fieldname": "custom_calf_sex",
-   "label": "Calf Sex",
    "fieldtype": "Select",
+   "label": "Calf Sex",
    "options": "Male\nFemale"
   },
   {
    "fieldname": "custom_related_pregnancy",
-   "label": "Related Pregnancy",
    "fieldtype": "Link",
+   "label": "Related Pregnancy",
    "options": "Livestock Event"
   },
   {
@@ -428,6 +435,53 @@
    "print_hide": 1,
    "read_only": 1,
    "search_index": 1
+  },
+  {
+   "depends_on": "eval:doc.event_type=='Service'",
+   "description": "The semen straw consumed. Defaults from Livestock Settings; issued out of the semen store on submit.",
+   "fieldname": "semen_item",
+   "fieldtype": "Link",
+   "label": "Semen Straw",
+   "options": "Item"
+  },
+  {
+   "default": "1",
+   "depends_on": "eval:doc.event_type=='Service'",
+   "fieldname": "semen_qty",
+   "fieldtype": "Float",
+   "label": "Straws Used"
+  },
+  {
+   "fieldname": "tab_husbandry",
+   "fieldtype": "Tab Break",
+   "label": "Husbandry"
+  },
+  {
+   "fieldname": "sb_drugs",
+   "fieldtype": "Section Break",
+   "label": "Drugs Issued"
+  },
+  {
+   "depends_on": "eval:['Vaccination','Deworming'].includes(doc.event_type)",
+   "description": "Each drug administered. Issued out of its source warehouse as one Material Issue on submit.",
+   "fieldname": "drug_issues",
+   "fieldtype": "Table",
+   "label": "Drugs Issued",
+   "options": "Livestock Drug Issue"
+  },
+  {
+   "fieldname": "sb_event_stock",
+   "fieldtype": "Section Break",
+   "label": "Stock"
+  },
+  {
+   "description": "The Material Issue posted for this event's drugs or semen straw.",
+   "fieldname": "stock_entry",
+   "fieldtype": "Link",
+   "label": "Stock Entry",
+   "no_copy": 1,
+   "options": "Stock Entry",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
