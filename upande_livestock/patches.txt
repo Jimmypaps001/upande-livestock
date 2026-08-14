@@ -25,3 +25,5 @@ upande_livestock.patches.backfill_animal_disabled
 # is exercised on these 2 rows' next save (it only binds on new documents, so
 # this is a data-quality fix, not a precondition for migrate to succeed).
 upande_livestock.patches.backfill_event_date_from_twin_field
+upande_livestock.patches.migrate_milking_session_to_time
+upande_livestock.patches.align_event_date_with_type_date

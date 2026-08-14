@@ -28,7 +28,7 @@
   "disposal_account",
   "cost_center",
   "cb_accounting",
-  "sale_journal_entry",
+  "sales_invoice",
   "writeoff_journal_entry",
   "sb_notes",
   "reason_details",
@@ -156,18 +156,11 @@
    "fieldtype": "Column Break"
   },
   {
-   "description": "Auto-created on submit when sale_price > 0.",
-   "fieldname": "sale_journal_entry",
-   "fieldtype": "Link",
-   "label": "Sale Receipt Journal Entry",
-   "options": "Journal Entry",
-   "read_only": 1
-  },
-  {
-   "description": "Auto-created on submit to write off the animal from the asset register.",
+   "description": "The scrap Journal Entry posted for a non-sale disposal.",
    "fieldname": "writeoff_journal_entry",
    "fieldtype": "Link",
    "label": "Asset Write-off Journal Entry",
+   "no_copy": 1,
    "options": "Journal Entry",
    "read_only": 1
   },
@@ -200,6 +193,15 @@
    "print_hide": 1,
    "read_only": 1,
    "search_index": 1
+  },
+  {
+   "description": "The Sales Invoice raised for a Sold disposal.",
+   "fieldname": "sales_invoice",
+   "fieldtype": "Link",
+   "label": "Sales Invoice",
+   "no_copy": 1,
+   "options": "Sales Invoice",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,

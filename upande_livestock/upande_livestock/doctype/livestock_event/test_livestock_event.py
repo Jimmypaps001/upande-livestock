@@ -16,7 +16,20 @@ from upande_livestock.install import ensure_livestock_event_types
 # tests below touch herd or accounting fields, and make_animal()/make_event()
 # create the Animal and Employee values they need directly, so all of these are
 # safe to drop from the auto-generated dependency walk.
-IGNORE_TEST_RECORD_DEPENDENCIES = ["Animal", "Herds", "Employee", "Account", "Cost Center", "Journal Entry"]
+IGNORE_TEST_RECORD_DEPENDENCIES = [
+	"Animal",
+	"Herds",
+	"Employee",
+	"Account",
+	"Cost Center",
+	"Journal Entry",
+	"Stock Entry",
+	"Stock Entry Type",
+	"Item",
+	"Warehouse",
+	"Department",
+	"Livestock Drug Issue",
+]
 
 
 def make_animal(tag):

@@ -17,12 +17,18 @@ Contract for every endpoint here:
     rather than a raw 500 / stack trace.
   * Success returns ``{"ok": True, ...}``.
 
-INSEMINATION INVARIANT — do not break:
-  Service / insemination / pregnancy-diagnosis create an **Livestock Event only**.
-  There is deliberately NO Stock Entry (no semen-straw / consumable inventory
-  movement) in any breeding path here. The only flows in this module that touch
-  Stock Entry are feed (feeding.py) and milking (Milk Recording's after-submit
-  Server Script). Keep it that way.
+STOCK-CONSUMING FLOWS:
+  Every livestock flow that consumes something now posts a Stock Entry. Feed
+  (feeding.py) and milking (Milk Recording) always did; vaccination, deworming,
+  treatment and service post theirs through livestock_stock.try_issue_items, fired
+  from the owning controller's on_submit rather than from here.
+
+  This module previously carried the opposite rule — an "INSEMINATION INVARIANT"
+  stating that no breeding path may ever create a Stock Entry, enforced by an
+  assert in create_service_event. That was an early simplification: an A.I. does
+  consume a semen straw, the DAIRY item group already stocks them, and the farm
+  needs that movement recorded. The rule and its assert were removed deliberately.
+  Pregnancy diagnosis still creates no Stock Entry — it consumes nothing.
 """
 
 import json
@@ -31,11 +37,11 @@ import frappe
 from frappe import _
 from frappe.utils import add_days, flt, nowtime, today
 
+from upande_livestock import livestock_stock
 from upande_livestock.api import feeding
 from upande_livestock.upande_livestock.doctype.livestock_event.livestock_event import (
 	warn_on_calving_mismatch,
 )
-
 
 # ---------------------------------------------------------------------------
 # helpers
@@ -121,6 +127,44 @@ def _animal_choices(animals, labels):
 			"repro": a.repro_status,
 		}
 		for a in animals
+	]
+
+
+def _stock_items(kind):
+	"""Items a livestock form can issue, restricted to what is actually in stock.
+
+	`kind` is "drug" or "semen". Offering the whole 595-item DRUGS group would be
+	unusable and would mostly name things the store cannot supply, so this returns
+	only items with a positive balance, plus their on-hand quantity so the form can
+	show it. Stock items are non-disabled and stocked (is_stock_item).
+	"""
+	group = "DRUGS" if kind == "drug" else "DAIRY"
+	name_filter = (
+		"" if kind == "drug" else "AND LOWER(CONCAT(i.name, ' ', IFNULL(i.item_name, ''))) LIKE '%%semen%%'"
+	)
+	rows = frappe.db.sql(
+		f"""SELECT i.name, i.item_name, i.stock_uom, SUM(b.actual_qty) AS qty
+		    FROM `tabItem` i
+		    JOIN `tabBin` b ON b.item_code = i.name
+		    WHERE i.item_group = %s
+		      AND IFNULL(i.disabled, 0) = 0
+		      AND IFNULL(i.is_stock_item, 1) = 1
+		      {name_filter}
+		    GROUP BY i.name
+		    HAVING qty > 0
+		    ORDER BY i.item_name ASC
+		    LIMIT 500""",
+		(group,),
+		as_dict=True,
+	)
+	return [
+		{
+			"value": r.name,
+			"label": f"{r.item_name or r.name}  ·  {flt(r.qty):g} {r.stock_uom or ''}".strip(),
+			"qty": flt(r.qty),
+			"uom": r.stock_uom,
+		}
+		for r in rows
 	]
 
 
@@ -235,7 +279,6 @@ def milking_options():
 		return {
 			"ok": True,
 			"herds": [{"name": h.name, "label": h.herd_name or h.name} for h in herds],
-			"sessions": _select_options("Milk Recording", "session"),
 			"company": _default_company(),
 			"employee": _current_employee(),
 		}
@@ -270,7 +313,7 @@ def create_milk_recording(payload):
 
 		doc = frappe.new_doc("Milk Recording")
 		doc.herd = herd
-		doc.session = d.get("session")
+		doc.milking_time = d.get("milking_time") or nowtime()
 		doc.recording_date = d.get("recording_date") or today()
 		doc.cows_milked = int(flt(d.get("cows_milked")))
 		doc.operator = d.get("operator") or _current_employee()
@@ -504,6 +547,8 @@ def breeding_options():
 			"diagnosis_results": _select_options("Livestock Event", "diagnosis_result")
 			or ["Confirmed", "Not Pregnant", "Aborted"],
 			"sires": sires,
+			"semen_items": _stock_items("semen"),
+			"default_semen_item": livestock_stock.default_semen_item(),
 			"employee": _current_employee(),
 		}
 
@@ -578,10 +623,13 @@ def breeding_lists():
 
 @frappe.whitelist()
 def create_service_event(payload):
-	"""Record a Service / insemination. Creates an Livestock Event ONLY — no Stock
-	Entry, no semen-straw inventory movement (see module invariant). The
-	"VALIDATION FOR SERVICE EVENTS" Server Script enforces the breeding rules
-	and stamps the expected-calving / check-due / next-heat dates."""
+	"""Record a Service / insemination.
+
+	LivestockEvent.validate() enforces the breeding rules and stamps the
+	expected-calving / check-due / next-heat dates; its on_submit issues the semen
+	straw out of the semen store. The straw item falls back to Livestock Settings
+	when the caller does not name one.
+	"""
 
 	def go():
 		_guard("Livestock Event")
@@ -592,18 +640,17 @@ def create_service_event(payload):
 		doc.service_type = d.get("service_type")
 		doc.service_date = d.get("service_date") or today()
 		doc.sire = d.get("sire")
+		doc.semen_item = d.get("semen_item") or None
+		doc.semen_qty = flt(d.get("semen_qty")) or 1
 		doc.insert()
 		doc.submit()
-		# Invariant check: a Service event must never spawn a Stock Entry.
-		assert not frappe.db.exists(
-			"Stock Entry", {"remarks": ["like", "%" + doc.name + "%"]}
-		), "Service event unexpectedly created a Stock Entry"
 		doc.reload()
 		return {
 			"ok": True,
 			"name": doc.name,
 			"expected_calving_date": str(doc.expected_calving_date or ""),
 			"pregnancy_check_due_date": str(doc.pregnancy_check_due_date or ""),
+			"stock_entry": doc.stock_entry or "",
 		}
 
 	return _run(go, "livestock create_service_event failed")
@@ -1061,9 +1108,130 @@ def create_health_case(payload):
 		doc.severity = d.get("severity") or None
 		doc.vet_called = 1 if d.get("vet_called") else 0
 		doc.vet_name = d.get("vet_name")
+		# Treatments given at the point of opening. Each row naming a drug_item is
+		# issued out of the drug store by LivestockHealthCase.on_submit; further
+		# treatments are added on the case itself later.
+		for t in d.get("treatments") or []:
+			if not (t.get("drug_item") or t.get("drug_name_text")):
+				continue
+			doc.append(
+				"treatments",
+				{
+					"treatment_date": t.get("treatment_date") or today(),
+					"drug_item": t.get("drug_item") or None,
+					"drug_name_text": t.get("drug_name_text"),
+					"dosage": t.get("dosage"),
+					"route": t.get("route") or None,
+					"withdrawal_period_days": int(flt(t.get("withdrawal_period_days"))) or None,
+					"administered_by": t.get("administered_by") or _current_employee(),
+					"notes": t.get("notes"),
+				},
+			)
 		doc.insert()
 		doc.submit()
 		doc.reload()
-		return {"ok": True, "name": doc.name, "case_status": doc.case_status}
+		return {
+			"ok": True,
+			"name": doc.name,
+			"case_status": doc.case_status,
+			"treatments": len(doc.treatments or []),
+			"drug_stock_entry": doc.drug_stock_entry or "",
+		}
 
 	return _run(go, "livestock create_health_case failed")
+
+
+# ===========================================================================
+# HUSBANDRY  (Vaccination, Deworming, Dehorning, Hoof Trimming)
+# ===========================================================================
+
+HUSBANDRY_TYPES = ("Vaccination", "Deworming", "Dehorning", "Hoof Trimming")
+
+# Only these two consume drugs out of a store. Dehorning and hoof trimming are
+# procedures — they use a tool, not stock — so their forms carry no drug rows.
+DRUG_CONSUMING_TYPES = ("Vaccination", "Deworming")
+
+
+@frappe.whitelist()
+def husbandry_options():
+	def go():
+		labels = _herd_label_map()
+		return {
+			"ok": True,
+			"animals": _animal_choices(_active_animals(), labels),
+			"event_types": list(HUSBANDRY_TYPES),
+			"drug_consuming_types": list(DRUG_CONSUMING_TYPES),
+			"drug_items": _stock_items("drug"),
+			"drug_warehouse": livestock_stock.drug_warehouse(),
+			"warehouses": [
+				w.name
+				for w in frappe.get_all(
+					"Warehouse",
+					filters={"is_group": 0, "disabled": 0},
+					fields=["name"],
+					order_by="name asc",
+					limit_page_length=500,
+				)
+			],
+			"employee": _current_employee(),
+		}
+
+	return _run(go, "livestock husbandry_options failed")
+
+
+@frappe.whitelist()
+def create_husbandry_event(payload):
+	"""Record a Vaccination / Deworming / Dehorning / Hoof Trimming event.
+
+	For the two drug-consuming types the `drugs` rows become Livestock Drug Issue
+	child rows, and LivestockEvent.on_submit posts them as one Material Issue out of
+	the drug store. A drug row with no item or a non-positive qty is dropped rather
+	than rejected — a half-filled line should not cost the user the whole event.
+
+	The event records even when the issue cannot post; see
+	livestock_stock.try_issue_items for why that is the deliberate choice.
+	"""
+
+	def go():
+		_guard("Livestock Event")
+		d = _ok(payload)
+		event_type = d.get("event_type")
+		if event_type not in HUSBANDRY_TYPES:
+			frappe.throw(
+				_("{0} is not a husbandry event type. Expected one of: {1}.").format(
+					event_type or _("(none)"), ", ".join(HUSBANDRY_TYPES)
+				)
+			)
+		if not d.get("animal"):
+			frappe.throw(_("Select an animal."))
+
+		doc = _new_livestock_event(d, event_type)
+		if event_type in DRUG_CONSUMING_TYPES:
+			default_wh = d.get("source_warehouse") or livestock_stock.drug_warehouse()
+			for drug in d.get("drugs") or []:
+				if not drug.get("item_code") or flt(drug.get("qty")) <= 0:
+					continue
+				doc.append(
+					"drug_issues",
+					{
+						"item_code": drug.get("item_code"),
+						"qty": flt(drug.get("qty")),
+						"source_warehouse": drug.get("source_warehouse") or default_wh,
+						"batch_no": drug.get("batch_no"),
+						"dosage": drug.get("dosage"),
+						"withdrawal_days": int(flt(drug.get("withdrawal_days"))) or None,
+						"next_due_date": drug.get("next_due_date") or None,
+					},
+				)
+		doc.insert()
+		doc.submit()
+		doc.reload()
+		return {
+			"ok": True,
+			"name": doc.name,
+			"event_type": doc.event_type,
+			"stock_entry": doc.stock_entry or "",
+			"drugs_issued": len(doc.drug_issues or []),
+		}
+
+	return _run(go, "livestock create_husbandry_event failed")

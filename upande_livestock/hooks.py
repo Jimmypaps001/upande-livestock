@@ -122,7 +122,7 @@ fixtures = [
 				"in",
 				[
 					"Stock Entry-custom_milking_details_section",
-					"Stock Entry-custom_milking_session",
+					"Stock Entry-custom_milking_time",
 					"Stock Entry-custom_cows_milked",
 					"Stock Entry-custom_milking_end_section",
 				],
@@ -136,6 +136,17 @@ fixtures = [
 	{
 		"dt": "Custom HTML Block",
 		"filters": [["name", "in", ["Livestock Dashboard", "Livestock Operations"]]],
+	},
+	{
+		# Reference master data, not demo scaffolding: these are the dairy diseases a
+		# Kenyan herd is actually managed against, and Livestock Diagnosis /
+		# Livestock Health Case both link to them. Shipping them means a fresh site
+		# has something to diagnose against instead of an empty dropdown.
+		#
+		# The drug store and its opening stock are deliberately NOT fixtures — they
+		# post stock movements, so they live in demo/seed_test_stock.py and are run
+		# by hand on test sites only.
+		"dt": "Livestock Disease",
 	},
 	{
 		# Desktop Icon = the card on the v16 desk app grid. Without it the
@@ -317,4 +328,3 @@ scheduler_events = {
 # ------------
 # List of apps whose translatable strings should be excluded from this app's translations.
 # ignore_translatable_strings_from = []
-

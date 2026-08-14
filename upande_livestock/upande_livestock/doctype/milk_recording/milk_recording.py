@@ -12,9 +12,7 @@ class MilkRecording(Document):
 		# lets a numeric 0 through, so guard the actual value: no record may be
 		# saved/submitted without a positive yield for the herd milked.
 		if flt(self.total_yield_kg) <= 0:
-			frappe.throw(
-				"Enter the amount of milk produced (Total Yield must be greater than 0)."
-			)
+			frappe.throw("Enter the amount of milk produced (Total Yield must be greater than 0).")
 		# Compute the derived (read-only) figures server-side so every entry path
 		# — desk form, the Operations block, or the API — is consistent and the
 		# after-submit Stock Entry always has a correct net_yield_kg.
@@ -32,7 +30,9 @@ class MilkRecording(Document):
 		target_wh = self.target_warehouse or frappe.db.get_single_value(
 			"Livestock Settings", "custom_milk_target_warehouse"
 		)
-		se_type = frappe.db.get_single_value("Livestock Settings", "custom_milking_stock_entry_type") or "Milking"
+		se_type = (
+			frappe.db.get_single_value("Livestock Settings", "custom_milking_stock_entry_type") or "Milking"
+		)
 		income_acct = self.income_account
 		credit_acct = frappe.db.get_single_value("Livestock Settings", "custom_default_credit_account")
 		cost_center = self.cost_center
@@ -48,15 +48,19 @@ class MilkRecording(Document):
 		if not target_wh:
 			frappe.throw("Milk target warehouse not set in Livestock Settings or on this record.")
 
-		# 1. Stock Entry (type Milking) — carries the milking session + cows milked
+		# 1. Stock Entry (type Milking) — carries the milking time + cows milked.
+		# The recording's own clock time is the posting time, so two milkings on the
+		# same day land in the right stock order instead of both at midnight.
 		se = frappe.new_doc("Stock Entry")
 		se.stock_entry_type = se_type
 		se.company = company
 		se.posting_date = self.recording_date
-		se.posting_time = "00:00:00"
-		se.custom_milking_session = self.session
+		se.posting_time = self.milking_time or "00:00:00"
+		se.custom_milking_time = self.milking_time
 		se.custom_cows_milked = self.cows_milked
-		se.remarks = "Milk Recording - {0} - {1} - {2}".format(self.herd, self.session, self.recording_date)
+		se.remarks = "Milk Recording - {0} - {1} - {2}".format(
+			self.herd, self.milking_time, self.recording_date
+		)
 
 		if net_yield > 0:
 			r1 = se.append("items", {})
@@ -87,7 +91,9 @@ class MilkRecording(Document):
 				je = frappe.new_doc("Journal Entry")
 				je.company = company
 				je.posting_date = self.recording_date
-				je.user_remark = "Milk sales - {0} - {1} - {2} kg".format(self.herd, self.session, net_yield)
+				je.user_remark = "Milk sales - {0} - {1} - {2} kg".format(
+					self.herd, self.milking_time, net_yield
+				)
 				cr = je.append("accounts", {})
 				cr.account = income_acct
 				cr.credit_in_account_currency = revenue
@@ -104,9 +110,12 @@ class MilkRecording(Document):
 
 		se_ref = frappe.db.get_value("Milk Recording", self.name, "stock_entry") or "pending"
 		frappe.msgprint(
-			"Stock Entry " + se_ref + " created. " + str(net_yield) + " kg milk posted."
+			"Stock Entry "
+			+ se_ref
+			+ " created. "
+			+ str(net_yield)
+			+ " kg milk posted."
 			+ (" Revenue KES " + str(int(revenue)) + "." if revenue > 0 else ""),
 			indicator="green",
 			title="Milk Recording submitted",
 		)
-

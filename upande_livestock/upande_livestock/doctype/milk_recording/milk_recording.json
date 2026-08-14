@@ -11,7 +11,7 @@
  "field_order": [
   "sb_recording",
   "herd",
-  "session",
+  "milking_time",
   "recording_date",
   "col_break_1",
   "cows_milked",
@@ -58,14 +58,6 @@
    "options": "Herds",
    "reqd": 1,
    "search_index": 1
-  },
-  {
-   "fieldname": "session",
-   "fieldtype": "Select",
-   "in_list_view": 1,
-   "label": "Session",
-   "options": "AM \u2014 Morning\nPM \u2014 Afternoon\nEvening",
-   "reqd": 1
   },
   {
    "fieldname": "recording_date",
@@ -252,6 +244,14 @@
    "print_hide": 1,
    "read_only": 1,
    "search_index": 1
+  },
+  {
+   "description": "Clock time the milking took place.",
+   "fieldname": "milking_time",
+   "fieldtype": "Time",
+   "in_list_view": 1,
+   "label": "Milking Time",
+   "reqd": 1
   }
  ],
  "grid_page_length": 50,
