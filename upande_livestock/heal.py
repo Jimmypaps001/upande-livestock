@@ -34,7 +34,9 @@ def clear_stale_desktop_layout(login_manager=None):
 
 		bootinfo = frappe._dict({"workspace_sidebar_item": _sidebar_map()})
 		permitted = get_desktop_icons(user=user, bootinfo=bootinfo)
-		missing = [i for i in permitted if not i.get("parent_icon") and i.get("label") and i["label"] not in layout]
+		missing = [
+			i for i in permitted if not i.get("parent_icon") and i.get("label") and i["label"] not in layout
+		]
 
 		if missing:
 			frappe.delete_doc("Desktop Layout", user, force=True, ignore_permissions=True)
