@@ -27,3 +27,4 @@ upande_livestock.patches.backfill_animal_disabled
 upande_livestock.patches.backfill_event_date_from_twin_field
 upande_livestock.patches.migrate_milking_session_to_time
 upande_livestock.patches.align_event_date_with_type_date
+upande_livestock.patches.namespace_livestock_roles
