@@ -49,6 +49,10 @@
   "custom_dairy_col",
   "custom_milk_target_warehouse",
   "custom_milk_discard_warehouse",
+  "sb_feed_sources",
+  "feed_source_warehouses",
+  "sb_concentrates",
+  "bought_in_concentrates",
   "sb_husbandry_stock",
   "drug_warehouse",
   "semen_warehouse",
@@ -320,6 +324,30 @@
    "fieldtype": "Link",
    "label": "Milk Discard Warehouse",
    "options": "Warehouse"
+  },
+  {
+   "fieldname": "sb_feed_sources",
+   "fieldtype": "Section Break",
+   "label": "Feed Source Warehouses"
+  },
+  {
+   "description": "Warehouses feed inputs may be drawn from, in search order. The first row that can cover a line in full is the one the Work Order transfers from. The Feed WIP / Store Warehouse above is always tried last.",
+   "fieldname": "feed_source_warehouses",
+   "fieldtype": "Table",
+   "label": "Feed Source Warehouses",
+   "options": "Livestock Feed Warehouse"
+  },
+  {
+   "fieldname": "sb_concentrates",
+   "fieldtype": "Section Break",
+   "label": "Bought-in Concentrates"
+  },
+  {
+   "description": "Concentrates the farm buys ready-packed. A concentrate that is mixed on the farm is recognised by its BOM and does not belong here — list only the ones that arrive already made, so the feeding programme flags them as concentrate rather than plain raw material.",
+   "fieldname": "bought_in_concentrates",
+   "fieldtype": "Table",
+   "label": "Bought-in Concentrates",
+   "options": "Livestock Bought In Concentrate"
   },
   {
    "fieldname": "sb_accounting",
