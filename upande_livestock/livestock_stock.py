@@ -19,11 +19,21 @@ TWO THINGS THIS MODULE DELIBERATELY DOES:
    mid-flow, which breaks the caller's ability to roll back a partially failed
    operation — api/operations._run() relies on that rollback. Committing is the
    caller's business, or the request's.
+
+SHORT STOCK BLOCKS. This module used to downgrade a failed issue to a warning, on
+the reasoning that an animal was treated whether or not the balance allows the
+issue to post. That produced 93 vaccinations and 25 health cases with not one
+gram of stock moved, and nobody noticed. The farm's call is now the opposite: an
+issue the store cannot cover stops the event, so the books and the yard cannot
+drift apart silently. `check_availability` reports the gap before anything is
+written, so the message names the drug and the shortfall rather than surfacing a
+raw ERPNext negative-stock error.
 """
 
 import frappe
 from frappe import _
-from frappe.utils import flt
+from frappe.utils import flt, getdate, today
+from erpnext.stock.utils import get_stock_balance
 
 
 def drug_warehouse():
@@ -39,6 +49,55 @@ def default_semen_item():
 	return frappe.db.get_single_value("Livestock Settings", "semen_item")
 
 
+def check_availability(rows, posting_date=None):
+	"""Return the rows the store cannot cover, each with what is missing.
+
+	Read-only. Quantities are summed per (item, warehouse) first, because two
+	drug lines naming the same item out of the same store compete for one balance
+	— checking them independently would clear a pair that together overdraws it.
+
+	`posting_date` matters: Bin holds today's balance, but a back-dated issue is
+	judged against the ledger as it stood then. A health case opened before its
+	drug was delivered would otherwise pass a check on today's 24 units and be
+	refused by ERPNext for having 0 on the day. When a past date is given the
+	balance is read as of that date instead.
+	"""
+	historic = bool(posting_date) and getdate(posting_date) < getdate(today())
+	demand = {}
+	for r in rows or []:
+		item, wh, qty = r.get("item_code"), r.get("warehouse"), flt(r.get("qty"))
+		if not item or not wh or qty <= 0:
+			continue
+		demand[(item, wh)] = demand.get((item, wh), 0.0) + qty
+
+	short = []
+	for (item, wh), qty in demand.items():
+		if historic:
+			have = flt(get_stock_balance(item, wh, posting_date))
+		else:
+			have = flt(frappe.db.get_value("Bin", {"item_code": item, "warehouse": wh}, "actual_qty"))
+		if have + 1e-9 < qty:
+			short.append(
+				{
+					"item_code": item,
+					"item_name": frappe.db.get_value("Item", item, "item_name") or item,
+					"warehouse": wh,
+					"required": qty,
+					"available": have,
+					"short": qty - have,
+					"uom": frappe.db.get_value("Item", item, "stock_uom") or "",
+				}
+			)
+	return short
+
+
+def shortage_message(short):
+	return ", ".join(
+		_("{0}: need {1:g} {2}, store has {3:g}").format(s["item_name"], s["required"], s["uom"], s["available"])
+		for s in short
+	)
+
+
 def _employee_for(employee=None):
 	return employee or frappe.db.get_value("Employee", {"user_id": frappe.session.user}, "name")
 
@@ -51,8 +110,8 @@ def issue_items(rows, remarks, company=None, posting_date=None, employee=None):
 	leaves a drug line blank should not fail, it should issue nothing for it. If
 	nothing usable survives, no Stock Entry is created and None is returned.
 
-	Raises on a genuine stock problem (no stock, closed period, missing warehouse).
-	Callers that must survive that should use try_issue_items().
+	Raises when the store cannot cover the rows, naming the drug and the gap —
+	see the module docstring for why that blocks rather than warns.
 	"""
 	usable = [r for r in (rows or []) if r.get("item_code") and flt(r.get("qty")) > 0]
 	if not usable:
@@ -64,6 +123,15 @@ def issue_items(rows, remarks, company=None, posting_date=None, employee=None):
 			_(
 				"No source warehouse for {0}. Set one on the row, or set the Drug Store in Livestock Settings."
 			).format(", ".join(missing_wh))
+		)
+
+	short = check_availability(usable, posting_date=posting_date)
+	if short:
+		frappe.throw(
+			_("The store cannot cover this issue on {0} — {1}.").format(
+				posting_date or today(), shortage_message(short)
+			),
+			title=_("Not enough stock"),
 		)
 
 	company = (
@@ -116,11 +184,10 @@ def issue_items(rows, remarks, company=None, posting_date=None, employee=None):
 def try_issue_items(rows, remarks, what, **kwargs):
 	"""issue_items(), downgrading any failure to a warning. Returns name or None.
 
-	The clinical or breeding record is worth more than the stock posting: an animal
-	was vaccinated, treated or served whether or not the warehouse balance allows
-	the issue to post. Losing that record because the store is short is the worse
-	outcome, so the event saves and the user is told the issue did not post. This
-	mirrors LivestockDisposal.post_asset_disposal().
+	NOT the path for drugs or semen any more — those block, see the module
+	docstring. This remains for callers where the stock posting is genuinely
+	secondary to the record, and is kept separate so that choice has to be made
+	deliberately rather than inherited.
 	"""
 	try:
 		return issue_items(rows, remarks, **kwargs)

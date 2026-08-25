@@ -14,6 +14,7 @@
   "drug_name_text",
   "section_break_1",
   "dosage",
+  "qty",
   "route",
   "withdrawal_period_days",
   "col_break_2",
@@ -21,7 +22,8 @@
   "cost",
   "section_break_2",
   "response_observed",
-  "notes"
+  "notes",
+  "stock_entry_ref"
  ],
  "fields": [
   {
@@ -68,6 +70,14 @@
    "label": "Dosage"
   },
   {
+   "default": "1",
+   "description": "How much of the drug item to take out of the store, in its stock UOM. Dosage above is the clinical instruction ('20 ml'); this is the stock number.",
+   "fieldname": "qty",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Qty Issued"
+  },
+  {
    "fieldname": "route",
    "fieldtype": "Select",
    "in_list_view": 1,
@@ -112,6 +122,13 @@
    "fieldname": "notes",
    "fieldtype": "Small Text",
    "label": "Notes"
+  },
+  {
+   "fieldname": "stock_entry_ref",
+   "fieldtype": "Link",
+   "label": "Stock Entry",
+   "options": "Stock Entry",
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 1,

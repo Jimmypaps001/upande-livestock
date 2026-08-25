@@ -47,6 +47,9 @@
   "sb_action",
   "action_taken",
   "action_notes",
+  "sb_dx_drugs",
+  "drug_issues",
+  "stock_entry",
   "cb_action",
   "confirmed_by_vet",
   "vet_name",
@@ -166,10 +169,10 @@
    "fieldtype": "Column Break"
   },
   {
-   "description": "Rectal, \u00b0C. Normal cattle 38.0-39.0.",
+   "description": "Rectal, °C. Normal cattle 38.0-39.0.",
    "fieldname": "temperature_c",
    "fieldtype": "Float",
-   "label": "Temperature (\u00b0C)",
+   "label": "Temperature (°C)",
    "precision": "1"
   },
   {
@@ -293,13 +296,32 @@
    "fieldname": "action_taken",
    "fieldtype": "Select",
    "label": "Action Taken",
-   "options": "Logged \u2014 monitor\nTreated on Spot\nEscalated to Case\nReferred to Vet\nNo action \u2014 normal",
+   "options": "Logged — monitor\nTreated on Spot\nEscalated to Case\nReferred to Vet\nNo action — normal",
    "reqd": 1
   },
   {
    "fieldname": "action_notes",
    "fieldtype": "Small Text",
    "label": "Action Notes"
+  },
+  {
+   "fieldname": "sb_dx_drugs",
+   "fieldtype": "Section Break",
+   "label": "Drugs Issued"
+  },
+  {
+   "description": "Anything given at the check. Submitting posts a Material Issue out of the drug store; the check is blocked if the store cannot cover it.",
+   "fieldname": "drug_issues",
+   "fieldtype": "Table",
+   "label": "Drugs Issued",
+   "options": "Livestock Drug Issue"
+  },
+  {
+   "fieldname": "stock_entry",
+   "fieldtype": "Link",
+   "label": "Stock Entry",
+   "options": "Stock Entry",
+   "read_only": 1
   },
   {
    "fieldname": "cb_action",

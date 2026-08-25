@@ -130,18 +130,28 @@ def _animal_choices(animals, labels):
 	]
 
 
-def _stock_items(kind):
+def _stock_items(kind, warehouse=None):
 	"""Items a livestock form can issue, restricted to what is actually in stock.
 
 	`kind` is "drug" or "semen". Offering the whole 595-item DRUGS group would be
 	unusable and would mostly name things the store cannot supply, so this returns
 	only items with a positive balance, plus their on-hand quantity so the form can
 	show it. Stock items are non-disabled and stocked (is_stock_item).
+
+	`warehouse` scopes the balance to the store the issue will actually draw from.
+	Summing across every warehouse — which this used to do — offered drugs the
+	drug store did not have, because 33 units sat in a packaging store on the
+	other side of the farm. The label then promised stock the issue could not
+	find, and the issue failed.
 	"""
 	group = "DRUGS" if kind == "drug" else "DAIRY"
 	name_filter = (
 		"" if kind == "drug" else "AND LOWER(CONCAT(i.name, ' ', IFNULL(i.item_name, ''))) LIKE '%%semen%%'"
 	)
+	conditions, params = [], [group]
+	if warehouse:
+		conditions.append("AND b.warehouse = %s")
+		params.append(warehouse)
 	rows = frappe.db.sql(
 		f"""SELECT i.name, i.item_name, i.stock_uom, SUM(b.actual_qty) AS qty
 		    FROM `tabItem` i
@@ -149,18 +159,20 @@ def _stock_items(kind):
 		    WHERE i.item_group = %s
 		      AND IFNULL(i.disabled, 0) = 0
 		      AND IFNULL(i.is_stock_item, 1) = 1
+		      {" ".join(conditions)}
 		      {name_filter}
 		    GROUP BY i.name
 		    HAVING qty > 0
 		    ORDER BY i.item_name ASC
 		    LIMIT 500""",
-		(group,),
+		params,
 		as_dict=True,
 	)
 	return [
 		{
 			"value": r.name,
-			"label": f"{r.item_name or r.name}  ·  {flt(r.qty):g} {r.stock_uom or ''}".strip(),
+			"label": f"{r.item_name or r.name}  ·  {flt(r.qty):g} {r.stock_uom or ''} in store".strip(),
+			"item_name": r.item_name or r.name,
 			"qty": flt(r.qty),
 			"uom": r.stock_uom,
 		}
@@ -574,7 +586,7 @@ def breeding_options():
 			"diagnosis_results": _select_options("Livestock Event", "diagnosis_result")
 			or ["Confirmed", "Not Pregnant", "Aborted"],
 			"sires": sires,
-			"semen_items": _stock_items("semen"),
+			"semen_items": _stock_items("semen", livestock_stock.semen_warehouse()),
 			"default_semen_item": livestock_stock.default_semen_item(),
 			"employee": _current_employee(),
 		}
@@ -1099,10 +1111,20 @@ def create_check_up(payload):
 		doc.action_taken = d.get("action_taken")
 		doc.action_notes = d.get("action_notes")
 		doc.follow_up_date = d.get("follow_up_date") or None
+		# Anything given at the check. LivestockDiagnosis.post_drug_issue posts these
+		# out of the drug store on submit, and blocks the check if it cannot.
+		for drug in _clean_drug_rows(d.get("drugs"), d.get("source_warehouse") or livestock_stock.drug_warehouse()):
+			doc.append("drug_issues", drug)
 		doc.insert()
 		doc.submit()
 		doc.reload()
-		return {"ok": True, "name": doc.name, "action_taken": doc.action_taken}
+		return {
+			"ok": True,
+			"name": doc.name,
+			"action_taken": doc.action_taken,
+			"stock_entry": doc.stock_entry or "",
+			"drugs_issued": len(doc.drug_issues or []),
+		}
 
 	return _run(go, "livestock create_check_up failed")
 
@@ -1148,6 +1170,7 @@ def create_health_case(payload):
 					"drug_item": t.get("drug_item") or None,
 					"drug_name_text": t.get("drug_name_text"),
 					"dosage": t.get("dosage"),
+					"qty": flt(t.get("qty")) or 1,
 					"route": t.get("route") or None,
 					"withdrawal_period_days": int(flt(t.get("withdrawal_period_days"))) or None,
 					"administered_by": t.get("administered_by") or _current_employee(),
@@ -1166,6 +1189,97 @@ def create_health_case(payload):
 		}
 
 	return _run(go, "livestock create_health_case failed")
+
+
+@frappe.whitelist()
+def open_health_cases():
+	"""Cases still being treated, for the treatment form's case picker."""
+
+	def go():
+		rows = frappe.get_all(
+			"Livestock Health Case",
+			filters={"docstatus": 1, "case_status": ["!=", "Closed"]},
+			fields=["name", "animal", "animal_name", "case_status", "opened_date", "provisional_diagnosis"],
+			order_by="opened_date desc",
+			limit_page_length=200,
+		)
+		return {
+			"ok": True,
+			"cases": [
+				{
+					"value": r.name,
+					"label": "{0} · {1}{2}".format(
+						r.name,
+						r.animal_name or r.animal,
+						" · " + r.provisional_diagnosis if r.provisional_diagnosis else "",
+					),
+					"animal": r.animal,
+				}
+				for r in rows
+			],
+			"drug_items": _stock_items("drug", livestock_stock.drug_warehouse()),
+			"routes": _select_options("Livestock Health Treatment", "route"),
+			"employee": _current_employee(),
+		}
+
+	return _run(go, "livestock open_health_cases failed")
+
+
+@frappe.whitelist()
+def add_case_treatment(payload):
+	"""Add today's treatment to an open case and issue its drugs.
+
+	Treatments are `allow_on_submit`, and the issue guard lives on the row, so
+	this appends to a live case rather than amending it. The drugs go out of the
+	store as they are recorded — a case treated for five days posts five issues,
+	not one, which is what the store actually saw.
+	"""
+
+	def go():
+		_guard("Livestock Health Case")
+		d = _ok(payload)
+		if not d.get("case"):
+			frappe.throw(_("Select a case."))
+		treatments = [
+			t for t in (d.get("treatments") or []) if t.get("drug_item") or t.get("drug_name_text")
+		]
+		if not treatments:
+			frappe.throw(_("Add at least one treatment."))
+
+		doc = frappe.get_doc("Livestock Health Case", d["case"])
+		if doc.docstatus != 1:
+			frappe.throw(_("Case {0} is not submitted.").format(doc.name))
+
+		before = {t.name for t in doc.treatments or []}
+		for t in treatments:
+			doc.append(
+				"treatments",
+				{
+					"treatment_date": t.get("treatment_date") or d.get("treatment_date") or today(),
+					"drug_item": t.get("drug_item") or None,
+					"drug_name_text": t.get("drug_name_text"),
+					"dosage": t.get("dosage"),
+					"qty": flt(t.get("qty")) or 1,
+					"route": t.get("route") or None,
+					"withdrawal_period_days": int(flt(t.get("withdrawal_period_days"))) or None,
+					"administered_by": t.get("administered_by") or _current_employee(),
+					"notes": t.get("notes"),
+				},
+			)
+		doc.flags.ignore_permissions = True
+		doc.save()
+		doc.reload()
+		added = [t for t in doc.treatments or [] if t.name not in before]
+		return {
+			"ok": True,
+			"name": doc.name,
+			"animal": doc.animal,
+			"added": len(added),
+			"treatments": len(doc.treatments or []),
+			"stock_entry": (added[0].stock_entry_ref if added else "") or "",
+		}
+
+	return _run(go, "livestock add_case_treatment failed")
 
 
 # ===========================================================================
@@ -1188,8 +1302,14 @@ def husbandry_options():
 			"animals": _animal_choices(_active_animals(), labels),
 			"event_types": list(HUSBANDRY_TYPES),
 			"drug_consuming_types": list(DRUG_CONSUMING_TYPES),
-			"drug_items": _stock_items("drug"),
+			"drug_items": _stock_items("drug", livestock_stock.drug_warehouse()),
 			"drug_warehouse": livestock_stock.drug_warehouse(),
+			"herds": [
+				{"name": h.name, "label": h.herd_name or h.name, "heads": int(h.number_of_animals or 0)}
+				for h in frappe.get_all(
+					"Herds", fields=["name", "herd_name", "number_of_animals"], order_by="herd_name asc"
+				)
+			],
 			"warehouses": [
 				w.name
 				for w in frappe.get_all(
@@ -1204,6 +1324,33 @@ def husbandry_options():
 		}
 
 	return _run(go, "livestock husbandry_options failed")
+
+
+@frappe.whitelist()
+def drugs_in_store(warehouse=None):
+	"""The drug picker for one store, with that store's balances.
+
+	Called when the user changes the store, so the quantities on screen always
+	describe the shelf the issue will come off.
+	"""
+
+	def go():
+		wh = warehouse or livestock_stock.drug_warehouse()
+		return {"ok": True, "warehouse": wh, "drug_items": _stock_items("drug", wh)}
+
+	return _run(go, "livestock drugs_in_store failed")
+
+
+@frappe.whitelist()
+def herd_animals(herd):
+	"""Active animals in a herd — the target list for a whole-herd round."""
+
+	def go():
+		labels = _herd_label_map()
+		animals = _animals_in_herd(herd)
+		return {"ok": True, "herd": herd, "animals": _animal_choices(animals, labels), "count": len(animals)}
+
+	return _run(go, "livestock herd_animals failed")
 
 
 @frappe.whitelist()
@@ -1229,36 +1376,133 @@ def create_husbandry_event(payload):
 					event_type or _("(none)"), ", ".join(HUSBANDRY_TYPES)
 				)
 			)
-		if not d.get("animal"):
-			frappe.throw(_("Select an animal."))
 
-		doc = _new_livestock_event(d, event_type)
-		if event_type in DRUG_CONSUMING_TYPES:
-			default_wh = d.get("source_warehouse") or livestock_stock.drug_warehouse()
-			for drug in d.get("drugs") or []:
-				if not drug.get("item_code") or flt(drug.get("qty")) <= 0:
-					continue
-				doc.append(
-					"drug_issues",
-					{
-						"item_code": drug.get("item_code"),
-						"qty": flt(drug.get("qty")),
-						"source_warehouse": drug.get("source_warehouse") or default_wh,
-						"batch_no": drug.get("batch_no"),
-						"dosage": drug.get("dosage"),
-						"withdrawal_days": int(flt(drug.get("withdrawal_days"))) or None,
-						"next_due_date": drug.get("next_due_date") or None,
-					},
-				)
-		doc.insert()
-		doc.submit()
-		doc.reload()
+		animals = _husbandry_targets(d)
+		consumes = _type_consumes_drugs(event_type)
+		default_wh = d.get("source_warehouse") or livestock_stock.drug_warehouse()
+		drugs = _clean_drug_rows(d.get("drugs"), default_wh) if consumes else []
+
+		# One Material Issue for the whole round, not one per animal. Dosing is
+		# entered per animal — 2 ml a cow across 119 cows — so the store sees a
+		# single line of 238 ml, which is both what left the shelf and what the
+		# storekeeper can reconcile. The events are then stamped with that entry,
+		# and LivestockEvent.post_stock_issue's `self.stock_entry` guard stops each
+		# one posting again.
+		stock_entry = None
+		if drugs:
+			rows = [
+				{
+					"item_code": drug["item_code"],
+					"qty": drug["qty"] * len(animals),
+					"warehouse": drug["source_warehouse"],
+					"batch_no": drug.get("batch_no"),
+					"uom": drug.get("uom"),
+				}
+				for drug in drugs
+			]
+			stock_entry = livestock_stock.issue_items(
+				rows,
+				remarks="Livestock {0} - {1} animal(s)".format(event_type, len(animals)),
+				posting_date=d.get("event_date"),
+				employee=d.get("operator"),
+			)
+
+		created = []
+		for animal in animals:
+			doc = _new_livestock_event(dict(d, animal=animal), event_type)
+			for drug in drugs:
+				doc.append("drug_issues", dict(drug, stock_entry_ref=stock_entry))
+			if stock_entry:
+				doc.stock_entry = stock_entry
+			doc.insert()
+			doc.submit()
+			created.append(doc.name)
+
 		return {
 			"ok": True,
-			"name": doc.name,
-			"event_type": doc.event_type,
-			"stock_entry": doc.stock_entry or "",
-			"drugs_issued": len(doc.drug_issues or []),
+			"name": created[0] if created else "",
+			"names": created,
+			"animals": len(created),
+			"event_type": event_type,
+			"stock_entry": stock_entry or "",
+			"drugs_issued": len(drugs),
+			"qty_per_animal": sum(drug["qty"] for drug in drugs),
 		}
 
 	return _run(go, "livestock create_husbandry_event failed")
+
+
+def _type_consumes_drugs(event_type):
+	"""Read off Livestock Event Type, so the farm can flag a new drug-consuming
+	type without a deploy. DRUG_CONSUMING_TYPES is the fallback for a site whose
+	event types predate the flag."""
+	flagged = frappe.db.get_value("Livestock Event Type", event_type, "consumes_drugs")
+	if flagged is None:
+		return event_type in DRUG_CONSUMING_TYPES
+	return bool(flagged)
+
+
+def _animals_in_herd(herd):
+	"""Animals in a herd that may still receive an event.
+
+	Same rule as _active_animals — retired status or `disabled` excludes an
+	animal. `Herds.number_of_animals` is NOT that count: it counts every animal
+	whose current_herd points here regardless of status, so dosing off it would
+	issue drugs for cows that are dead or sold.
+	"""
+	return frappe.get_all(
+		"Animal",
+		filters=[
+			["current_herd", "=", herd],
+			["status", "not in", _RETIRED_STATUSES],
+			["disabled", "=", 0],
+		],
+		fields=_ANIMAL_FIELDS,
+		order_by="tag_number asc",
+		limit=5000,
+	)
+
+
+def _husbandry_targets(d):
+	"""The animals this event applies to: one, a chosen set, or a whole herd.
+
+	Deworming a herd is one operation to the person doing it and one issue out of
+	the store, but it is still a clinical fact about each cow — withdrawal dates
+	and next-due dates are per animal. So the round fans out into one event per
+	animal, and only the stock side is batched.
+	"""
+	animals = [a for a in (d.get("animals") or []) if a]
+	if not animals and d.get("animal"):
+		animals = [d["animal"]]
+	if not animals and d.get("herd"):
+		animals = [a.name for a in _animals_in_herd(d["herd"])]
+		if not animals:
+			frappe.throw(_("Herd {0} has no active animals.").format(d["herd"]))
+	if not animals:
+		frappe.throw(_("Select an animal, a set of animals, or a herd."))
+	return animals
+
+
+def _clean_drug_rows(drugs, default_wh):
+	"""Drop half-filled drug lines; quantities here are PER ANIMAL.
+
+	A blank line should not cost the user the whole event, so an incomplete row is
+	dropped rather than rejected.
+	"""
+	rows = []
+	for drug in drugs or []:
+		if not drug.get("item_code") or flt(drug.get("qty")) <= 0:
+			continue
+		rows.append(
+			{
+				"item_code": drug["item_code"],
+				"qty": flt(drug["qty"]),
+				"source_warehouse": drug.get("source_warehouse") or default_wh,
+				"batch_no": drug.get("batch_no"),
+				"dosage": drug.get("dosage"),
+				"uom": drug.get("uom"),
+				"withdrawal_days": int(flt(drug.get("withdrawal_days"))) or None,
+				"next_due_date": drug.get("next_due_date") or None,
+			}
+		)
+	return rows

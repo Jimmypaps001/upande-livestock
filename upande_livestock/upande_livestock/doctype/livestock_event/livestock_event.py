@@ -974,22 +974,43 @@ class LivestockEvent(Document):
 	def on_cancel(self):
 		self.refresh_calving_birth_count()
 
+	def _type_consumes_drugs(self):
+		"""Whether this event type takes drugs out of a store.
+
+		Read off Livestock Event Type rather than a tuple in code, so the farm can
+		flag a new drug-consuming type — dry-cow therapy at Drying Off, calcium at
+		Calving — without a deploy. Mirrors `creates_animal`.
+		"""
+		if not self.event_type:
+			return False
+		return bool(frappe.db.get_value("Livestock Event Type", self.event_type, "consumes_drugs"))
+
 	def post_stock_issue(self):
 		"""Issue whatever this event consumed out of stock.
 
-		Vaccination and Deworming issue their `drug_issues` rows; a Service issues
-		the semen straw. Both go through try_issue_items, so a store that cannot
-		satisfy the issue costs a warning rather than the clinical record — see
-		livestock_stock.try_issue_items for why.
+		A drug-consuming type issues its `drug_issues` rows; a Service issues the
+		semen straw. Both block when the store cannot cover them — see
+		livestock_stock for why that reversed.
 
 		Guarded by `self.stock_entry` so an amend or a re-submit cannot post a
-		second issue for the same event.
+		second issue for the same event. That guard is also how a batch issue
+		works: api/operations posts one Material Issue for a whole herd's
+		deworming and stamps it on every event, so each event finds it already
+		set and does not post its own.
 		"""
 		if self.stock_entry:
 			return
 
+		# A mirror event does not own its stock. Livestock Diagnosis and Livestock
+		# Health Case create one of these through sync_event_for purely to put
+		# themselves on the animal's timeline; the drug rows and the Material Issue
+		# live on the source document, which posts them itself. Without this the
+		# mirror would warn "recorded with no drugs issued" for every check-up.
+		if self.reference_doctype:
+			return
+
 		rows, what = [], None
-		if self.event_type in ("Vaccination", "Deworming"):
+		if self._type_consumes_drugs():
 			what = self.event_type
 			default_wh = livestock_stock.drug_warehouse()
 			for row in self.drug_issues or []:
@@ -1001,6 +1022,17 @@ class LivestockEvent(Document):
 						"batch_no": row.batch_no,
 						"uom": row.uom,
 					}
+				)
+			if not rows:
+				# The reason 93 vaccinations consumed nothing: an empty drug table
+				# passed silently. It still saves — a procedure genuinely may use
+				# nothing — but it no longer does so quietly.
+				frappe.msgprint(
+					_("{0} recorded with no drugs issued. Nothing was taken out of the store.").format(
+						self.event_type
+					),
+					alert=True,
+					indicator="orange",
 				)
 		elif self.event_type == "Service":
 			what = "Service"
@@ -1018,10 +1050,9 @@ class LivestockEvent(Document):
 		if not rows:
 			return
 
-		name = livestock_stock.try_issue_items(
+		name = livestock_stock.issue_items(
 			rows,
 			remarks=f"Livestock {what} - {self.animal} - {self.name}",
-			what=what,
 			posting_date=self.event_date,
 			employee=self.operator,
 		)
