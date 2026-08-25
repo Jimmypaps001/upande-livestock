@@ -245,15 +245,42 @@ def feed_preview(herd):
 
 
 @frappe.whitelist()
-def manufacture_feed(herd):
+def feeding_program(herd):
+	"""Both sections of the herd feeding programme — the TMR requirement priced
+	against the stores, plus a whole-batch plan per concentrate it draws on."""
+
+	def go():
+		info = feeding.get_herd_feeding_program(herd)
+		info["ok"] = True
+		return info
+
+	return _run(go, "livestock feeding_program failed")
+
+
+@frappe.whitelist()
+def manufacture_feed(herd, allow_shortage=False):
 	def go():
 		_guard("Work Order")
 		_guard("Stock Entry")
-		res = feeding.manufacture_herd_feed(herd)
+		res = feeding.manufacture_herd_feed(herd, allow_shortage=allow_shortage)
 		res["ok"] = True
 		return res
 
 	return _run(go, "livestock manufacture_feed failed")
+
+
+@frappe.whitelist()
+def manufacture_concentrate(item_code, qty=None, bom_no=None, allow_shortage=False):
+	def go():
+		_guard("Work Order")
+		_guard("Stock Entry")
+		res = feeding.manufacture_concentrate(
+			item_code, qty=qty, bom_no=bom_no, allow_shortage=allow_shortage
+		)
+		res["ok"] = True
+		return res
+
+	return _run(go, "livestock manufacture_concentrate failed")
 
 
 @frappe.whitelist()
