@@ -239,7 +239,8 @@
    "fieldname": "treatments",
    "fieldtype": "Table",
    "label": "Treatments",
-   "options": "Livestock Health Treatment"
+   "options": "Livestock Health Treatment",
+   "allow_on_submit": 1
   },
   {
    "fieldname": "sb_cost",
@@ -251,7 +252,8 @@
    "fieldname": "total_treatment_cost",
    "fieldtype": "Currency",
    "label": "Total Treatment Cost (KES)",
-   "read_only": 1
+   "read_only": 1,
+   "allow_on_submit": 1
   },
   {
    "description": "Auto-created Journal Entry for total_treatment_cost",
@@ -271,7 +273,8 @@
    "fieldtype": "Link",
    "label": "Drug Issue Stock Entry",
    "options": "Stock Entry",
-   "read_only": 1
+   "read_only": 1,
+   "allow_on_submit": 1
   },
   {
    "fieldname": "tab_outcome",
@@ -338,7 +341,7 @@
    "fieldtype": "Column Break"
   },
   {
-   "description": "Auto-calculated from production_loss_kg \u00d7 milk price in Livestock Settings",
+   "description": "Auto-calculated from production_loss_kg × milk price in Livestock Settings",
    "fieldname": "production_loss_value",
    "fieldtype": "Currency",
    "label": "Production Loss Value (KES)",

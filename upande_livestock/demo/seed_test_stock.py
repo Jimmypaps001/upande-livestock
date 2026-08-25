@@ -22,7 +22,7 @@ warehouse keeps demo movements separable from real ones.
 """
 
 import frappe
-from frappe.utils import flt, today
+from frappe.utils import add_years, flt, today
 
 WAREHOUSE_NAME = "Livestock Drug Store"
 
@@ -158,7 +158,11 @@ def receive_stock(warehouse, company):
 	se.purpose = "Material Receipt"
 	se.company = company
 	se.set_posting_time = 1
-	se.posting_date = today()
+	# Opening stock has to predate the events that draw on it. Issues block when
+	# the store cannot cover them *on the posting date*, so stock received today
+	# makes every back-dated vaccination, service or treatment — and the tests
+	# that record one — fail for having 0 on the day.
+	se.posting_date = add_years(today(), -1)
 	se.remarks = "Livestock demo opening stock (demo/seed_test_stock.py)"
 	for code, qty, rate in rows:
 		item = se.append("items", {})

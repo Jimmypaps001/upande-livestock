@@ -11,6 +11,7 @@
   "is_active",
   "cb_details",
   "creates_animal",
+  "consumes_drugs",
   "detail_doctype"
  ],
  "fields": [
@@ -42,6 +43,13 @@
    "fieldtype": "Check",
    "in_list_view": 1,
    "label": "Creates Animal"
+  },
+  {
+   "default": "0",
+   "description": "Events of this type take something out of a store. The Drugs Issued table appears on the event, and submitting posts a Material Issue for those rows. An event of this type submitted with no drug rows warns rather than passing silently.",
+   "fieldname": "consumes_drugs",
+   "fieldtype": "Check",
+   "label": "Consumes Drugs"
   },
   {
    "description": "Events of this type are auto-created from this detail DocType.",
