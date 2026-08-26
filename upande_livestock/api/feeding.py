@@ -342,6 +342,13 @@ def _run_manufacture(production_item, bom_no, qty, herd=None, heads=None, allow_
 	wo.production_item = production_item
 	wo.bom_no = bom_no
 	wo.qty = qty
+	# Set explicitly rather than leaning on the field's `fetch_from`. That fetch
+	# stopped firing server-side somewhere after frappe 16.26, so a Work Order
+	# built through the API kept the "Nos" default — and Nos is a whole-number
+	# UOM, so ERPNext refused every fractional batch ("Qty To Manufacture (319.8)
+	# cannot be a fraction"). Feed is measured in kilograms and is fractional by
+	# nature, so this has to be right, not merely usually right.
+	wo.stock_uom = frappe.db.get_value("Item", production_item, "stock_uom")
 	wo.company = company
 	wo.fg_warehouse = store
 	wo.wip_warehouse = store
