@@ -16,9 +16,14 @@ Work Orders here run with ``use_multi_level_bom = 0`` deliberately. The
 concentrate is therefore consumed *as stock*, not exploded — so it has to have
 been manufactured first. That is the whole point of the two sections in the UI:
 
-  Main programme      herd -> TMR.  Required = BOM line qty * head count.
+  Main programme      herd -> TMR -> the herd.  Required = BOM line qty * head
+                      count, and the batch is issued to the herd as part of the
+                      same action: a TMR is mixed and fed, never stored, so
+                      manufacturing without issuing left feed sitting on the
+                      books that had already gone in the trough.
   Concentrate         concentrate -> stock.  Required = its own BOM, scaled to
-                      whole batches covering the TMR's shortfall.
+                      whole batches covering the TMR's shortfall. This one does
+                      stay in the store — it is an input, not a meal.
 
 STORE RESOLUTION
   Livestock Settings.feed_source_warehouses is an ordered list of warehouses
@@ -318,6 +323,19 @@ def _shortage_message(lines):
 	)
 
 
+def _assert_can_cover(production_item, bom_no, qty, allow_shortage=False):
+	"""Raise if the stores cannot cover this run. Read-only; writes nothing."""
+	_, lines = resolve_requirement(bom_no, qty)
+	if allow_shortage:
+		return lines
+	short = [ln for ln in lines if ln["short_qty"] > 0]
+	if short:
+		frappe.throw(
+			"Not enough stock to manufacture {0}: {1}.".format(production_item, _shortage_message(short))
+		)
+	return lines
+
+
 def _run_manufacture(production_item, bom_no, qty, herd=None, heads=None, allow_shortage=False):
 	"""Work Order -> Material Transfer for Manufacture -> Manufacture.
 
@@ -331,11 +349,7 @@ def _run_manufacture(production_item, bom_no, qty, herd=None, heads=None, allow_
 
 	store = _feed_store()
 	company = _company()
-	_, lines = resolve_requirement(bom_no, qty)
-	if not allow_shortage:
-		short = [ln for ln in lines if ln["short_qty"] > 0]
-		if short:
-			frappe.throw("Not enough stock to manufacture {0}: {1}.".format(production_item, _shortage_message(short)))
+	lines = _assert_can_cover(production_item, bom_no, qty, allow_shortage)
 	source_of = {ln["item_code"]: ln["source_warehouse"] for ln in lines}
 
 	wo = frappe.new_doc("Work Order")
@@ -386,22 +400,53 @@ def _run_manufacture(production_item, bom_no, qty, herd=None, heads=None, allow_
 
 
 @frappe.whitelist()
-def manufacture_herd_feed(herd, allow_shortage=False):
-	"""Stage A — manufacture the herd's TMR.
+def manufacture_herd_feed(herd, allow_shortage=False, employee=None):
+	"""Manufacture the herd's TMR and issue the whole batch to that herd.
 
 	Total produced = heads * BOM.quantity; every raw material and the
 	concentrate scale by head count. Refuses to run short unless explicitly
 	overridden, because the transfer would otherwise post negative stock.
+
+	`employee` attributes the issue; it defaults to the Employee linked to the
+	logged-in user, which is what the block sends. That is attribution, not a
+	quantity — there is still nothing to choose about how much goes out.
+
+	The batch is issued in the same call, in full. There is no quantity to
+	choose: a total mixed ration is made for one herd for one feeding, and
+	splitting it would mean the rest sat in the store as feed that had already
+	been eaten. Exactly what this run produced goes out — an earlier balance is
+	left alone rather than swept up, so each batch reconciles against its own
+	issue.
+
+	Nothing is committed here. The manufacture and the issue have to stand or
+	fall together, and api/operations._run() relies on the rollback.
 	"""
 	herd_doc, bom, heads = _herd_bom(herd)
 	per_head = flt(bom.quantity) or 1.0
 	total_qty = per_head * heads
 
+	# Availability first — it writes nothing, and a shortage is the more useful
+	# thing to be told about. The operator is then resolved before anything
+	# posts: finding that out afterwards would leave a manufactured batch with
+	# no way to move it out, a half-done state that reads as feed in the store.
+	_assert_can_cover(bom.item, bom.name, total_qty, frappe.parse_json(allow_shortage))
+	employee = _operator_or_throw(employee)
+
 	res = _run_manufacture(
 		bom.item, bom.name, total_qty, herd=herd, heads=heads, allow_shortage=frappe.parse_json(allow_shortage)
 	)
-	frappe.db.commit()
-	res.update({"heads": heads, "per_head_qty": per_head, "uom": bom.uom})
+	issue = _issue_feed(herd, bom, total_qty, employee)
+	res.update(
+		{
+			"heads": heads,
+			"per_head_qty": per_head,
+			"uom": bom.uom,
+			"issued_qty": issue["issued_qty"],
+			"issue_stock_entry": issue["stock_entry"],
+			"livestock_event": issue["livestock_event"],
+			"employee": employee,
+		}
+	)
 	return res
 
 
@@ -426,31 +471,42 @@ def manufacture_concentrate(item_code, qty=None, bom_no=None, allow_shortage=Fal
 	return res
 
 
+def _operator_or_throw(employee=None):
+	"""The Employee the issue is attributed to.
+
+	This site runs a "PPE Issuance Assignment Creation" script on every Material
+	Issue that requires exactly one employee in custom_employee_data, so an issue
+	without one does not save at all.
+	"""
+	employee = employee or frappe.db.get_value("Employee", {"user_id": frappe.session.user}, "name")
+	if not employee:
+		frappe.throw(
+			"No Employee is linked to your user ({0}). Link one before manufacturing feed.".format(
+				frappe.session.user
+			)
+		)
+	return employee
+
+
 @frappe.whitelist()
 def feed_herd(herd, qty, employee=None):
-	"""Stage B — issue `qty` of the herd's manufactured TMR out of the feed
-	store via a Material Issue, recording the operating employee."""
+	"""Issue `qty` of a herd's TMR out of the store.
+
+	Not the normal path any more — manufacturing issues its own batch. This
+	stays for corrections and for clearing a balance left by an earlier run.
+	"""
 	qty = flt(qty)
 	if qty <= 0:
 		frappe.throw("Enter a quantity greater than zero.")
 	herd_doc, bom, heads = _herd_bom(herd)
+	return _issue_feed(herd, bom, qty, _operator_or_throw(employee))
+
+
+def _issue_feed(herd, bom, qty, employee):
+	"""Post the Material Issue and put the feeding on the herd's timeline."""
 	store = _feed_store()
 	company = _company()
 	item = bom.item
-
-	# The feed issue is a standard Material Issue. This site runs a
-	# "PPE Issuance Assignment Creation" script on every Material Issue that
-	# requires exactly one employee in custom_employee_data (it only creates
-	# PPE assignments for items flagged custom_is_ppe, which feed is not).
-	# So we attribute the issue to the currently logged-in employee.
-	if not employee:
-		employee = frappe.db.get_value("Employee", {"user_id": frappe.session.user}, "name")
-	if not employee:
-		frappe.throw(
-			"No Employee is linked to your user ({0}). Link one before issuing feed.".format(
-				frappe.session.user
-			)
-		)
 	emp_name = frappe.db.get_value("Employee", employee, "employee_name")
 
 	se = frappe.new_doc("Stock Entry")

@@ -270,11 +270,11 @@ def feeding_program(herd):
 
 
 @frappe.whitelist()
-def manufacture_feed(herd, allow_shortage=False):
+def manufacture_feed(herd, allow_shortage=False, employee=None):
 	def go():
 		_guard("Work Order")
 		_guard("Stock Entry")
-		res = feeding.manufacture_herd_feed(herd, allow_shortage=allow_shortage)
+		res = feeding.manufacture_herd_feed(herd, allow_shortage=allow_shortage, employee=employee)
 		res["ok"] = True
 		return res
 

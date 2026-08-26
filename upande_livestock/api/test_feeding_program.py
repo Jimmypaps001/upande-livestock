@@ -109,12 +109,106 @@ class TestFeedingProgram(IntegrationTestCase):
 		self.assertEqual(p["can_manufacture"], not p["shortages"])
 
 	def test_manufacture_refuses_when_short(self):
-		"""A short run must not post — the transfer would go negative."""
+		"""A short run must not post — the transfer would go negative.
+
+		The message is asserted, not just the exception type: the operator guard
+		raises ValidationError too, so a bare assertRaises would pass on a site
+		where the test user has no Employee and prove nothing about shortages.
+		"""
 		p = feeding.get_herd_feeding_program(self.herd.name)
 		if p["can_manufacture"]:
 			raise unittest.SkipTest("this herd is not short; nothing to refuse")
-		with self.assertRaises(frappe.ValidationError):
+		with self.assertRaises(frappe.ValidationError) as caught:
 			feeding.manufacture_herd_feed(self.herd.name)
+		self.assertIn("Not enough stock", str(caught.exception))
+
+
+class TestManufactureIssuesItsBatch(IntegrationTestCase):
+	"""A TMR is mixed and fed, never stored, so manufacturing issues the batch.
+
+	The quantity is not a choice: splitting it would leave the rest on the books
+	as feed that had already gone in the trough.
+	"""
+
+	def setUp(self):
+		# A herd the stores can actually cover, so the test exercises the issue
+		# rather than skipping on whatever the biggest herd happens to be short of.
+		self.herd = None
+		for h in frappe.get_all(
+			"Herds", filters=[["bom", "is", "set"], ["number_of_animals", ">", 0]],
+			fields=["name", "bom", "number_of_animals"], order_by="number_of_animals asc"
+		):
+			try:
+				if feeding.get_herd_feeding_program(h.name)["can_manufacture"]:
+					self.herd = h
+					break
+			except frappe.ValidationError:
+				continue
+		if not self.herd:
+			raise unittest.SkipTest("no herd on this site can currently be manufactured")
+		self.employee = frappe.db.get_value("Employee", {"status": "Active"}, "name")
+		if not self.employee:
+			raise unittest.SkipTest("no active Employee on this site")
+
+	def test_the_operator_is_resolved_before_anything_posts(self):
+		"""Discovering the operator afterwards would strand a manufactured batch
+		in the store with no way to move it out."""
+		original = frappe.session.user
+		frappe.set_user("Administrator")
+		try:
+			if frappe.db.get_value("Employee", {"user_id": "Administrator"}, "name"):
+				raise unittest.SkipTest("Administrator has an Employee on this site")
+			before = frappe.db.count("Work Order")
+			with self.assertRaises(frappe.ValidationError) as caught:
+				feeding.manufacture_herd_feed(self.herd.name)
+			self.assertIn("Employee", str(caught.exception))
+			self.assertEqual(frappe.db.count("Work Order"), before, "nothing may post without an operator")
+		finally:
+			frappe.set_user(original)
+
+	def test_the_whole_batch_is_issued(self):
+		p = feeding.get_herd_feeding_program(self.herd.name)
+		if not p["can_manufacture"]:
+			raise unittest.SkipTest("this herd is short; nothing to manufacture")
+
+		item, store = p["production_item"], p["store"]
+		before = feeding._bin_qty(item, store)
+		res = feeding.manufacture_herd_feed(self.herd.name, employee=self.employee)
+
+		self.assertAlmostEqual(res["issued_qty"], res["produced_qty"], places=4)
+		self.assertTrue(res["issue_stock_entry"])
+		# Made and fed in one action, so the store balance is unchanged.
+		self.assertAlmostEqual(feeding._bin_qty(item, store), before, places=4)
+
+		se = frappe.get_doc("Stock Entry", res["issue_stock_entry"])
+		self.assertEqual(se.stock_entry_type, "Material Issue")
+		self.assertEqual(len(se.items), 1)
+		self.assertEqual(se.items[0].item_code, item)
+		self.assertAlmostEqual(se.items[0].qty, res["produced_qty"], places=4)
+
+	def test_an_earlier_balance_is_left_alone(self):
+		"""Only this run's batch goes out — each batch reconciles against its
+		own issue rather than sweeping up whatever the store held."""
+		p = feeding.get_herd_feeding_program(self.herd.name)
+		if not p["can_manufacture"]:
+			raise unittest.SkipTest("this herd is short; nothing to manufacture")
+		item, store = p["production_item"], p["store"]
+		standing = feeding._bin_qty(item, store)
+		res = feeding.manufacture_herd_feed(self.herd.name, employee=self.employee)
+		self.assertAlmostEqual(res["issued_qty"], p["total_manufacture_qty"], places=4)
+		self.assertAlmostEqual(feeding._bin_qty(item, store), standing, places=4)
+
+	def test_the_feeding_reaches_the_herd_timeline(self):
+		p = feeding.get_herd_feeding_program(self.herd.name)
+		if not p["can_manufacture"]:
+			raise unittest.SkipTest("this herd is short; nothing to manufacture")
+		res = feeding.manufacture_herd_feed(self.herd.name, employee=self.employee)
+		if not res.get("livestock_event"):
+			raise unittest.SkipTest("the timeline write is best-effort and did not run")
+		ev = frappe.get_doc("Livestock Event", res["livestock_event"])
+		self.assertEqual(ev.event_type, "Feeding")
+		self.assertEqual(ev.current_herd, self.herd.name)
+		self.assertEqual(ev.stock_entry, res["issue_stock_entry"])
 
 
 class TestPickSource(IntegrationTestCase):
