@@ -1,0 +1,62 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-08-27 08:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "herd",
+  "days_in_herd",
+  "max_days_in_herd",
+  "exits_on_service"
+ ],
+ "fields": [
+  {
+   "columns": 3,
+   "fieldname": "herd",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Herd",
+   "options": "Herds",
+   "reqd": 1
+  },
+  {
+   "columns": 2,
+   "description": "Days a heifer normally spends here before the next herd is suggested.",
+   "fieldname": "days_in_herd",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Days in Herd"
+  },
+  {
+   "columns": 2,
+   "description": "Beyond this she is overdue and is flagged. Leave at 0 for no limit.",
+   "fieldname": "max_days_in_herd",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Maximum Days"
+  },
+  {
+   "columns": 2,
+   "default": "0",
+   "description": "The last rung: she leaves when she is served, not when her days are up.",
+   "fieldname": "exits_on_service",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Exits on Service"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-08-27 08:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Upande Livestock",
+ "name": "Herd Growth Stage",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}
