@@ -445,6 +445,43 @@ def _new_livestock_event(d, event_type, date_key=None):
 
 
 @frappe.whitelist()
+def eligibility():
+	"""Everything a client needs to offer only what an animal is eligible for.
+
+	One call rather than several, because a mobile client on a farm network
+	should not need four round trips to work out whether it may show a cow in a
+	milking form. All of it is DERIVED from Herd Movement settings — a client
+	that filters on its own hand-marked flags drifts the moment a herd is
+	renamed or added, which is what the app was doing with custom_is_milking.
+	"""
+
+	def go():
+		from upande_livestock import herd_movement
+
+		ladder = herd_movement.growth_ladder()
+		return {
+			"ok": True,
+			"milking_herds": herd_movement.milking_herds(),
+			"service_herds": herd_movement.service_herds(),
+			"service_wait_days": herd_movement.service_wait_days(),
+			"growth_ladder": ladder,
+			# next_herd per rung, so a client can propose a destination without
+			# re-deriving the order and getting it subtly wrong.
+			"next_herd": {
+				r["herd"]: herd_movement.next_growth_herd(r["herd"])
+				for r in ladder
+			},
+			"calf_herds": {
+				"female": herd_movement.calf_herd("Female"),
+				"male": herd_movement.calf_herd("Male"),
+			},
+			"diagnosable": [r["animal"] for r in herd_movement.diagnosable_animals()],
+		}
+
+	return _run(go, "livestock eligibility failed")
+
+
+@frappe.whitelist()
 def movement_suggestions():
 	"""What the herd structure says should happen next.
 
