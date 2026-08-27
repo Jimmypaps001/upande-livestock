@@ -245,6 +245,9 @@ scheduler_events = {
 	# Ex "CHECK OVERDUE PREGNANCY DIAGNOSES" Server Script (Daily).
 	"daily": [
 		"upande_livestock.tasks.check_overdue_pregnancy_diagnoses",
+		# Captures what should be said about herd movement. It records alerts; it
+		# does not deliver them — that channel is still to be decided.
+		"upande_livestock.herd_alerts.raise_alerts",
 	],
 }
 

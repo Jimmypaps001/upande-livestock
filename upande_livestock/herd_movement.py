@@ -195,8 +195,17 @@ def service_herds():
 
 
 def service_wait_days():
-	"""Days after calving before a cow is offered for service again."""
-	return int(settings().get("post_calving_min_service_days") or 0)
+	"""Days after calving before a cow is OFFERED for service again.
+
+	The optimal window, not the minimum. Settings holds both: a hard floor
+	(post_calving_min_service_days, 45 here) below which a service is refused,
+	and the point the farm actually starts serving (60). Offering from the floor
+	puts cows in front of the breeder three weeks before anybody would serve
+	them; the floor stays where it is, guarding a deliberate override.
+	"""
+	s = settings()
+	return int(s.get("post_calving_optimal_service_days")
+	           or s.get("post_calving_min_service_days") or 0)
 
 
 def is_milkable(animal):
@@ -216,6 +225,38 @@ def is_servable(animal):
 		if wait and date_diff(today(), getdate(row.last_calving_date)) < wait:
 			return False
 	return True
+
+
+def has_open_service(animal):
+	"""Is there a submitted Service still awaiting its pregnancy check?
+
+	A diagnosis answers a question a service asked. Without one there is nothing
+	to diagnose, and recording a result would invent a pregnancy from nothing.
+	"""
+	return bool(frappe.db.exists("Livestock Event", {
+		"animal": animal,
+		"event_type": "Service",
+		"docstatus": 1,
+		"pregnancy_confirmation_status": "Pending",
+	}))
+
+
+def diagnosable_animals():
+	"""Animals with an open service, newest service first."""
+	rows = frappe.db.sql(
+		"""SELECT s.animal, MAX(s.service_date) AS served, MAX(s.name) AS service
+		   FROM `tabLivestock Event` s
+		   JOIN `tabAnimal` a ON a.name = s.animal
+		   WHERE s.event_type = 'Service' AND s.docstatus = 1
+		     AND s.pregnancy_confirmation_status = 'Pending'
+		     AND IFNULL(a.status, '') NOT IN ('Dead','Deceased','Sold','Culled','Disposed')
+		     AND IFNULL(a.disabled, 0) = 0
+		   GROUP BY s.animal
+		   ORDER BY served DESC
+		   LIMIT 2000""",
+		as_dict=True,
+	)
+	return rows
 
 
 def open_days(animal):
