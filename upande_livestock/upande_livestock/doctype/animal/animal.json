@@ -13,6 +13,7 @@
   "sb_identity",
   "tag_number",
   "burn_name",
+  "book_number",
   "cb_identity",
   "sex",
   "breed",
@@ -99,6 +100,14 @@
    "label": "Burn Name (Display)",
    "reqd": 1,
    "search_index": 1
+  },
+  {
+   "fieldname": "book_number",
+   "fieldtype": "Data",
+   "label": "Book Number",
+   "unique": 0,
+   "in_standard_filter": 1,
+   "description": "The farm's own register number, e.g. A028/19 — letter, sequence, year of birth. What people say out loud."
   },
   {
    "fieldname": "cb_identity",
