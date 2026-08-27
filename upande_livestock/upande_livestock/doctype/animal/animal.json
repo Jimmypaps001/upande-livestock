@@ -83,7 +83,7 @@
   },
   {
    "bold": 1,
-   "description": "Unique ID e.g. A001/26 — used as the system name.",
+   "description": "Unique ID e.g. A001/26 \u2014 used as the system name.",
    "fieldname": "tag_number",
    "fieldtype": "Data",
    "in_list_view": 1,
@@ -107,7 +107,7 @@
    "label": "Book Number",
    "unique": 0,
    "in_standard_filter": 1,
-   "description": "The farm's own register number, e.g. A028/19 — letter, sequence, year of birth. What people say out loud."
+   "description": "The farm's own register number, e.g. A028/19 \u2014 letter, sequence, year of birth. What people say out loud."
   },
   {
    "fieldname": "cb_identity",
@@ -185,7 +185,9 @@
    "fieldname": "image",
    "fieldtype": "Attach Image",
    "label": "Photo",
-   "hidden": 1
+   "hidden": 1,
+   "allow_on_submit": 1,
+   "description": "A photo can be added after the record is submitted \u2014 a newborn is booked before anyone has a free hand for the camera."
   },
   {
    "fieldname": "cb_parentage",

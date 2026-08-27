@@ -66,7 +66,6 @@ app_include_js = "/assets/upande_livestock/js/livestock_desk.js?v=6"
 # include js in doctype views — form scripts (ex Client Scripts, now versioned code)
 doctype_js = {
 	"Livestock Event": "public/js/livestock_event.js",
-	"Milking Palour Checksheet": "public/js/milking_palour_checksheet.js",
 }
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}

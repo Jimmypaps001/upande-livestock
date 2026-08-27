@@ -42,6 +42,8 @@ import frappe
 from frappe.utils import flt, today
 from erpnext.manufacturing.doctype.work_order.work_order import make_stock_entry
 
+from upande_livestock import livestock_stock
+
 DEFAULT_FEED_STORE = "Concentrate Mixing Store - KR"
 
 
@@ -510,7 +512,8 @@ def _issue_feed(herd, bom, qty, employee):
 	emp_name = frappe.db.get_value("Employee", employee, "employee_name")
 
 	se = frappe.new_doc("Stock Entry")
-	se.stock_entry_type = "Material Issue"
+	# Named rather than generic — see livestock_stock.STOCK_ENTRY_TYPES.
+	se.stock_entry_type = livestock_stock.stock_entry_type_for("Feeding")
 	se.purpose = "Material Issue"
 	se.company = company
 	if se.meta.has_field("custom_employee"):

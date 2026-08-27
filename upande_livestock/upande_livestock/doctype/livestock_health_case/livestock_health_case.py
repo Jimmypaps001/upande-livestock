@@ -57,6 +57,7 @@ class LivestockHealthCase(Document):
 		name = livestock_stock.issue_items(
 			rows,
 			remarks=f"Livestock Treatment - {self.animal} - {self.name}",
+			what="Treatment",
 			posting_date=given,
 			employee=self.opened_by,
 		)

@@ -29,3 +29,4 @@ upande_livestock.patches.migrate_milking_session_to_time
 upande_livestock.patches.align_event_date_with_type_date
 upande_livestock.patches.namespace_livestock_roles
 upande_livestock.patches.flag_drug_consuming_event_types
+upande_livestock.patches.create_livestock_stock_entry_types

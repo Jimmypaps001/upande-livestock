@@ -852,18 +852,14 @@ class LivestockEvent(Document):
 					# Update the animal's current herd
 					frappe.db.set_value("Animal", self.animal, "current_herd", self.new_herd)
 
-					# Update OLD herd count (if there was a previous herd)
-					if previous_herd:
-						old_count = frappe.db.count(
-							"Animal", {"current_herd": previous_herd, "docstatus": ["!=", 2]}
-						)
-						frappe.db.set_value("Herds", previous_herd, "number_of_animals", old_count)
+					# Both counts through the one helper, which excludes retired
+					# animals. Counting every row that points at the herd is what
+					# left sold cows in the headcount and fed them.
+					from upande_livestock.api.animal import recompute_herd_count
 
-					# Update NEW herd count
-					new_count = frappe.db.count(
-						"Animal", {"current_herd": self.new_herd, "docstatus": ["!=", 2]}
-					)
-					frappe.db.set_value("Herds", self.new_herd, "number_of_animals", new_count)
+					if previous_herd:
+						recompute_herd_count(previous_herd)
+					recompute_herd_count(self.new_herd)
 
 					frappe.msgprint(
 						f"Animal {self.animal} successfully moved from {previous_herd or 'no herd'} to {self.new_herd}"
@@ -1058,6 +1054,7 @@ class LivestockEvent(Document):
 		name = livestock_stock.issue_items(
 			rows,
 			remarks=f"Livestock {what} - {self.animal} - {self.name}",
+			what=what,
 			posting_date=self.event_date,
 			employee=self.operator,
 		)

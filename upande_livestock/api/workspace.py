@@ -269,7 +269,7 @@ def get_production() -> dict:
 				"total_yield_kg",
 				"discarded_kg",
 				"net_yield_kg",
-				"fat_percent",
+				"discard_reason",
 				"protein_percent",
 				"bulk_scc",
 				"milk_revenue",
@@ -292,7 +292,9 @@ def get_production() -> dict:
 			"records": len(recent),
 			"net_kg": round(sum(flt(r.get("net_yield_kg")) for r in recent), 1),
 			"revenue": round(sum(flt(r.get("milk_revenue")) for r in recent), 2),
-			"avg_fat": _avg("fat_percent"),
+			# Fat is no longer recorded at milking, so there is nothing to average.
+			# The discarded litres and why they went are what the summary can act on.
+			"discarded_kg": round(sum(flt(r.get("discarded_kg")) for r in recent), 1),
 			"avg_protein": _avg("protein_percent"),
 			"avg_scc": _avg("bulk_scc"),
 		}

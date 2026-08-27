@@ -20,6 +20,8 @@
   "section_qty",
   "total_yield_kg",
   "discarded_kg",
+  "discard_reason",
+  "discard_reason_notes",
   "net_yield_kg",
   "col_break_qty",
   "price_per_kg",
@@ -109,6 +111,22 @@
    "label": "Discarded (kg)"
   },
   {
+   "fieldname": "discard_reason",
+   "fieldtype": "Select",
+   "label": "Reason for Discard",
+   "options": "\nMastitis\nAntibiotic withdrawal\nColostrum\nSpoiled / soured\nSpilled\nFailed quality test\nOther",
+   "depends_on": "eval:doc.discarded_kg > 0",
+   "mandatory_depends_on": "eval:doc.discarded_kg > 0",
+   "description": "Milk poured away is a loss. Recording why is the only way it can be reduced."
+  },
+  {
+   "fieldname": "discard_reason_notes",
+   "fieldtype": "Small Text",
+   "label": "Discard Notes",
+   "depends_on": "eval:doc.discard_reason == 'Other'",
+   "mandatory_depends_on": "eval:doc.discard_reason == 'Other'"
+  },
+  {
    "description": "Auto-calculated: Total Yield minus Discarded.",
    "fieldname": "net_yield_kg",
    "fieldtype": "Float",
@@ -126,7 +144,7 @@
    "label": "Price per kg (KES)"
   },
   {
-   "description": "Auto-calculated: Net Yield \u00d7 Price.",
+   "description": "Auto-calculated: Net Yield × Price.",
    "fieldname": "milk_revenue",
    "fieldtype": "Currency",
    "label": "Estimated Revenue (KES)",
@@ -204,12 +222,14 @@
   {
    "fieldname": "bulk_scc",
    "fieldtype": "Float",
-   "label": "Bulk Tank SCC (cells/ml \u00d7 1000)"
+   "label": "Bulk Tank SCC (cells/ml × 1000)"
   },
   {
    "fieldname": "fat_percent",
    "fieldtype": "Float",
-   "label": "Fat %"
+   "label": "Fat %",
+   "hidden": 1,
+   "description": "Not recorded at milking. Kept because two existing recordings hold a value and deleting the field would destroy it."
   },
   {
    "fieldname": "protein_percent",

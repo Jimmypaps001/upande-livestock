@@ -13,6 +13,8 @@ animals and leaves already-repointed events alone. Safe on fresh installs
 
 import frappe
 
+from upande_livestock.api.animal import live_herd_count
+
 
 def execute():
 	# Fresh install or already-removed Asset custom fields -> nothing to migrate.
@@ -115,7 +117,7 @@ def execute():
 
 	# Recompute herd headcounts from Animal membership
 	for h in herds:
-		cnt = frappe.db.count("Animal", {"current_herd": h, "docstatus": ["!=", 2]})
+		cnt = live_herd_count(h)
 		frappe.db.set_value("Herds", h, "number_of_animals", cnt, update_modified=False)
 	frappe.db.commit()
 

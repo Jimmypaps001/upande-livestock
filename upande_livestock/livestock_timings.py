@@ -76,6 +76,19 @@ TIMING_DEFAULTS = {
 	# belong in this dict for the same reason.
 	"min_dehorning_age_months": 1,
 	"max_dehorning_age_months": 6,
+	# Herd-movement thresholds. Every one is a day count on which 0 means
+	# nothing real — a bull culled 0 days after birth, a cow flagged open the
+	# day she calves — so they belong here rather than in the disable-capable
+	# set, and the values match the DocType's own defaults so a seeded site and
+	# a fresh install agree.
+	"bull_cull_max_days": 14,
+	"incalf_general_days": 180,
+	"heifer_dry_off_before_calving_days": 90,
+	"high_yield_days_from_conception": 120,
+	"low_yield_days": 60,
+	"steamer_days_from_heifers": 90,
+	"steamer_days_from_lactation": 60,
+	"max_open_days": 200,
 }
 
 # Float counterparts of TIMING_DEFAULTS: seeded the same way (see

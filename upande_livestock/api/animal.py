@@ -65,12 +65,36 @@ def resolve_calf_herd(sex=None):
 	return youngest[0].name if youngest else None
 
 
+# An animal with one of these statuses has left the herd. It keeps its
+# `current_herd` so its history stays readable, which is precisely why every
+# headcount has to exclude it explicitly.
+RETIRED_STATUSES = ("Dead", "Deceased", "Sold", "Culled", "Disposed", "Transferred Out")
+
+
+def live_herd_count(herd):
+	"""How many animals are actually in `herd` right now.
+
+	The count used to be every Animal row pointing at the herd, retired ones
+	included — so a herd that had sold four cows still reported them, and feed
+	was manufactured for animals that were no longer on the farm. A disposal
+	sets the status and leaves `current_herd` alone on purpose, so the status
+	filter is the only thing that can tell the difference.
+	"""
+	return frappe.db.count(
+		"Animal",
+		{
+			"current_herd": herd,
+			"docstatus": ["!=", 2],
+			"status": ["not in", RETIRED_STATUSES],
+		},
+	)
+
+
 def recompute_herd_count(herd):
-	"""Set Herds.number_of_animals to the actual count. Matches herd_movement_processor."""
+	"""Set Herds.number_of_animals to the live count."""
 	if not herd:
 		return
-	count = frappe.db.count("Animal", {"current_herd": herd, "docstatus": ["!=", 2]})
-	frappe.db.set_value("Herds", herd, "number_of_animals", count)
+	frappe.db.set_value("Herds", herd, "number_of_animals", live_herd_count(herd))
 
 
 def create_calf(dam, tag_number, sex, event_date, birth_weight=None, burn_name=None, herd=None,
@@ -129,6 +153,10 @@ def create_calf(dam, tag_number, sex, event_date, birth_weight=None, burn_name=N
 
 STATUS_BY_DISPOSAL_TYPE = {
 	"Sold": "Sold",
+	# A gift leaves the farm with no sale behind it. "Transferred Out" is the
+	# one status that says exactly that; Sold would invent revenue and Culled
+	# would say the animal was destroyed.
+	"Gifted": "Transferred Out",
 	"Culled (Farm Use)": "Culled",
 	"Died — Natural Causes": "Dead",
 	"Died — Disease": "Dead",

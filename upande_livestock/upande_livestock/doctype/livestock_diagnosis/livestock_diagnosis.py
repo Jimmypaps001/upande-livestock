@@ -47,6 +47,7 @@ class LivestockDiagnosis(Document):
 		name = livestock_stock.issue_items(
 			rows,
 			remarks=f"Livestock Check Up - {self.animal} - {self.name}",
+			what="Check Up",
 			posting_date=self.diagnosis_date,
 			employee=self.operator,
 		)

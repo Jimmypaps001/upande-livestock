@@ -23,6 +23,8 @@
   "customer",
   "buyer_name",
   "buyer_contact",
+  "gifted_to",
+  "gift_destination",
   "sb_accounting",
   "income_account",
   "disposal_account",
@@ -75,7 +77,7 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Disposal Type",
-   "options": "Sold\nCulled (Farm Use)\nDied \u2014 Natural Causes\nDied \u2014 Disease\nDied \u2014 Accident\nCondemned\nSlaughtered",
+   "options": "Sold\nGifted\nCulled (Farm Use)\nDied \u2014 Natural Causes\nDied \u2014 Disease\nDied \u2014 Accident\nCondemned\nSlaughtered",
    "reqd": 1,
    "search_index": 1
   },
@@ -123,6 +125,21 @@
    "fieldname": "buyer_contact",
    "fieldtype": "Data",
    "label": "Buyer Contact / Phone"
+  },
+  {
+   "fieldname": "gifted_to",
+   "fieldtype": "Data",
+   "label": "Gifted To",
+   "depends_on": "eval:doc.disposal_type == 'Gifted'",
+   "mandatory_depends_on": "eval:doc.disposal_type == 'Gifted'",
+   "description": "A gifted animal still leaves the herd and still writes off its book value. Naming the recipient is what makes it auditable."
+  },
+  {
+   "fieldname": "gift_destination",
+   "fieldtype": "Data",
+   "label": "Gift Destination",
+   "depends_on": "eval:doc.disposal_type == 'Gifted'",
+   "mandatory_depends_on": "eval:doc.disposal_type == 'Gifted'"
   },
   {
    "fieldname": "sb_accounting",
