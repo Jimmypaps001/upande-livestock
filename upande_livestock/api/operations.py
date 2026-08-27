@@ -313,11 +313,27 @@ def issue_feed(herd, qty, employee=None):
 
 @frappe.whitelist()
 def milking_options():
+	"""Herds that are actually in milk.
+
+	Offering every herd let a milking be recorded against calves and dry cows.
+	The lactation groups are read off Herd Movement settings rather than marked
+	by hand, because a hand-marked list drifts the first time a herd is renamed
+	or added.
+	"""
+
 	def go():
-		herds = frappe.get_all("Herds", fields=["name", "herd_name", "cost_center"], order_by="herd_name asc")
+		from upande_livestock import herd_movement
+
+		allowed = herd_movement.milking_herds()
+		filters = {"name": ["in", allowed]} if allowed else None
+		herds = frappe.get_all(
+			"Herds", filters=filters, fields=["name", "herd_name", "cost_center"],
+			order_by="herd_name asc",
+		)
 		return {
 			"ok": True,
 			"herds": [{"name": h.name, "label": h.herd_name or h.name} for h in herds],
+			"restricted_to": allowed,
 			"company": _default_company(),
 			"employee": _current_employee(),
 		}
@@ -582,8 +598,14 @@ def record_birth(payload):
 @frappe.whitelist()
 def breeding_options():
 	def go():
+		from upande_livestock import herd_movement
+
 		labels = _herd_label_map()
-		animals = _active_animals()
+		# Only animals a service can happen to: the top rung of the growth ladder
+		# and cows already in milk that are past the post-calving wait. A weaner
+		# in the offer list is an invitation to record a service that biology
+		# rules out.
+		animals = [a for a in _active_animals() if herd_movement.is_servable(a.name)]
 		sires = sorted(
 			{
 				r.sire
@@ -599,6 +621,15 @@ def breeding_options():
 		return {
 			"ok": True,
 			"animals": _animal_choices(animals, labels),
+			"service_herds": herd_movement.service_herds(),
+			"service_wait_days": herd_movement.service_wait_days(),
+			# Only animals with an open service can be diagnosed — the form's
+			# animal list for diagnosis is not the same as the one for service.
+			"diagnosis_animals": _animal_choices(
+				[a for a in _active_animals()
+				 if a.name in {r["animal"] for r in herd_movement.diagnosable_animals()}],
+				labels,
+			),
 			"service_types": _select_options("Livestock Event", "service_type") or ["A.I.", "Natural"],
 			"diagnosis_results": _select_options("Livestock Event", "diagnosis_result")
 			or ["Confirmed", "Not Pregnant", "Aborted"],
@@ -718,12 +749,23 @@ def create_pregnancy_diagnosis(payload):
 	auto-links the related service when omitted and validates timing."""
 
 	def go():
+		from upande_livestock import herd_movement
+
 		_guard("Livestock Event")
 		d = _ok(payload)
 		if not d.get("animal"):
 			frappe.throw(_("Select an animal."))
 		if not d.get("diagnosis_result"):
 			frappe.throw(_("Select a diagnosis result."))
+		# A diagnosis answers a question a service asked. Without an open service
+		# there is nothing to diagnose, and a "Confirmed" would invent a pregnancy
+		# out of nothing — which then drives calving, herd moves and milk.
+		if not d.get("related_service") and not herd_movement.has_open_service(d["animal"]):
+			frappe.throw(
+				_("{0} has no service awaiting a pregnancy check. Record the service first.").format(
+					d["animal"]
+				)
+			)
 		doc = _new_livestock_event(d, "Pregnancy Diagnosis", date_key="diagnosis_date")
 		doc.diagnosis_date = d.get("diagnosis_date") or today()
 		doc.diagnosis_result = d.get("diagnosis_result")
