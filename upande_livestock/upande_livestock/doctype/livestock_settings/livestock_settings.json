@@ -60,7 +60,36 @@
   "semen_item",
   "sb_accounting",
   "custom_default_company",
-  "custom_default_credit_account"
+  "custom_default_credit_account",
+  "tab_herd_movement",
+  "sb_calf_intake",
+  "female_calf_herd",
+  "cb_calf_intake",
+  "male_calf_herd",
+  "sb_bull_cull",
+  "cull_bulls_after_birth",
+  "bull_cull_max_days",
+  "cb_bull_cull",
+  "bull_cull_warn_percent",
+  "sb_growth_ladder",
+  "growth_ladder",
+  "sb_first_pregnancy",
+  "incalf_heifer_herd",
+  "incalf_general_days",
+  "cb_first_pregnancy",
+  "heifer_dry_off_before_calving_days",
+  "sb_lactation",
+  "high_yield_herd",
+  "high_yield_days_from_conception",
+  "max_open_days",
+  "cb_lactation",
+  "low_yield_herd",
+  "low_yield_days",
+  "sb_steamers",
+  "steamer_herd",
+  "steamer_days_from_heifers",
+  "cb_steamers",
+  "steamer_days_from_lactation"
  ],
  "fields": [
   {
@@ -350,23 +379,6 @@
    "options": "Livestock Bought In Concentrate"
   },
   {
-   "fieldname": "sb_accounting",
-   "fieldtype": "Section Break",
-   "label": "Accounting"
-  },
-  {
-   "fieldname": "custom_default_company",
-   "fieldtype": "Link",
-   "label": "Default Company (Livestock JE)",
-   "options": "Company"
-  },
-  {
-   "fieldname": "custom_default_credit_account",
-   "fieldtype": "Link",
-   "label": "Default Credit Account (Livestock JE)",
-   "options": "Account"
-  },
-  {
    "fieldname": "sb_husbandry_stock",
    "fieldtype": "Section Break",
    "label": "Drug & Semen Stores"
@@ -395,6 +407,200 @@
    "fieldtype": "Link",
    "label": "Default Semen Item",
    "options": "Item"
+  },
+  {
+   "fieldname": "sb_accounting",
+   "fieldtype": "Section Break",
+   "label": "Accounting"
+  },
+  {
+   "fieldname": "custom_default_company",
+   "fieldtype": "Link",
+   "label": "Default Company (Livestock JE)",
+   "options": "Company"
+  },
+  {
+   "fieldname": "custom_default_credit_account",
+   "fieldtype": "Link",
+   "label": "Default Credit Account (Livestock JE)",
+   "options": "Account"
+  },
+  {
+   "fieldname": "tab_herd_movement",
+   "fieldtype": "Tab Break",
+   "label": "Herd Movement"
+  },
+  {
+   "fieldname": "sb_calf_intake",
+   "fieldtype": "Section Break",
+   "label": "A · Calf Intake",
+   "description": "Which herd a newborn enters. A calf's sex decides this and nothing else does."
+  },
+  {
+   "fieldname": "female_calf_herd",
+   "fieldtype": "Link",
+   "options": "Herds",
+   "label": "Female Calf Herd",
+   "description": "Normally the first rung of the growth ladder below."
+  },
+  {
+   "fieldname": "cb_calf_intake",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "male_calf_herd",
+   "fieldtype": "Link",
+   "options": "Herds",
+   "label": "Male Calf Herd",
+   "description": "Bull calves. Culling settings below apply to this herd."
+  },
+  {
+   "fieldname": "sb_bull_cull",
+   "fieldtype": "Section Break",
+   "label": "Bull Culling"
+  },
+  {
+   "fieldname": "cull_bulls_after_birth",
+   "fieldtype": "Check",
+   "default": "0",
+   "label": "Cull Bulls After Birth",
+   "description": "Some farms sell a bull calf almost as soon as it is born. Tick this and the system will warn before the window closes."
+  },
+  {
+   "fieldname": "bull_cull_max_days",
+   "fieldtype": "Int",
+   "default": "14",
+   "label": "Maximum Days on Farm",
+   "depends_on": "cull_bulls_after_birth",
+   "description": "Longest a bull calf should remain before it is sold."
+  },
+  {
+   "fieldname": "cb_bull_cull",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "bull_cull_warn_percent",
+   "fieldtype": "Percent",
+   "default": "75",
+   "label": "Warn At (% of window)",
+   "depends_on": "cull_bulls_after_birth",
+   "description": "At 75% of 14 days the warning fires on day 10.5."
+  },
+  {
+   "fieldname": "sb_growth_ladder",
+   "fieldtype": "Section Break",
+   "label": "B · Growth Ladder",
+   "description": "The herds a heifer climbs before she is old enough to serve, in order. The first row is where female calves land; the last should be marked 'exits on service'."
+  },
+  {
+   "fieldname": "growth_ladder",
+   "fieldtype": "Table",
+   "options": "Herd Growth Stage",
+   "label": "Growth Ladder"
+  },
+  {
+   "fieldname": "sb_first_pregnancy",
+   "fieldtype": "Section Break",
+   "label": "C · First Pregnancy",
+   "description": "Where a served heifer waits out her first pregnancy. She gives no milk yet, which is why this herd is separate from the lactation groups."
+  },
+  {
+   "fieldname": "incalf_heifer_herd",
+   "fieldtype": "Link",
+   "options": "Herds",
+   "label": "Incalf Heifer Herd",
+   "description": "Entered on a CONFIRMED pregnancy, never on the service alone."
+  },
+  {
+   "fieldname": "incalf_general_days",
+   "fieldtype": "Int",
+   "default": "180",
+   "label": "General Time (days)",
+   "description": "A heifer that repeatedly fails to conceive should not sit here indefinitely; past this she is flagged for a decision."
+  },
+  {
+   "fieldname": "cb_first_pregnancy",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "heifer_dry_off_before_calving_days",
+   "fieldtype": "Int",
+   "default": "90",
+   "label": "Leaves for Steamers (days before calving)",
+   "description": "3 months for a first pregnancy. Counted back from the calving date, which is the service date plus Gestation Period (General tab)."
+  },
+  {
+   "fieldname": "sb_lactation",
+   "fieldtype": "Section Break",
+   "label": "D · Lactation Cycle",
+   "description": "After her first calving a cow never returns to the growth ladder. She cycles between these herds for the rest of her productive life."
+  },
+  {
+   "fieldname": "high_yield_herd",
+   "fieldtype": "Link",
+   "options": "Herds",
+   "label": "High Yield Herd"
+  },
+  {
+   "fieldname": "high_yield_days_from_conception",
+   "fieldtype": "Int",
+   "default": "120",
+   "label": "Milked After Conceiving (days)",
+   "description": "4 months from conception, then she steps down to the low yield herd."
+  },
+  {
+   "fieldname": "max_open_days",
+   "fieldtype": "Int",
+   "default": "200",
+   "label": "Maximum Open Days",
+   "description": "A cow that has not conceived in this many days has expired from the high yield herd on productivity grounds."
+  },
+  {
+   "fieldname": "cb_lactation",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "low_yield_herd",
+   "fieldtype": "Link",
+   "options": "Herds",
+   "label": "Low Yield Herd"
+  },
+  {
+   "fieldname": "low_yield_days",
+   "fieldtype": "Int",
+   "default": "60",
+   "label": "Days in Low Yield Herd",
+   "description": "2 months. Fixed — it does not vary with yield or anything else."
+  },
+  {
+   "fieldname": "sb_steamers",
+   "fieldtype": "Section Break",
+   "label": "Steamers · the dry herd",
+   "description": "Two streams meet here, and how long an animal stays depends on which one it came from — so the duration belongs to the route, not to the herd."
+  },
+  {
+   "fieldname": "steamer_herd",
+   "fieldtype": "Link",
+   "options": "Herds",
+   "label": "Steamer Herd"
+  },
+  {
+   "fieldname": "steamer_days_from_heifers",
+   "fieldtype": "Int",
+   "default": "90",
+   "label": "Dry Days · arriving from Incalf Heifers",
+   "description": "A first-time heifer arrives with 3 months to calving."
+  },
+  {
+   "fieldname": "cb_steamers",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "steamer_days_from_lactation",
+   "fieldtype": "Int",
+   "default": "60",
+   "label": "Dry Days · arriving from Low Yield",
+   "description": "A cow arrives with 2 months to calving."
   }
  ],
  "grid_page_length": 50,
