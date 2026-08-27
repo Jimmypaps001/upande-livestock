@@ -375,6 +375,8 @@ def create_milk_recording(payload):
 		doc.company = company
 		doc.total_yield_kg = total
 		doc.discarded_kg = discarded
+		doc.discard_reason = d.get("discard_reason") or None
+		doc.discard_reason_notes = d.get("discard_reason_notes") or None
 		# net_yield_kg / milk_revenue are read-only on the form (a client script
 		# fills them there); server-side we must set them before submit because
 		# the after-submit Stock Entry uses net_yield_kg.
@@ -383,7 +385,6 @@ def create_milk_recording(payload):
 		doc.milk_revenue = net * price
 		doc.cost_center = frappe.db.get_value("Herds", herd, "cost_center")
 		doc.bulk_scc = flt(d.get("bulk_scc")) or None
-		doc.fat_percent = flt(d.get("fat_percent")) or None
 		doc.protein_percent = flt(d.get("protein_percent")) or None
 		doc.remarks = d.get("remarks")
 		doc.insert()
@@ -517,6 +518,28 @@ def create_movement_event(payload):
 
 
 @frappe.whitelist()
+def create_heat_event(payload):
+	"""Record a Heat Detection — an observation, nothing more.
+
+	It consumes no stock and moves no animal, but it is the fact a service is
+	timed off, so it needs a home of its own rather than being folded into the
+	husbandry endpoint (whose types all carry a vet, a cost or a drug row).
+	"""
+
+	def go():
+		_guard("Livestock Event")
+		d = _ok(payload)
+		if not d.get("animal"):
+			frappe.throw(_("Select an animal."))
+		doc = _new_livestock_event(d, "Heat Detection")
+		doc.insert()
+		doc.submit()
+		return {"ok": True, "name": doc.name}
+
+	return _run(go, "livestock create_heat_event failed")
+
+
+@frappe.whitelist()
 def create_drying_off_event(payload):
 	def go():
 		_guard("Livestock Event")
@@ -524,9 +547,18 @@ def create_drying_off_event(payload):
 		if not d.get("animal"):
 			frappe.throw(_("Select an animal."))
 		doc = _new_livestock_event(d, "Drying Off")
+		if d.get("new_herd"):
+			doc.new_herd = d.get("new_herd")
+		# Drying off a cow means sealing her quarters, so Livestock Event Type
+		# flags it drug-consuming. The rows were being read off the payload by
+		# nothing at all, which left the teat sealant on the shelf while the
+		# ledger said the cow was dry.
+		for drug in _clean_drug_rows(d.get("drugs"), d.get("source_warehouse") or livestock_stock.drug_warehouse()):
+			doc.append("drug_issues", drug)
 		doc.insert()
-		doc.submit()
-		return {"ok": True, "name": doc.name}
+		doc.submit()  # LivestockEvent.on_submit posts the issue as "Animal Treatment"
+		doc.reload()
+		return {"ok": True, "name": doc.name, "stock_entry": doc.stock_entry or ""}
 
 	return _run(go, "livestock create_drying_off_event failed")
 
@@ -542,6 +574,14 @@ def _calf_row(calf, outcome):
 		"birth_weight": calf.get("birth_weight"),
 		"is_stillborn": 1 if stillborn else 0,
 		"herd": calf.get("herd"),
+		# record_calf_births reads all four off the row and stamps them on the
+		# Birth event, which passes them to the Animal. Leaving them out here is
+		# what made a birth booked through record_birth arrive with no breed, no
+		# condition at birth and no photo.
+		"breed": calf.get("breed"),
+		"health_status": calf.get("health_status"),
+		"vet_remarks": calf.get("vet_remarks"),
+		"photo": calf.get("photo"),
 	}
 
 
@@ -821,73 +861,6 @@ def create_pregnancy_diagnosis(payload):
 # ===========================================================================
 
 
-@frappe.whitelist()
-def parlour_options():
-	def go():
-		assets = frappe.get_all(
-			"Asset",
-			filters=[["docstatus", "<", 2]],
-			fields=["name", "asset_name", "asset_category", "location"],
-			order_by="asset_name asc",
-			limit_page_length=500,
-		)
-		return {
-			"ok": True,
-			"assets": [
-				{
-					"name": a.name,
-					"label": a.asset_name or a.name,
-					"category": a.asset_category,
-					"location": a.location,
-				}
-				for a in assets
-			],
-			"equipment": _select_options("Milking Palour Checksheet", "equipment"),
-			"frequencies": _select_options("Milking Palour Checksheet", "frequency") or ["Daily"],
-			"statuses": _select_options("CFU Inspection Item", "status"),
-			"inspector": frappe.session.user,
-		}
-
-	return _run(go, "livestock parlour_options failed")
-
-
-@frappe.whitelist()
-def create_parlour_checksheet(payload):
-	def go():
-		_guard("Milking Palour Checksheet")
-		d = _ok(payload)
-		if not d.get("asset"):
-			frappe.throw(_("Select an asset."))
-		items = d.get("items") or []
-		items = [r for r in items if (r.get("part_name") or "").strip()]
-		if not items:
-			frappe.throw(_("Add at least one inspection row."))
-
-		doc = frappe.new_doc("Milking Palour Checksheet")
-		doc.asset = d.get("asset")
-		doc.equipment = d.get("equipment")
-		doc.frequency = d.get("frequency") or "Daily"
-		doc.date = d.get("date") or today()
-		doc.time = nowtime()
-		doc.inspector = d.get("inspector") or frappe.session.user
-		for r in items:
-			doc.append(
-				"inspection_items",
-				{
-					"equipment": r.get("equipment") or d.get("equipment") or "",
-					"part_name": r.get("part_name"),
-					"parameter_checked": r.get("parameter_checked") or "-",
-					"status": r.get("status") or "Not Checked",
-					"notes": r.get("notes"),
-				},
-			)
-		doc.insert()
-		doc.submit()
-		return {"ok": True, "name": doc.name, "rows": len(items)}
-
-	return _run(go, "livestock create_parlour_checksheet failed")
-
-
 # ===========================================================================
 # MULTIPLE BIRTHS  (twins/triplets — one Calving, N Birth events)
 # ===========================================================================
@@ -1082,6 +1055,9 @@ def record_disposal(payload):
 		doc.sale_price = flt(d.get("sale_price")) or None
 		doc.customer = d.get("customer") or None
 		doc.buyer_name = d.get("buyer_name")
+		doc.buyer_contact = d.get("buyer_contact")
+		doc.gifted_to = d.get("gifted_to")
+		doc.gift_destination = d.get("gift_destination")
 		doc.reason_details = d.get("reason_details")
 		doc.witness = d.get("witness")
 		doc.insert()
@@ -1181,6 +1157,11 @@ def health_options():
 			"actions": _select_options("Livestock Diagnosis", "action_taken"),
 			"case_statuses": _select_options("Livestock Health Case", "case_status"),
 			"severities": _select_options("Livestock Health Case", "severity"),
+			# A treatment row is refused outright if its route is not one of
+			# these, so the form has to be able to offer them rather than let
+			# the operator type "Oral" and lose the whole case.
+			"routes": _select_options("Livestock Health Treatment", "route"),
+			"responses": _select_options("Livestock Health Treatment", "response_observed"),
 			"employee": _current_employee(),
 			"company": _default_company(),
 		}
@@ -1515,6 +1496,8 @@ def create_husbandry_event(payload):
 				remarks="Livestock {0} - {1} animal(s)".format(event_type, len(animals)),
 				posting_date=d.get("event_date"),
 				employee=d.get("operator"),
+				# So the ledger says "Deworming", not "Material Issue".
+				what=event_type,
 			)
 
 		created = []

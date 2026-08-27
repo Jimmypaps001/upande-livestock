@@ -92,7 +92,10 @@ class TestHusbandryStockIssue(StockSeededTestCase):
 		self.assertTrue(res["stock_entry"], "Vaccination must post a Stock Entry")
 		se = frappe.get_doc("Stock Entry", res["stock_entry"])
 		self.addCleanup(_purge, "Stock Entry", se.name)
-		self.assertEqual(se.stock_entry_type, "Material Issue")
+		# The ledger has to say what the drugs were for. The type is the named
+		# one; the purpose stays Material Issue so stock behaves identically.
+		self.assertEqual(se.stock_entry_type, "Vaccination")
+		self.assertEqual(se.purpose, "Material Issue")
 		self.assertEqual(se.docstatus, 1)
 		self.assertEqual(se.items[0].item_code, self.drug_item)
 		self.assertEqual(se.items[0].s_warehouse, self.warehouse)
@@ -101,6 +104,9 @@ class TestHusbandryStockIssue(StockSeededTestCase):
 		res = self._record("Deworming")
 		self.assertTrue(res["stock_entry"], "Deworming must post a Stock Entry")
 		self.addCleanup(_purge, "Stock Entry", res["stock_entry"])
+		se = frappe.get_doc("Stock Entry", res["stock_entry"])
+		self.assertEqual(se.stock_entry_type, "Deworming")
+		self.assertEqual(se.purpose, "Material Issue")
 
 	def test_the_drug_row_records_the_issue(self):
 		res = self._record("Vaccination")
@@ -180,7 +186,8 @@ class TestTreatmentStockIssue(StockSeededTestCase):
 		self.assertTrue(res["drug_stock_entry"], "A treated case must post a drug issue")
 		self.addCleanup(_purge, "Stock Entry", res["drug_stock_entry"])
 		se = frappe.get_doc("Stock Entry", res["drug_stock_entry"])
-		self.assertEqual(se.stock_entry_type, "Material Issue")
+		self.assertEqual(se.stock_entry_type, "Animal Treatment")
+		self.assertEqual(se.purpose, "Material Issue")
 		self.assertEqual(se.items[0].item_code, self.drug_item)
 
 	def test_a_case_with_no_drug_posts_nothing(self):
@@ -248,6 +255,7 @@ class TestServiceStockIssue(IntegrationTestCase):
 		self.assertTrue(res["stock_entry"], "A Service must issue a semen straw")
 		self.addCleanup(_purge, "Stock Entry", res["stock_entry"])
 		se = frappe.get_doc("Stock Entry", res["stock_entry"])
-		self.assertEqual(se.stock_entry_type, "Material Issue")
+		self.assertEqual(se.stock_entry_type, "Semen Issue")
+		self.assertEqual(se.purpose, "Material Issue")
 		self.assertEqual(se.items[0].item_code, self.semen_item)
 		self.assertEqual(flt(se.items[0].qty), 1.0)

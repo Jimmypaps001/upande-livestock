@@ -49,6 +49,39 @@ def default_semen_item():
 	return frappe.db.get_single_value("Livestock Settings", "semen_item")
 
 
+# A Material Issue tells you stock left; it does not tell you why. Naming the
+# reason on the Stock Entry Type means a storekeeper reading the stock ledger can
+# see a deworming round without opening the document, and a report can group by
+# it. Each of these has purpose "Material Issue" — they are the same transaction,
+# labelled honestly. SCP set this precedent with Chemical Spray and Chemical
+# Loaning; livestock was still posting everything as the generic type.
+STOCK_ENTRY_TYPES = {
+	"Vaccination": "Vaccination",
+	"Deworming": "Deworming",
+	"Treatment": "Animal Treatment",
+	# Sealing a dry cow's quarters is a treatment, so it shares that type
+	# rather than falling through to the bare "Material Issue".
+	"Drying Off": "Animal Treatment",
+	"Check Up": "Animal Health Check",
+	"Service": "Semen Issue",
+	"Feeding": "Animal Feeding",
+}
+FALLBACK_TYPE = "Material Issue"
+
+
+def stock_entry_type_for(what):
+	"""The named type for this kind of issue, or the generic one if unknown.
+
+	Falling back rather than throwing: a new event type should not stop a drug
+	leaving the store, it should just be labelled less precisely until somebody
+	adds it here and to the installer.
+	"""
+	name = STOCK_ENTRY_TYPES.get((what or "").strip())
+	if name and frappe.db.exists("Stock Entry Type", name):
+		return name
+	return FALLBACK_TYPE
+
+
 def check_availability(rows, posting_date=None):
 	"""Return the rows the store cannot cover, each with what is missing.
 
@@ -102,7 +135,7 @@ def _employee_for(employee=None):
 	return employee or frappe.db.get_value("Employee", {"user_id": frappe.session.user}, "name")
 
 
-def issue_items(rows, remarks, company=None, posting_date=None, employee=None):
+def issue_items(rows, remarks, company=None, posting_date=None, employee=None, what=None):
 	"""Post one Material Issue covering `rows`; return the Stock Entry name.
 
 	`rows` is a list of dicts with item_code, qty and warehouse (batch_no and uom
@@ -151,7 +184,7 @@ def issue_items(rows, remarks, company=None, posting_date=None, employee=None):
 		)
 
 	se = frappe.new_doc("Stock Entry")
-	se.stock_entry_type = "Material Issue"
+	se.stock_entry_type = stock_entry_type_for(what)
 	se.purpose = "Material Issue"
 	se.company = company
 	if posting_date:

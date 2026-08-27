@@ -15,6 +15,19 @@ IGNORE_TEST_RECORD_DEPENDENCIES = [
 	"Employee",
 	"Livestock Disease",
 	"Livestock Health Case",
+	# `stock_entry` was the one link left out, and it is the one that hurts:
+	# following it imports erpnext's own test_stock_entry module, whose
+	# module-level bootstrap wants the "All Departments" fixture this site does
+	# not have. Everything Stock Entry drags in behind it is listed too, the
+	# same way test_livestock_event.py does. No test below touches any of them.
+	"Livestock Drug Issue",
+	"Stock Entry",
+	"Stock Entry Type",
+	"Item",
+	"Warehouse",
+	"Account",
+	"Cost Center",
+	"Department",
 ]
 
 

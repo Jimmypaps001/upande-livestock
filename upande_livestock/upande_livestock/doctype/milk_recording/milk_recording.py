@@ -45,6 +45,15 @@ class MilkRecording(Document):
 		self.net_yield_kg = flt(self.total_yield_kg) - flt(self.discarded_kg)
 		self.milk_revenue = flt(self.net_yield_kg) * flt(self.price_per_kg)
 
+		# Milk poured away is a loss, and a loss with no reason recorded cannot be
+		# reduced. mandatory_depends_on covers the desk form; this covers the API
+		# and the Operations block, which do not evaluate it.
+		if flt(self.discarded_kg) > 0 and not self.get("discard_reason"):
+			frappe.throw("Say why {0} kg was discarded — it is a loss, and an unexplained "
+			             "loss cannot be acted on.".format(flt(self.discarded_kg)))
+		if self.get("discard_reason") == "Other" and not self.get("discard_reason_notes"):
+			frappe.throw("Describe the reason for the discard.")
+
 	def on_submit(self):
 		"""Post the milk into stock (+ a best-effort revenue Journal Entry).
 
