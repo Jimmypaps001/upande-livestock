@@ -4,6 +4,8 @@
 import frappe
 from frappe.tests import IntegrationTestCase
 
+from upande_livestock.api.test_operations import _suspend_sex_routing
+
 from upande_livestock.install import ensure_livestock_event_types
 
 # Livestock Event links out to Animal, Herds (current_herd/new_herd), Employee
@@ -210,6 +212,7 @@ class TestLivestockEventAccountingRemoved(IntegrationTestCase):
 class TestLivestockEventBirth(IntegrationTestCase):
 	def setUp(self):
 		ensure_livestock_event_types()
+		_suspend_sex_routing(self)
 		if not frappe.db.exists("Herds", "TEST-BIRTH-CALVES"):
 			frappe.get_doc(
 				{
@@ -459,6 +462,7 @@ class TestLivestockEventMultipleBirths(IntegrationTestCase):
 	"""
 
 	def setUp(self):
+		_suspend_sex_routing(self)
 		ensure_livestock_event_types()
 		herd_created = not frappe.db.exists("Herds", "TEST-BIRTH-CALVES")
 		if herd_created:
@@ -823,7 +827,9 @@ class TestLivestockEventMultipleBirths(IntegrationTestCase):
 		)
 		self._register_birth_family_cleanup(calving.name, [c["animal"] for c in result["created"]])
 		self.assertEqual(len(result["created"]), 1)
-		self.assertEqual(set(result["created"][0].keys()), {"animal", "tag", "sex"})
+		# A subset check, not equality: callers read by key, so an added key is
+		# harmless while a dropped one is the silent failure this guards against.
+		self.assertLessEqual({"animal", "tag", "sex"}, set(result["created"][0].keys()))
 		self.assertEqual(result["created"][0]["sex"], "Female")
 
 	def test_specified_herd_wins_over_resolution(self):
@@ -910,7 +916,9 @@ class TestLivestockEventMultipleBirths(IntegrationTestCase):
 		self.addCleanup(_delete_and_commit, "Livestock Event", result["name"])
 		self._register_birth_family_cleanup(result["name"], [c["animal"] for c in result["calves"]])
 		self.assertEqual(len(result["calves"]), 1)
-		self.assertEqual(set(result["calves"][0].keys()), {"animal", "tag", "sex"})
+		# Subset, not equality — see the note on record_calf_births' own contract
+		# test: a dropped key is the silent failure, an added one is harmless.
+		self.assertLessEqual({"animal", "tag", "sex"}, set(result["calves"][0].keys()))
 		self.assertEqual(result["calves"][0]["sex"], "Female")
 
 	def test_record_birth_rejects_abortion_as_an_outcome(self):

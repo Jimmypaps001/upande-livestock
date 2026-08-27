@@ -56,6 +56,12 @@
   "cb_calf",
   "calf_burn_name",
   "calf_birth_weight_kg",
+  "calf_breed",
+  "sb_calf_health",
+  "calf_health_status",
+  "calf_vet_remarks",
+  "cb_calf_health",
+  "calf_photo",
   "calf_herd",
   "dam",
   "related_calving",
@@ -366,6 +372,42 @@
    "fieldname": "calf_birth_weight_kg",
    "fieldtype": "Float",
    "label": "Birth Weight (kg)"
+  },
+  {
+   "fieldname": "calf_breed",
+   "fieldtype": "Link",
+   "options": "Breed",
+   "label": "Calf Breed",
+   "depends_on": "eval:!doc.is_stillborn",
+   "description": "Defaults to the dam's breed when left blank."
+  },
+  {
+   "fieldname": "sb_calf_health",
+   "fieldtype": "Section Break",
+   "label": "Condition at Birth",
+   "depends_on": "eval:!doc.is_stillborn"
+  },
+  {
+   "fieldname": "calf_health_status",
+   "fieldtype": "Select",
+   "label": "Health Status",
+   "options": "\nHealthy\nWeak\nNeeds Attention\nCritical",
+   "description": "How the calf presented when it was found."
+  },
+  {
+   "fieldname": "calf_vet_remarks",
+   "fieldtype": "Small Text",
+   "label": "Veterinary Remarks"
+  },
+  {
+   "fieldname": "cb_calf_health",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "calf_photo",
+   "fieldtype": "Attach Image",
+   "label": "Calf Photo",
+   "description": "Optional."
   },
   {
    "description": "Leave blank to resolve the herd automatically (Default Calf Herd, calf-rearing flag, or age bracket).",

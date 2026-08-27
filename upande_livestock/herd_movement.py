@@ -264,3 +264,131 @@ def expected_calving_date(conception_date):
 	"""Conception plus gestation. Nine months, from settings."""
 	days = int(settings().get("gestation_period_days") or 0) or 270
 	return add_days(getdate(conception_date), days) if conception_date else None
+
+
+# ---------------------------------------------------------------------------
+# suggestions — what the farm should do about all this
+# ---------------------------------------------------------------------------
+
+
+def _animals_in(herd):
+	return frappe.get_all(
+		"Animal",
+		filters=[
+			["current_herd", "=", herd],
+			["status", "not in", ["Dead", "Deceased", "Sold", "Culled", "Disposed"]],
+			["disabled", "=", 0],
+		],
+		fields=["name", "tag_number", "burn_name", "sex", "date_of_birth",
+		        "last_calving_date", "repro_status", "current_herd"],
+		limit=5000,
+	)
+
+
+def _label(a):
+	return a.get("tag_number") or a.get("burn_name") or a.get("name")
+
+
+def growth_suggestions():
+	"""Heifers whose time on their rung is up.
+
+	Only the growth ladder — everything past it moves on breeding events, which
+	a day count cannot predict.
+	"""
+	out = []
+	for rung in growth_ladder():
+		if rung["exits_on_service"]:
+			continue
+		nxt = next_growth_herd(rung["herd"])
+		if not nxt:
+			continue
+		for a in _animals_in(rung["herd"]):
+			state = growth_move_due(a["name"])
+			if not state or not (state["due"] or state["overdue"]):
+				continue
+			out.append({
+				"animal": a["name"],
+				"label": _label(a),
+				"from_herd": rung["herd"],
+				"to_herd": nxt,
+				"days_in_herd": state["days_in_herd"],
+				"days_expected": state["days_expected"],
+				"overdue": state["overdue"],
+				"days_over": state["days_over"],
+				"reason": "overdue by {} day(s)".format(state["days_over"])
+				if state["overdue"] else "due — {} of {} days".format(
+					state["days_in_herd"], state["days_expected"]),
+			})
+	out.sort(key=lambda r: (not r["overdue"], -r["days_in_herd"]))
+	return out
+
+
+def bull_cull_warnings():
+	"""Bull calves running out of selling window."""
+	s = settings()
+	herd = s.get("male_calf_herd")
+	if not (s.get("cull_bulls_after_birth") and herd):
+		return []
+	out = []
+	for a in _animals_in(herd):
+		st = bull_cull_status(a["name"])
+		if not st or not st["warn"]:
+			continue
+		out.append({
+			"animal": a["name"],
+			"label": _label(a),
+			"herd": herd,
+			"days_on_farm": st["days_on_farm"],
+			"window_days": st["window_days"],
+			"days_remaining": st["days_remaining"],
+			"overdue": st["overdue"],
+			"reason": "past the {}-day window by {} day(s)".format(
+				st["window_days"], -st["days_remaining"])
+			if st["overdue"] else "day {} of {}".format(st["days_on_farm"], st["window_days"]),
+		})
+	out.sort(key=lambda r: r["days_remaining"])
+	return out
+
+
+def open_cow_warnings():
+	"""Cows that have gone too long without conceiving."""
+	limit = int(settings().get("max_open_days") or 0)
+	if not limit:
+		return []
+	out = []
+	for herd in milking_herds():
+		for a in _animals_in(herd):
+			st = open_too_long(a["name"])
+			if not st:
+				continue
+			out.append({
+				"animal": a["name"],
+				"label": _label(a),
+				"herd": herd,
+				"open_days": st["open_days"],
+				"limit": st["limit"],
+				"days_over": st["days_over"],
+				"reason": "{} days open, {} past the {}-day limit".format(
+					st["open_days"], st["days_over"], st["limit"]),
+			})
+	out.sort(key=lambda r: -r["open_days"])
+	return out
+
+
+def suggestions():
+	"""Everything the farm should look at, in one call."""
+	growth = growth_suggestions()
+	bulls = bull_cull_warnings()
+	open_cows = open_cow_warnings()
+	return {
+		"growth": growth,
+		"bulls": bulls,
+		"open_cows": open_cows,
+		"counts": {
+			"growth": len(growth),
+			"growth_overdue": sum(1 for r in growth if r["overdue"]),
+			"bulls": len(bulls),
+			"bulls_overdue": sum(1 for r in bulls if r["overdue"]),
+			"open_cows": len(open_cows),
+		},
+	}

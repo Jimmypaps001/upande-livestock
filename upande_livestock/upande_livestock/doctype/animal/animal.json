@@ -23,6 +23,9 @@
   "origin",
   "acquisition_date",
   "birth_weight_kg",
+  "birth_health_status",
+  "birth_vet_remarks",
+  "image",
   "cb_parentage",
   "dam",
   "sire_name",
@@ -79,7 +82,7 @@
   },
   {
    "bold": 1,
-   "description": "Unique ID e.g. A001/26 \u2014 used as the system name.",
+   "description": "Unique ID e.g. A001/26 — used as the system name.",
    "fieldname": "tag_number",
    "fieldtype": "Data",
    "in_list_view": 1,
@@ -154,6 +157,26 @@
    "fieldname": "birth_weight_kg",
    "fieldtype": "Float",
    "label": "Birth Weight (kg)"
+  },
+  {
+   "fieldname": "birth_health_status",
+   "fieldtype": "Select",
+   "label": "Health at Birth",
+   "options": "\nHealthy\nWeak\nNeeds Attention\nCritical",
+   "read_only": 1,
+   "description": "Recorded once, at the birth. The animal's current condition lives on its health cases."
+  },
+  {
+   "fieldname": "birth_vet_remarks",
+   "fieldtype": "Small Text",
+   "label": "Veterinary Remarks at Birth",
+   "read_only": 1
+  },
+  {
+   "fieldname": "image",
+   "fieldtype": "Attach Image",
+   "label": "Photo",
+   "hidden": 1
   },
   {
    "fieldname": "cb_parentage",
@@ -523,5 +546,6 @@
  "sort_field": "modified",
  "sort_order": "DESC",
  "states": [],
- "title_field": "burn_name"
+ "title_field": "burn_name",
+ "image_field": "image"
 }

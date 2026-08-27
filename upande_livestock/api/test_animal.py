@@ -4,6 +4,8 @@
 import frappe
 from frappe.tests import IntegrationTestCase
 
+from upande_livestock.api.test_operations import _suspend_sex_routing
+
 from upande_livestock.api.animal import create_calf, recompute_herd_count, resolve_calf_herd
 
 
@@ -53,6 +55,7 @@ class TestResolveCalfHerd(IntegrationTestCase):
 
 class TestCreateCalf(IntegrationTestCase):
 	def setUp(self):
+		_suspend_sex_routing(self)
 		self.herd = make_herd("TEST-CALF-HERD", min_age=0, max_age=1, custom_is_calf_rearing=1)
 		self.addCleanup(_delete_and_commit, "Herds", self.herd.name)
 		self.dam = make_dam("TEST-DAM-1", herd=self.herd.name)
