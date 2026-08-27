@@ -82,6 +82,33 @@ def _make_cow(tag, months_old=48, herd=None, sex="Female"):
 	).insert(ignore_permissions=True)
 
 
+def _suspend_sex_routing(case):
+	"""Point the sex-specific calf herds at nothing for the duration of a test.
+
+	Tests that exercise the calf-herd FALLBACK chain — an explicit setting, the
+	calf-rearing flag, the age bracket — need sex routing out of the way, because
+	it answers first in resolve_calf_herd() and the fallback under test never runs.
+
+	Both writes commit. Several of these tests commit mid-run, so a suspension
+	left uncommitted would become durable while the restore was undone by the
+	class teardown rollback, leaving the site with no calf herds at all.
+	"""
+	saved = {}
+	for field in ("female_calf_herd", "male_calf_herd"):
+		saved[field] = frappe.db.get_single_value("Livestock Settings", field)
+		frappe.db.set_single_value("Livestock Settings", field, None)
+	frappe.db.commit()
+	frappe.clear_cache(doctype="Livestock Settings")
+
+	def restore():
+		for f, v in saved.items():
+			frappe.db.set_single_value("Livestock Settings", f, v)
+		frappe.db.commit()
+		frappe.clear_cache(doctype="Livestock Settings")
+
+	case.addCleanup(restore)
+
+
 def _assert_ok(case, res, what):
 	case.assertTrue(res.get("ok"), f"{what} failed: {res.get('error')}")
 	return res

@@ -103,8 +103,13 @@ class LivestockEvent(Document):
 			birth_weight=self.calf_birth_weight_kg,
 			burn_name=self.calf_burn_name,
 			# An empty/unset calf_herd must still fall back to resolve_calf_herd()
-			# inside create_calf() — only a real herd name should override it.
+			# inside create_calf() — only a real herd name should override it, and
+			# that fallback is now sex-aware.
 			herd=self.calf_herd or None,
+			breed=self.get("calf_breed") or None,
+			health_status=self.get("calf_health_status") or None,
+			vet_remarks=self.get("calf_vet_remarks") or None,
+			photo=self.get("calf_photo") or None,
 		)
 
 	def before_insert(self):

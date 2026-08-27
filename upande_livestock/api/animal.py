@@ -19,13 +19,25 @@ from frappe.utils import flt
 from upande_livestock.livestock_timings import read_setting
 
 
-def resolve_calf_herd():
+def resolve_calf_herd(sex=None):
 	"""The herd a newborn calf belongs in, or None if nothing resolves.
 
-	Order: the explicit setting, then the calf-rearing flag, then the age bracket
-	configured in settings, then the Youngstock < 12m category, then the herd with
-	the lowest min_age.
+	Sex decides this before anything else does. A heifer calf joins the growth
+	ladder and climbs it; a bull calf goes to the bull herd, where a selling
+	window may be running against it. Sending both to one herd — which is what
+	happened before the Herd Movement settings existed — puts bull calves on a
+	ladder built for animals that will one day be milked.
+
+	Falling back through: the sex-specific herd, the old single Default Calf
+	Herd, the calf-rearing flag, the age bracket, Youngstock < 12m, and finally
+	the herd with the lowest min_age.
 	"""
+	from upande_livestock import herd_movement
+
+	by_sex = herd_movement.calf_herd(sex) if sex else None
+	if by_sex and frappe.db.exists("Herds", by_sex):
+		return by_sex
+
 	explicit = frappe.db.get_single_value("Livestock Settings", "default_calf_herd")
 	if explicit and frappe.db.exists("Herds", explicit):
 		return explicit
@@ -61,11 +73,16 @@ def recompute_herd_count(herd):
 	frappe.db.set_value("Herds", herd, "number_of_animals", count)
 
 
-def create_calf(dam, tag_number, sex, event_date, birth_weight=None, burn_name=None, herd=None):
+def create_calf(dam, tag_number, sex, event_date, birth_weight=None, burn_name=None, herd=None,
+                breed=None, health_status=None, vet_remarks=None, photo=None):
 	"""Insert a newborn Animal and return its name.
 
 	Throws on a duplicate tag before writing anything, so a mistyped tag cannot
 	half-create a birth.
+
+	`breed` overrides the dam's — a calf by a different sire is not necessarily
+	its mother's breed. The condition at birth is recorded on the animal because
+	it is a fact about this animal on one day, not a health case to be followed.
 	"""
 	tag = (tag_number or "").strip()
 	if not tag:
@@ -76,7 +93,7 @@ def create_calf(dam, tag_number, sex, event_date, birth_weight=None, burn_name=N
 		frappe.throw(_("Calf sex must be Female or Male."))
 
 	dam_doc = frappe.get_doc("Animal", dam)
-	target_herd = herd or resolve_calf_herd()
+	target_herd = herd or resolve_calf_herd(sex)
 	if not target_herd:
 		frappe.throw(_("No calf herd could be resolved. Set Default Calf Herd in Livestock Settings."))
 
@@ -95,10 +112,15 @@ def create_calf(dam, tag_number, sex, event_date, birth_weight=None, burn_name=N
 	calf.origin = "Born on Farm"
 	calf.status = "Active"
 	calf.repro_status = "Calf"
-	if dam_doc.breed:
-		calf.breed = dam_doc.breed
+	calf.breed = breed or dam_doc.breed
 	if dam_doc.species:
 		calf.species = dam_doc.species
+	if health_status:
+		calf.birth_health_status = health_status
+	if vet_remarks:
+		calf.birth_vet_remarks = vet_remarks
+	if photo:
+		calf.image = photo
 	calf.insert(ignore_permissions=True)
 
 	recompute_herd_count(target_herd)

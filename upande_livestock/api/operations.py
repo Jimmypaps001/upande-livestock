@@ -429,6 +429,23 @@ def _new_livestock_event(d, event_type, date_key=None):
 
 
 @frappe.whitelist()
+def movement_suggestions():
+	"""What the herd structure says should happen next.
+
+	Read-only. Nothing here moves an animal — it proposes, and a person decides.
+	"""
+
+	def go():
+		from upande_livestock import herd_movement
+
+		res = herd_movement.suggestions()
+		res["ok"] = True
+		return res
+
+	return _run(go, "livestock movement_suggestions failed")
+
+
+@frappe.whitelist()
 def create_movement_event(payload):
 	def go():
 		_guard("Livestock Event")
@@ -803,7 +820,11 @@ def record_calf_births(payload):
 
 	A dam bearing triplets gets one Calving event and three Birth events. Stillborn
 	rows are recorded as Birth events that create no Animal, so the calving's count
-	stays honest without inflating herd numbers.
+	stays honest without inflating herd numbers — a dam with twins where one lives
+	and one dies is two rows with two different outcomes, not an average.
+
+	Each live calf carries its own breed, condition at birth and photo, and is
+	routed to a herd by its sex.
 	"""
 
 	def go():
@@ -856,16 +877,26 @@ def record_calf_births(payload):
 					birth.calf_burn_name = calf.get("burn_name") or birth.calf_tag_number
 					birth.calf_birth_weight_kg = flt(calf.get("birth_weight"))
 					# An empty/omitted herd must still fall back to resolve_calf_herd() —
-					# create_calf_if_needed() treats a falsy herd the same as "not given".
+					# create_calf_if_needed() treats a falsy herd the same as "not given",
+					# and that fallback now routes on sex.
 					birth.calf_herd = calf.get("herd") or ""
+					birth.calf_breed = calf.get("breed") or None
+					birth.calf_health_status = calf.get("health_status") or None
+					birth.calf_vet_remarks = calf.get("vet_remarks") or None
+					birth.calf_photo = calf.get("photo") or None
 					birth.remarks = f"Dam: {dam.tag_number or dam.burn_name}"
 
 				birth.insert()
 				birth.submit()
 				if not stillborn:
-					created.append(
-						{"animal": birth.animal, "tag": birth.calf_tag_number, "sex": birth.calf_sex}
-					)
+					created.append({
+						"animal": birth.animal,
+						"tag": birth.calf_tag_number,
+						"sex": birth.calf_sex,
+						"herd": frappe.db.get_value("Animal", birth.animal, "current_herd"),
+						"breed": frappe.db.get_value("Animal", birth.animal, "breed"),
+						"health_status": birth.calf_health_status,
+					})
 		finally:
 			frappe.flags.suppress_calving_mismatch_warning = False
 
