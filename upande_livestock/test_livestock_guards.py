@@ -6,8 +6,8 @@ from frappe.tests import IntegrationTestCase
 from frappe.utils import add_days, add_months, today
 
 from upande_livestock.install import ensure_livestock_event_types
-from upande_livestock.livestock_guards import AGE_RULES, INTERVAL_RULES, animal_age_months, check_guards
-from upande_livestock.livestock_timings_test_utils import ResetsLivestockTimings
+from upande_livestock.serverscripts.common.guards import AGE_RULES, INTERVAL_RULES, animal_age_months, check_guards
+from upande_livestock.serverscripts.tests.timings_utils import ResetsLivestockTimings
 
 # The seven age/interval fields this module's tests set to None as a precondition
 # ("this site never configured any of these"). Not a second copy of

@@ -6,14 +6,14 @@ from frappe.tests import IntegrationTestCase
 from frappe.utils import add_days, cint, flt
 
 from upande_livestock.install import ensure_livestock_event_types, ensure_livestock_timing_defaults
-from upande_livestock.livestock_timings import (
+from upande_livestock.serverscripts.common.timings import (
 	ALL_TIMING_DEFAULTS,
 	FLOAT_TIMING_DEFAULTS,
 	TIMING_DEFAULTS,
 	get_timing,
 	read_setting,
 )
-from upande_livestock.livestock_timings_test_utils import ResetsLivestockTimings
+from upande_livestock.serverscripts.tests.timings_utils import ResetsLivestockTimings
 
 
 class TestLivestockTimings(ResetsLivestockTimings, IntegrationTestCase):

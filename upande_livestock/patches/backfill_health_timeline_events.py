@@ -10,7 +10,7 @@ than creating a second one), so this patch is safe to re-run.
 import frappe
 
 from upande_livestock.install import ensure_livestock_event_types
-from upande_livestock.livestock_event_link import sync_event_for
+from upande_livestock.serverscripts.common.event_link import sync_event_for
 
 BACKFILL = (
 	("Livestock Diagnosis", "Check Up"),

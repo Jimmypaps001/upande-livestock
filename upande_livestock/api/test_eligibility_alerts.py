@@ -19,7 +19,8 @@ import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import today
 
-from upande_livestock import herd_alerts, herd_movement as hm
+from upande_livestock import herd_alerts
+from upande_livestock.serverscripts.common import herd_movement as hm
 from upande_livestock.api import operations as ops
 
 

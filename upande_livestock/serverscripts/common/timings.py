@@ -6,7 +6,7 @@ Settings.
 
 Every default here equals the value that was previously hardcoded — either in
 the Livestock Event controller (the first eleven) or in public/js/animal_event.js
-(the rest, consumed by upande_livestock.livestock_guards) — so an unconfigured
+(the rest, consumed by upande_livestock.serverscripts.common.guards) — so an unconfigured
 site behaves exactly as before.
 
 A setting of 0 is honoured, not treated as unset — that is how
@@ -57,7 +57,7 @@ TIMING_DEFAULTS = {
 	"gestation_short_warning_days": 260,
 	"gestation_long_warning_days": 300,
 	"calving_alert_lead_days": 7,
-	# Age/interval guard thresholds (upande_livestock.livestock_guards). These
+	# Age/interval guard thresholds (upande_livestock.serverscripts.common.guards). These
 	# seven predate Task 5 and were, until now, excluded from this dict — which
 	# meant they got none of the protection below: an unset field silently
 	# read back as 0 (see ensure_livestock_timing_defaults) once anything

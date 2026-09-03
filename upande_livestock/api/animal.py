@@ -16,7 +16,7 @@ import frappe
 from frappe import _
 from frappe.utils import flt
 
-from upande_livestock.livestock_timings import read_setting
+from upande_livestock.serverscripts.common.timings import read_setting
 
 
 def resolve_calf_herd(sex=None):
@@ -32,7 +32,7 @@ def resolve_calf_herd(sex=None):
 	Herd, the calf-rearing flag, the age bracket, Youngstock < 12m, and finally
 	the herd with the lowest min_age.
 	"""
-	from upande_livestock import herd_movement
+	from upande_livestock.serverscripts.common import herd_movement
 
 	by_sex = herd_movement.calf_herd(sex) if sex else None
 	if by_sex and frappe.db.exists("Herds", by_sex):

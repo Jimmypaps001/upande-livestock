@@ -22,7 +22,7 @@ import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import flt, today
 
-from upande_livestock import livestock_stock
+from upande_livestock.serverscripts.common import stock as livestock_stock
 from upande_livestock.api.operations import (
 	create_health_case,
 	create_husbandry_event,
