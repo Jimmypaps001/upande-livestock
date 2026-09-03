@@ -6,12 +6,9 @@ a phone authenticating as a real user makes that gap a real one."""
 import frappe
 from frappe import _
 
-from upande_livestock.serverscripts.common.envelope import guard
 
 
-@frappe.whitelist()
-def scrap_livestock_asset(animal=None, asset_name=None, reason=None, scrapping_date=None):
-	guard("Asset")
+def _scrap_livestock_asset(animal=None, asset_name=None, reason=None, scrapping_date=None):
 	animal_name = animal or asset_name
 	reason = reason or ""
 	scrapping_date = scrapping_date or frappe.utils.today()
@@ -189,3 +186,23 @@ def scrap_livestock_asset(animal=None, asset_name=None, reason=None, scrapping_d
 		"journal_entry": je.name,
 		"reason": reason,
 	}
+
+
+@frappe.whitelist()
+def scrap_livestock_asset(animal=None, asset_name=None, reason=None, scrapping_date=None):
+	"""REST entry point. The guard lives here, not in `_scrap_livestock_asset`.
+
+	`_scrap_livestock_asset` is also called from
+	`doctype/livestock_disposal/livestock_disposal.py` after the Disposal
+	submits, inside a try/except that downgrades any failure to a toast. A guard
+	in the shared function would therefore be swallowed: the animal would retire
+	and the Journal Entry would silently never post. The desk path has already
+	been permission-checked by the Disposal itself.
+
+	Asset *write*, not create — this amends an existing Asset rather than making
+	one. The Journal Entry and Sales Invoice it posts are inserted with
+	ignore_permissions, so this is the only check standing.
+	"""
+	if not frappe.has_permission("Asset", "write"):
+		frappe.throw(_("You are not permitted to scrap a livestock Asset."), frappe.PermissionError)
+	return _scrap_livestock_asset(animal=animal, asset_name=asset_name, reason=reason, scrapping_date=scrapping_date)

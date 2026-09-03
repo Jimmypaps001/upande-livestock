@@ -21,8 +21,8 @@ from frappe import _
 from frappe.model.document import Document
 
 from upande_livestock.serverscripts.common.animal import retire_animal
-from upande_livestock.serverscripts.disposal.scrap_livestock_asset import scrap_livestock_asset
-from upande_livestock.serverscripts.disposal.sell_livestock_asset import sell_livestock_asset
+from upande_livestock.serverscripts.disposal.scrap_livestock_asset import _scrap_livestock_asset
+from upande_livestock.serverscripts.disposal.sell_livestock_asset import _sell_livestock_asset
 
 SALE_TYPES = ("Sold",)
 
@@ -51,7 +51,7 @@ class LivestockDisposal(Document):
 
 		try:
 			if self.disposal_type in SALE_TYPES:
-				result = sell_livestock_asset(
+				result = _sell_livestock_asset(
 					animal=self.animal,
 					customer=self.customer,
 					selling_amount=self.sale_price,
@@ -63,7 +63,7 @@ class LivestockDisposal(Document):
 				if (result or {}).get("sales_invoice"):
 					self.db_set("sales_invoice", result["sales_invoice"], update_modified=False)
 			else:
-				result = scrap_livestock_asset(
+				result = _scrap_livestock_asset(
 					animal=self.animal,
 					reason=self.disposal_type,
 					scrapping_date=self.disposal_date,

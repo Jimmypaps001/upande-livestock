@@ -9,9 +9,9 @@ data-entry dropdowns cannot drift apart.
 """
 
 import frappe
-from frappe.utils import add_days, add_months, flt, get_first_day, today
+from frappe.utils import add_days, flt, today
 
-from upande_livestock.serverscripts.common.choices import RETIRED_STATUSES, is_active
+from upande_livestock.serverscripts.common.choices import RETIRED_STATUSES
 
 
 _OPEN_CASE_STATUS = ("Open", "Under Treatment", "Chronic")

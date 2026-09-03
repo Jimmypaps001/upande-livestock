@@ -24,7 +24,7 @@ worse than writing the asset off honestly.
 """
 
 import frappe
-from frappe.utils import flt, today
+from frappe.utils import flt
 
 RETIRED = ("Sold", "Culled", "Disposed", "Dead", "Deceased")
 SETTLED = ("Scrapped", "Sold", "Cancelled")

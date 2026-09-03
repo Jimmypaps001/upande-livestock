@@ -8,7 +8,6 @@ to guard against.
 import frappe
 from frappe.utils import today
 
-from upande_livestock.serverscripts.alerts._shared import KINDS
 from upande_livestock.serverscripts.common import herd_movement
 
 

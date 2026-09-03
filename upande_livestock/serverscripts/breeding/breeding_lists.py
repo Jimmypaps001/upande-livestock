@@ -11,8 +11,8 @@ duplicate is gone. Read-guarded on Livestock Event."""
 import frappe
 from frappe.utils import today
 
-from upande_livestock.serverscripts.common.choices import animal_label, herd_label_map
-from upande_livestock.serverscripts.common.envelope import as_dict, guard_read, run
+from upande_livestock.serverscripts.common.choices import RETIRED_STATUSES, animal_label, herd_label_map
+from upande_livestock.serverscripts.common.envelope import guard_read, run
 
 
 @frappe.whitelist()
@@ -29,9 +29,9 @@ def breeding_lists():
 			   FROM `tabLivestock Event`
 			   WHERE event_type = 'Service' AND docstatus = 1
 			     AND pregnancy_confirmation_status = 'Pending'
-			     AND IFNULL(pregnancy_check_due_date, service_date) <= %s
+			     AND IFNULL(pregnancy_check_due_date, service_date) <= %(today)s
 			   ORDER BY pregnancy_check_due_date ASC LIMIT 200""",
-			(today(),),
+			{"today": today(), "retired": tuple(RETIRED_STATUSES)},
 			as_dict=True,
 		)
 		# Ready for service: active, not currently confirmed-pregnant, no pending
@@ -40,7 +40,8 @@ def breeding_lists():
 		ready = frappe.db.sql(
 			"""SELECT a.name, a.tag_number, a.burn_name, a.current_herd, a.repro_status
 			   FROM `tabAnimal` a
-			   WHERE IFNULL(a.status,'') NOT IN ('Dead','Deceased','Sold','Culled','Disposed')
+			   WHERE IFNULL(a.status,'') NOT IN %(retired)s
+			     AND IFNULL(a.disabled, 0) = 0
 			     AND NOT EXISTS (
 			       SELECT 1 FROM `tabLivestock Event` s
 			       WHERE s.animal = a.name AND s.event_type='Service' AND s.docstatus=1
@@ -52,9 +53,9 @@ def breeding_lists():
 			     AND EXISTS (
 			       SELECT 1 FROM `tabLivestock Event` cal
 			       WHERE cal.animal=a.name AND cal.event_type='Calving' AND cal.docstatus=1
-			         AND IFNULL(cal.ready_for_service_date, cal.event_date) <= %s)
+			         AND IFNULL(cal.ready_for_service_date, cal.event_date) <= %(today)s)
 			   ORDER BY a.tag_number ASC LIMIT 200""",
-			(today(),),
+			{"today": today(), "retired": tuple(RETIRED_STATUSES)},
 			as_dict=True,
 		)
 		return {

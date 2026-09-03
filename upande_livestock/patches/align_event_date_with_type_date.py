@@ -27,7 +27,6 @@ they are left for a human. See the ledger.
 
 import frappe
 
-from upande_livestock.serverscripts.common.events import new_livestock_event
 
 # event_type -> the field that carries the date the user actually entered.
 TYPE_DATE_FIELD = {

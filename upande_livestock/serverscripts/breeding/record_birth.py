@@ -57,11 +57,23 @@ def record_birth(payload):
 
 		dam = frappe.get_doc("Animal", dam_name)
 
+		# The sire comes off the Service, but `related_pregnancy` can name either
+		# link in the chain, so follow whichever arrived.
+		#
+		# It used to only handle a Pregnancy Diagnosis, hopping Diagnosis ->
+		# related_service -> Service. `_validate_pregnancy_link` now rejects a
+		# Diagnosis on `custom_related_pregnancy` (every reader of that field
+		# joins it against a Service), which left no input for which this both
+		# succeeded and found a sire: pass a Diagnosis and the insert below
+		# throws; pass a Service and `related_service` is blank, because only a
+		# Diagnosis carries it. Every Birth event lost its sire, silently.
 		sire = ""
 		if related_pregnancy:
 			try:
 				preg = frappe.get_doc("Livestock Event", related_pregnancy)
-				if preg.related_service:
+				if preg.event_type == "Service":
+					sire = preg.sire or ""
+				elif preg.related_service:
 					svc = frappe.get_doc("Livestock Event", preg.related_service)
 					sire = svc.sire or ""
 			except Exception:
@@ -88,9 +100,9 @@ def record_birth(payload):
 		# the Livestock Event controller create each Animal. A second copy of this
 		# loop here is what would make a form-booked birth create the calf twice.
 		#
-		# Gated on outcome, matching the pre-Task-9 behaviour exactly: a Still
+		# Gated on outcome, matching the before the reorg behaviour exactly: a Still
 		# Birth creates only the Calving, with no Birth events at all. Abortion
-		# used to reach this same gate as a custom_calving_outcome value; Task 10
+		# used to reach this same gate as a custom_calving_outcome value; a later change
 		# removed it from that Select entirely (pregnancy loss is now its own
 		# Abortion event type — see LivestockEvent.close_pregnancy_after_abortion),
 		# so calving.insert() above now rejects outcome="Abortion" itself, before

@@ -17,7 +17,6 @@ def create_pregnancy_diagnosis(payload):
 	auto-links the related service when omitted and validates timing."""
 
 	def go():
-		from upande_livestock.serverscripts.common import herd_movement
 
 		guard("Livestock Event")
 		d = as_dict(payload)

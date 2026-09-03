@@ -24,7 +24,11 @@ from frappe import _
 def guard(doctype: str) -> None:
 	"""Raise a clean PermissionError-style throw if the user can't create `doctype`."""
 	if not frappe.has_permission(doctype, "create"):
-		frappe.throw(_("You are not permitted to create {0}.").format(doctype))
+		# PermissionError, not the default ValidationError: `run` distinguishes the
+		# two, and only the general branch rolls back and writes an Error Log. A
+		# refusal is an answer, not a fault — and a phone whose user lacks a role
+		# would otherwise fill the log on every screen it opens.
+		frappe.throw(_("You are not permitted to create {0}.").format(doctype), frappe.PermissionError)
 
 
 def guard_read(doctype: str) -> None:
@@ -41,7 +45,7 @@ def guard_read(doctype: str) -> None:
 	cannot drift into sixteen slightly different checks.
 	"""
 	if not frappe.has_permission(doctype, "read"):
-		frappe.throw(_("You are not permitted to read {0}.").format(doctype))
+		frappe.throw(_("You are not permitted to read {0}.").format(doctype), frappe.PermissionError)
 
 
 def as_dict(value):

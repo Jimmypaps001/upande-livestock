@@ -33,7 +33,7 @@ class TestEnvelope(IntegrationTestCase):
 	def test_guard_throws_without_permission(self):
 		frappe.set_user("Guest")
 		try:
-			with self.assertRaises(frappe.ValidationError):
+			with self.assertRaises(frappe.PermissionError):
 				guard("Animal")
 		finally:
 			frappe.set_user("Administrator")
@@ -41,7 +41,7 @@ class TestEnvelope(IntegrationTestCase):
 	def test_guard_read_throws_without_permission(self):
 		frappe.set_user("Guest")
 		try:
-			with self.assertRaises(frappe.ValidationError):
+			with self.assertRaises(frappe.PermissionError):
 				guard_read("Animal")
 		finally:
 			frappe.set_user("Administrator")
@@ -49,3 +49,16 @@ class TestEnvelope(IntegrationTestCase):
 	def test_guard_read_passes_for_a_user_who_may_read(self):
 		frappe.set_user("Administrator")
 		guard_read("Animal")  # must not raise
+
+	def test_a_refusal_is_not_logged_as_a_fault(self):
+		"""`run` must take the PermissionError branch, which does not roll back
+		or write an Error Log. A phone whose user lacks a role opens screens it
+		cannot read all day; each one is an answer, not an incident."""
+		frappe.set_user("Guest")
+		try:
+			before = frappe.db.count("Error Log")
+			result = run(lambda: guard_read("Animal"), "test refusal")
+			self.assertIn("error", result)
+			self.assertEqual(frappe.db.count("Error Log"), before)
+		finally:
+			frappe.set_user("Administrator")

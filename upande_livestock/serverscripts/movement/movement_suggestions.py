@@ -17,7 +17,6 @@ def movement_suggestions():
 
 	def go():
 		guard_read("Herds")
-		from upande_livestock.serverscripts.common import herd_movement
 
 		res = herd_movement.suggestions()
 		res["ok"] = True

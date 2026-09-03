@@ -20,6 +20,7 @@ from frappe.tests import IntegrationTestCase
 from frappe.utils import today
 
 from upande_livestock.serverscripts.alerts import raise_alerts as herd_alerts
+from upande_livestock.serverscripts.alerts._shared import KINDS
 from upande_livestock.serverscripts.common import herd_movement as hm
 from upande_livestock.serverscripts.breeding.breeding_options import breeding_options
 from upande_livestock.serverscripts.breeding.create_pregnancy_diagnosis import create_pregnancy_diagnosis
@@ -131,7 +132,7 @@ class TestAlerts(IntegrationTestCase):
 
 	def test_every_alert_names_an_animal_and_says_why(self):
 		for a in herd_alerts.collect():
-			self.assertIn(a["kind"], herd_alerts.KINDS)
+			self.assertIn(a["kind"], KINDS)
 			self.assertTrue(a["animal"])
 			self.assertTrue(a["message"])
 			self.assertIn(a["severity"], ("Due", "Overdue"))

@@ -10,7 +10,7 @@ copy of the rule never covered.
 
 import frappe
 from frappe.tests import IntegrationTestCase
-from frappe.utils import add_days, add_months, today
+from frappe.utils import add_days, today
 
 from upande_livestock.serverscripts.tests.test_operations import _employee, _make_cow, _purge, _purge_events_for
 

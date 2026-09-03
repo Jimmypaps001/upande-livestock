@@ -58,7 +58,7 @@ TIMING_DEFAULTS = {
 	"gestation_long_warning_days": 300,
 	"calving_alert_lead_days": 7,
 	# Age/interval guard thresholds (upande_livestock.serverscripts.common.guards). These
-	# seven predate Task 5 and were, until now, excluded from this dict — which
+	# seven predate a later change and were, until now, excluded from this dict — which
 	# meant they got none of the protection below: an unset field silently
 	# read back as 0 (see ensure_livestock_timing_defaults) once anything
 	# saved Livestock Settings, disabling every age/interval guard.

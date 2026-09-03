@@ -22,7 +22,6 @@ def milking_options():
 
 	def go():
 		guard_read("Milk Recording")
-		from upande_livestock.serverscripts.common import herd_movement
 
 		allowed = herd_movement.milking_herds()
 		filters = {"name": ["in", allowed]} if allowed else None

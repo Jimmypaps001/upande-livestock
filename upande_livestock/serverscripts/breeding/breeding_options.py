@@ -16,7 +16,6 @@ from upande_livestock.serverscripts.common import herd_movement
 def breeding_options():
 	def go():
 		guard_read("Animal")
-		from upande_livestock.serverscripts.common import herd_movement
 
 		labels = herd_label_map()
 		# Only animals a service can happen to: the top rung of the growth ladder
