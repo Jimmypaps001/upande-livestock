@@ -31,7 +31,7 @@ import frappe
 from frappe import _
 from frappe.utils import cint, date_diff, flt, getdate
 
-from upande_livestock.livestock_timings import TIMING_DEFAULTS, read_setting
+from upande_livestock.serverscripts.common.timings import TIMING_DEFAULTS, read_setting
 
 # event_type -> the Livestock Settings field and its default. The default is
 # read out of TIMING_DEFAULTS rather than repeated as a literal here: that is

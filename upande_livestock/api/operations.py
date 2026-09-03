@@ -35,7 +35,7 @@ import frappe
 from frappe import _
 from frappe.utils import add_days, flt, nowtime, today
 
-from upande_livestock import livestock_stock
+from upande_livestock.serverscripts.common import stock as livestock_stock
 from upande_livestock.api import feeding
 from upande_livestock.serverscripts.common.choices import (
 	ANIMAL_FIELDS,
@@ -185,7 +185,7 @@ def milking_options():
 	"""
 
 	def go():
-		from upande_livestock import herd_movement
+		from upande_livestock.serverscripts.common import herd_movement
 
 		allowed = herd_movement.milking_herds()
 		filters = {"name": ["in", allowed]} if allowed else None
@@ -300,7 +300,7 @@ def eligibility():
 	"""
 
 	def go():
-		from upande_livestock import herd_movement
+		from upande_livestock.serverscripts.common import herd_movement
 
 		ladder = herd_movement.growth_ladder()
 		return {
@@ -333,7 +333,7 @@ def movement_suggestions():
 	"""
 
 	def go():
-		from upande_livestock import herd_movement
+		from upande_livestock.serverscripts.common import herd_movement
 
 		res = herd_movement.suggestions()
 		res["ok"] = True
@@ -518,7 +518,7 @@ def record_birth(payload):
 @frappe.whitelist()
 def breeding_options():
 	def go():
-		from upande_livestock import herd_movement
+		from upande_livestock.serverscripts.common import herd_movement
 
 		labels = _herd_label_map()
 		# Only animals a service can happen to: the top rung of the growth ladder
@@ -669,7 +669,7 @@ def create_pregnancy_diagnosis(payload):
 	auto-links the related service when omitted and validates timing."""
 
 	def go():
-		from upande_livestock import herd_movement
+		from upande_livestock.serverscripts.common import herd_movement
 
 		_guard("Livestock Event")
 		d = _ok(payload)

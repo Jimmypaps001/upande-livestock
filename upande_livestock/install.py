@@ -6,7 +6,7 @@ deploy doesn't fail link validation.
 
 import frappe
 
-from upande_livestock.livestock_timings import ALL_TIMING_DEFAULTS, read_setting
+from upande_livestock.serverscripts.common.timings import ALL_TIMING_DEFAULTS, read_setting
 
 MILKING_STOCK_ENTRY_TYPE = "Milking"
 
@@ -103,7 +103,7 @@ def ensure_livestock_timing_defaults():
 	through `cint()` and persists an explicit `0` (see
 	`frappe.model.base_document.BaseDocument.get_valid_dict`). That silently
 	disables every breeding timing and every age/interval guard in
-	`upande_livestock.livestock_guards` (or worse: `gestation_period_days = 0`
+	`upande_livestock.serverscripts.common.guards` (or worse: `gestation_period_days = 0`
 	makes the expected calving date equal the service date) the first time
 	anyone opens the settings page and clicks Save — indistinguishable
 	afterwards from a deliberate choice, since `get_timing()` correctly

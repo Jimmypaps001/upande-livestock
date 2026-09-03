@@ -18,7 +18,7 @@ import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import add_days, today
 
-from upande_livestock import herd_movement as hm
+from upande_livestock.serverscripts.common import herd_movement as hm
 from upande_livestock.api import operations as ops
 from upande_livestock.api.animal import resolve_calf_herd
 from upande_livestock.api.test_operations import _make_cow, _purge, _purge_events_for

@@ -26,7 +26,7 @@ people learn to ignore alerts.
 import frappe
 from frappe.utils import today
 
-from upande_livestock import herd_movement
+from upande_livestock.serverscripts.common import herd_movement
 
 KINDS = ("Bull Cull Due", "Move Due", "Move Overdue", "Cow Open Too Long")
 

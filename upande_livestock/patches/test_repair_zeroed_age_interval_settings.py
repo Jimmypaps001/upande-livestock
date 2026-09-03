@@ -4,8 +4,8 @@
 import frappe
 from frappe.tests import IntegrationTestCase
 
-from upande_livestock.livestock_timings import TIMING_DEFAULTS
-from upande_livestock.livestock_timings_test_utils import ResetsLivestockTimings
+from upande_livestock.serverscripts.common.timings import TIMING_DEFAULTS
+from upande_livestock.serverscripts.tests.timings_utils import ResetsLivestockTimings
 from upande_livestock.patches.repair_zeroed_age_interval_settings import FIELDS, execute
 
 

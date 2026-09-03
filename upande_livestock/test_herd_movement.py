@@ -19,7 +19,7 @@ import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import add_days, getdate, today
 
-from upande_livestock import herd_movement as hm
+from upande_livestock.serverscripts.common import herd_movement as hm
 
 
 class TestGrowthLadder(IntegrationTestCase):

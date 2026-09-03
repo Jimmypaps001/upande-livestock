@@ -4,8 +4,8 @@
 from frappe.model.document import Document
 from frappe.utils import flt
 
-from upande_livestock import livestock_stock
-from upande_livestock.livestock_event_link import cancel_event_for, sync_event_for
+from upande_livestock.serverscripts.common import stock as livestock_stock
+from upande_livestock.serverscripts.common.event_link import cancel_event_for, sync_event_for
 
 
 class LivestockDiagnosis(Document):

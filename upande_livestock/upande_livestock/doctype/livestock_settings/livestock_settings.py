@@ -6,7 +6,7 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import cint
 
-from upande_livestock.livestock_timings import TIMING_DEFAULTS
+from upande_livestock.serverscripts.common.timings import TIMING_DEFAULTS
 
 # 0 is a legitimate configuration for these two: "no waiting period".
 ZERO_MEANS_DISABLED = {"post_calving_min_service_days", "post_abortion_min_service_days"}

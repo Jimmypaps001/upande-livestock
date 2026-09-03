@@ -137,7 +137,7 @@ class TestLivestockEventLink(IntegrationTestCase):
 		self.assertEqual(events[0].event_type, "Health Case")
 
 	def test_sync_is_idempotent(self):
-		from upande_livestock.livestock_event_link import sync_event_for
+		from upande_livestock.serverscripts.common.event_link import sync_event_for
 
 		dx = self._new_diagnosis(diagnosis_date="2026-04-03")
 		dx.submit()

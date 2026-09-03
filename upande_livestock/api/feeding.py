@@ -42,7 +42,7 @@ import frappe
 from frappe.utils import flt, today
 from erpnext.manufacturing.doctype.work_order.work_order import make_stock_entry
 
-from upande_livestock import livestock_stock
+from upande_livestock.serverscripts.common import stock as livestock_stock
 
 DEFAULT_FEED_STORE = "Concentrate Mixing Store - KR"
 

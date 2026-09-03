@@ -19,11 +19,11 @@ from frappe.model.document import Document
 from frappe.model.naming import make_autoname
 from frappe.utils import flt, getdate, nowdate
 
-from upande_livestock import livestock_stock
+from upande_livestock.serverscripts.common import stock as livestock_stock
 
 from upande_livestock.api.animal import create_calf
-from upande_livestock.livestock_guards import check_guards
-from upande_livestock.livestock_timings import get_timing
+from upande_livestock.serverscripts.common.guards import check_guards
+from upande_livestock.serverscripts.common.timings import get_timing
 
 
 def warn_on_calving_mismatch(calving_name):

@@ -39,11 +39,21 @@ def animal_label(row):
 # api/operations.py: they are not, and have never been, options on Animal.status
 # (see the doctype's own Select) so they never matched anything — a dead pair of
 # entries duplicated as-is across api/animal.py, api/workspace.py,
-# herd_movement.py and a couple of demo/test files. This module's copy is now
-# asserted against the doctype meta (test_choices.py), so it has to stay real;
-# the other, untouched copies are a pre-existing app-wide staleness this task
-# does not fix.
-RETIRED_STATUSES = ["Dead", "Sold", "Culled"]
+# herd_movement.py and a couple of demo/test files.
+#
+# "Transferred Out" was added for the opposite reason: it IS a real status, and
+# dropping the two dead entries exposed that the app held four disagreeing
+# definitions of "retired". patches/backfill_animal_disabled and api/animal.py
+# counted a transferred animal as retired; api/operations.py and api/workspace.py
+# did not — so the dashboard would have counted an animal that left the farm as
+# active livestock. This list matches the patch that sets `disabled`, which is
+# the canonical flag. No animal carries the status today, so the change is inert
+# until one does.
+#
+# This copy is asserted against the doctype meta (test_choices.py), so it has to
+# stay real. The other, untouched copies are a pre-existing app-wide staleness
+# that Tasks 4-12 remove as each caller moves.
+RETIRED_STATUSES = ["Dead", "Sold", "Culled", "Transferred Out"]
 
 ANIMAL_FIELDS = ["name", "tag_number", "burn_name", "current_herd", "repro_status"]
 

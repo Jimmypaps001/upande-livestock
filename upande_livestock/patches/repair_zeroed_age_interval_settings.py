@@ -12,7 +12,7 @@ validation. On kaitet.local every one of them had already been coerced to the
 literal string '0' in `tabSingles` by some earlier save of Livestock Settings
 (see `frappe.model.base_document.BaseDocument.get_valid_dict`, and
 `ensure_livestock_timing_defaults`'s docstring) — silently disabling every
-guard in `upande_livestock.livestock_guards`.
+guard in `upande_livestock.serverscripts.common.guards`.
 
 ensure_livestock_timing_defaults() cannot fix this on its own: it only ever
 fills a field that has *no* row at all, on purpose, so it never overwrites a
@@ -30,7 +30,7 @@ untouched. Idempotent — running this twice repairs nothing the second time.
 
 import frappe
 
-from upande_livestock.livestock_timings import TIMING_DEFAULTS
+from upande_livestock.serverscripts.common.timings import TIMING_DEFAULTS
 
 FIELDS = (
 	"min_service_age_months",

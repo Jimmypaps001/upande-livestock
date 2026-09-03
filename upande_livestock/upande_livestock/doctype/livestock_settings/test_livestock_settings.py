@@ -5,8 +5,8 @@ import frappe
 from frappe.tests import IntegrationTestCase
 
 from upande_livestock.install import ensure_livestock_timing_defaults
-from upande_livestock.livestock_timings import get_timing
-from upande_livestock.livestock_timings_test_utils import ResetsLivestockTimings
+from upande_livestock.serverscripts.common.timings import get_timing
+from upande_livestock.serverscripts.tests.timings_utils import ResetsLivestockTimings
 from upande_livestock.upande_livestock.doctype.livestock_settings.livestock_settings import (
 	ZERO_IS_INVALID,
 	ZERO_MEANS_DISABLED,

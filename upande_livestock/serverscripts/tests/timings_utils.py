@@ -25,7 +25,7 @@ later.
 import frappe
 
 from upande_livestock.install import ensure_livestock_timing_defaults
-from upande_livestock.livestock_timings import ALL_TIMING_DEFAULTS
+from upande_livestock.serverscripts.common.timings import ALL_TIMING_DEFAULTS
 
 
 def reset_livestock_timings():

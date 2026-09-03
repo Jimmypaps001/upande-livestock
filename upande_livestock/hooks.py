@@ -21,7 +21,7 @@ add_to_apps_screen = [
 # Permanent fix: on login, drop a stale per-user desktop grid layout that is
 # missing a permitted icon, so the grid rebuilds natively from the boot (which
 # includes newly-added app icons like Upande Livestock). See heal.py.
-on_session_creation = ["upande_livestock.heal.clear_stale_desktop_layout"]
+on_session_creation = ["upande_livestock.serverscripts.common.heal.clear_stale_desktop_layout"]
 
 # Apps
 # ------------------
