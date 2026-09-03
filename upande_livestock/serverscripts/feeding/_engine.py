@@ -1,39 +1,12 @@
-"""Animal feeding — the herd feeding programme.
+"""The feed engine: TMR rations, concentrate manufacture, and issuing to a herd.
 
-The farm feeds a herd a TMR that is mixed from raw materials *plus* a
-concentrate. There are two kinds of concentrate and they behave differently:
+Plain functions, deliberately not endpoints. These five were whitelisted, which
+made them reachable over REST and — because the guards live one layer up in the
+endpoints that call them — callable with no permission check at all. A client
+could manufacture feed or issue stock through this module while the guarded twin
+sat next to it doing the same work.
 
-  MIXED      Made on the farm from its own raw materials, so the herd's BOM
-             carries it as a sub-assembly line (``BOM Item.bom_no`` set). Short
-             stock is answered by manufacturing a batch.
-  BOUGHT IN  Arrives ready-packed. Nothing in the item data distinguishes it
-             from silage or hay — every feed item sits in the DAIRY group with
-             ``is_purchase_item = 1``, the mixed ones included — so these are
-             named on Livestock Settings.bought_in_concentrates. Short stock is
-             answered by a purchase, not a Work Order.
-
-Work Orders here run with ``use_multi_level_bom = 0`` deliberately. The
-concentrate is therefore consumed *as stock*, not exploded — so it has to have
-been manufactured first. That is the whole point of the two sections in the UI:
-
-  Main programme      herd -> TMR -> the herd.  Required = BOM line qty * head
-                      count, and the batch is issued to the herd as part of the
-                      same action: a TMR is mixed and fed, never stored, so
-                      manufacturing without issuing left feed sitting on the
-                      books that had already gone in the trough.
-  Concentrate         concentrate -> stock.  Required = its own BOM, scaled to
-                      whole batches covering the TMR's shortfall. This one does
-                      stay in the store — it is an input, not a meal.
-
-STORE RESOLUTION
-  Livestock Settings.feed_source_warehouses is an ordered list of warehouses
-  feed inputs may come from (raw material store, concentrate store, hay store,
-  silage pits...), with the WIP/FG store always tried last. ``_pick_source``
-  walks it and returns ONE warehouse per line. That same function feeds both
-  the availability check and ``Work Order.required_items.source_warehouse``, so
-  the shortage the screen reports is the shortage the transfer would really
-  hit. Splitting a line across warehouses is deliberately not supported —
-  ERPNext carries one source warehouse per required item.
+The endpoints in this package are the public surface; this is what they call.
 """
 
 import math
@@ -258,7 +231,6 @@ def _concentrate_plan(line):
 	}
 
 
-@frappe.whitelist()
 def get_herd_feeding_program(herd):
 	"""Everything the two feeding sections render. Read-only.
 
@@ -294,7 +266,6 @@ def get_herd_feeding_program(herd):
 	}
 
 
-@frappe.whitelist()
 def get_herd_feed_info(herd):
 	"""Back-compat shape for the old feed preview: per-head BOM scaled by head
 	count, the total to manufacture, and finished feed on hand."""
@@ -401,7 +372,6 @@ def _run_manufacture(production_item, bom_no, qty, herd=None, heads=None, allow_
 	}
 
 
-@frappe.whitelist()
 def manufacture_herd_feed(herd, allow_shortage=False, employee=None):
 	"""Manufacture the herd's TMR and issue the whole batch to that herd.
 
@@ -452,7 +422,6 @@ def manufacture_herd_feed(herd, allow_shortage=False, employee=None):
 	return res
 
 
-@frappe.whitelist()
 def manufacture_concentrate(item_code, qty=None, bom_no=None, allow_shortage=False):
 	"""Stage A-prime — manufacture a concentrate so a TMR run can consume it.
 
@@ -490,7 +459,6 @@ def _operator_or_throw(employee=None):
 	return employee
 
 
-@frappe.whitelist()
 def feed_herd(herd, qty, employee=None):
 	"""Issue `qty` of a herd's TMR out of the store.
 

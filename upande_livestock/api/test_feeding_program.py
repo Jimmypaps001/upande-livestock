@@ -28,7 +28,7 @@ import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import flt
 
-from upande_livestock.api import feeding
+from upande_livestock.serverscripts.feeding import _engine as feeding
 
 
 def _herd_with_bom():

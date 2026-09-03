@@ -9,7 +9,7 @@ from frappe.utils import now
 class LivestockAlert(Document):
 	"""Something about an animal that somebody should look at.
 
-	Raised by herd_alerts.raise_alerts on a schedule, one per animal per kind
+	Raised by serverscripts.alerts.raise_alerts on a schedule, one per animal per kind
 	per day. It records WHAT should be said; how it reaches a person is not
 	decided here, so nothing in this doctype sends anything.
 	"""

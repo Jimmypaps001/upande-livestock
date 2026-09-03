@@ -436,7 +436,7 @@ def _delete_animal_and_fix_herd(name):
 	throwaway TEST-BIRTH-CALVES herd) keeps the invariant intact even if
 	resolve_calf_herd() picked a real herd instead.
 	"""
-	from upande_livestock.api.animal import recompute_herd_count
+	from upande_livestock.serverscripts.common.animal import recompute_herd_count
 
 	herd = frappe.db.get_value("Animal", name, "current_herd")
 	frappe.db.delete("Animal", {"name": name})
@@ -574,7 +574,7 @@ class TestLivestockEventMultipleBirths(IntegrationTestCase):
 		return service.name
 
 	def test_births_recorded_counts_linked_births(self):
-		from upande_livestock.api.operations import record_calf_births
+		from upande_livestock.serverscripts.breeding.record_calf_births import record_calf_births
 
 		calving = self._calving(3)
 		result = record_calf_births(
@@ -592,7 +592,7 @@ class TestLivestockEventMultipleBirths(IntegrationTestCase):
 		self.assertEqual(calving.births_recorded, 3)
 
 	def test_three_births_create_three_animals(self):
-		from upande_livestock.api.operations import record_calf_births
+		from upande_livestock.serverscripts.breeding.record_calf_births import record_calf_births
 
 		calving = self._calving(3)
 		result = record_calf_births(
@@ -610,7 +610,7 @@ class TestLivestockEventMultipleBirths(IntegrationTestCase):
 			self.assertTrue(frappe.db.exists("Animal", f"TEST-TRIPLET-{n}"))
 
 	def test_parity_increments_once_per_calving_not_per_birth(self):
-		from upande_livestock.api.operations import record_calf_births
+		from upande_livestock.serverscripts.breeding.record_calf_births import record_calf_births
 
 		before = frappe.db.get_value("Animal", self.dam, "parity") or 0
 		calving = self._calving(3)
@@ -629,7 +629,7 @@ class TestLivestockEventMultipleBirths(IntegrationTestCase):
 		self.assertEqual(after - before, 1)
 
 	def test_stillborn_row_records_a_birth_without_an_animal(self):
-		from upande_livestock.api.operations import record_calf_births
+		from upande_livestock.serverscripts.breeding.record_calf_births import record_calf_births
 
 		calving = self._calving(2)
 		result = record_calf_births(
@@ -647,7 +647,7 @@ class TestLivestockEventMultipleBirths(IntegrationTestCase):
 		self.assertEqual(len(result["created"]), 1)
 
 	def test_count_mismatch_warns_but_does_not_block(self):
-		from upande_livestock.api.operations import record_calf_births
+		from upande_livestock.serverscripts.breeding.record_calf_births import record_calf_births
 
 		calving = self._calving(3)
 		result = record_calf_births(
@@ -682,7 +682,7 @@ class TestLivestockEventMultipleBirths(IntegrationTestCase):
 		"""
 		from unittest.mock import patch
 
-		from upande_livestock.api.operations import record_calf_births
+		from upande_livestock.serverscripts.breeding.record_calf_births import record_calf_births
 
 		calving = self._calving(3)
 		with patch("frappe.msgprint") as mock_msgprint:
@@ -711,7 +711,7 @@ class TestLivestockEventMultipleBirths(IntegrationTestCase):
 		"""
 		from unittest.mock import patch
 
-		from upande_livestock.api.operations import record_calf_births
+		from upande_livestock.serverscripts.breeding.record_calf_births import record_calf_births
 
 		calving = self._calving(3)
 		with patch("frappe.msgprint") as mock_msgprint:
@@ -738,7 +738,7 @@ class TestLivestockEventMultipleBirths(IntegrationTestCase):
 		"""
 		from unittest.mock import patch
 
-		from upande_livestock.api.operations import record_calf_births
+		from upande_livestock.serverscripts.breeding.record_calf_births import record_calf_births
 
 		calving = self._calving(3)
 		with patch("frappe.msgprint") as mock_msgprint:
@@ -787,7 +787,7 @@ class TestLivestockEventMultipleBirths(IntegrationTestCase):
 		"""
 		from unittest.mock import patch
 
-		from upande_livestock.api.operations import record_calf_births
+		from upande_livestock.serverscripts.breeding.record_calf_births import record_calf_births
 
 		calving = self._calving(3)
 		result = record_calf_births(
@@ -819,7 +819,7 @@ class TestLivestockEventMultipleBirths(IntegrationTestCase):
 		Dropping `sex` here silently gives every caller `undefined`/None instead
 		of an error, so pin the exact key set as well as the value.
 		"""
-		from upande_livestock.api.operations import record_calf_births
+		from upande_livestock.serverscripts.breeding.record_calf_births import record_calf_births
 
 		calving = self._calving(1)
 		result = record_calf_births(
@@ -837,7 +837,7 @@ class TestLivestockEventMultipleBirths(IntegrationTestCase):
 		sends) must reach create_calf(), not be silently discarded by
 		resolve_calf_herd() picking something else.
 		"""
-		from upande_livestock.api.operations import record_calf_births
+		from upande_livestock.serverscripts.breeding.record_calf_births import record_calf_births
 
 		alt_herd = "TEST-TRIPLET-ALT-HERD"
 		if not frappe.db.exists("Herds", alt_herd):
@@ -859,8 +859,8 @@ class TestLivestockEventMultipleBirths(IntegrationTestCase):
 		all — resolved the same way create_calf_if_needed's own callers with no
 		opinion on herd already rely on.
 		"""
-		from upande_livestock.api.animal import resolve_calf_herd
-		from upande_livestock.api.operations import record_calf_births
+		from upande_livestock.serverscripts.common.animal import resolve_calf_herd
+		from upande_livestock.serverscripts.breeding.record_calf_births import record_calf_births
 
 		expected_herd = resolve_calf_herd()
 		calving = self._calving(1)
@@ -875,7 +875,7 @@ class TestLivestockEventMultipleBirths(IntegrationTestCase):
 
 	def test_record_birth_creates_one_calving_and_n_births(self):
 		"""record_birth must delegate to record_calf_births, not carry its own loop."""
-		from upande_livestock.api.operations import record_birth
+		from upande_livestock.serverscripts.breeding.record_birth import record_birth
 
 		self._confirm_pregnancy()
 		result = record_birth(
@@ -901,7 +901,7 @@ class TestLivestockEventMultipleBirths(IntegrationTestCase):
 		"""Same per-item contract as record_calf_births' own "created" list —
 		record_birth returns it under the "calves" key instead.
 		"""
-		from upande_livestock.api.operations import record_birth
+		from upande_livestock.serverscripts.breeding.record_birth import record_birth
 
 		self._confirm_pregnancy(service_date="2025-09-10", diagnosis_date="2025-10-14")
 		result = record_birth(
@@ -932,7 +932,7 @@ class TestLivestockEventMultipleBirths(IntegrationTestCase):
 		not a crash — and create no Calving row at all, rather than silently
 		succeeding with zero calves as it used to.
 		"""
-		from upande_livestock.api.operations import record_birth
+		from upande_livestock.serverscripts.breeding.record_birth import record_birth
 
 		self._confirm_pregnancy(service_date="2025-09-11", diagnosis_date="2025-10-15")
 		before = frappe.db.count("Livestock Event", {"event_type": "Calving"})
@@ -955,7 +955,7 @@ class TestLivestockEventMultipleBirths(IntegrationTestCase):
 		Still Birth must create zero Birth events too, matching pre-Task-9
 		behaviour exactly.
 		"""
-		from upande_livestock.api.operations import record_birth
+		from upande_livestock.serverscripts.breeding.record_birth import record_birth
 
 		self._confirm_pregnancy(service_date="2025-09-12", diagnosis_date="2025-10-16")
 		result = record_birth(
@@ -977,7 +977,7 @@ class TestLivestockEventMultipleBirths(IntegrationTestCase):
 		self.assertFalse(frappe.db.exists("Animal", "TEST-TRIPLET-1"))
 
 	def test_record_birth_stillborn_sentinel_creates_no_animal(self):
-		from upande_livestock.api.operations import record_birth
+		from upande_livestock.serverscripts.breeding.record_birth import record_birth
 
 		self._confirm_pregnancy(service_date="2025-09-02", diagnosis_date="2025-10-06")
 		before = frappe.db.count("Animal")
@@ -996,13 +996,25 @@ class TestLivestockEventMultipleBirths(IntegrationTestCase):
 		self.assertEqual(frappe.db.count("Animal"), before)
 
 	def test_only_one_place_creates_a_calf_animal(self):
-		"""Guard against the two-paths regression this task exists to remove."""
-		import inspect
+		"""Guard against the two-paths regression that first prompted this.
 
-		from upande_livestock.api import operations
+		Once asserted against api/operations.py, which held every endpoint. That
+		file is gone — the endpoints are one per module under serverscripts/ — so
+		the same guarantee now has to be asserted across the whole package: no
+		endpoint may create an Animal directly. `common/animal.py:create_calf` is
+		the one place, and the Livestock Event controller is what calls it.
+		"""
+		import pathlib
 
-		src = inspect.getsource(operations)
-		self.assertNotIn('frappe.new_doc("Animal")', src)
+		root = pathlib.Path(frappe.get_app_path("upande_livestock", "serverscripts"))
+		offenders = [
+			str(path.relative_to(root))
+			for path in root.rglob("*.py")
+			if path.name != "animal.py"
+			and "tests" not in path.parts
+			and 'frappe.new_doc("Animal")' in path.read_text()
+		]
+		self.assertEqual(offenders, [], f"a second path creates a calf Animal: {offenders}")
 
 
 class TestLivestockEventCalfFieldsMandatory(IntegrationTestCase):

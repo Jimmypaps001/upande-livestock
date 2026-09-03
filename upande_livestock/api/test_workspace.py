@@ -13,7 +13,8 @@ import frappe
 from frappe.tests import IntegrationTestCase
 
 from upande_livestock.api.test_operations import _make_cow, _purge
-from upande_livestock.api.workspace import _active_animal_count, _is_active
+from upande_livestock.serverscripts.dashboard._shared import _active_animal_count
+from upande_livestock.serverscripts.common.choices import is_active as _is_active
 
 
 class TestActiveAnimalPredicate(IntegrationTestCase):

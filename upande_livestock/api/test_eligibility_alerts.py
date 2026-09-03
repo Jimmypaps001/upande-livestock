@@ -19,14 +19,16 @@ import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import today
 
-from upande_livestock import herd_alerts
+from upande_livestock.serverscripts.alerts import raise_alerts as herd_alerts
 from upande_livestock.serverscripts.common import herd_movement as hm
-from upande_livestock.api import operations as ops
+from upande_livestock.serverscripts.breeding.breeding_options import breeding_options
+from upande_livestock.serverscripts.breeding.create_pregnancy_diagnosis import create_pregnancy_diagnosis
+from upande_livestock.serverscripts.milking.milking_options import milking_options
 
 
 class TestMilkingIsOfferedOnlyForLactatingHerds(IntegrationTestCase):
 	def test_the_list_is_the_lactation_groups(self):
-		res = ops.milking_options()
+		res = milking_options()
 		if res.get("error"):
 			raise unittest.SkipTest(res["error"][:120])
 		offered = {h["name"] for h in res["herds"]}
@@ -35,7 +37,7 @@ class TestMilkingIsOfferedOnlyForLactatingHerds(IntegrationTestCase):
 
 	def test_no_growth_herd_is_offered(self):
 		"""A calf is never in milk."""
-		res = ops.milking_options()
+		res = milking_options()
 		if res.get("error"):
 			raise unittest.SkipTest(res["error"][:120])
 		offered = {h["name"] for h in res["herds"]}
@@ -43,7 +45,7 @@ class TestMilkingIsOfferedOnlyForLactatingHerds(IntegrationTestCase):
 			self.assertNotIn(rung["herd"], offered)
 
 	def test_it_narrows_rather_than_offering_everything(self):
-		res = ops.milking_options()
+		res = milking_options()
 		if res.get("error"):
 			raise unittest.SkipTest(res["error"][:120])
 		total = frappe.db.count("Herds")
@@ -53,7 +55,7 @@ class TestMilkingIsOfferedOnlyForLactatingHerds(IntegrationTestCase):
 
 class TestServiceIsOfferedOnlyForServableAnimals(IntegrationTestCase):
 	def setUp(self):
-		self.res = ops.breeding_options()
+		self.res = breeding_options()
 		if self.res.get("error"):
 			raise unittest.SkipTest(self.res["error"][:120])
 
@@ -90,7 +92,7 @@ class TestDiagnosisNeedsAService(IntegrationTestCase):
 	"""A diagnosis answers a question a service asked."""
 
 	def test_only_animals_with_an_open_service_are_offered(self):
-		res = ops.breeding_options()
+		res = breeding_options()
 		if res.get("error"):
 			raise unittest.SkipTest(res["error"][:120])
 		for a in res.get("diagnosis_animals") or []:
@@ -105,13 +107,13 @@ class TestDiagnosisNeedsAService(IntegrationTestCase):
 		calf = frappe.db.get_value("Animal", {"current_herd": rungs[0]["herd"]}, "name")
 		if not calf or hm.has_open_service(calf):
 			raise unittest.SkipTest("no un-served animal to test with")
-		res = ops.create_pregnancy_diagnosis({"animal": calf, "diagnosis_result": "Confirmed"})
+		res = create_pregnancy_diagnosis({"animal": calf, "diagnosis_result": "Confirmed"})
 		self.assertTrue(res.get("error"))
 		self.assertIn("no service", res["error"].lower())
 
 	def test_the_two_lists_are_not_the_same(self):
 		"""Servable and diagnosable are different questions."""
-		res = ops.breeding_options()
+		res = breeding_options()
 		if res.get("error"):
 			raise unittest.SkipTest(res["error"][:120])
 		serv = {a["name"] for a in res["animals"]}

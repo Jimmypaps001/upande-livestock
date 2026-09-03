@@ -14,23 +14,23 @@ submitted-record guard — so ``_purge`` cancels before deleting, and every crea
 document is registered with addCleanup.
 """
 
+import pathlib
+
 import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import add_days, add_months, today
 
-from upande_livestock.api.operations import (
-	_active_animals,
-	create_abortion_event,
-	create_check_up,
-	create_health_case,
-	create_pregnancy_diagnosis,
-	create_service_event,
-	create_weight_record,
-	disposal_options,
-	health_options,
-	record_disposal,
-	weight_options,
-)
+from upande_livestock.serverscripts.common.choices import active_animals as _active_animals
+from upande_livestock.serverscripts.breeding.create_abortion_event import create_abortion_event
+from upande_livestock.serverscripts.breeding.create_pregnancy_diagnosis import create_pregnancy_diagnosis
+from upande_livestock.serverscripts.breeding.create_service_event import create_service_event
+from upande_livestock.serverscripts.disposal.disposal_options import disposal_options
+from upande_livestock.serverscripts.disposal.record_disposal import record_disposal
+from upande_livestock.serverscripts.health.create_check_up import create_check_up
+from upande_livestock.serverscripts.health.create_health_case import create_health_case
+from upande_livestock.serverscripts.health.health_options import health_options
+from upande_livestock.serverscripts.weights.create_weight_record import create_weight_record
+from upande_livestock.serverscripts.weights.weight_options import weight_options
 
 COMPANY = "Kaitet Group"
 
@@ -403,23 +403,27 @@ class TestOneSourceForBreedingWorklists(IntegrationTestCase):
 	"""
 
 	def test_reproduction_no_longer_answers_ready_for_service(self):
-		from upande_livestock.api import reproduction
+		import upande_livestock.serverscripts.breeding as breeding
 
 		self.assertFalse(
-			hasattr(reproduction, "get_animals_ready_for_service"),
+			pathlib.Path(breeding.__file__).parent.joinpath(
+				"get_animals_ready_for_service.py"
+			).exists(),
 			"the duplicate ready-for-service worklist is back",
 		)
 
 	def test_reproduction_no_longer_answers_pregnancy_checks(self):
-		from upande_livestock.api import reproduction
+		import upande_livestock.serverscripts.breeding as breeding
 
 		self.assertFalse(
-			hasattr(reproduction, "get_animals_needing_pregnancy_check"),
+			pathlib.Path(breeding.__file__).parent.joinpath(
+				"get_animals_needing_pregnancy_check.py"
+			).exists(),
 			"the duplicate pregnancy-check worklist is back",
 		)
 
 	def test_breeding_lists_still_answers_both(self):
-		from upande_livestock.api.operations import breeding_lists
+		from upande_livestock.serverscripts.breeding.breeding_lists import breeding_lists
 
 		result = breeding_lists()
 		self.assertTrue(result.get("ok"), result.get("error"))

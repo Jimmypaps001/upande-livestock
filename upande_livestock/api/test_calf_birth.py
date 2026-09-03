@@ -19,8 +19,9 @@ from frappe.tests import IntegrationTestCase
 from frappe.utils import add_days, today
 
 from upande_livestock.serverscripts.common import herd_movement as hm
-from upande_livestock.api import operations as ops
-from upande_livestock.api.animal import resolve_calf_herd
+from upande_livestock.serverscripts.breeding.create_service_event import create_service_event
+from upande_livestock.serverscripts.breeding.record_calf_births import record_calf_births
+from upande_livestock.serverscripts.common.animal import resolve_calf_herd
 from upande_livestock.api.test_operations import _make_cow, _purge, _purge_events_for
 
 
@@ -70,7 +71,7 @@ class TestBirthOutcomes(IntegrationTestCase):
 			self.addCleanup(_purge, "Animal", tag)
 
 		served = add_days(today(), -285)
-		r = ops.create_service_event({
+		r = create_service_event({
 			"animal": self.dam.name, "service_type": "A.I.",
 			"service_date": served, "operator": self.employee,
 		})
@@ -95,7 +96,7 @@ class TestBirthOutcomes(IntegrationTestCase):
 		self.calving.insert(ignore_permissions=True)
 		self.calving.submit()
 
-		self.res = ops.record_calf_births({"calving": self.calving.name, "calves": [
+		self.res = record_calf_births({"calving": self.calving.name, "calves": [
 			{"tag": "ZZ CALF HEIFER", "sex": "Female", "birth_weight": 34,
 			 "breed": "Holstein-Friesian", "health_status": "Healthy",
 			 "vet_remarks": "Strong, suckled within the hour"},

@@ -1,34 +1,17 @@
-# Copyright (c) 2026, Upande and contributors
-# For license information, please see license.txt
+"""The nightly alert sweep: what should be said about herd movement.
 
-"""The four things about herd movement somebody should be told.
-
-Each one is CAPTURED here, not delivered. `collect()` answers "what would you
-tell someone right now" as plain data, and `raise_alerts()` records each as a
-Livestock Alert. How an alert reaches a person — email, the desk, a phone —
-is deliberately not decided here, because that decision has not been made yet
-and hard-wiring one channel now is what makes it expensive to change later.
-
-  BULL CULL DUE       a bull calf is past the share of its selling window the
-                      farm set. On this farm the window is 14 days and the
-                      warning fires at 75% of it — day 10.5.
-  MOVE DUE            a heifer has served her time on a rung of the growth
-                      ladder and the next herd is waiting.
-  MOVE OVERDUE        she is past the maximum, not merely due.
-  COW OPEN TOO LONG   a cow in the high-yield herd has gone longer than the
-                      farm's limit without conceiving, and has expired from
-                      that herd on productivity grounds.
-
-An alert is raised once per animal per kind per day. Repeating it hourly is how
-people learn to ignore alerts.
+Records alerts; it does not deliver them — that channel is still to be decided.
+Not an endpoint: hooks.py runs it on the daily scheduler, so it has no caller
+to guard against.
 """
 
 import frappe
 from frappe.utils import today
 
+from upande_livestock.serverscripts.alerts._shared import KINDS
 from upande_livestock.serverscripts.common import herd_movement
 
-KINDS = ("Bull Cull Due", "Move Due", "Move Overdue", "Cow Open Too Long")
+
 
 
 def collect():
@@ -118,23 +101,3 @@ def raise_alerts():
 		raised += 1
 	frappe.db.commit()
 	return {"raised": raised, "already_open": skipped}
-
-
-@frappe.whitelist()
-def open_alerts(kind=None, limit=200):
-	"""Alerts nobody has actioned yet, newest first."""
-	filters = {"status": "Open"}
-	if kind:
-		filters["alert_kind"] = kind
-	rows = frappe.get_all(
-		"Livestock Alert",
-		filters=filters,
-		fields=["name", "alert_kind", "alert_date", "animal", "herd", "severity", "message"],
-		order_by="severity asc, alert_date asc",
-		limit=int(limit),
-	)
-	return {
-		"ok": True,
-		"alerts": rows,
-		"counts": {k: sum(1 for r in rows if r.alert_kind == k) for k in KINDS},
-	}
