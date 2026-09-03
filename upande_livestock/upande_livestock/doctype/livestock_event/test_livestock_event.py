@@ -1431,3 +1431,117 @@ class TestLivestockEventAbortionAwareServiceCheckJS(IntegrationTestCase):
 		check_block = source[marker : marker + 1200]
 		self.assertIn("Abortion", check_block)
 		self.assertIn("custom_related_pregnancy", check_block)
+
+
+class TestCalvingPregnancyLinkIsAService(IntegrationTestCase):
+	"""`custom_related_pregnancy` on a Calving must name a Service event.
+
+	Every reader of this field joins it against a Service: breeding_lists'
+	ready-for-service query (api/operations.py), the overdue-pregnancy-check
+	scheduler (tasks.py), this controller's own "not already calved" guard, the
+	Abortion auto-link, and the gestation-length check immediately below the
+	link resolution — which reads `service_date` off whatever it points at.
+
+	The auto-resolver populates it correctly, but only runs when the field is
+	blank. The write endpoints (record_calf_births, create_abortion_event) set
+	it straight from a client-supplied `related_pregnancy` with no check, and
+	the clients have been sending Pregnancy Diagnosis names. A Diagnosis has no
+	`service_date`, so the join silently matches nothing and the gestation check
+	silently skips: a served cow's Service never closes and she is never listed
+	as ready to serve again.
+
+	These pin the field's type so a client cannot reintroduce that.
+	"""
+
+	def setUp(self):
+		ensure_livestock_event_types()
+		self.operator = frappe.db.get_value("Employee", {}, "name")
+		self.animal = make_animal("TEST-PREGLINK-DAM").name
+		self.addCleanup(_delete_and_commit, "Animal", self.animal)
+
+	def _service_and_diagnosis(self, animal, service_date="2025-09-01", diagnosis_date="2025-10-05"):
+		"""A submitted Confirmed Service plus the Diagnosis that confirmed it."""
+		service = make_event(
+			"Service", animal, service_date, service_type="A.I.", service_date=service_date
+		)
+		self.addCleanup(_delete_and_commit, "Livestock Event", service.name)
+		service.submit()
+
+		diagnosis = make_event(
+			"Pregnancy Diagnosis",
+			animal,
+			diagnosis_date,
+			related_service=service.name,
+			diagnosis_date=diagnosis_date,
+			diagnosis_result="Confirmed",
+		)
+		self.addCleanup(_delete_and_commit, "Livestock Event", diagnosis.name)
+		diagnosis.submit()
+		return service, diagnosis
+
+	def _calving(self, animal, related_pregnancy, event_date="2026-06-08"):
+		doc = frappe.get_doc(
+			{
+				"doctype": "Livestock Event",
+				"animal": animal,
+				"event_type": "Calving",
+				"event_date": event_date,
+				"operator": self.operator,
+				"custom_calving_outcome": "Live Birth",
+				"custom_no_of_calves": 1,
+				"custom_related_pregnancy": related_pregnancy,
+			}
+		)
+		doc.insert()
+		self.addCleanup(_delete_and_commit, "Livestock Event", doc.name)
+		return doc
+
+	def test_a_calving_may_not_point_its_pregnancy_at_a_diagnosis(self):
+		"""The exact shape found on kaitet.local: 10 of 14 Calvings did this."""
+		_, diagnosis = self._service_and_diagnosis(self.animal)
+		with self.assertRaises(frappe.ValidationError) as caught:
+			self._calving(self.animal, diagnosis.name)
+		self.assertIn("must be a Service event", str(caught.exception))
+
+	def test_a_calving_may_not_point_at_another_animals_service(self):
+		"""A Service for a different cow is not this cow's pregnancy."""
+		other = make_animal("TEST-PREGLINK-OTHER").name
+		self.addCleanup(_delete_and_commit, "Animal", other)
+		other_service, _ = self._service_and_diagnosis(other)
+		self._service_and_diagnosis(self.animal)
+		with self.assertRaises(frappe.ValidationError) as caught:
+			self._calving(self.animal, other_service.name)
+		self.assertIn("belongs to", str(caught.exception))
+
+	def test_a_calving_pointing_at_its_own_service_is_accepted(self):
+		"""The correct linkage must keep working — this guards over-rejection."""
+		service, _ = self._service_and_diagnosis(self.animal)
+		calving = self._calving(self.animal, service.name)
+		self.assertEqual(calving.custom_related_pregnancy, service.name)
+
+	def test_an_abortion_may_not_point_its_pregnancy_at_a_diagnosis(self):
+		"""create_abortion_event sets the same field from the same client input.
+
+		The Abortion auto-link resolves a Service (see the ABORTION block in
+		validate), and `warn_on_calving_mismatch` and the desk form's own check
+		both read this field expecting one, so an Abortion carrying a Diagnosis
+		is as broken as a Calving carrying one.
+		"""
+		_, diagnosis = self._service_and_diagnosis(self.animal)
+		doc = frappe.get_doc(
+			{
+				"doctype": "Livestock Event",
+				"animal": self.animal,
+				"event_type": "Abortion",
+				"event_date": "2026-01-15",
+				"operator": self.operator,
+				# Mandatory for an Abortion. Supplied so the insert fails on the
+				# pregnancy link and not on MandatoryError, which is also a
+				# ValidationError and would make this test pass for free.
+				"abortion_cause": "Unknown",
+				"custom_related_pregnancy": diagnosis.name,
+			}
+		)
+		with self.assertRaises(frappe.ValidationError) as caught:
+			doc.insert()
+		self.assertIn("must be a Service event", str(caught.exception))

@@ -1,4 +1,23 @@
-"""Reproduction API endpoints, ported from sandboxed Frappe Server Scripts."""
+"""Per-animal reproductive history.
+
+Held one endpoint per animal plus two herd-wide worklists — "ready for service"
+and "pregnancy checks due". Both worklists were also implemented, independently,
+in `operations.breeding_lists`, and the two disagreed: on kaitet.local this
+module reported 8 animals ready to serve against breeding_lists' 2.
+
+The gap was not a difference of opinion about breeding. `breeding_lists` filters
+on `custom_related_pregnancy`, which had been corrupted to hold Pregnancy
+Diagnosis names instead of Service names, so served cows never closed out. This
+module happened to sidestep that by asking a different question ("no Service
+since the last Calving") — while itself ignoring Animal status, hardcoding a
+60-day wait instead of the Calving's configured `ready_for_service_date`, and
+returning one row per calving rather than per animal.
+
+The corruption is fixed at its source (`_validate_pregnancy_link`) and repaired
+in history (`patches.relink_pregnancy_to_service`), so the duplicates are gone
+and `operations.breeding_lists` is the single answer. See
+`test_operations.TestOneSourceForBreedingWorklists`.
+"""
 
 import frappe
 
@@ -91,69 +110,3 @@ def get_animal_reproductive_summary(animal=None):
 
 	# Set response
 	return summary
-
-
-@frappe.whitelist()
-def get_animals_ready_for_service():
-	# Get animals ready for service
-	ready_animals = frappe.db.sql(
-		"""
-        SELECT
-            ae.animal,
-            a.burn_name AS asset_name,
-            a.current_herd AS custom_current_herd,
-            ae.event_date as calving_date,
-            DATEDIFF(CURDATE(), ae.event_date) as days_since_calving,
-            ae.ready_for_service_date
-        FROM `tabLivestock Event` ae
-        LEFT JOIN `tabAnimal` a ON ae.animal = a.name
-        WHERE ae.event_type = 'Calving'
-        AND ae.docstatus = 1
-        AND DATEDIFF(CURDATE(), ae.event_date) >= 60
-        AND NOT EXISTS (
-            SELECT 1 FROM `tabLivestock Event` service
-            WHERE service.animal = ae.animal
-            AND service.event_type = 'Service'
-            AND service.service_date > ae.event_date
-            AND service.docstatus = 1
-        )
-        ORDER BY ae.event_date ASC
-    """,
-		as_dict=True,
-	)
-
-	# Set response
-	return ready_animals
-
-
-@frappe.whitelist()
-def get_animals_needing_pregnancy_check():
-	# Get animals needing pregnancy check
-	animals_needing_check = frappe.db.sql(
-		"""
-        SELECT
-            ae.animal,
-            ae.name as service_event,
-            ae.service_date,
-            ae.pregnancy_check_due_date,
-            DATEDIFF(CURDATE(), ae.service_date) as days_since_service,
-            CASE
-                WHEN DATEDIFF(CURDATE(), ae.pregnancy_check_due_date) > 20 THEN 'Overdue'
-                WHEN DATEDIFF(CURDATE(), ae.pregnancy_check_due_date) > 0 THEN 'Due'
-                ELSE 'Upcoming'
-            END as urgency,
-            a.burn_name AS asset_name,
-            a.current_herd AS custom_current_herd
-        FROM `tabLivestock Event` ae
-        LEFT JOIN `tabAnimal` a ON ae.animal = a.name
-        WHERE ae.event_type = 'Service'
-        AND ae.pregnancy_confirmation_status = 'Pending'
-        AND ae.docstatus = 1
-        AND DATEDIFF(CURDATE(), ae.service_date) >= 21
-        ORDER BY ae.pregnancy_check_due_date ASC
-    """,
-		as_dict=True,
-	)
-
-	# Set response
-	return animals_needing_check

@@ -57,6 +57,54 @@ def warn_on_calving_mismatch(calving_name):
 		)
 
 
+def _validate_pregnancy_link(doc):
+	"""`custom_related_pregnancy` must name a Service event for this same animal.
+
+	Every reader of this field joins it against a Service — breeding_lists'
+	ready-for-service query, the overdue-pregnancy-check scheduler, the
+	"not already calved" guard above, the Abortion auto-link, and the gestation
+	check immediately below, which reads `service_date` off whatever it points
+	at. A Pregnancy Diagnosis has no `service_date`, so pointing at one makes
+	all of them fail *silently*: the joins match nothing, the gestation warning
+	never fires, and a served cow's Service stays open forever, so she is never
+	listed as ready to serve again.
+
+	The auto-resolver above always picks a Service, but it only runs when the
+	field is blank. record_calf_births() and create_abortion_event() set it
+	straight from a client-supplied `related_pregnancy`, which is how 10 of the
+	14 Calvings on the Kaitet site ended up pointing at a Diagnosis. Validating
+	here covers every write path, including the desk form.
+
+	A Diagnosis carries `related_service`, so the message names the event the
+	caller almost certainly meant.
+	"""
+	linked = frappe.db.get_value(
+		"Livestock Event",
+		doc.custom_related_pregnancy,
+		["event_type", "animal", "related_service"],
+		as_dict=True,
+	)
+	if not linked:
+		return  # a broken Link is the Link field's error to report, not ours
+
+	if linked.event_type != "Service":
+		hint = ""
+		if linked.event_type == "Pregnancy Diagnosis" and linked.related_service:
+			hint = _(" Did you mean {0}, the service it confirmed?").format(linked.related_service)
+		frappe.throw(
+			_("Related Pregnancy must be a Service event, but {0} is a {1} event.{2}").format(
+				doc.custom_related_pregnancy, linked.event_type, hint
+			)
+		)
+
+	if linked.animal != doc.animal:
+		frappe.throw(
+			_("Related Pregnancy {0} belongs to {1}, not {2}.").format(
+				doc.custom_related_pregnancy, linked.animal, doc.animal
+			)
+		)
+
+
 class LivestockEvent(Document):
 	def autoname(self):
 		"""Name as TYPE-YEAR-#####, e.g. FEEDING-2026-00001.
@@ -390,6 +438,16 @@ class LivestockEvent(Document):
 				_("{0} is mandatory for an Abortion event.").format(_("Probable Cause")),
 				frappe.MandatoryError,
 			)
+
+		# ============================================================
+		# RELATED PREGNANCY MUST BE A SERVICE
+		# ============================================================
+		# Both event types that carry this field are checked in one place. The
+		# auto-resolvers further down only run when it is blank and always pick
+		# a Service for this animal, so this covers exactly the case they miss:
+		# a value supplied by a caller.
+		if self.custom_related_pregnancy and self.event_type in ("Calving", "Abortion"):
+			_validate_pregnancy_link(self)
 
 		# ============================================================
 		# CLEAR-DETECTION: EVENT DATE (reject blanking a stored date)
