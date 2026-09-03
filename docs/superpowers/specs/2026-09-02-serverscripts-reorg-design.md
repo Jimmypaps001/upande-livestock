@@ -43,32 +43,53 @@ Plus non-endpoint logic at the app root: `herd_movement.py` (435),
 
 ## Target structure
 
+One file per endpoint. A filename is an endpoint name, so finding the code
+behind `.../serverscripts/breeding/create_service_event.py` needs no grep. The
+only files holding more than one whitelisted function are none: 46 endpoint
+files, each with exactly one.
+
 ```
 upande_livestock/serverscripts/
   __init__.py
-  common/       animal.py guards.py stock.py timings.py event_link.py
-                heal.py herd_movement.py envelope.py choices.py
-                employee.py company.py stock_items.py events.py      0
-  feeding/      options.py program.py manufacture.py issue.py
-                _engine.py                                            6
-  milking/      options.py record.py                                  2
-  breeding/     options.py lists.py heat.py drying_off.py service.py
-                diagnosis.py birth.py calving.py abortion.py
-                summary.py                                           12
-  health/       options.py check_up.py cases.py treatment.py          5
-  husbandry/    options.py drugs.py animals.py events.py              4
-  movement/     options.py eligibility.py suggestions.py record.py    4
-  disposal/     options.py record.py assets.py                        4
-  weights/      options.py record.py                                  2
-  dashboard/    stats.py animals.py production.py health.py
-                events.py reports.py                                  6
-  alerts/       herd_alerts.py tasks.py                               1
-  mobile/       __init__.py README.md                                 0
-  tests/        (all api/test_*.py and the root test modules)
+  common/         (no endpoints — the shared spine)
+    envelope.py employee.py company.py choices.py stock_items.py events.py
+    animal.py guards.py stock.py timings.py event_link.py heal.py
+    herd_movement.py
+  feeding/        feed_options.py feed_preview.py feeding_program.py
+                  manufacture_feed.py manufacture_concentrate.py
+                  issue_feed.py _engine.py                            6
+  milking/        milking_options.py create_milk_recording.py         2
+  breeding/       breeding_options.py breeding_lists.py
+                  create_heat_event.py create_drying_off_event.py
+                  create_service_event.py create_pregnancy_diagnosis.py
+                  record_birth.py record_calf_births.py
+                  create_abortion_event.py
+                  get_animal_reproductive_summary.py                 10
+  health/         health_options.py create_check_up.py
+                  create_health_case.py open_health_cases.py
+                  add_case_treatment.py                               5
+  husbandry/      husbandry_options.py drugs_in_store.py
+                  herd_animals.py create_husbandry_event.py           4
+  movement/       event_options.py eligibility.py
+                  movement_suggestions.py create_movement_event.py    4
+  disposal/       disposal_options.py record_disposal.py
+                  scrap_livestock_asset.py sell_livestock_asset.py    4
+  weights/        weight_options.py create_weight_record.py           2
+  dashboard/      get_livestock_workspace_stats.py get_animals.py
+                  get_production.py get_health.py get_events.py
+                  get_reports.py                                      6
+  alerts/         raise_alerts.py tasks.py                            1
+  mobile/         __init__.py README.md                               0
+  tests/          (all api/test_*.py and the root test modules)
 ```
 
-Every group is a package with `__init__.py`. Imports are absolute, matching
-SCP: `from upande_livestock.serverscripts.common.envelope import run, guard`.
+Every directory is a package with `__init__.py`. Imports are absolute:
+`from upande_livestock.serverscripts.common.envelope import run, guard`.
+
+Files stay small — most between 30 and 120 lines — which is the point: the unit
+of navigation becomes the unit of review. Where an endpoint needs a helper only
+it uses, that helper lives in its file; anything a second endpoint needs moves
+to `common/`.
 
 ### `common/` — the shared spine
 
@@ -153,26 +174,27 @@ No shims at the old paths. Nothing outside this app calls them, and leaving
 a dead compatibility layer at the exact paths being retired would reintroduce
 the two-sources-of-truth problem this design is removing.
 
-## Out of scope — needs a decision first
+## Settled before this refactor starts
 
-**`operations.breeding_lists` and `reproduction.get_animals_ready_for_service`
-disagree about which animals are ready to serve.** Measured on kaitet.local
-as `dickson@westwooddairies.com`:
+`operations.breeding_lists` and `reproduction.get_animals_ready_for_service`
+disagreed — 2 animals against 8 — and it turned out not to be a difference of
+opinion about breeding but a data-model bug underneath both.
 
-| | ready for service | pregnancy checks due |
-|---|---:|---:|
-| `operations.breeding_lists` | 2 animals | 42 animals |
-| `reproduction.*` | 8 animals (11 rows, not deduped) | 42 animals (50 rows) |
+`custom_related_pregnancy` on a Calving is read everywhere as a Service, and the
+write endpoints had been storing Pregnancy Diagnosis names. Ten of fourteen
+Calvings pointed at a Diagnosis; none at a Service. Nothing errored, because a
+Diagnosis has no `service_date` — the joins matched nothing and the gestation
+warnings skipped, so a served cow's Service never closed and she was never
+listed ready again.
 
-The operations set is a strict subset; reproduction lists six animals that
-operations does not. Both are whitelisted, so a mobile client that picked the
-wrong one would show four times as many cows ready to serve as the desk does
-— the failure mode commit 11cf9ce set out to prevent.
+Fixed in `4e7a210` before this reorg begins: `_validate_pregnancy_link` on every
+write path, `patches.relink_pregnancy_to_service` for history, and the duplicate
+worklists removed so `breeding_lists` is the single answer. `breeding_lists` now
+reports 6 where it reported 2.
 
-This design **relocates both without changing either**. Deciding which answer
-is correct is a herd-management question, not a refactoring one, and folding
-them silently during a move would bury a real behavioural change inside a
-1,600-line diff. It gets its own change once someone rules on it.
+This matters to the refactor because it removes the one place where two files
+would have had to be reconciled rather than simply moved. Everything below is
+now a move.
 
 ## Sequencing
 
@@ -184,8 +206,8 @@ Each step ends green, so a bisect lands on a real cause.
 2. Move the seven root modules into `common/`. Update imports.
 3. Split `operations.py` into its eight domain groups, one group per commit.
 4. Move `workspace.py` into `dashboard/`, `assets.py` into `disposal/`,
-   `reproduction.py` into `breeding/summary.py`, `herd_alerts.py` and
-   `tasks.py` into `alerts/`.
+   `reproduction.py`'s surviving summary into `breeding/`, `herd_alerts.py`
+   and `tasks.py` into `alerts/`.
 5. Un-whitelist `feeding/_engine.py`; add the guards from §2.
 6. Repoint both HTML blocks; regenerate the fixture.
 7. Move tests into `serverscripts/tests/`.
