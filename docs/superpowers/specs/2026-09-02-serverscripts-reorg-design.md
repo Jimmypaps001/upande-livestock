@@ -45,8 +45,9 @@ Plus non-endpoint logic at the app root: `herd_movement.py` (435),
 
 One file per endpoint. A filename is an endpoint name, so finding the code
 behind `.../serverscripts/breeding/create_service_event.py` needs no grep. The
-only files holding more than one whitelisted function are none: 46 endpoint
-files, each with exactly one.
+only files holding more than one whitelisted function are none: 44 endpoint
+files, each with exactly one. (46 in the first draft — that count still included
+the two duplicate reproduction worklists, since removed.)
 
 ```
 upande_livestock/serverscripts/
@@ -151,8 +152,8 @@ write endpoints by deletion rather than by adding guards in two places.
 
 That is **32 of the 51 endpoints currently unguarded** — 16 inside
 `operations.py` (all option/read calls; every write there already guards) and
-16 across `feeding`, `assets`, `reproduction` and `workspace`. Five of the 32
-disappear with the un-whitelisting in §1, leaving 27 to guard.
+16 across `feeding`, `assets`, `reproduction` and `workspace`. Five disappear with the un-whitelisting in §1 and two more went with the
+duplicate worklists, leaving **26 to guard** across 44 endpoints.
 
 SCP is not the model here: of its 228 endpoints, one module references
 `has_permission`. Livestock's `operations.py` is already stricter than the
