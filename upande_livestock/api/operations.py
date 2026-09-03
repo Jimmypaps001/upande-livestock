@@ -31,14 +31,13 @@ STOCK-CONSUMING FLOWS:
   Pregnancy diagnosis still creates no Stock Entry — it consumes nothing.
 """
 
-import json
-
 import frappe
 from frappe import _
 from frappe.utils import add_days, flt, nowtime, today
 
 from upande_livestock import livestock_stock
 from upande_livestock.api import feeding
+from upande_livestock.serverscripts.common.envelope import as_dict, guard, run
 from upande_livestock.upande_livestock.doctype.livestock_event.livestock_event import (
 	warn_on_calving_mismatch,
 )
@@ -47,21 +46,11 @@ from upande_livestock.upande_livestock.doctype.livestock_event.livestock_event i
 # helpers
 # ---------------------------------------------------------------------------
 
-
-def _guard(doctype: str):
-	"""Raise a clean PermissionError-style throw if the user can't create `doctype`."""
-	if not frappe.has_permission(doctype, "create"):
-		frappe.throw(_("You are not permitted to create {0}.").format(doctype))
-
-
-def _ok(payload):
-	"""Coerce the whitelist arg (JSON string from fetch, or dict) to a dict."""
-	if isinstance(payload, str):
-		try:
-			return json.loads(payload or "{}")
-		except Exception:
-			return {}
-	return payload or {}
+# `guard`, `as_dict` and `run` moved to serverscripts/common/envelope.py, the
+# spine every migrated endpoint imports from directly. These aliases keep the
+# 34 call sites below working untouched until each domain migrates in turn;
+# they are removed per-domain in later tasks, not all at once here.
+_guard, _ok, _run = guard, as_dict, run
 
 
 def _current_employee():
@@ -201,19 +190,6 @@ def _company_or_throw(company=None):
 	if not company:
 		frappe.throw(_("No company configured (Livestock Settings > Default Company)."))
 	return company
-
-
-def _run(fn, log_title):
-	"""Execute `fn`, returning its dict on success or {"error": msg} on failure."""
-	try:
-		return fn()
-	except frappe.PermissionError as e:
-		return {"error": str(e) or _("Not permitted.")}
-	except Exception as e:
-		frappe.db.rollback()
-		frappe.log_error(title=log_title)
-		# Surface the doctype/Server-Script validation message (may be HTML).
-		return {"error": str(e) or _("Operation failed.")}
 
 
 # ===========================================================================
