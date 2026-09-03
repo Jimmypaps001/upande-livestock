@@ -23,7 +23,11 @@ is reported and its ration is skipped — inventing an item from a formulation
 sheet is how a phantom product ends up in a stock ledger.
 
     bench --site <site> execute upande_livestock.demo.build_feed_rations.run
-    bench --site <site> execute upande_livestock.demo.build_feed_rations.run --kwargs "{'apply': True}"
+    bench --site <site> execute upande_livestock.demo.build_feed_rations.apply_now
+
+The --kwargs form does not work: `bench execute` only imports the module on the
+no-argument path, so passing arguments makes it eval a dotted name it never
+imported and the call dies with a bare NameError naming the app.
 """
 
 import frappe
@@ -63,7 +67,12 @@ SILAGE_NOTE = "sorghum and maize silage are one item on this site and are summed
 # does not — see UNRESOLVED at the end of run().
 CONCENTRATE = {
 	"weaner_meal": "Weaner Meal",
-	"yearling_meal": "Weaners/Yearlings",
+	# The sheet's YEARLING MEAL. This used to point at "Weaners/Yearlings",
+	# which is not a concentrate at all — it is the weaner herd's TMR, so the
+	# bullying-heifer ration was nesting one TMR inside another. The naming on
+	# this site is consistent once you see it: "<herd name>" is a TMR and
+	# "<x> Meal" is the concentrate that goes into it.
+	"yearling_meal": "Bullying Heifer Meal",
 	"dry_meal": "Dry Cows  Meal",
 	"calf_meal": "Calves Meal",
 	"new_concentrate": "4040010086",   # Westwood Dairy Meal - New formulation
@@ -75,10 +84,11 @@ RATIONS = [
 		("silage", 10.0), ("silage", 25.0), ("hay", 2.0), ("new_concentrate", 9.0)]),
 	("Lactating Group 2", "LACTATION GROUP 2", [
 		("silage", 10.0), ("silage", 25.0), ("hay", 2.0), ("new_concentrate", 6.0)]),
-	# The weaner ration has no TMR item on this site — see NO_RATION_ITEM. The
-	# herd currently points at a 1000 kg CONCENTRATE recipe, which asks for 46
-	# tonnes for 46 head.
-
+	# "Weaners/Yearlings" is this herd's TMR — the earlier note that no ration
+	# item existed was wrong, and followed from the same confusion that had it
+	# serving as the bullying heifers' concentrate.
+	("Weaners/Yearlings", "4-12 MONTHS (WEANERS)", [
+		("silage", 7.0), ("hay", 2.0), ("weaner_meal", 3.0)]),
 	("Bullying Heifers", "12 MONTHS-SERVICE (BULLYING HEIFERS)", [
 		("silage", 10.0), ("hay", 4.0), ("yearling_meal", 4.0)]),
 	("Dry/Steamers/Incalf Heifers", "INCALF HEIFERS", [
@@ -95,12 +105,11 @@ ALSO_FEEDS = {
 # Herds the sheet feeds but the site has no ration item for. Reported, never
 # invented — naming a product is the farm's call, not a script's.
 NO_RATION_ITEM = {
-	"4-12 MONTHS (WEANERS)": (
-		"the sheet's weaner/yearling ration has no TMR item here. The herd points at "
-		"BOM-Heifer Meal-002, a 1000 kg CONCENTRATE recipe, so a run for 46 head asks "
-		"for 46 tonnes"
+	"BULLS": (
+		"the sheet groups bulls with calves 0-3, but that line carries 0.75 kg of milk "
+		"replacer per head, which is a calf's ration and not a bull's. Left without a "
+		"ration deliberately, for the farm to say what a bull is fed"
 	),
-	"BULLS": "no ration on the sheet and no BOM on the herd",
 }
 
 
@@ -199,8 +208,16 @@ def run(apply=False):
 				continue
 			print("  · {:<30} also feeds {}".format(ration_item[:30], h))
 			if apply_:
+				# Find the BOM that was just built, by being the item's default —
+				# not by uom. This filtered on MEAL_UOM while _build_bom writes
+				# Kilogram, so it silently matched nothing and the sharing herds
+				# were left on whatever they had: STEAMERS on a 12.3 kg ration
+				# against the sheet's 20, and 2-4 on a 1000 kg concentrate recipe.
 				bom = frappe.db.get_value(
-					"BOM", {"item": ration_item, "docstatus": 1, "uom": MEAL_UOM}, "name")
+					"BOM",
+					{"item": ration_item, "docstatus": 1, "is_default": 1, "is_active": 1},
+					"name",
+				)
 				if bom:
 					frappe.db.set_value("Herds", h, "bom", bom)
 					frappe.db.commit()
@@ -298,3 +315,8 @@ def _build_bom(ration_item, herd, merged):
 	frappe.db.set_value("Herds", herd, "bom", bom.name)
 	frappe.db.commit()
 	return bom.name
+
+
+def apply_now():
+	"""Zero-argument entry point — see the note at the top about bench execute."""
+	return run(apply=True)
