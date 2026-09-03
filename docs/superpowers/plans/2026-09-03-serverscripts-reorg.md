@@ -397,139 +397,700 @@ git commit -m "refactor(livestock): move the root domain modules under serverscr
 
 ---
 
-### Tasks 4-12: split the domains, one file per endpoint
+### Task 4: `feeding/` — 6 endpoints
 
-Each task below is the same mechanic, applied to one domain:
+**Files:**
+- Create: `upande_livestock/serverscripts/feeding/__init__.py` (empty)
+- Create: `upande_livestock/serverscripts/feeding/feed_options.py`
+- Create: `upande_livestock/serverscripts/feeding/feed_preview.py`
+- Create: `upande_livestock/serverscripts/feeding/feeding_program.py`
+- Create: `upande_livestock/serverscripts/feeding/manufacture_feed.py`
+- Create: `upande_livestock/serverscripts/feeding/manufacture_concentrate.py`
+- Create: `upande_livestock/serverscripts/feeding/issue_feed.py`
+- Modify: `upande_livestock/api/operations.py` (delete the moved functions and their aliases)
 
-1. Create the domain package (`serverscripts/<domain>/__init__.py`).
-2. For each endpoint, create `<domain>/<endpoint_name>.py` holding **one**
-   `@frappe.whitelist()` function, its docstring, and any helper used only by it.
-3. Import `guard`, `as_dict`, `run` from `common.envelope` and the lookups from
-   `common.choices` / `common.employee` / `common.company` / `common.stock_items`
-   / `common.events`.
-4. Delete the function from `api/operations.py` and drop its alias.
-5. Run the suite. 1 failure, 0 errors.
-6. Commit the domain.
-
-Guards marked **ADD** are new in this refactor; the rest already exist and must
-be carried over unchanged.
-
-- [ ] **Task 4: `feeding/` — 6 endpoints**
+**Interfaces:**
+- Consumes: `common.envelope.run`, `common.envelope.guard`, `common.envelope.as_dict` (Task 1); the lookups in `common.choices`, `common.employee`, `common.company`, `common.stock_items`, `common.events` (Task 2); the modules moved in Task 3.
+- Produces: the endpoints below, at `upande_livestock.serverscripts.feeding.<module>.<function>`. Task 13 routes the desk blocks at these paths.
 
 | File | Function | Guard |
 |---|---|---|
-| `feed_options.py` | `feed_options()` | **ADD** read `Herds` |
-| `feed_preview.py` | `feed_preview(herd)` | **ADD** read `Herds` |
-| `feeding_program.py` | `feeding_program(herd)` | **ADD** read `Herds` |
-| `manufacture_feed.py` | `manufacture_feed(herd, allow_shortage=False, employee=None)` | `Work Order`, `Stock Entry` |
-| `manufacture_concentrate.py` | `manufacture_concentrate(item_code, qty=None, bom_no=None, allow_shortage=False)` | `Work Order`, `Stock Entry` |
-| `issue_feed.py` | `issue_feed(herd, qty, employee=None)` | `Stock Entry` |
+| `feed_options.py` | `feed_options()` | ADD read `Herds` |
+| `feed_preview.py` | `feed_preview(herd)` | ADD read `Herds` |
+| `feeding_program.py` | `feeding_program(herd)` | ADD read `Herds` |
+| `manufacture_feed.py` | `manufacture_feed(herd, allow_shortage=False, employee=None)` | `Work Order`, `Stock Entry` (existing) |
+| `manufacture_concentrate.py` | `manufacture_concentrate(item_code, qty=None, bom_no=None, allow_shortage=False)` | `Work Order`, `Stock Entry` (existing) |
+| `issue_feed.py` | `issue_feed(herd, qty, employee=None)` | `Stock Entry` (existing) |
 
-Also: `git mv upande_livestock/api/feeding.py upande_livestock/serverscripts/feeding/_engine.py`
+Guards marked **ADD** are new in this refactor and must be written; the rest
+already exist in `api/operations.py` and must be carried over unchanged. A read
+guard is `frappe.has_permission("<DocType>", "read")` wrapped in the same
+`frappe.throw` shape `guard()` uses for create.
+
+Additionally: `git mv upande_livestock/api/feeding.py upande_livestock/serverscripts/feeding/_engine.py`
 and **delete all five `@frappe.whitelist()` decorators in it**. Its
 `get_herd_feeding_program`, `get_herd_feed_info`, `manufacture_herd_feed`,
-`manufacture_concentrate` and `feed_herd` become plain functions called by the
-six endpoints above. This is the change that closes five unguarded write
-endpoints by deletion rather than by double-guarding.
+`manufacture_concentrate` and `feed_herd` become plain functions that the six
+endpoints above call. This is the change that closes five unguarded write
+endpoints by deletion rather than by guarding the same code path twice.
 
-- [ ] **Task 5: `milking/` — 2 endpoints**
+Importers to rewrite in this same commit: `api/operations.py:41`
+(`from upande_livestock.api import feeding`) and
+`api/test_feeding_program.py:31` (same import).
+
+- [ ] **Step 1: Create the package and move each endpoint**
+
+Create `upande_livestock/serverscripts/feeding/__init__.py` (empty).
+For each row in the table, create the named file holding **exactly one**
+`@frappe.whitelist()` function: its body copied verbatim from the source, its
+docstring carried over (extend it where the guard is new), and any helper used
+only by it. Rewrite the imports to the absolute `common.*` paths.
+
+- [ ] **Step 2: Delete the originals and rewire every importer**
+
+Delete each moved function from `api/operations.py`, along with its `_guard` /
+`_ok` / `_run` aliases once nothing there uses them. Then rewrite every importer
+of the moved symbols — production and test alike — in this same commit. Find
+them with:
+
+```bash
+grep -rn "api\.operations\|api\.workspace\|api\.assets\|api\.feeding\|api\.reproduction" \
+  --include=*.py --include=*.js --include=*.json upande_livestock/
+```
+
+The suite must be green at the end of this task, so an importer left pointing at
+a moved symbol is this task's bug, not Task 15's.
+
+- [ ] **Step 3: Run the tests**
+
+```bash
+cd /home/ubuntu/stive/code/frappe15 && bench --site kaitet.local run-tests --app upande_livestock
+```
+
+Expected: exactly 1 failure (`test_each_calf_is_routed_by_its_own_sex`,
+pre-existing), 0 errors. A second failure is yours. Never run two suites against
+`kaitet.local` at once — they share a database and produce false failures with
+duplicated test names.
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add -A
+git commit -m "refactor(livestock): split feeding into one file per endpoint"
+```
+
+---
+
+### Task 5: `milking/` — 2 endpoints
+
+**Files:**
+- Create: `upande_livestock/serverscripts/milking/__init__.py` (empty)
+- Create: `upande_livestock/serverscripts/milking/milking_options.py`
+- Create: `upande_livestock/serverscripts/milking/create_milk_recording.py`
+- Modify: `upande_livestock/api/operations.py` (delete the moved functions and their aliases)
+
+**Interfaces:**
+- Consumes: `common.envelope.run`, `common.envelope.guard`, `common.envelope.as_dict` (Task 1); the lookups in `common.choices`, `common.employee`, `common.company`, `common.stock_items`, `common.events` (Task 2); the modules moved in Task 3.
+- Produces: the endpoints below, at `upande_livestock.serverscripts.milking.<module>.<function>`. Task 13 routes the desk blocks at these paths.
 
 | File | Function | Guard |
 |---|---|---|
-| `milking_options.py` | `milking_options()` | **ADD** read `Milk Recording` |
-| `create_milk_recording.py` | `create_milk_recording(payload)` | `Milk Recording` |
+| `milking_options.py` | `milking_options()` | ADD read `Milk Recording` |
+| `create_milk_recording.py` | `create_milk_recording(payload)` | `Milk Recording` (existing) |
 
-- [ ] **Task 6: `breeding/` — 10 endpoints**
+Guards marked **ADD** are new in this refactor and must be written; the rest
+already exist in `api/operations.py` and must be carried over unchanged. A read
+guard is `frappe.has_permission("<DocType>", "read")` wrapped in the same
+`frappe.throw` shape `guard()` uses for create.
+
+- [ ] **Step 1: Create the package and move each endpoint**
+
+Create `upande_livestock/serverscripts/milking/__init__.py` (empty).
+For each row in the table, create the named file holding **exactly one**
+`@frappe.whitelist()` function: its body copied verbatim from the source, its
+docstring carried over (extend it where the guard is new), and any helper used
+only by it. Rewrite the imports to the absolute `common.*` paths.
+
+- [ ] **Step 2: Delete the originals and rewire every importer**
+
+Delete each moved function from `api/operations.py`, along with its `_guard` /
+`_ok` / `_run` aliases once nothing there uses them. Then rewrite every importer
+of the moved symbols — production and test alike — in this same commit. Find
+them with:
+
+```bash
+grep -rn "api\.operations\|api\.workspace\|api\.assets\|api\.feeding\|api\.reproduction" \
+  --include=*.py --include=*.js --include=*.json upande_livestock/
+```
+
+The suite must be green at the end of this task, so an importer left pointing at
+a moved symbol is this task's bug, not Task 15's.
+
+- [ ] **Step 3: Run the tests**
+
+```bash
+cd /home/ubuntu/stive/code/frappe15 && bench --site kaitet.local run-tests --app upande_livestock
+```
+
+Expected: exactly 1 failure (`test_each_calf_is_routed_by_its_own_sex`,
+pre-existing), 0 errors. A second failure is yours. Never run two suites against
+`kaitet.local` at once — they share a database and produce false failures with
+duplicated test names.
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add -A
+git commit -m "refactor(livestock): split milking into one file per endpoint"
+```
+
+---
+
+### Task 6: `breeding/` — 10 endpoints
+
+**Files:**
+- Create: `upande_livestock/serverscripts/breeding/__init__.py` (empty)
+- Create: `upande_livestock/serverscripts/breeding/breeding_options.py`
+- Create: `upande_livestock/serverscripts/breeding/breeding_lists.py`
+- Create: `upande_livestock/serverscripts/breeding/create_heat_event.py`
+- Create: `upande_livestock/serverscripts/breeding/create_drying_off_event.py`
+- Create: `upande_livestock/serverscripts/breeding/create_service_event.py`
+- Create: `upande_livestock/serverscripts/breeding/create_pregnancy_diagnosis.py`
+- Create: `upande_livestock/serverscripts/breeding/record_birth.py`
+- Create: `upande_livestock/serverscripts/breeding/record_calf_births.py`
+- Create: `upande_livestock/serverscripts/breeding/create_abortion_event.py`
+- Create: `upande_livestock/serverscripts/breeding/get_animal_reproductive_summary.py`
+- Modify: `upande_livestock/api/operations.py` (delete the moved functions and their aliases)
+
+**Interfaces:**
+- Consumes: `common.envelope.run`, `common.envelope.guard`, `common.envelope.as_dict` (Task 1); the lookups in `common.choices`, `common.employee`, `common.company`, `common.stock_items`, `common.events` (Task 2); the modules moved in Task 3.
+- Produces: the endpoints below, at `upande_livestock.serverscripts.breeding.<module>.<function>`. Task 13 routes the desk blocks at these paths.
 
 | File | Function | Guard |
 |---|---|---|
-| `breeding_options.py` | `breeding_options()` | **ADD** read `Animal` |
-| `breeding_lists.py` | `breeding_lists()` | **ADD** read `Livestock Event` |
-| `create_heat_event.py` | `create_heat_event(payload)` | `Livestock Event` |
-| `create_drying_off_event.py` | `create_drying_off_event(payload)` | `Livestock Event` |
-| `create_service_event.py` | `create_service_event(payload)` | `Livestock Event` |
-| `create_pregnancy_diagnosis.py` | `create_pregnancy_diagnosis(payload)` | `Livestock Event` |
-| `record_birth.py` | `record_birth(payload)` | `Livestock Event`, `Animal` |
-| `record_calf_births.py` | `record_calf_births(payload)` | `Livestock Event`, `Animal` |
-| `create_abortion_event.py` | `create_abortion_event(payload)` | `Livestock Event` |
-| `get_animal_reproductive_summary.py` | `get_animal_reproductive_summary(animal=None)` | **ADD** read `Livestock Event` |
+| `breeding_options.py` | `breeding_options()` | ADD read `Animal` |
+| `breeding_lists.py` | `breeding_lists()` | ADD read `Livestock Event` |
+| `create_heat_event.py` | `create_heat_event(payload)` | `Livestock Event` (existing) |
+| `create_drying_off_event.py` | `create_drying_off_event(payload)` | `Livestock Event` (existing) |
+| `create_service_event.py` | `create_service_event(payload)` | `Livestock Event` (existing) |
+| `create_pregnancy_diagnosis.py` | `create_pregnancy_diagnosis(payload)` | `Livestock Event` (existing) |
+| `record_birth.py` | `record_birth(payload)` | `Livestock Event`, `Animal` (existing) |
+| `record_calf_births.py` | `record_calf_births(payload)` | `Livestock Event`, `Animal` (existing) |
+| `create_abortion_event.py` | `create_abortion_event(payload)` | `Livestock Event` (existing) |
+| `get_animal_reproductive_summary.py` | `get_animal_reproductive_summary(animal=None)` | ADD read `Livestock Event` |
 
-The last one comes from `api/reproduction.py`, which is then deleted — its two
-worklists were already removed in `4e7a210`. Carry its module docstring's
-explanation of that removal into `breeding_lists.py`, since that is now the file
-readers will look at when they wonder where the second implementation went.
+Guards marked **ADD** are new in this refactor and must be written; the rest
+already exist in `api/operations.py` and must be carried over unchanged. A read
+guard is `frappe.has_permission("<DocType>", "read")` wrapped in the same
+`frappe.throw` shape `guard()` uses for create.
 
-`_calf_row` is used only by `record_calf_births` and moves into that file.
+The last file's function comes from `api/reproduction.py`, which is then
+deleted (`git rm`). Carry that module's docstring — which explains why its two
+duplicate worklists were removed in `4e7a210` — into `breeding/breeding_lists.py`,
+since that is the file a reader will open when wondering where the second
+implementation went.
 
-- [ ] **Task 7: `health/` — 5 endpoints**
+`_calf_row` is used only by `record_calf_births`; put it in that file.
+
+Importers to rewrite in this same commit: `test_livestock_event.py` imports
+`record_calf_births` from `upande_livestock.api.operations` at ten separate
+call sites (they are function-local imports, so grep for all of them).
+
+- [ ] **Step 1: Create the package and move each endpoint**
+
+Create `upande_livestock/serverscripts/breeding/__init__.py` (empty).
+For each row in the table, create the named file holding **exactly one**
+`@frappe.whitelist()` function: its body copied verbatim from the source, its
+docstring carried over (extend it where the guard is new), and any helper used
+only by it. Rewrite the imports to the absolute `common.*` paths.
+
+- [ ] **Step 2: Delete the originals and rewire every importer**
+
+Delete each moved function from `api/operations.py`, along with its `_guard` /
+`_ok` / `_run` aliases once nothing there uses them. Then rewrite every importer
+of the moved symbols — production and test alike — in this same commit. Find
+them with:
+
+```bash
+grep -rn "api\.operations\|api\.workspace\|api\.assets\|api\.feeding\|api\.reproduction" \
+  --include=*.py --include=*.js --include=*.json upande_livestock/
+```
+
+The suite must be green at the end of this task, so an importer left pointing at
+a moved symbol is this task's bug, not Task 15's.
+
+- [ ] **Step 3: Run the tests**
+
+```bash
+cd /home/ubuntu/stive/code/frappe15 && bench --site kaitet.local run-tests --app upande_livestock
+```
+
+Expected: exactly 1 failure (`test_each_calf_is_routed_by_its_own_sex`,
+pre-existing), 0 errors. A second failure is yours. Never run two suites against
+`kaitet.local` at once — they share a database and produce false failures with
+duplicated test names.
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add -A
+git commit -m "refactor(livestock): split breeding into one file per endpoint"
+```
+
+---
+
+### Task 7: `health/` — 5 endpoints
+
+**Files:**
+- Create: `upande_livestock/serverscripts/health/__init__.py` (empty)
+- Create: `upande_livestock/serverscripts/health/health_options.py`
+- Create: `upande_livestock/serverscripts/health/create_check_up.py`
+- Create: `upande_livestock/serverscripts/health/create_health_case.py`
+- Create: `upande_livestock/serverscripts/health/open_health_cases.py`
+- Create: `upande_livestock/serverscripts/health/add_case_treatment.py`
+- Modify: `upande_livestock/api/operations.py` (delete the moved functions and their aliases)
+
+**Interfaces:**
+- Consumes: `common.envelope.run`, `common.envelope.guard`, `common.envelope.as_dict` (Task 1); the lookups in `common.choices`, `common.employee`, `common.company`, `common.stock_items`, `common.events` (Task 2); the modules moved in Task 3.
+- Produces: the endpoints below, at `upande_livestock.serverscripts.health.<module>.<function>`. Task 13 routes the desk blocks at these paths.
 
 | File | Function | Guard |
 |---|---|---|
-| `health_options.py` | `health_options()` | **ADD** read `Livestock Health Case` |
-| `create_check_up.py` | `create_check_up(payload)` | `Livestock Diagnosis` |
-| `create_health_case.py` | `create_health_case(payload)` | `Livestock Health Case` |
-| `open_health_cases.py` | `open_health_cases()` | **ADD** read `Livestock Health Case` |
-| `add_case_treatment.py` | `add_case_treatment(payload)` | `Livestock Health Case` |
+| `health_options.py` | `health_options()` | ADD read `Livestock Health Case` |
+| `create_check_up.py` | `create_check_up(payload)` | `Livestock Diagnosis` (existing) |
+| `create_health_case.py` | `create_health_case(payload)` | `Livestock Health Case` (existing) |
+| `open_health_cases.py` | `open_health_cases()` | ADD read `Livestock Health Case` |
+| `add_case_treatment.py` | `add_case_treatment(payload)` | `Livestock Health Case` (existing) |
 
-- [ ] **Task 8: `husbandry/` — 4 endpoints**
+Guards marked **ADD** are new in this refactor and must be written; the rest
+already exist in `api/operations.py` and must be carried over unchanged. A read
+guard is `frappe.has_permission("<DocType>", "read")` wrapped in the same
+`frappe.throw` shape `guard()` uses for create.
+
+- [ ] **Step 1: Create the package and move each endpoint**
+
+Create `upande_livestock/serverscripts/health/__init__.py` (empty).
+For each row in the table, create the named file holding **exactly one**
+`@frappe.whitelist()` function: its body copied verbatim from the source, its
+docstring carried over (extend it where the guard is new), and any helper used
+only by it. Rewrite the imports to the absolute `common.*` paths.
+
+- [ ] **Step 2: Delete the originals and rewire every importer**
+
+Delete each moved function from `api/operations.py`, along with its `_guard` /
+`_ok` / `_run` aliases once nothing there uses them. Then rewrite every importer
+of the moved symbols — production and test alike — in this same commit. Find
+them with:
+
+```bash
+grep -rn "api\.operations\|api\.workspace\|api\.assets\|api\.feeding\|api\.reproduction" \
+  --include=*.py --include=*.js --include=*.json upande_livestock/
+```
+
+The suite must be green at the end of this task, so an importer left pointing at
+a moved symbol is this task's bug, not Task 15's.
+
+- [ ] **Step 3: Run the tests**
+
+```bash
+cd /home/ubuntu/stive/code/frappe15 && bench --site kaitet.local run-tests --app upande_livestock
+```
+
+Expected: exactly 1 failure (`test_each_calf_is_routed_by_its_own_sex`,
+pre-existing), 0 errors. A second failure is yours. Never run two suites against
+`kaitet.local` at once — they share a database and produce false failures with
+duplicated test names.
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add -A
+git commit -m "refactor(livestock): split health into one file per endpoint"
+```
+
+---
+
+### Task 8: `husbandry/` — 4 endpoints
+
+**Files:**
+- Create: `upande_livestock/serverscripts/husbandry/__init__.py` (empty)
+- Create: `upande_livestock/serverscripts/husbandry/husbandry_options.py`
+- Create: `upande_livestock/serverscripts/husbandry/drugs_in_store.py`
+- Create: `upande_livestock/serverscripts/husbandry/herd_animals.py`
+- Create: `upande_livestock/serverscripts/husbandry/create_husbandry_event.py`
+- Modify: `upande_livestock/api/operations.py` (delete the moved functions and their aliases)
+
+**Interfaces:**
+- Consumes: `common.envelope.run`, `common.envelope.guard`, `common.envelope.as_dict` (Task 1); the lookups in `common.choices`, `common.employee`, `common.company`, `common.stock_items`, `common.events` (Task 2); the modules moved in Task 3.
+- Produces: the endpoints below, at `upande_livestock.serverscripts.husbandry.<module>.<function>`. Task 13 routes the desk blocks at these paths.
 
 | File | Function | Guard |
 |---|---|---|
-| `husbandry_options.py` | `husbandry_options()` | **ADD** read `Livestock Event` |
-| `drugs_in_store.py` | `drugs_in_store(warehouse=None)` | **ADD** read `Item` |
-| `herd_animals.py` | `herd_animals(herd)` | **ADD** read `Animal` |
-| `create_husbandry_event.py` | `create_husbandry_event(payload)` | `Livestock Event` |
+| `husbandry_options.py` | `husbandry_options()` | ADD read `Livestock Event` |
+| `drugs_in_store.py` | `drugs_in_store(warehouse=None)` | ADD read `Item` |
+| `herd_animals.py` | `herd_animals(herd)` | ADD read `Animal` |
+| `create_husbandry_event.py` | `create_husbandry_event(payload)` | `Livestock Event` (existing) |
+
+Guards marked **ADD** are new in this refactor and must be written; the rest
+already exist in `api/operations.py` and must be carried over unchanged. A read
+guard is `frappe.has_permission("<DocType>", "read")` wrapped in the same
+`frappe.throw` shape `guard()` uses for create.
 
 `_type_consumes_drugs`, `_animals_in_herd`, `_husbandry_targets` and
 `_clean_drug_rows` are husbandry-only. Put each in the single file that uses it;
-if two of the four files need one, it goes to `husbandry/_shared.py`.
+where two of the four files need the same one, it goes to
+`husbandry/_shared.py`.
 
-- [ ] **Task 9: `movement/` — 4 endpoints**
+- [ ] **Step 1: Create the package and move each endpoint**
+
+Create `upande_livestock/serverscripts/husbandry/__init__.py` (empty).
+For each row in the table, create the named file holding **exactly one**
+`@frappe.whitelist()` function: its body copied verbatim from the source, its
+docstring carried over (extend it where the guard is new), and any helper used
+only by it. Rewrite the imports to the absolute `common.*` paths.
+
+- [ ] **Step 2: Delete the originals and rewire every importer**
+
+Delete each moved function from `api/operations.py`, along with its `_guard` /
+`_ok` / `_run` aliases once nothing there uses them. Then rewrite every importer
+of the moved symbols — production and test alike — in this same commit. Find
+them with:
+
+```bash
+grep -rn "api\.operations\|api\.workspace\|api\.assets\|api\.feeding\|api\.reproduction" \
+  --include=*.py --include=*.js --include=*.json upande_livestock/
+```
+
+The suite must be green at the end of this task, so an importer left pointing at
+a moved symbol is this task's bug, not Task 15's.
+
+- [ ] **Step 3: Run the tests**
+
+```bash
+cd /home/ubuntu/stive/code/frappe15 && bench --site kaitet.local run-tests --app upande_livestock
+```
+
+Expected: exactly 1 failure (`test_each_calf_is_routed_by_its_own_sex`,
+pre-existing), 0 errors. A second failure is yours. Never run two suites against
+`kaitet.local` at once — they share a database and produce false failures with
+duplicated test names.
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add -A
+git commit -m "refactor(livestock): split husbandry into one file per endpoint"
+```
+
+---
+
+### Task 9: `movement/` — 4 endpoints
+
+**Files:**
+- Create: `upande_livestock/serverscripts/movement/__init__.py` (empty)
+- Create: `upande_livestock/serverscripts/movement/event_options.py`
+- Create: `upande_livestock/serverscripts/movement/eligibility.py`
+- Create: `upande_livestock/serverscripts/movement/movement_suggestions.py`
+- Create: `upande_livestock/serverscripts/movement/create_movement_event.py`
+- Modify: `upande_livestock/api/operations.py` (delete the moved functions and their aliases)
+
+**Interfaces:**
+- Consumes: `common.envelope.run`, `common.envelope.guard`, `common.envelope.as_dict` (Task 1); the lookups in `common.choices`, `common.employee`, `common.company`, `common.stock_items`, `common.events` (Task 2); the modules moved in Task 3.
+- Produces: the endpoints below, at `upande_livestock.serverscripts.movement.<module>.<function>`. Task 13 routes the desk blocks at these paths.
 
 | File | Function | Guard |
 |---|---|---|
-| `event_options.py` | `event_options()` | **ADD** read `Livestock Event` |
-| `eligibility.py` | `eligibility()` | **ADD** read `Herds` |
-| `movement_suggestions.py` | `movement_suggestions()` | **ADD** read `Herds` |
-| `create_movement_event.py` | `create_movement_event(payload)` | `Livestock Event` |
+| `event_options.py` | `event_options()` | ADD read `Livestock Event` |
+| `eligibility.py` | `eligibility()` | ADD read `Herds` |
+| `movement_suggestions.py` | `movement_suggestions()` | ADD read `Herds` |
+| `create_movement_event.py` | `create_movement_event(payload)` | `Livestock Event` (existing) |
 
-- [ ] **Task 10: `disposal/` — 4 endpoints**
+Guards marked **ADD** are new in this refactor and must be written; the rest
+already exist in `api/operations.py` and must be carried over unchanged. A read
+guard is `frappe.has_permission("<DocType>", "read")` wrapped in the same
+`frappe.throw` shape `guard()` uses for create.
+
+- [ ] **Step 1: Create the package and move each endpoint**
+
+Create `upande_livestock/serverscripts/movement/__init__.py` (empty).
+For each row in the table, create the named file holding **exactly one**
+`@frappe.whitelist()` function: its body copied verbatim from the source, its
+docstring carried over (extend it where the guard is new), and any helper used
+only by it. Rewrite the imports to the absolute `common.*` paths.
+
+- [ ] **Step 2: Delete the originals and rewire every importer**
+
+Delete each moved function from `api/operations.py`, along with its `_guard` /
+`_ok` / `_run` aliases once nothing there uses them. Then rewrite every importer
+of the moved symbols — production and test alike — in this same commit. Find
+them with:
+
+```bash
+grep -rn "api\.operations\|api\.workspace\|api\.assets\|api\.feeding\|api\.reproduction" \
+  --include=*.py --include=*.js --include=*.json upande_livestock/
+```
+
+The suite must be green at the end of this task, so an importer left pointing at
+a moved symbol is this task's bug, not Task 15's.
+
+- [ ] **Step 3: Run the tests**
+
+```bash
+cd /home/ubuntu/stive/code/frappe15 && bench --site kaitet.local run-tests --app upande_livestock
+```
+
+Expected: exactly 1 failure (`test_each_calf_is_routed_by_its_own_sex`,
+pre-existing), 0 errors. A second failure is yours. Never run two suites against
+`kaitet.local` at once — they share a database and produce false failures with
+duplicated test names.
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add -A
+git commit -m "refactor(livestock): split movement into one file per endpoint"
+```
+
+---
+
+### Task 10: `disposal/` — 4 endpoints
+
+**Files:**
+- Create: `upande_livestock/serverscripts/disposal/__init__.py` (empty)
+- Create: `upande_livestock/serverscripts/disposal/disposal_options.py`
+- Create: `upande_livestock/serverscripts/disposal/record_disposal.py`
+- Create: `upande_livestock/serverscripts/disposal/scrap_livestock_asset.py`
+- Create: `upande_livestock/serverscripts/disposal/sell_livestock_asset.py`
+- Modify: `upande_livestock/api/operations.py` (delete the moved functions and their aliases)
+
+**Interfaces:**
+- Consumes: `common.envelope.run`, `common.envelope.guard`, `common.envelope.as_dict` (Task 1); the lookups in `common.choices`, `common.employee`, `common.company`, `common.stock_items`, `common.events` (Task 2); the modules moved in Task 3.
+- Produces: the endpoints below, at `upande_livestock.serverscripts.disposal.<module>.<function>`. Task 13 routes the desk blocks at these paths.
 
 | File | Function | Guard |
 |---|---|---|
-| `disposal_options.py` | `disposal_options()` | **ADD** read `Livestock Disposal` |
-| `record_disposal.py` | `record_disposal(payload)` | `Livestock Disposal` |
-| `scrap_livestock_asset.py` | `scrap_livestock_asset(animal=None, asset_name=None, reason=None, scrapping_date=None)` | **ADD** `Asset` |
-| `sell_livestock_asset.py` | `sell_livestock_asset(animal=None, asset_name=None, customer=None, selling_amount=None, posting_date=None, farm=None, ...)` | **ADD** `Asset` |
+| `disposal_options.py` | `disposal_options()` | ADD read `Livestock Disposal` |
+| `record_disposal.py` | `record_disposal(payload)` | `Livestock Disposal` (existing) |
+| `scrap_livestock_asset.py` | `scrap_livestock_asset(animal=None, asset_name=None, reason=None, scrapping_date=None)` | ADD `Asset` |
+| `sell_livestock_asset.py` | `sell_livestock_asset(animal=None, asset_name=None, customer=None, selling_amount=None, posting_date=None, farm=None, ...)` | ADD `Asset` |
 
-The last two come from `api/assets.py`, which is then deleted. Read its full
-signature for `sell_livestock_asset` — it spans several lines and this table
-abbreviates it.
+Guards marked **ADD** are new in this refactor and must be written; the rest
+already exist in `api/operations.py` and must be carried over unchanged. A read
+guard is `frappe.has_permission("<DocType>", "read")` wrapped in the same
+`frappe.throw` shape `guard()` uses for create.
 
-- [ ] **Task 11: `weights/` — 2 endpoints**
+The last two come from `api/assets.py`, which is then deleted (`git rm`).
+Read the real signature of `sell_livestock_asset` from the source — it spans
+several lines and the table above abbreviates it.
+
+Importers to rewrite in this same commit:
+`upande_livestock/upande_livestock/doctype/livestock_disposal/livestock_disposal.py:24`
+(`from upande_livestock.api.assets import scrap_livestock_asset, sell_livestock_asset`).
+
+- [ ] **Step 1: Create the package and move each endpoint**
+
+Create `upande_livestock/serverscripts/disposal/__init__.py` (empty).
+For each row in the table, create the named file holding **exactly one**
+`@frappe.whitelist()` function: its body copied verbatim from the source, its
+docstring carried over (extend it where the guard is new), and any helper used
+only by it. Rewrite the imports to the absolute `common.*` paths.
+
+- [ ] **Step 2: Delete the originals and rewire every importer**
+
+Delete each moved function from `api/operations.py`, along with its `_guard` /
+`_ok` / `_run` aliases once nothing there uses them. Then rewrite every importer
+of the moved symbols — production and test alike — in this same commit. Find
+them with:
+
+```bash
+grep -rn "api\.operations\|api\.workspace\|api\.assets\|api\.feeding\|api\.reproduction" \
+  --include=*.py --include=*.js --include=*.json upande_livestock/
+```
+
+The suite must be green at the end of this task, so an importer left pointing at
+a moved symbol is this task's bug, not Task 15's.
+
+- [ ] **Step 3: Run the tests**
+
+```bash
+cd /home/ubuntu/stive/code/frappe15 && bench --site kaitet.local run-tests --app upande_livestock
+```
+
+Expected: exactly 1 failure (`test_each_calf_is_routed_by_its_own_sex`,
+pre-existing), 0 errors. A second failure is yours. Never run two suites against
+`kaitet.local` at once — they share a database and produce false failures with
+duplicated test names.
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add -A
+git commit -m "refactor(livestock): split disposal into one file per endpoint"
+```
+
+---
+
+### Task 11: `weights/` — 2 endpoints
+
+**Files:**
+- Create: `upande_livestock/serverscripts/weights/__init__.py` (empty)
+- Create: `upande_livestock/serverscripts/weights/weight_options.py`
+- Create: `upande_livestock/serverscripts/weights/create_weight_record.py`
+- Modify: `upande_livestock/api/operations.py` (delete the moved functions and their aliases)
+
+**Interfaces:**
+- Consumes: `common.envelope.run`, `common.envelope.guard`, `common.envelope.as_dict` (Task 1); the lookups in `common.choices`, `common.employee`, `common.company`, `common.stock_items`, `common.events` (Task 2); the modules moved in Task 3.
+- Produces: the endpoints below, at `upande_livestock.serverscripts.weights.<module>.<function>`. Task 13 routes the desk blocks at these paths.
 
 | File | Function | Guard |
 |---|---|---|
-| `weight_options.py` | `weight_options()` | **ADD** read `Livestock Weight Record` |
-| `create_weight_record.py` | `create_weight_record(payload)` | `Livestock Weight Record` |
+| `weight_options.py` | `weight_options()` | ADD read `Livestock Weight Record` |
+| `create_weight_record.py` | `create_weight_record(payload)` | `Livestock Weight Record` (existing) |
 
-- [ ] **Task 12: `dashboard/` and `alerts/` — 7 endpoints**
+Guards marked **ADD** are new in this refactor and must be written; the rest
+already exist in `api/operations.py` and must be carried over unchanged. A read
+guard is `frappe.has_permission("<DocType>", "read")` wrapped in the same
+`frappe.throw` shape `guard()` uses for create.
 
-From `api/workspace.py`, which is then deleted. All six are **ADD** read
-`Animal`:
+- [ ] **Step 1: Create the package and move each endpoint**
 
-`get_livestock_workspace_stats.py`, `get_animals.py`, `get_production.py`,
-`get_health.py`, `get_events.py`, `get_reports.py`.
+Create `upande_livestock/serverscripts/weights/__init__.py` (empty).
+For each row in the table, create the named file holding **exactly one**
+`@frappe.whitelist()` function: its body copied verbatim from the source, its
+docstring carried over (extend it where the guard is new), and any helper used
+only by it. Rewrite the imports to the absolute `common.*` paths.
 
-Its private helpers (`_is_active`, `_active_animal_count`, `_herd_labels`,
-`_zeros`, `_build`, `_INACTIVE_STATUS`, `_OPEN_CASE_STATUS`) go to
-`dashboard/_shared.py` — except `_is_active`, which duplicates
-`common.choices.active_animals`'s predicate and must call it instead.
+- [ ] **Step 2: Delete the originals and rewire every importer**
 
-Then `git mv upande_livestock/herd_alerts.py serverscripts/alerts/open_alerts.py`
-(guard: **ADD** read `Livestock Alert`) and
-`git mv upande_livestock/tasks.py serverscripts/alerts/tasks.py`. Update
-`hooks.py`'s `scheduler_events` to the new paths.
+Delete each moved function from `api/operations.py`, along with its `_guard` /
+`_ok` / `_run` aliases once nothing there uses them. Then rewrite every importer
+of the moved symbols — production and test alike — in this same commit. Find
+them with:
+
+```bash
+grep -rn "api\.operations\|api\.workspace\|api\.assets\|api\.feeding\|api\.reproduction" \
+  --include=*.py --include=*.js --include=*.json upande_livestock/
+```
+
+The suite must be green at the end of this task, so an importer left pointing at
+a moved symbol is this task's bug, not Task 15's.
+
+- [ ] **Step 3: Run the tests**
+
+```bash
+cd /home/ubuntu/stive/code/frappe15 && bench --site kaitet.local run-tests --app upande_livestock
+```
+
+Expected: exactly 1 failure (`test_each_calf_is_routed_by_its_own_sex`,
+pre-existing), 0 errors. A second failure is yours. Never run two suites against
+`kaitet.local` at once — they share a database and produce false failures with
+duplicated test names.
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add -A
+git commit -m "refactor(livestock): split weights into one file per endpoint"
+```
+
+---
+
+### Task 12: `dashboard/ and alerts/` — 7 endpoints
+
+**Files:**
+- Create: `upande_livestock/serverscripts/dashboard/__init__.py` (empty)
+- Create: `upande_livestock/serverscripts/dashboard/get_livestock_workspace_stats.py`
+- Create: `upande_livestock/serverscripts/dashboard/get_animals.py`
+- Create: `upande_livestock/serverscripts/dashboard/get_production.py`
+- Create: `upande_livestock/serverscripts/dashboard/get_health.py`
+- Create: `upande_livestock/serverscripts/dashboard/get_events.py`
+- Create: `upande_livestock/serverscripts/dashboard/get_reports.py`
+- Create: `upande_livestock/serverscripts/alerts/open_alerts.py`
+- Modify: `upande_livestock/api/operations.py` (delete the moved functions and their aliases)
+
+**Interfaces:**
+- Consumes: `common.envelope.run`, `common.envelope.guard`, `common.envelope.as_dict` (Task 1); the lookups in `common.choices`, `common.employee`, `common.company`, `common.stock_items`, `common.events` (Task 2); the modules moved in Task 3.
+- Produces: the endpoints below, at `upande_livestock.serverscripts.dashboard.<module>.<function>`. Task 13 routes the desk blocks at these paths.
+
+| File | Function | Guard |
+|---|---|---|
+| `dashboard/get_livestock_workspace_stats.py` | `get_livestock_workspace_stats()` | ADD read `Animal` |
+| `dashboard/get_animals.py` | `get_animals()` | ADD read `Animal` |
+| `dashboard/get_production.py` | `get_production()` | ADD read `Animal` |
+| `dashboard/get_health.py` | `get_health()` | ADD read `Animal` |
+| `dashboard/get_events.py` | `get_events()` | ADD read `Animal` |
+| `dashboard/get_reports.py` | `get_reports()` | ADD read `Animal` |
+| `alerts/open_alerts.py` | `open_alerts(kind=None, limit=200)` | ADD read `Livestock Alert` |
+
+Guards marked **ADD** are new in this refactor and must be written; the rest
+already exist in `api/operations.py` and must be carried over unchanged. A read
+guard is `frappe.has_permission("<DocType>", "read")` wrapped in the same
+`frappe.throw` shape `guard()` uses for create.
+
+The first six come from `api/workspace.py`, which is then deleted (`git rm`).
+Its private helpers (`_active_animal_count`, `_herd_labels`, `_zeros`, `_build`,
+`_INACTIVE_STATUS`, `_OPEN_CASE_STATUS`) go to `dashboard/_shared.py`.
+
+`_is_active` is the exception: it duplicates the predicate behind
+`common.choices.active_animals`. Delete it and import
+`common.choices.is_active` instead, so the dashboard and the dropdowns cannot
+drift apart about what "active" means.
+
+`herd_alerts.py` splits rather than moves — it holds one endpoint and one
+scheduler entry point:
+* `alerts/open_alerts.py` — the `open_alerts` endpoint.
+* `alerts/raise_alerts.py` — `raise_alerts`, plus `collect` and
+  `_already_raised_today`, which only it uses.
+
+Then `git mv upande_livestock/tasks.py serverscripts/alerts/tasks.py`.
+
+`hooks.py` `scheduler_events` must be repointed to
+`upande_livestock.serverscripts.alerts.tasks.check_overdue_pregnancy_diagnoses`
+and `upande_livestock.serverscripts.alerts.raise_alerts.raise_alerts`.
+
+Importers to rewrite in this same commit: `api/test_workspace.py:16`
+(`from upande_livestock.api.workspace import _active_animal_count, _is_active`).
+
+- [ ] **Step 1: Create the package and move each endpoint**
+
+Create `upande_livestock/serverscripts/dashboard/__init__.py` (empty).
+For each row in the table, create the named file holding **exactly one**
+`@frappe.whitelist()` function: its body copied verbatim from the source, its
+docstring carried over (extend it where the guard is new), and any helper used
+only by it. Rewrite the imports to the absolute `common.*` paths.
+
+- [ ] **Step 2: Delete the originals and rewire every importer**
+
+Delete each moved function from `api/operations.py`, along with its `_guard` /
+`_ok` / `_run` aliases once nothing there uses them. Then rewrite every importer
+of the moved symbols — production and test alike — in this same commit. Find
+them with:
+
+```bash
+grep -rn "api\.operations\|api\.workspace\|api\.assets\|api\.feeding\|api\.reproduction" \
+  --include=*.py --include=*.js --include=*.json upande_livestock/
+```
+
+The suite must be green at the end of this task, so an importer left pointing at
+a moved symbol is this task's bug, not Task 15's.
+
+- [ ] **Step 3: Run the tests**
+
+```bash
+cd /home/ubuntu/stive/code/frappe15 && bench --site kaitet.local run-tests --app upande_livestock
+```
+
+Expected: exactly 1 failure (`test_each_calf_is_routed_by_its_own_sex`,
+pre-existing), 0 errors. A second failure is yours. Never run two suites against
+`kaitet.local` at once — they share a database and produce false failures with
+duplicated test names.
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add -A
+git commit -m "refactor(livestock): split dashboard into one file per endpoint"
+```
 
 ---
 
@@ -723,10 +1284,18 @@ git commit -m "docs(livestock): scaffold serverscripts/mobile with its conventio
 - Leave: `patches/test_*.py` and the doctype `test_*.py` where they are — they
   test patches and controllers, not serverscripts.
 
-- [ ] **Step 1: Move and fix imports**
+- [ ] **Step 1: Move the files**
 
-`git mv` each, then rewrite `from upande_livestock.api...` imports to the
-`serverscripts` paths.
+`git mv` each. Their imports were already rewired by Tasks 4-12, which had to
+update every importer in the same commit that moved the symbol — otherwise the
+suite could not have been green at the end of each of those tasks. So this task
+is a pure relocation: if you find yourself editing an import here, a domain task
+missed it; fix it and note which task in your report.
+
+One import does need attention: `test_livestock_event.py` does
+`from upande_livestock.api.test_operations import _suspend_sex_routing`, and
+`test_operations.py` moves in this task. Repoint it to
+`upande_livestock.serverscripts.tests.test_operations`.
 
 - [ ] **Step 2: Run tests**
 
