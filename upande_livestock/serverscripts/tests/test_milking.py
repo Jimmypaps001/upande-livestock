@@ -58,6 +58,20 @@ class TestMilkRecordingTime(IntegrationTestCase):
 			"milking_time was left empty, so the doctype's reqd check will reject it",
 		)
 
+	def test_a_time_without_seconds_is_accepted(self):
+		"""The handset's picker emits HH:MM, not HH:MM:SS.
+
+		Frappe parses both, but the app sends the short form, so a change that
+		started requiring seconds would break the milk form and nothing else
+		would notice.
+		"""
+		result = self._record(milking_time="05:30")
+		self.assertTrue(result.get("ok"), result.get("error"))
+		self.assertEqual(
+			str(frappe.db.get_value("Milk Recording", result["name"], "milking_time")),
+			"5:30:00",
+		)
+
 	def test_a_supplied_time_is_kept(self):
 		"""A 05:30 milking entered at 14:00 must not be stamped 14:00."""
 		result = self._record(milking_time="05:30:00")
