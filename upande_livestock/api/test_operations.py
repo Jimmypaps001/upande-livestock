@@ -381,3 +381,47 @@ class TestDisposal(IntegrationTestCase):
 	def test_options_offer_the_disposal_types(self):
 		res = _assert_ok(self, disposal_options(), "disposal_options")
 		self.assertIn("Sold", res["disposal_types"])
+
+
+class TestOneSourceForBreedingWorklists(IntegrationTestCase):
+	"""`breeding_lists` is the only endpoint answering these two questions.
+
+	`api/reproduction.py` carried a second, independent implementation of both
+	worklists. Nothing imported it, but it was whitelisted, so a client could
+	reach it — and it disagreed: on kaitet.local it reported 8 animals ready to
+	serve against breeding_lists' 2, because it sidestepped the
+	`custom_related_pregnancy` corruption instead of being subject to it.
+
+	It was also wrong in ways breeding_lists is not: no Animal status filter, so
+	a dead or sold cow could be listed; a hardcoded 60-day wait instead of the
+	Calving's configured `ready_for_service_date`; and one row per calving
+	rather than per animal.
+
+	Two endpoints answering "which cows can I serve today" is the failure this
+	app already decided against once (see "one call for eligibility, so a client
+	cannot decide it differently"). These pin the removal.
+	"""
+
+	def test_reproduction_no_longer_answers_ready_for_service(self):
+		from upande_livestock.api import reproduction
+
+		self.assertFalse(
+			hasattr(reproduction, "get_animals_ready_for_service"),
+			"the duplicate ready-for-service worklist is back",
+		)
+
+	def test_reproduction_no_longer_answers_pregnancy_checks(self):
+		from upande_livestock.api import reproduction
+
+		self.assertFalse(
+			hasattr(reproduction, "get_animals_needing_pregnancy_check"),
+			"the duplicate pregnancy-check worklist is back",
+		)
+
+	def test_breeding_lists_still_answers_both(self):
+		from upande_livestock.api.operations import breeding_lists
+
+		result = breeding_lists()
+		self.assertTrue(result.get("ok"), result.get("error"))
+		self.assertIn("ready_for_service", result)
+		self.assertIn("pregnancy_checks", result)

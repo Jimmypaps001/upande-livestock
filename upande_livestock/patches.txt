@@ -30,3 +30,8 @@ upande_livestock.patches.align_event_date_with_type_date
 upande_livestock.patches.namespace_livestock_roles
 upande_livestock.patches.flag_drug_consuming_event_types
 upande_livestock.patches.create_livestock_stock_entry_types
+# Must run after the DocType sync that ships _validate_pregnancy_link, so the
+# repair is not racing the write path that caused the corruption. Repoints
+# Calving/Abortion pregnancy links from a Pregnancy Diagnosis to the Service it
+# confirmed; every reader of that field joins it against a Service.
+upande_livestock.patches.relink_pregnancy_to_service
