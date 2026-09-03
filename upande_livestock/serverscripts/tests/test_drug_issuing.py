@@ -38,7 +38,7 @@ from frappe.tests import IntegrationTestCase
 from frappe.utils import flt, today
 
 from upande_livestock.serverscripts.common import stock as livestock_stock
-from upande_livestock.api.test_operations import _make_cow, _purge, _purge_events_for
+from upande_livestock.serverscripts.tests.test_operations import _make_cow, _purge, _purge_events_for
 
 
 def _drug_store():

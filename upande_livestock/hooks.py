@@ -35,7 +35,7 @@ on_session_creation = ["upande_livestock.serverscripts.common.heal.clear_stale_d
 # 		"logo": "/assets/upande_livestock/logo.png",
 # 		"title": "Upande Livestock",
 # 		"route": "/upande_livestock",
-# 		"has_permission": "upande_livestock.api.permission.has_app_permission"
+# 		"has_permission": "upande_livestock.serverscripts.permission.has_app_permission"
 # 	}
 # ]
 

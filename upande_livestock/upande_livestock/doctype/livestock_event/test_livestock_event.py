@@ -4,7 +4,7 @@
 import frappe
 from frappe.tests import IntegrationTestCase
 
-from upande_livestock.api.test_operations import _suspend_sex_routing
+from upande_livestock.serverscripts.tests.test_operations import _suspend_sex_routing
 
 from upande_livestock.install import ensure_livestock_event_types
 

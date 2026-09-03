@@ -22,7 +22,7 @@ from upande_livestock.serverscripts.common import herd_movement as hm
 from upande_livestock.serverscripts.breeding.create_service_event import create_service_event
 from upande_livestock.serverscripts.breeding.record_calf_births import record_calf_births
 from upande_livestock.serverscripts.common.animal import resolve_calf_herd
-from upande_livestock.api.test_operations import _make_cow, _purge, _purge_events_for
+from upande_livestock.serverscripts.tests.test_operations import _make_cow, _purge, _purge_events_for
 
 
 def _employee():

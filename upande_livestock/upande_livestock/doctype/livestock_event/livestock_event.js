@@ -94,7 +94,7 @@ function open_births_dialog(frm) {
 				return;
 			}
 			frappe.call({
-				method: "upande_livestock.api.operations.record_calf_births",
+				method: "upande_livestock.serverscripts.breeding.record_calf_births.record_calf_births",
 				args: { payload: { calving: frm.doc.name, calves: rows } },
 				freeze: true,
 				freeze_message: __("Recording births..."),

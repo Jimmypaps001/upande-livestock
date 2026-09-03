@@ -12,7 +12,7 @@ import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import add_days, add_months, today
 
-from upande_livestock.api.test_operations import _employee, _make_cow, _purge, _purge_events_for
+from upande_livestock.serverscripts.tests.test_operations import _employee, _make_cow, _purge, _purge_events_for
 
 
 def _event(animal, event_type, event_date, **kwargs):
