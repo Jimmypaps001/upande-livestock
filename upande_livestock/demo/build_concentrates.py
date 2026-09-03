@@ -47,6 +47,10 @@ ITEM = {
 	"wheat_bran": "4040010020",
 	"maize_germ": "4040020044",
 	"canola": "4040010026",
+	"maclick_plus": "4040010002",
+	"maclick_dry": "4040010078",
+	"ckl_extra_legend": "4040010088",
+	"soya": "4040010037",
 }
 
 # Westwood Dairy Meal - New formulation. Quantities are the sheet's own kg per
@@ -60,14 +64,29 @@ FORMULA = [
 	("canola", 359.6),
 ]
 
-# The four that already have a recipe. Reported against the sheet rather than
-# rewritten: they carry stock history, and a BOM that has produced stock is not
-# something a formulation script should quietly replace.
-EXISTING = {
-	"Weaner Meal": "weaner/yearling meal",
-	"Weaners/Yearlings": "yearling meal (bullying heifers)",
-	"Dry Cows  Meal": "dry meal",
-	"Calves Meal": "calf meal",
+# The other four concentrates, as the sheet states them. Each was on the site
+# with the minerals matching exactly and Cotton Seed Cake standing in for the
+# sheet's wheat bran and rapeseed/canola — a substitution that is also why
+# canola had never been received here. The sheet governs, so these are rebuilt
+# onto it. The superseded BOMs are left in place, inactive: they produced real
+# stock and their history has to stay readable.
+#
+# Quantities are the sheet's own kg per 1000 kg batch. Where the sheet's
+# percentages sum slightly off 100 (its own rounding), the largest line absorbs
+# the difference so a batch is exactly 1000 kg.
+OTHER_CONCENTRATES = {
+	"Weaner Meal": [
+		("limestone", 15.0), ("maclick_plus", 29.0), ("wheat_bran", 190.0),
+		("maize_germ", 421.0), ("canola", 345.0)],
+	"Bullying Heifer Meal": [
+		("maclick_plus", 23.0), ("wheat_bran", 280.0), ("canola", 237.0),
+		("maize_germ", 460.0)],
+	"Dry Cows  Meal": [
+		("maize_germ", 511.0), ("canola", 100.0), ("wheat_bran", 364.0),
+		("maclick_dry", 25.0)],
+	"Calves Meal": [
+		("limestone", 10.0), ("ckl_extra_legend", 20.0), ("wheat_bran", 280.0),
+		("soya", 280.0), ("maize_germ", 410.0)],
 }
 
 
@@ -191,18 +210,82 @@ def unlist_as_bought_in(apply_=False):
 	print(f"  - removed {NEW_CONCENTRATE} from bought_in_concentrates")
 
 
-def report_existing():
-	print("\n[the four that already have a recipe — reported, not rewritten]")
-	for item, what in EXISTING.items():
-		bom = frappe.db.get_value(
-			"BOM", {"item": item, "docstatus": 1, "is_active": 1, "is_default": 1}, "name")
-		if not bom:
-			print(f"   ! {item[:22]:<22} {what:<34} no default BOM")
+def _build_one(item, lines, apply_):
+	"""Rebuild `item`'s recipe onto the sheet, superseding whatever it had."""
+	rows, missing = [], []
+	for key, qty in lines:
+		code = ITEM[key]
+		if not frappe.db.exists("Item", code):
+			missing.append(f"{key} ({code})")
 			continue
-		qty = flt(frappe.db.get_value("BOM", bom, "quantity"))
-		lines = frappe.get_all("BOM Item", filters={"parent": bom},
-		                       fields=["item_code", "qty"], order_by="idx")
-		print(f"   · {item[:22]:<22} {what:<34} {bom} ({qty:.0f} kg batch, {len(lines)} lines)")
+		rows.append((code, flt(qty)))
+	if missing:
+		print(f"   ! {item[:24]:<24} not built — missing {', '.join(missing)}")
+		return None
+	total = sum(q for _, q in rows)
+	if abs(total - BATCH_KG) > 0.05:
+		print(f"   ! {item[:24]:<24} not built — sums to {total:.1f} kg")
+		return None
+
+	current = frappe.db.get_value(
+		"BOM", {"item": item, "docstatus": 1, "is_active": 1, "is_default": 1}, "name")
+	if current and _matches(current, rows):
+		print(f"   · {item[:24]:<24} already on the sheet ({current})")
+		return current
+
+	print(f"   {'+' if apply_ else '~'} {item[:24]:<24} {BATCH_KG:.0f} kg batch"
+	      + (f"  (supersedes {current})" if current else ""))
+	for code, qty in rows:
+		label = frappe.db.get_value("Item", code, "item_name") or code
+		print(f"        {label[:36]:<36} {qty:>7.1f} kg  ({qty / BATCH_KG * 100:>4.1f}%)")
+	if not apply_:
+		return None
+
+	doc = frappe.new_doc("BOM")
+	doc.item = item
+	doc.quantity = BATCH_KG
+	doc.uom = RECIPE_UOM
+	doc.is_active = 1
+	doc.is_default = 1
+	doc.company = _company()
+	farm = _mixing_farm()
+	if farm:
+		doc.custom_farm = farm
+	doc.with_operations = 0
+	for code, qty in rows:
+		doc.append("items", {"item_code": code, "qty": qty, "uom": RECIPE_UOM})
+	doc.insert(ignore_permissions=True)
+	doc.submit()
+	# The superseded recipe stays on the site, inactive: it produced real stock
+	# and its history has to remain readable.
+	if current:
+		frappe.db.set_value("BOM", current, {"is_default": 0, "is_active": 0})
+	frappe.db.set_value("Item", item, "default_bom", doc.name)
+	frappe.db.commit()
+	print(f"        -> {doc.name}")
+	return doc.name
+
+
+def _matches(bom, rows):
+	"""Whether an existing BOM already states exactly this recipe."""
+	have = {
+		r.item_code: flt(r.qty)
+		for r in frappe.get_all("BOM Item", filters={"parent": bom},
+		                        fields=["item_code", "qty"])
+	}
+	want = {code: flt(qty) for code, qty in rows}
+	if set(have) != set(want):
+		return False
+	return all(abs(have[c] - want[c]) < 0.05 for c in want)
+
+
+def build_others(apply_=False):
+	print("\n[the other four, rebuilt onto the sheet]")
+	for item, lines in OTHER_CONCENTRATES.items():
+		if not frappe.db.exists("Item", item):
+			print(f"   ! {item[:24]:<24} not an item on this site")
+			continue
+		_build_one(item, lines, apply_)
 
 
 def run(apply=False):
@@ -212,7 +295,7 @@ def run(apply=False):
 	build_bom(apply_)
 	print("\n[bought-in list]")
 	unlist_as_bought_in(apply_)
-	report_existing()
+	build_others(apply_)
 	print("\nnote: a week's mix is a Work Order for as many 1000 kg batches as the")
 	print("      herds require; manufacture_concentrate scales a partial batch.")
 
