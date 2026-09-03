@@ -12,7 +12,7 @@ not just the status list.
 import frappe
 from frappe.tests import IntegrationTestCase
 
-from upande_livestock.api.test_operations import _make_cow, _purge
+from upande_livestock.serverscripts.tests.test_operations import _make_cow, _purge
 from upande_livestock.serverscripts.dashboard._shared import _active_animal_count
 from upande_livestock.serverscripts.common.choices import is_active as _is_active
 

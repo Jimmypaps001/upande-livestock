@@ -26,7 +26,7 @@ from upande_livestock.serverscripts.common import stock as livestock_stock
 from upande_livestock.serverscripts.breeding.create_service_event import create_service_event
 from upande_livestock.serverscripts.health.create_health_case import create_health_case
 from upande_livestock.serverscripts.husbandry.create_husbandry_event import create_husbandry_event
-from upande_livestock.api.test_operations import _assert_ok, _employee, _make_cow, _purge, _purge_events_for
+from upande_livestock.serverscripts.tests.test_operations import _assert_ok, _employee, _make_cow, _purge, _purge_events_for
 
 
 def _stocked_drug():
