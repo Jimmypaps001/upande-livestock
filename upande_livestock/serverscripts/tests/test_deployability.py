@@ -91,3 +91,46 @@ class TestServerscriptsShape(IntegrationTestCase):
 			if needle in path.read_text():
 				stale.append(str(path.relative_to(app)))
 		self.assertEqual(stale, [], f"still referencing the old api package: {stale}")
+
+	def test_every_desk_block_route_resolves(self):
+		"""The half `test_a_module_is_named_for_the_endpoint_it_holds` cannot see.
+
+		That test proves module stem == function name. It cannot prove the
+		*group*: `weight_options: "weights.weight_options"` lives only in the
+		block's ROUTES map, and a wrong group 404s at runtime with the whole
+		suite green. This resolves every entry against the filesystem, and
+		checks the reverse direction too — an endpoint the block calls with no
+		ROUTES entry throws "unrouted livestock endpoint" on tap.
+		"""
+		import json
+		import re
+
+		blocks = json.loads(
+			pathlib.Path(
+				frappe.get_app_path("upande_livestock", "fixtures", "custom_html_block.json")
+			).read_text()
+		)
+		endpoints = {
+			fn.name
+			for path in _endpoint_files()
+			for fn in _whitelisted(ast.parse(path.read_text()))
+		}
+		for block in blocks:
+			script = block.get("script") or ""
+			routes = dict(re.findall(r'\n    ([a-z_0-9]+): "([a-z_0-9.]+)",', script))
+			if not routes:
+				continue
+			unresolved = [
+				f"{name} -> {route}"
+				for name, route in routes.items()
+				if not (ROOT / (route.replace(".", "/") + ".py")).exists()
+			]
+			self.assertEqual(
+				unresolved, [], f"{block['name']}: routes with no such module: {unresolved}"
+			)
+			quoted = set(re.findall(r'"([a-z_][a-z_0-9]*)"', script))
+			unrouted = sorted((quoted & endpoints) - set(routes))
+			self.assertEqual(
+				unrouted, [], f"{block['name']}: calls these with no ROUTES entry: {unrouted}"
+			)
+

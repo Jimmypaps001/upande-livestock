@@ -13,8 +13,6 @@ from frappe.utils import flt
 from upande_livestock.serverscripts.common.choices import (
 	ANIMAL_FIELDS,
 	RETIRED_STATUSES,
-	animal_label,
-	herd_label_map,
 )
 
 

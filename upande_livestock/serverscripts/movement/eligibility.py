@@ -22,7 +22,6 @@ def eligibility():
 
 	def go():
 		guard_read("Herds")
-		from upande_livestock.serverscripts.common import herd_movement
 
 		ladder = herd_movement.growth_ladder()
 		return {

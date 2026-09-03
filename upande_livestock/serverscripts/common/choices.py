@@ -64,7 +64,7 @@ def is_active(row) -> bool:
 	`disabled` is the canonical retirement flag — retire_animal() sets it together
 	with the final status — so it is checked alongside the status list. Keeping
 	both predicates means an animal retired by any route drops out. This is the
-	one definition api/workspace.py's dashboard (Task 12) and the data-entry
+	one definition api/workspace.py's dashboard (a later change) and the data-entry
 	dropdowns both defer to, so the two cannot quietly disagree about what
 	"active" means.
 	"""

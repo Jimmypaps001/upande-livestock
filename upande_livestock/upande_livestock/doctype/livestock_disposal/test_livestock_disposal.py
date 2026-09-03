@@ -120,7 +120,7 @@ class TestLivestockDisposal(IntegrationTestCase):
 		self.assertFalse(sale_price_field.mandatory_depends_on)
 
 	@patch(
-		"upande_livestock.upande_livestock.doctype.livestock_disposal.livestock_disposal.sell_livestock_asset"
+		"upande_livestock.upande_livestock.doctype.livestock_disposal.livestock_disposal._sell_livestock_asset"
 	)
 	@patch("frappe.msgprint")
 	def test_sold_without_customer_or_price_warns_and_still_retires(self, mock_msgprint, mock_sell):
@@ -134,14 +134,14 @@ class TestLivestockDisposal(IntegrationTestCase):
 		self.assertTrue(self.animal.disabled)
 
 	@patch(
-		"upande_livestock.upande_livestock.doctype.livestock_disposal.livestock_disposal.scrap_livestock_asset"
+		"upande_livestock.upande_livestock.doctype.livestock_disposal.livestock_disposal._scrap_livestock_asset"
 	)
 	def test_died_routes_to_scrap(self, mock_scrap):
 		self._disposal("Died — Disease")
 		mock_scrap.assert_called_once()
 
 	@patch(
-		"upande_livestock.upande_livestock.doctype.livestock_disposal.livestock_disposal.sell_livestock_asset"
+		"upande_livestock.upande_livestock.doctype.livestock_disposal.livestock_disposal._sell_livestock_asset"
 	)
 	def test_sold_routes_to_sell(self, mock_sell):
 		customer = frappe.db.get_value("Customer", {}, "name")
@@ -152,7 +152,7 @@ class TestLivestockDisposal(IntegrationTestCase):
 		mock_sell.assert_called_once()
 
 	@patch(
-		"upande_livestock.upande_livestock.doctype.livestock_disposal.livestock_disposal.scrap_livestock_asset"
+		"upande_livestock.upande_livestock.doctype.livestock_disposal.livestock_disposal._scrap_livestock_asset"
 	)
 	def test_status_and_disabled_are_set(self, _mock_scrap):
 		self._disposal("Died — Accident")
@@ -161,7 +161,7 @@ class TestLivestockDisposal(IntegrationTestCase):
 		self.assertTrue(self.animal.disabled)
 
 	@patch(
-		"upande_livestock.upande_livestock.doctype.livestock_disposal.livestock_disposal.scrap_livestock_asset"
+		"upande_livestock.upande_livestock.doctype.livestock_disposal.livestock_disposal._scrap_livestock_asset"
 	)
 	def test_uncapitalised_animal_disposes_with_a_warning_not_a_throw(self, mock_scrap):
 		mock_scrap.side_effect = frappe.ValidationError("not capitalised")
@@ -171,7 +171,7 @@ class TestLivestockDisposal(IntegrationTestCase):
 		self.assertTrue(self.animal.disabled)
 
 	@patch(
-		"upande_livestock.upande_livestock.doctype.livestock_disposal.livestock_disposal.scrap_livestock_asset"
+		"upande_livestock.upande_livestock.doctype.livestock_disposal.livestock_disposal._scrap_livestock_asset"
 	)
 	def test_disabled_animal_is_hidden_from_link_search(self, _mock_scrap):
 		self._disposal("Died — Natural Causes")
