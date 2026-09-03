@@ -255,7 +255,11 @@ git commit -m "refactor(livestock): lift the endpoint envelope into serverscript
   - `choices.select_options(doctype: str, fieldname: str) -> list[str]`
   - `choices.herd_label_map() -> dict[str, str]`
   - `choices.animal_label(row: dict) -> str`
-  - `choices.active_animals() -> list[dict]`
+  - `choices.is_active(row: dict) -> bool` — true when the row is neither
+    `disabled` nor carrying a retired `status`. Task 12's dashboard imports
+    this to replace its own `_is_active`, so both cannot drift apart about
+    what "active" means.
+  - `choices.active_animals() -> list[dict]` — defined in terms of `is_active`
   - `choices.animal_choices(animals: list, labels: dict) -> list[dict]`
   - `choices.RETIRED_STATUSES: list[str]`, `choices.ANIMAL_FIELDS: list[str]`
   - `employee.current_employee() -> str | None`
@@ -285,6 +289,7 @@ from upande_livestock.serverscripts.common.choices import (
 	RETIRED_STATUSES,
 	active_animals,
 	herd_label_map,
+	is_active,
 	select_options,
 )
 
@@ -305,6 +310,15 @@ class TestChoices(IntegrationTestCase):
 		for row in active_animals():
 			self.assertNotIn(row.get("status"), RETIRED_STATUSES)
 
+	def test_is_active_rejects_a_retired_status(self):
+		self.assertFalse(is_active({"disabled": 0, "status": RETIRED_STATUSES[0]}))
+
+	def test_is_active_rejects_a_disabled_animal(self):
+		self.assertFalse(is_active({"disabled": 1, "status": "Active"}))
+
+	def test_is_active_accepts_a_live_animal(self):
+		self.assertTrue(is_active({"disabled": 0, "status": "Active"}))
+
 	def test_herd_label_map_covers_every_herd(self):
 		self.assertEqual(len(herd_label_map()), frappe.db.count("Herds"))
 ```
@@ -317,10 +331,12 @@ Expected: FAIL — `ModuleNotFoundError: ...common.choices`
 - [ ] **Step 3: Move the helpers**
 
 Copy each helper body verbatim from `api/operations.py` into the destination
-above, dropping the leading underscore from its name. `active_animals` must keep
-selecting `_ANIMAL_FIELDS` and filtering on both `disabled` and `status` — the
-same predicate `api/workspace.py:_is_active` uses, so the dashboard and the
-dropdowns cannot disagree about what "active" means. Give each module a
+above, dropping the leading underscore from its name. Split the predicate out: `is_active(row)` returns whether one row counts as
+live livestock (not `disabled`, `status` not in `RETIRED_STATUSES`), and
+`active_animals()` selects `ANIMAL_FIELDS` and filters with it. This is the
+same predicate `api/workspace.py:_is_active` duplicates today; Task 12 deletes
+that copy and imports this one, so the dashboard and the dropdowns cannot
+disagree about what "active" means. Give each module a
 docstring. In `api/operations.py`, import them and alias to the old private
 names so existing call sites still resolve.
 
