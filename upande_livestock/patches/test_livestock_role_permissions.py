@@ -14,6 +14,8 @@ change was that a milker could previously delete an animal and a vet could dispo
 of the herd, because four roles held everything across all sixteen doctypes.
 """
 
+import os
+
 import frappe
 from frappe.tests import IntegrationTestCase
 
@@ -119,12 +121,29 @@ class TestLivestockRolePermissions(IntegrationTestCase):
 				self._can(role, "Animal", "delete"), f"{role} can delete an Animal"
 			)
 
-	def test_the_retired_checksheet_is_reachable_by_nobody(self):
-		for role in ROLE_USERS:
-			self.assertFalse(
-				self._can(role, "Milking Palour Checksheet", "read"),
-				f"{role} can still see the retired checksheet",
-			)
+	def test_the_app_no_longer_ships_the_retired_checksheet(self):
+		"""It was narrowed to System Manager, then dropped from the app outright.
+
+		Asserted against the filesystem, not against `tabDocType`: the site's
+		DocType record is cleared by `remove_orphan_doctypes()` on the next
+		migrate, so checking the database would fail on any site that has not
+		migrated yet and pass for the wrong reason on one that has. What this
+		app controls — and what a future commit could regress — is whether the
+		schema file ships at all. (The directory itself can linger on an existing
+		bench as a stale `__pycache__`, so the JSON is the honest signal.)
+		"""
+		self.assertFalse(
+			os.path.exists(
+				frappe.get_app_path(
+					"upande_livestock",
+					"upande_livestock",
+					"doctype",
+					"milking_palour_checksheet",
+					"milking_palour_checksheet.json",
+				)
+			),
+			"the retired checksheet is back in the app",
+		)
 
 	def test_settings_are_management_only(self):
 		self.assertTrue(self._can("Livestock Manager", "Livestock Settings", "write"))

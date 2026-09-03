@@ -14,10 +14,12 @@ Two are load-bearing beyond that:
   at a Role Profile that no longer exists and four roles that were deleted; a patch
   that re-saves the User fails on that unrelated rot, which is why the child row is
   inserted directly.
-* `Milking Palour Checksheet` must be invisible. It is retired, and "retired" here
-  means no role but System Manager may see it — a doctype left readable is a
-  doctype still in use.
+* `Milking Palour Checksheet` must be gone. This patch narrowed it to System
+  Manager; it has since been dropped from the app outright, so the assertion is
+  now that no such DocType survives migrate at all.
 """
+
+import os
 
 import frappe
 from frappe.tests import IntegrationTestCase
@@ -60,9 +62,26 @@ class TestNamespaceLivestockRoles(IntegrationTestCase):
 			              "Dairy Secretary", "HOD Dairy", "Dairy Supervisor"):
 				self.assertNotIn(stale, roles, f"{stale} still reaches {doctype}")
 
-	def test_the_retired_checksheet_is_invisible(self):
-		"""Retired means nobody sees it, not merely that nobody uses it."""
-		self.assertEqual(_roles_on("Milking Palour Checksheet"), {"System Manager"})
+	def test_the_retired_checksheet_is_gone(self):
+		"""This patch narrowed it to System Manager; it has since been dropped.
+
+		The files are deleted, so `remove_orphan_doctypes()` clears the DocType
+		record on the next migrate — non-destructively, leaving
+		`tabMilking Palour Checksheet` and its rows in place on purpose. The
+		assertion is therefore about what the app ships, not what the site holds.
+		"""
+		self.assertFalse(
+			os.path.exists(
+				frappe.get_app_path(
+					"upande_livestock",
+					"upande_livestock",
+					"doctype",
+					"milking_palour_checksheet",
+					"milking_palour_checksheet.json",
+				)
+			),
+			"the retired checksheet is back in the app",
+		)
 
 	def test_each_role_is_confined_to_its_job(self):
 		"""A milker cannot treat a cow; a vet cannot dispose of one."""
