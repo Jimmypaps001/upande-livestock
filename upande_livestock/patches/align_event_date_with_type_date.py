@@ -8,7 +8,7 @@ fills rows where event_date IS NULL. This one fixes rows where BOTH dates are se
 and differ — a separate defect with a separate cause.
 
 The cause: the Livestock Operations block's Service tab sent only `service_date`
-and its Diagnosis tab only `diagnosis_date`, and api/operations._new_livestock_event
+and its Diagnosis tab only `diagnosis_date`, and api/new_livestock_event
 then fell through to today() for event_date. A backdated entry therefore stored the
 date the user typed in the type-specific field and today's date in event_date. That
 fallback is fixed (the `date_key` argument), so this patch is a one-off repair of
@@ -26,6 +26,8 @@ they are left for a human. See the ledger.
 """
 
 import frappe
+
+from upande_livestock.serverscripts.common.events import new_livestock_event
 
 # event_type -> the field that carries the date the user actually entered.
 TYPE_DATE_FIELD = {

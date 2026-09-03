@@ -23,11 +23,9 @@ from frappe.tests import IntegrationTestCase
 from frappe.utils import flt, today
 
 from upande_livestock.serverscripts.common import stock as livestock_stock
-from upande_livestock.api.operations import (
-	create_health_case,
-	create_husbandry_event,
-	create_service_event,
-)
+from upande_livestock.serverscripts.breeding.create_service_event import create_service_event
+from upande_livestock.serverscripts.health.create_health_case import create_health_case
+from upande_livestock.serverscripts.husbandry.create_husbandry_event import create_husbandry_event
 from upande_livestock.api.test_operations import _assert_ok, _employee, _make_cow, _purge, _purge_events_for
 
 

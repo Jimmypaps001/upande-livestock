@@ -31,6 +31,6 @@ class Animal(Document):
 			return
 		# One definition of "in this herd", in api.animal — a second copy here
 		# is how the count and the disposal path drifted apart before.
-		from upande_livestock.api.animal import recompute_herd_count
+		from upande_livestock.serverscripts.common.animal import recompute_herd_count
 
 		recompute_herd_count(herd)

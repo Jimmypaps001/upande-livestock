@@ -13,7 +13,7 @@ animals and leaves already-repointed events alone. Safe on fresh installs
 
 import frappe
 
-from upande_livestock.api.animal import live_herd_count
+from upande_livestock.serverscripts.common.animal import live_herd_count
 
 
 def execute():

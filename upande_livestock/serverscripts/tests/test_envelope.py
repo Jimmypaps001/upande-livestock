@@ -9,7 +9,7 @@ write endpoint has to accept both.
 import frappe
 from frappe.tests import IntegrationTestCase
 
-from upande_livestock.serverscripts.common.envelope import as_dict, guard, run
+from upande_livestock.serverscripts.common.envelope import as_dict, guard, guard_read, run
 
 
 class TestEnvelope(IntegrationTestCase):
@@ -37,3 +37,15 @@ class TestEnvelope(IntegrationTestCase):
 				guard("Animal")
 		finally:
 			frappe.set_user("Administrator")
+
+	def test_guard_read_throws_without_permission(self):
+		frappe.set_user("Guest")
+		try:
+			with self.assertRaises(frappe.ValidationError):
+				guard_read("Animal")
+		finally:
+			frappe.set_user("Administrator")
+
+	def test_guard_read_passes_for_a_user_who_may_read(self):
+		frappe.set_user("Administrator")
+		guard_read("Animal")  # must not raise

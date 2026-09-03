@@ -21,7 +21,7 @@ from frappe.utils import flt, getdate, nowdate
 
 from upande_livestock.serverscripts.common import stock as livestock_stock
 
-from upande_livestock.api.animal import create_calf
+from upande_livestock.serverscripts.common.animal import create_calf
 from upande_livestock.serverscripts.common.guards import check_guards
 from upande_livestock.serverscripts.common.timings import get_timing
 
@@ -33,7 +33,7 @@ def warn_on_calving_mismatch(calving_name):
 	A module-level function, not a method, so it has one caller-agnostic
 	definition shared by both places that need it: LivestockEvent's own
 	refresh_calving_birth_count (fired once per Birth submit/cancel outside a
-	batch) and api.operations.record_calf_births (fired once after its whole
+	batch) and serverscripts.breeding.record_calf_births (fired once after its whole
 	multi-calf loop finishes, not per calf — see refresh_calving_birth_count's
 	docstring for why per-calf would produce false alarms on an in-progress,
 	ultimately-correct batch). Reads both counts fresh from the database rather
@@ -913,7 +913,7 @@ class LivestockEvent(Document):
 					# Both counts through the one helper, which excludes retired
 					# animals. Counting every row that points at the herd is what
 					# left sold cows in the headcount and fed them.
-					from upande_livestock.api.animal import recompute_herd_count
+					from upande_livestock.serverscripts.common.animal import recompute_herd_count
 
 					if previous_herd:
 						recompute_herd_count(previous_herd)
@@ -1141,7 +1141,7 @@ class LivestockEvent(Document):
 
 		The count refresh below is unconditional — births_recorded must stay
 		accurate after every single Birth submit or cancel, batch or not. Only
-		the *message* is suppressed mid-batch: api.operations.record_calf_births
+		the *message* is suppressed mid-batch: serverscripts.breeding.record_calf_births
 		sets frappe.flags.suppress_calving_mismatch_warning around its own loop,
 		so that inserting calf 1 of an eventual 3 does not warn about a mismatch
 		that the batch itself is about to resolve two calves later. A single

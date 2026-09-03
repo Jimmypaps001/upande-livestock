@@ -6,7 +6,11 @@ from frappe.tests import IntegrationTestCase
 
 from upande_livestock.api.test_operations import _suspend_sex_routing
 
-from upande_livestock.api.animal import create_calf, recompute_herd_count, resolve_calf_herd
+from upande_livestock.serverscripts.common.animal import create_calf
+
+from upande_livestock.serverscripts.common.animal import recompute_herd_count
+
+from upande_livestock.serverscripts.common.animal import resolve_calf_herd
 
 
 def make_herd(name, **kwargs):

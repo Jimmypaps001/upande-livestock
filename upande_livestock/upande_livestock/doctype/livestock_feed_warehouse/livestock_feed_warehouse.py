@@ -7,7 +7,7 @@ from frappe.model.document import Document
 class LivestockFeedWarehouse(Document):
 	"""One candidate source warehouse for feed inputs.
 
-	Row order (``idx``) is the search order: ``api.feeding._pick_source`` walks
+	Row order (``idx``) is the search order: ``serverscripts.feeding._engine._pick_source`` walks
 	the list top-down and takes the first warehouse that can cover a line in
 	full. Rows are configured on Livestock Settings.
 	"""

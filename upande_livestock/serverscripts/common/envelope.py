@@ -27,6 +27,23 @@ def guard(doctype: str) -> None:
 		frappe.throw(_("You are not permitted to create {0}.").format(doctype))
 
 
+def guard_read(doctype: str) -> None:
+	"""Raise if the user can't read `doctype`.
+
+	The read counterpart to `guard`. Sixteen endpoints — every `*_options` call
+	and every dashboard read — had no permission check at all: they answered any
+	logged-in user on the site, livestock role or not, because the desk blocks
+	were the only caller and the desk had already authenticated. A phone
+	authenticating as a real user makes that gap a real one, so the check moves
+	to the endpoint where it belongs.
+
+	Kept beside `guard` rather than inlined at each call site so the sixteen
+	cannot drift into sixteen slightly different checks.
+	"""
+	if not frappe.has_permission(doctype, "read"):
+		frappe.throw(_("You are not permitted to read {0}.").format(doctype))
+
+
 def as_dict(value):
 	"""Coerce the whitelist arg (JSON string from fetch, or dict) to a dict."""
 	if isinstance(value, str):

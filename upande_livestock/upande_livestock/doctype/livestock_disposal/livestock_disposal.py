@@ -20,8 +20,9 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 
-from upande_livestock.api.animal import retire_animal
-from upande_livestock.api.assets import scrap_livestock_asset, sell_livestock_asset
+from upande_livestock.serverscripts.common.animal import retire_animal
+from upande_livestock.serverscripts.disposal.scrap_livestock_asset import scrap_livestock_asset
+from upande_livestock.serverscripts.disposal.sell_livestock_asset import sell_livestock_asset
 
 SALE_TYPES = ("Sold",)
 

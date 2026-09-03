@@ -1,29 +1,17 @@
-"""Per-animal reproductive history.
+"""One animal's reproductive history: last service, pending checks, conception rate.
 
-Held one endpoint per animal plus two herd-wide worklists — "ready for service"
-and "pregnancy checks due". Both worklists were also implemented, independently,
-in `operations.breeding_lists`, and the two disagreed: on kaitet.local this
-module reported 8 animals ready to serve against breeding_lists' 2.
-
-The gap was not a difference of opinion about breeding. `breeding_lists` filters
-on `custom_related_pregnancy`, which had been corrupted to hold Pregnancy
-Diagnosis names instead of Service names, so served cows never closed out. This
-module happened to sidestep that by asking a different question ("no Service
-since the last Calving") — while itself ignoring Animal status, hardcoding a
-60-day wait instead of the Calving's configured `ready_for_service_date`, and
-returning one row per calving rather than per animal.
-
-The corruption is fixed at its source (`_validate_pregnancy_link`) and repaired
-in history (`patches.relink_pregnancy_to_service`), so the duplicates are gone
-and `operations.breeding_lists` is the single answer. See
-`test_operations.TestOneSourceForBreedingWorklists`.
-"""
+Per-animal, so it is not the herd-wide worklist — that is breeding_lists,
+and this module once carried a duplicate of it that disagreed. Read-guarded
+on Livestock Event."""
 
 import frappe
+
+from upande_livestock.serverscripts.common.envelope import guard_read
 
 
 @frappe.whitelist()
 def get_animal_reproductive_summary(animal=None):
+	guard_read("Livestock Event")
 	if not animal:
 		frappe.throw("Animal parameter is required")
 

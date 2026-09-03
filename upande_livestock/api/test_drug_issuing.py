@@ -26,11 +26,18 @@ than a broken feature:
 import unittest
 
 import frappe
+from upande_livestock.serverscripts.common.choices import RETIRED_STATUSES
+from upande_livestock.serverscripts.common.stock_items import stock_items
+from upande_livestock.serverscripts.husbandry._shared import (
+	_animals_in_herd,
+	_husbandry_targets,
+	_type_consumes_drugs,
+)
+from upande_livestock.serverscripts.husbandry.create_husbandry_event import create_husbandry_event
 from frappe.tests import IntegrationTestCase
 from frappe.utils import flt, today
 
 from upande_livestock.serverscripts.common import stock as livestock_stock
-from upande_livestock.api import operations
 from upande_livestock.api.test_operations import _make_cow, _purge, _purge_events_for
 
 
@@ -114,7 +121,7 @@ class TestStoreScopedPicker(IntegrationTestCase):
 		warehouse = _drug_store()
 		if not warehouse:
 			raise unittest.SkipTest("no drug store configured")
-		scoped = operations._stock_items("drug", warehouse)
+		scoped = stock_items("drug", warehouse)
 		if not scoped:
 			raise unittest.SkipTest("no drug stock on this site")
 		for row in scoped:
@@ -125,7 +132,7 @@ class TestStoreScopedPicker(IntegrationTestCase):
 			)
 
 	def test_an_empty_store_offers_nothing(self):
-		self.assertEqual(operations._stock_items("drug", "__no_such_warehouse__"), [])
+		self.assertEqual(stock_items("drug", "__no_such_warehouse__"), [])
 
 
 class TestHerdTargeting(IntegrationTestCase):
@@ -134,7 +141,7 @@ class TestHerdTargeting(IntegrationTestCase):
 	def _herd(self):
 		rows = frappe.get_all("Herds", fields=["name", "number_of_animals"], limit=50)
 		for h in rows:
-			if operations._animals_in_herd(h.name):
+			if _animals_in_herd(h.name):
 				return h
 		return None
 
@@ -142,8 +149,8 @@ class TestHerdTargeting(IntegrationTestCase):
 		herd = self._herd()
 		if not herd:
 			raise unittest.SkipTest("no herd on this site has live animals")
-		targets = operations._husbandry_targets({"herd": herd.name})
-		self.assertEqual(sorted(targets), sorted(a.name for a in operations._animals_in_herd(herd.name)))
+		targets = _husbandry_targets({"herd": herd.name})
+		self.assertEqual(sorted(targets), sorted(a.name for a in _animals_in_herd(herd.name)))
 
 	def test_retired_animals_are_never_dosed(self):
 		"""Herds.number_of_animals counts every animal pointing at the herd,
@@ -151,25 +158,25 @@ class TestHerdTargeting(IntegrationTestCase):
 		herd = self._herd()
 		if not herd:
 			raise unittest.SkipTest("no herd on this site has live animals")
-		for name in operations._husbandry_targets({"herd": herd.name}):
+		for name in _husbandry_targets({"herd": herd.name}):
 			status, disabled = frappe.db.get_value("Animal", name, ["status", "disabled"])
-			self.assertNotIn(status, operations._RETIRED_STATUSES)
+			self.assertNotIn(status, RETIRED_STATUSES)
 			self.assertFalse(disabled)
 
 	def test_an_explicit_list_wins_over_a_herd(self):
 		herd = self._herd()
 		if not herd:
 			raise unittest.SkipTest("no herd on this site has live animals")
-		some = [a.name for a in operations._animals_in_herd(herd.name)][:2]
-		self.assertEqual(operations._husbandry_targets({"herd": herd.name, "animals": some}), some)
+		some = [a.name for a in _animals_in_herd(herd.name)][:2]
+		self.assertEqual(_husbandry_targets({"herd": herd.name, "animals": some}), some)
 
 	def test_no_target_is_refused(self):
 		with self.assertRaises(frappe.ValidationError):
-			operations._husbandry_targets({})
+			_husbandry_targets({})
 
 	def test_an_empty_herd_is_refused(self):
 		with self.assertRaises(frappe.ValidationError):
-			operations._husbandry_targets({"herd": "__no_such_herd__"})
+			_husbandry_targets({"herd": "__no_such_herd__"})
 
 
 class TestPerAnimalDosing(IntegrationTestCase):
@@ -198,7 +205,7 @@ class TestPerAnimalDosing(IntegrationTestCase):
 	def test_quantities_are_per_animal(self):
 		"""2 ml a cow across N cows leaves the store as one line of 2N."""
 		heads = len(self.cows)
-		self.assertEqual(len(operations._animals_in_herd(self.HERD)), heads)
+		self.assertEqual(len(_animals_in_herd(self.HERD)), heads)
 
 		def bal():
 			return flt(
@@ -208,7 +215,7 @@ class TestPerAnimalDosing(IntegrationTestCase):
 			)
 
 		before = bal()
-		res = operations.create_husbandry_event(
+		res = create_husbandry_event(
 			{
 				"event_type": "Deworming",
 				"herd": self.HERD,
@@ -243,7 +250,7 @@ class TestPerAnimalDosing(IntegrationTestCase):
 	def test_a_round_the_store_cannot_cover_creates_nothing(self):
 		"""Blocking has to mean nothing was written, not a half-done round."""
 		before = frappe.db.count("Livestock Event", {"event_type": "Deworming"})
-		res = operations.create_husbandry_event(
+		res = create_husbandry_event(
 			{
 				"event_type": "Deworming",
 				"herd": self.HERD,
@@ -263,10 +270,10 @@ class TestConsumesDrugsFlag(IntegrationTestCase):
 		dry-cow therapy or calcium at calving without a deploy."""
 		for name in ("Vaccination", "Deworming"):
 			if frappe.db.exists("Livestock Event Type", name):
-				self.assertTrue(operations._type_consumes_drugs(name))
+				self.assertTrue(_type_consumes_drugs(name))
 		for name in ("Movement", "Weight Recording"):
 			if frappe.db.exists("Livestock Event Type", name):
-				self.assertFalse(operations._type_consumes_drugs(name))
+				self.assertFalse(_type_consumes_drugs(name))
 
 	def test_an_unknown_type_falls_back_to_the_old_tuple(self):
-		self.assertFalse(operations._type_consumes_drugs("__no_such_type__"))
+		self.assertFalse(_type_consumes_drugs("__no_such_type__"))

@@ -7,7 +7,7 @@ import frappe
 from frappe.desk.search import search_link
 from frappe.tests import IntegrationTestCase
 
-from upande_livestock.api.animal import STATUS_BY_DISPOSAL_TYPE
+from upande_livestock.serverscripts.common.animal import STATUS_BY_DISPOSAL_TYPE
 
 # This site has no standard ERPNext test fixtures (e.g. "All Departments"), so
 # following the dependency graph into Herds -> BOM -> Item -> Department blows up.
