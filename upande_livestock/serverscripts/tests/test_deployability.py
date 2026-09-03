@@ -23,8 +23,10 @@ import frappe
 from frappe.tests import IntegrationTestCase
 
 ROOT = pathlib.Path(frappe.get_app_path("upande_livestock", "serverscripts"))
-# common/ holds no endpoints; tests/ are tests; mobile/ is an empty scaffold.
-EXEMPT = {"common", "tests", "mobile"}
+# common/ holds no endpoints and tests/ are tests. mobile/ was exempt while it
+# was an empty scaffold; it now ships endpoints, and they are the ones a phone
+# in the field depends on, so they are held to the same two rules as the rest.
+EXEMPT = {"common", "tests"}
 
 
 def _whitelisted(tree):
@@ -63,14 +65,75 @@ class TestServerscriptsShape(IntegrationTestCase):
 				)
 
 	def test_every_endpoint_checks_permission(self):
-		offenders = []
+		"""Directly, or by delegating to an endpoint that does.
+
+		The mobile dispatchers hold no guard of their own on purpose: they
+		forward to the same domain endpoints the desk calls, which guard. A
+		second guard there would put the decision in two places, which is what
+		this package spent a refactor removing. So delegation counts — but only
+		to a module under serverscripts that is itself a guarded endpoint, which
+		is checked, not taken on trust.
+		"""
+		guarded = set()
 		for path in _endpoint_files():
 			source = path.read_text()
 			for fn in _whitelisted(ast.parse(source)):
 				body = ast.get_source_segment(source, fn) or ""
-				if not any(t in body for t in ("guard(", "guard_read(", "has_permission(")):
-					offenders.append(f"{path.relative_to(ROOT)}::{fn.name}")
-		self.assertEqual(offenders, [], f"unguarded endpoints: {offenders}")
+				if any(t in body for t in ("guard(", "guard_read(", "has_permission(")):
+					guarded.add(fn.name)
+
+		offenders = []
+		for path in _endpoint_files():
+			source = path.read_text()
+			tree = ast.parse(source)
+			imported = {
+				alias.asname or alias.name
+				for node in ast.walk(tree)
+				if isinstance(node, ast.ImportFrom)
+				and (node.module or "").startswith("upande_livestock.serverscripts.")
+				for alias in node.names
+			}
+			for fn in _whitelisted(tree):
+				body = ast.get_source_segment(source, fn) or ""
+				if any(t in body for t in ("guard(", "guard_read(", "has_permission(")):
+					continue
+				# Delegation: every guarded endpoint this module imports and, in
+				# the module as a whole, actually references.
+				delegates = {n for n in imported & guarded if n in source}
+				if delegates:
+					continue
+				offenders.append(f"{path.relative_to(ROOT)}::{fn.name}")
+		self.assertEqual(
+			offenders, [], f"endpoints that neither guard nor delegate: {offenders}"
+		)
+
+	def test_a_dispatcher_that_stops_delegating_is_caught(self):
+		"""The delegation allowance must not become a hole.
+
+		If someone strips the imports out of a mobile dispatcher and inlines the
+		work, it stops being covered by a downstream guard — and this proves the
+		rule above notices, rather than passing because the file merely looks
+		like a dispatcher.
+		"""
+		source = (
+			"import frappe\n"
+			"@frappe.whitelist()\n"
+			"def record_something(payload=None):\n"
+			"\treturn {'ok': True}\n"
+		)
+		tree = ast.parse(source)
+		fns = _whitelisted(tree)
+		self.assertEqual(len(fns), 1)
+		body = ast.get_source_segment(source, fns[0]) or ""
+		self.assertFalse(any(t in body for t in ("guard(", "guard_read(", "has_permission(")))
+		imported = {
+			alias.asname or alias.name
+			for node in ast.walk(tree)
+			if isinstance(node, ast.ImportFrom)
+			and (node.module or "").startswith("upande_livestock.serverscripts.")
+			for alias in node.names
+		}
+		self.assertEqual(imported, set(), "a module with no delegation must offer none")
 
 	def test_the_old_api_package_is_gone(self):
 		self.assertFalse(
