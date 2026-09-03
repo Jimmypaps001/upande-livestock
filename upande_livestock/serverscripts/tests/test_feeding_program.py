@@ -25,6 +25,8 @@ when no herd has a BOM, because that is a missing fixture, not a broken feature.
 import unittest
 
 import frappe
+
+from upande_livestock.serverscripts.common import stock as livestock_stock
 from frappe.tests import IntegrationTestCase
 from frappe.utils import flt
 
@@ -181,7 +183,16 @@ class TestManufactureIssuesItsBatch(IntegrationTestCase):
 		self.assertAlmostEqual(feeding._bin_qty(item, store), before, places=4)
 
 		se = frappe.get_doc("Stock Entry", res["issue_stock_entry"])
-		self.assertEqual(se.stock_entry_type, "Material Issue")
+		# The named type, not the generic one. A feed issue has been stamped
+		# "Animal Feeding" since stock issues were named; this asserted
+		# "Material Issue" and never noticed, because the herd was short in every
+		# run and the test skipped at can_manufacture. What has to hold is the
+		# purpose — feed leaves the store — and that the label is the one the app
+		# chooses for a feeding rather than a hardcoded guess.
+		self.assertEqual(
+			se.stock_entry_type, livestock_stock.stock_entry_type_for("Feeding")
+		)
+		self.assertEqual(se.purpose, "Material Issue")
 		self.assertEqual(len(se.items), 1)
 		self.assertEqual(se.items[0].item_code, item)
 		self.assertAlmostEqual(se.items[0].qty, res["produced_qty"], places=4)

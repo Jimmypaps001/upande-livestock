@@ -47,6 +47,7 @@ NOT WHITELISTED
 import math
 
 import frappe
+from frappe import _
 from frappe.utils import flt, today
 from erpnext.manufacturing.doctype.work_order.work_order import make_stock_entry
 
@@ -407,7 +408,7 @@ def _run_manufacture(production_item, bom_no, qty, herd=None, heads=None, allow_
 	}
 
 
-def manufacture_herd_feed(herd, allow_shortage=False, employee=None):
+def manufacture_herd_feed(herd, allow_shortage=False, employee=None, portion=1.0):
 	"""Manufacture the herd's TMR and issue the whole batch to that herd.
 
 	Total produced = heads * BOM.quantity; every raw material and the
@@ -418,19 +419,28 @@ def manufacture_herd_feed(herd, allow_shortage=False, employee=None):
 	logged-in user, which is what the block sends. That is attribution, not a
 	quantity — there is still nothing to choose about how much goes out.
 
-	The batch is issued in the same call, in full. There is no quantity to
-	choose: a total mixed ration is made for one herd for one feeding, and
-	splitting it would mean the rest sat in the store as feed that had already
-	been eaten. Exactly what this run produced goes out — an earlier balance is
-	left alone rather than swept up, so each batch reconciles against its own
-	issue.
+	The batch is issued in the same call, in full. Exactly what this run
+	produced goes out — an earlier balance is left alone rather than swept up,
+	so each batch reconciles against its own issue. That is the rule this
+	function is built on: mixed feed never sits in the store, because it has
+	already been eaten by the time anyone would count it.
+
+	`portion` is how a farm that feeds twice a day records it: 0.5 mixes and
+	issues half the day's ration, and two such runs make the day. It does not
+	break the rule above — each run still issues everything it produced — and a
+	day whose portions do not sum to 1 is a real day that happened, not an error
+	to refuse. `feed_day_status` is what tells the screen how much of the day is
+	left; nothing here enforces it.
 
 	Nothing is committed here. The manufacture and the issue have to stand or
 	fall together, and api/operations._run() relies on the rollback.
 	"""
 	herd_doc, bom, heads = _herd_bom(herd)
 	per_head = flt(bom.quantity) or 1.0
-	total_qty = per_head * heads
+	portion = flt(portion) or 1.0
+	if portion <= 0:
+		frappe.throw(_("A feeding run has to be for more than nothing."))
+	total_qty = per_head * heads * portion
 
 	# Availability first — it writes nothing, and a shortage is the more useful
 	# thing to be told about. The operator is then resolved before anything
@@ -447,6 +457,7 @@ def manufacture_herd_feed(herd, allow_shortage=False, employee=None):
 		{
 			"heads": heads,
 			"per_head_qty": per_head,
+			"portion": portion,
 			"uom": bom.uom,
 			"issued_qty": issue["issued_qty"],
 			"issue_stock_entry": issue["stock_entry"],
