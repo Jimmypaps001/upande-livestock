@@ -11,6 +11,12 @@ therefore makes three inputs short at once, not one:
     Wheat Bran      3,137.9 kg/week needed, 46.7 on hand
     Soya Meal         149.0 kg/week needed, 0 on hand
 
+Two TMR inputs are short for the same reason a demo site usually is — the feed
+was eaten and never restocked — and without them no herd can be fed at all:
+
+    Silage          6,107 kg/day needed across five herds, 183 on hand
+    Milk Replacer       9 kg/day needed by the two calf herds, 0 on hand
+
 Without a valuation rate ERPNext refuses the Manufacture entry outright —
 "Valuation Rate for the Item ... is required to do accounting entries" — so a
 Work Order for the lactating concentrate cannot post no matter how correct the
@@ -33,9 +39,16 @@ from frappe.utils import add_days, flt, today
 # The kg figures are two weeks of the sheet's weekly consumption, rounded up to
 # something a store would actually order.
 MATERIALS = {
+	# Concentrate ingredients the sheet's formulas need.
 	"4040010026": ("Canola Meal (sheet: Rapeseed/Canola)", 52.0, 7000.0),
 	"4040010020": ("Wheat Bran", 27.0, 7000.0),
 	"4040010037": ("Soya Meal (sheet: Soyabean meal)", 100.0, 500.0),
+	# TMR inputs. Silage is farm-produced and the site carries one item where
+	# the sheet prices sorghum at 7.20 and maize at 10.00; 8.65 is those two
+	# weighted by the quantities the sheet itself feeds (2,503 kg sorghum against
+	# 2,705 kg maize a day), so the ration costs what the sheet says it does.
+	"4040010082": ("Silage - Farm Produced (sorghum/maize blended)", 8.65, 90000.0),
+	"4040010095": ("Dehues Milk Replacer", 54.0, 200.0),
 }
 
 # The sheet's formulas draw raw materials from the raw-material store; the
