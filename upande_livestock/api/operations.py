@@ -37,7 +37,20 @@ from frappe.utils import add_days, flt, nowtime, today
 
 from upande_livestock import livestock_stock
 from upande_livestock.api import feeding
+from upande_livestock.serverscripts.common.choices import (
+	ANIMAL_FIELDS,
+	RETIRED_STATUSES,
+	active_animals,
+	animal_choices,
+	animal_label,
+	herd_label_map,
+	select_options,
+)
+from upande_livestock.serverscripts.common.company import company_or_throw, default_company
+from upande_livestock.serverscripts.common.employee import current_employee, employee_or_throw
 from upande_livestock.serverscripts.common.envelope import as_dict, guard, run
+from upande_livestock.serverscripts.common.events import new_livestock_event
+from upande_livestock.serverscripts.common.stock_items import stock_items
 from upande_livestock.upande_livestock.doctype.livestock_event.livestock_event import (
 	warn_on_calving_mismatch,
 )
@@ -52,144 +65,18 @@ from upande_livestock.upande_livestock.doctype.livestock_event.livestock_event i
 # they are removed per-domain in later tasks, not all at once here.
 _guard, _ok, _run = guard, as_dict, run
 
-
-def _current_employee():
-	return frappe.db.get_value("Employee", {"user_id": frappe.session.user}, "name")
-
-
-def _employee_or_throw(employee=None):
-	employee = employee or _current_employee()
-	if not employee:
-		frappe.throw(
-			_("No Employee is linked to your user ({0}). Select an operator or link an Employee.").format(
-				frappe.session.user
-			)
-		)
-	return employee
-
-
-def _select_options(doctype, fieldname):
-	"""The non-empty Select options of a field, from meta (avoids hardcoding)."""
-	field = frappe.get_meta(doctype).get_field(fieldname)
-	if not field or not field.options:
-		return []
-	return [o for o in (field.options or "").split("\n") if o.strip()]
-
-
-def _herd_label_map():
-	return {h.name: (h.herd_name or h.name) for h in frappe.get_all("Herds", fields=["name", "herd_name"])}
-
-
-def _animal_label(row):
-	return row.get("tag_number") or row.get("burn_name") or row.get("name")
-
-
-# A retired animal must never be offered as a data-entry target. retire_animal()
-# (api/animal.py) sets `disabled` alongside the final status, and `disabled` is the
-# canonical flag — it is also what Frappe's own link search honours. The status
-# list is kept as a second predicate so an animal that reached a final status
-# without being disabled, or was disabled by any other route, is excluded either
-# way.
-_RETIRED_STATUSES = ["Dead", "Deceased", "Sold", "Culled", "Disposed"]
-
-_ANIMAL_FIELDS = ["name", "tag_number", "burn_name", "current_herd", "repro_status"]
-
-
-def _active_animals():
-	"""Every animal still eligible to receive an event, newest tag order."""
-	return frappe.get_all(
-		"Animal",
-		filters=[["status", "not in", _RETIRED_STATUSES], ["disabled", "=", 0]],
-		fields=_ANIMAL_FIELDS,
-		order_by="tag_number asc",
-		limit_page_length=5000,
-	)
-
-
-def _animal_choices(animals, labels):
-	return [
-		{
-			"name": a.name,
-			"label": _animal_label(a),
-			"herd": a.current_herd,
-			"herd_label": labels.get(a.current_herd or "", a.current_herd or ""),
-			"repro": a.repro_status,
-		}
-		for a in animals
-	]
-
-
-def _stock_items(kind, warehouse=None):
-	"""Items a livestock form can issue, restricted to what is actually in stock.
-
-	`kind` is "drug" or "semen". Offering the whole 595-item DRUGS group would be
-	unusable and would mostly name things the store cannot supply, so this returns
-	only items with a positive balance, plus their on-hand quantity so the form can
-	show it. Stock items are non-disabled and stocked (is_stock_item).
-
-	`warehouse` scopes the balance to the store the issue will actually draw from.
-	Summing across every warehouse — which this used to do — offered drugs the
-	drug store did not have, because 33 units sat in a packaging store on the
-	other side of the farm. The label then promised stock the issue could not
-	find, and the issue failed.
-	"""
-	group = "DRUGS" if kind == "drug" else "DAIRY"
-	name_filter = (
-		"" if kind == "drug" else "AND LOWER(CONCAT(i.name, ' ', IFNULL(i.item_name, ''))) LIKE '%%semen%%'"
-	)
-	conditions, params = [], [group]
-	if warehouse:
-		conditions.append("AND b.warehouse = %s")
-		params.append(warehouse)
-	rows = frappe.db.sql(
-		f"""SELECT i.name, i.item_name, i.stock_uom, SUM(b.actual_qty) AS qty
-		    FROM `tabItem` i
-		    JOIN `tabBin` b ON b.item_code = i.name
-		    WHERE i.item_group = %s
-		      AND IFNULL(i.disabled, 0) = 0
-		      AND IFNULL(i.is_stock_item, 1) = 1
-		      {" ".join(conditions)}
-		      {name_filter}
-		    GROUP BY i.name
-		    HAVING qty > 0
-		    ORDER BY i.item_name ASC
-		    LIMIT 500""",
-		params,
-		as_dict=True,
-	)
-	return [
-		{
-			"value": r.name,
-			"label": f"{r.item_name or r.name}  ·  {flt(r.qty):g} {r.stock_uom or ''} in store".strip(),
-			"item_name": r.item_name or r.name,
-			"qty": flt(r.qty),
-			"uom": r.stock_uom,
-		}
-		for r in rows
-	]
-
-
-def _default_company():
-	"""The company to stamp on livestock documents.
-
-	Livestock Settings wins so a farm can pin its own company, then the user's
-	default, then the site-wide Global Defaults value — the same last resort
-	patches/migrate_animals_off_asset.py uses. Without the Global Defaults step the
-	health, weight and disposal forms fail with "No company configured" on any site
-	that never filled in the livestock-specific setting.
-	"""
-	return (
-		frappe.db.get_single_value("Livestock Settings", "custom_default_company")
-		or frappe.defaults.get_user_default("company")
-		or frappe.db.get_single_value("Global Defaults", "default_company")
-	)
-
-
-def _company_or_throw(company=None):
-	company = company or _default_company()
-	if not company:
-		frappe.throw(_("No company configured (Livestock Settings > Default Company)."))
-	return company
+# The dropdown builders, the Employee/company lookups and the stock-item picker
+# moved to serverscripts/common/ so the nine domain tasks that migrate the rest
+# of this file can import them directly. These aliases keep the call sites
+# below (and the handful of other modules that import them off this module)
+# working untouched until each domain migrates in turn.
+_current_employee, _employee_or_throw = current_employee, employee_or_throw
+_default_company, _company_or_throw = default_company, company_or_throw
+_select_options, _herd_label_map, _animal_label = select_options, herd_label_map, animal_label
+_RETIRED_STATUSES, _ANIMAL_FIELDS = RETIRED_STATUSES, ANIMAL_FIELDS
+_active_animals, _animal_choices = active_animals, animal_choices
+_stock_items = stock_items
+_new_livestock_event = new_livestock_event
 
 
 # ===========================================================================
@@ -399,26 +286,6 @@ def event_options():
 		}
 
 	return _run(go, "livestock event_options failed")
-
-
-def _new_livestock_event(d, event_type, date_key=None):
-	"""Build an unsaved Livestock Event of `event_type`.
-
-	`event_date` is the canonical date for every event type: livestock_guards.py
-	keys its age and interval rules on it, and the desk form relabels it per type
-	("Service Date", "Movement Date", "Diagnosis Date"). A form that collects only
-	the type-specific date therefore passes `date_key` so that date also becomes
-	`event_date`. Without it a backdated entry stored the right `service_date` and
-	an `event_date` of today, leaving the two out of step and the interval guards
-	reading the wrong day.
-	"""
-	doc = frappe.new_doc("Livestock Event")
-	doc.animal = d.get("animal")
-	doc.event_type = event_type
-	doc.event_date = d.get("event_date") or (d.get(date_key) if date_key else None) or today()
-	doc.operator = _employee_or_throw(d.get("operator"))
-	doc.remarks = d.get("remarks")
-	return doc
 
 
 @frappe.whitelist()
