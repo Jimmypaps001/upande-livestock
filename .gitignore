@@ -5,3 +5,10 @@
 tags
 node_modules
 __pycache__
+
+# Source documents the app is built against, not part of it. The August 2026
+# feed formulations govern every concentrate and TMR BOM here — see
+# demo/build_concentrates.py and demo/build_feed_rations.py, which carry the
+# figures in code — but the workbooks themselves are revised on the farm and
+# do not diff, so they are kept out of the history rather than versioned in it.
+references/
