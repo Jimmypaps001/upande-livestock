@@ -35,3 +35,7 @@ upande_livestock.patches.create_livestock_stock_entry_types
 # Calving/Abortion pregnancy links from a Pregnancy Diagnosis to the Service it
 # confirmed; every reader of that field joins it against a Service.
 upande_livestock.patches.relink_pregnancy_to_service
+# The livestock roles could not read Item, so the concentrate plan and the drug
+# picker were closed to a user holding only those roles — which is what a farm
+# hand holds. Read only, and only for the two roles that run and plan the store.
+upande_livestock.patches.grant_livestock_item_read
