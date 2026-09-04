@@ -8,17 +8,24 @@ who exercised the app hold Stock User and Stock Manager as well — roles that
 have nothing to do with livestock — so the gap only shows on a user who holds
 the livestock roles and nothing else, which is exactly what a farm hand is.
 
-What it broke: `feeding.concentrate_plan`, the week's mixing list and the
-farm's concentrate stock, and `husbandry.drugs_in_store`, which is what the
-drug picker is built from. Both guard on Item read, correctly — they disclose
-item names and stock balances, and that is Item and Bin data whatever screen it
-is drawn on. So the guard was right and the role was wrong.
+What it broke: `feeding.concentrate_plan`, the week's mixing list and the farm's
+concentrate stock, and `husbandry.drugs_in_store`, which the drug picker on the
+husbandry, check-up and treatment screens is built from. Both guard on Item
+read, correctly — they disclose item names and stock balances, and that is Item
+and Bin data whatever screen it is drawn on. So the guard was right and the role
+was wrong.
 
-READ ONLY, and only for the two roles that need it. Livestock Stores runs the
-store; Livestock Manager plans against it. A vet or a milker has no reason to
-read the item master, and this does not give them one. Nothing here grants
-write, create, delete, submit or report — an item is created by whoever buys
-it, not by whoever feeds it.
+READ ONLY, for every livestock role. It was first written for Stores and
+Manager alone, on the reasoning that a vet has no business in the item master.
+That was wrong: `drugs_in_store` guards Item read too, and it is what the drug
+picker is built from — so a vet recording a treatment, and an attendant or
+breeder recording a vaccination, hit exactly the same wall. Splitting hairs over
+which of six field roles may *see* a list of items buys nothing and costs a
+support call every time somebody is handed the wrong pair.
+
+What is worth withholding is writing. Nothing here grants write, create, delete,
+submit or report: an item is created by whoever buys it, not by whoever feeds,
+treats or milks against it.
 
 Item is a core doctype, so this lands as a Custom DocPerm rather than editing
 the shipped permissions. Idempotent: a role that already has the read is left
@@ -29,7 +36,14 @@ import frappe
 from frappe.permissions import add_permission, update_permission_property
 
 DOCTYPE = "Item"
-ROLES = ("Livestock Stores", "Livestock Manager")
+ROLES = (
+	"Livestock Manager",
+	"Livestock Stores",
+	"Livestock Vet",
+	"Livestock Attendant",
+	"Livestock Breeder",
+	"Livestock Milker",
+)
 
 
 def execute():
