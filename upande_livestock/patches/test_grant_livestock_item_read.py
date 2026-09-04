@@ -8,9 +8,13 @@ the app held Stock User and Stock Manager alongside the livestock roles. A user
 holding only livestock roles — which is what a farm hand holds — got "You are
 not permitted to read Item" from the concentrate plan and from the drug picker.
 
-So the test that matters is the negative one: a milker or a vet still cannot
-read the item master, and the two roles that can still cannot write to it.
-Granting read to run a store is not granting the run of the item master.
+Every livestock role now reads it, because every one of them meets a screen that
+needs it — the drug picker on the husbandry, check-up and treatment screens
+guards Item read just as the concentrate plan does.
+
+So the test that matters is the other negative: reading is all they got. None of
+them may write, create or delete an item, and the grant did not leak to a role
+outside livestock. Seeing the item master is not having the run of it.
 """
 
 import frappe
@@ -18,7 +22,8 @@ from frappe.tests import IntegrationTestCase
 
 from upande_livestock.patches.grant_livestock_item_read import DOCTYPE, ROLES, execute
 
-CANNOT_READ = ("Livestock Vet", "Livestock Milker", "Livestock Attendant", "Livestock Breeder")
+# A role with no livestock business must not have picked this up on the way past.
+UNRELATED = ("Employee", "Blogger")
 
 
 def _perm(role, right):
@@ -51,13 +56,23 @@ class TestLivestockItemRead(IntegrationTestCase):
 					_perm(role, right), f"{role} gained {right} on {DOCTYPE}, which it was never meant to have"
 				)
 
-	def test_the_other_livestock_roles_did_not_get_it(self):
-		"""A vet has no reason to read the item master, and still cannot."""
-		for role in CANNOT_READ:
+	def test_every_livestock_role_can_read_it(self):
+		"""They all meet a screen that needs it — the drug picker, or the plan."""
+		for role in ROLES:
+			if not frappe.db.exists("Role", role):
+				continue
+			self.assertTrue(_perm(role, "read"), f"{role} still cannot read {DOCTYPE}")
+
+	def test_the_grant_did_not_leak_beyond_livestock(self):
+		"""Every role this patch names starts with "Livestock"; nothing else moved."""
+		for role in ROLES:
+			self.assertTrue(role.startswith("Livestock"), f"{role} is not a livestock role")
+		for role in UNRELATED:
 			if not frappe.db.exists("Role", role):
 				continue
 			self.assertFalse(
-				_perm(role, "read"), f"{role} can read {DOCTYPE}; the grant was meant to be two roles"
+				_perm(role, "read"),
+				f"{role} gained read on {DOCTYPE}; this patch should not have touched it",
 			)
 
 	def test_running_twice_changes_nothing(self):
