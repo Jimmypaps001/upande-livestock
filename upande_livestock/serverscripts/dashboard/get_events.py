@@ -27,6 +27,8 @@ def get_events() -> dict:
 				"service_status",
 				"pregnancy_confirmation_status",
 				"diagnosis_result",
+				"custom_is_backdated",
+				"custom_feed_mode",
 			],
 			order_by="event_date desc, creation desc",
 			limit_page_length=300,

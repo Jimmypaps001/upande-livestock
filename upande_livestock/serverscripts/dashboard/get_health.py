@@ -29,6 +29,7 @@ def get_health() -> dict:
 				"vet_called",
 				"is_zoonotic",
 				"is_notifiable",
+				"custom_is_backdated",
 			],
 			order_by="opened_date desc",
 			limit_page_length=300,

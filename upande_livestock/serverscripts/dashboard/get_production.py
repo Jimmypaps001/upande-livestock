@@ -30,6 +30,7 @@ def get_production() -> dict:
 				"protein_percent",
 				"bulk_scc",
 				"milk_revenue",
+				"custom_is_backdated",
 			],
 			order_by="recording_date desc, creation desc",
 			limit_page_length=200,
