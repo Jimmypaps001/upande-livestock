@@ -28,13 +28,22 @@ def _signature(lines):
 
 
 def _clean(lines):
-	out = []
+	"""Drop empty/zero rows and merge duplicate item_codes by summing their
+	qty — a caller submitting the same ingredient twice (e.g. added once by
+	hand and once by a recipe default) means "this much in total", not two
+	separate BOM Item rows for the same item."""
+	totals = {}
+	order = []
 	for row in lines or []:
 		item = (row.get("item_code") or "").strip()
 		qty = flt(row.get("qty"))
-		if item and qty > 0:
-			out.append({"item_code": item, "qty": qty})
-	return out
+		if not item or qty <= 0:
+			continue
+		if item not in totals:
+			order.append(item)
+			totals[item] = 0.0
+		totals[item] += qty
+	return [{"item_code": item, "qty": totals[item]} for item in order]
 
 
 def _existing_match(item, signature):
@@ -76,21 +85,37 @@ def tuned_bom(herd, lines):
 	if found:
 		return found
 
+	# The caller's qty is in whatever UOM the *recipe* uses for that item, not
+	# necessarily the item's stock UOM (hay on this site is written as kg in
+	# the recipe but stocked in BALE, cf 0.07 bale/kg). Reuse the base BOM's
+	# own uom/conversion_factor for any item the base BOM already carries, so
+	# ERPNext derives the same stock_qty it always would. Only an item the
+	# operator adds that the base BOM has never heard of falls back to the
+	# item's stock UOM at a factor of 1 — there is no recipe UOM to borrow.
+	base_row_by_item = {row.item_code: row for row in base.items}
+
 	doc = frappe.copy_doc(base)
 	doc.is_active = 1  # ERPNext refuses a Work Order against anything else
 	doc.is_default = 0
 	doc.set("items", [])
 	for row in lines:
 		item = frappe.get_cached_doc("Item", row["item_code"])
+		base_row = base_row_by_item.get(row["item_code"])
+		if base_row:
+			uom = base_row.uom
+			conversion_factor = base_row.conversion_factor
+		else:
+			uom = item.stock_uom
+			conversion_factor = 1
 		doc.append(
 			"items",
 			{
 				"item_code": row["item_code"],
 				"item_name": item.item_name,
 				"qty": row["qty"],
-				"uom": item.stock_uom,
+				"uom": uom,
 				"stock_uom": item.stock_uom,
-				"conversion_factor": 1,
+				"conversion_factor": conversion_factor,
 			},
 		)
 	doc.insert(ignore_permissions=True)
