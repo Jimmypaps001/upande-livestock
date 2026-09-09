@@ -2,8 +2,9 @@
 
 import frappe
 from frappe import _
-from frappe.utils import flt, today
+from frappe.utils import flt
 
+from upande_livestock.serverscripts.common import backdate
 from upande_livestock.serverscripts.common.envelope import as_dict, guard, run
 
 
@@ -26,7 +27,10 @@ def record_disposal(payload):
 			frappe.throw(_("Select how the animal left the herd."))
 		doc = frappe.new_doc("Livestock Disposal")
 		doc.animal = d.get("animal")
-		doc.disposal_date = d.get("disposal_date") or today()
+		disposal_date, is_backdated = backdate.resolve(d, "disposal_date")
+		backdate.assert_allowed(is_backdated)
+		doc.disposal_date = disposal_date
+		backdate.stamp(doc, is_backdated)
 		doc.disposal_type = d.get("disposal_type")
 		doc.sale_price = flt(d.get("sale_price")) or None
 		doc.customer = d.get("customer") or None

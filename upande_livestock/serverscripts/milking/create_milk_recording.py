@@ -5,8 +5,9 @@ the controller with ignore_permissions, so this is the one check that matters.""
 
 import frappe
 from frappe import _
-from frappe.utils import flt, nowtime, today
+from frappe.utils import flt, nowtime
 
+from upande_livestock.serverscripts.common import backdate
 from upande_livestock.serverscripts.common.employee import current_employee
 from upande_livestock.serverscripts.common.envelope import as_dict, guard, run
 
@@ -39,7 +40,10 @@ def create_milk_recording(payload):
 		doc = frappe.new_doc("Milk Recording")
 		doc.herd = herd
 		doc.milking_time = d.get("milking_time") or nowtime()
-		doc.recording_date = d.get("recording_date") or today()
+		recording_date, is_backdated = backdate.resolve(d, "recording_date")
+		backdate.assert_allowed(is_backdated)
+		doc.recording_date = recording_date
+		backdate.stamp(doc, is_backdated)
 		doc.cows_milked = int(flt(d.get("cows_milked")))
 		doc.operator = d.get("operator") or current_employee()
 		doc.company = company

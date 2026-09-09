@@ -2,12 +2,13 @@
 
 import frappe
 from frappe import _
-from frappe.utils import flt, today
+from frappe.utils import flt
 
 from upande_livestock.serverscripts.common.company import company_or_throw
 from upande_livestock.serverscripts.common.employee import employee_or_throw
 from upande_livestock.serverscripts.husbandry._shared import _clean_drug_rows
 from upande_livestock.serverscripts.common.envelope import as_dict, guard, run
+from upande_livestock.serverscripts.common import backdate
 from upande_livestock.serverscripts.common import stock as livestock_stock
 
 
@@ -29,7 +30,10 @@ def create_check_up(payload):
 		doc = frappe.new_doc("Livestock Diagnosis")
 		doc.animal = d.get("animal")
 		doc.company = company_or_throw(d.get("company"))
-		doc.diagnosis_date = d.get("diagnosis_date") or today()
+		diagnosis_date, is_backdated = backdate.resolve(d, "diagnosis_date")
+		backdate.assert_allowed(is_backdated)
+		doc.diagnosis_date = diagnosis_date
+		backdate.stamp(doc, is_backdated)
 		doc.operator = employee_or_throw(d.get("operator"))
 		doc.reason_for_check = d.get("reason_for_check")
 		doc.appearance = d.get("appearance") or None

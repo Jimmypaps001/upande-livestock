@@ -4,6 +4,7 @@ import frappe
 from frappe import _
 from frappe.utils import flt, today
 
+from upande_livestock.serverscripts.common import backdate
 from upande_livestock.serverscripts.common.company import company_or_throw
 from upande_livestock.serverscripts.common.employee import current_employee
 from upande_livestock.serverscripts.common.envelope import as_dict, guard, run
@@ -28,7 +29,10 @@ def create_health_case(payload):
 		doc = frappe.new_doc("Livestock Health Case")
 		doc.animal = d.get("animal")
 		doc.company = company_or_throw(d.get("company"))
-		doc.opened_date = d.get("opened_date") or today()
+		opened_date, is_backdated = backdate.resolve(d, "opened_date")
+		backdate.assert_allowed(is_backdated)
+		doc.opened_date = opened_date
+		backdate.stamp(doc, is_backdated)
 		doc.opened_by = d.get("opened_by") or current_employee()
 		doc.case_status = d.get("case_status") or "Open"
 		doc.presenting_symptoms = d.get("presenting_symptoms")

@@ -2,8 +2,9 @@
 
 import frappe
 from frappe import _
-from frappe.utils import flt, today
+from frappe.utils import flt
 
+from upande_livestock.serverscripts.common import backdate
 from upande_livestock.serverscripts.common.company import company_or_throw
 from upande_livestock.serverscripts.common.employee import current_employee
 from upande_livestock.serverscripts.common.envelope import as_dict, guard, run
@@ -28,7 +29,10 @@ def create_weight_record(payload):
 		doc = frappe.new_doc("Livestock Weight Record")
 		doc.animal = d.get("animal")
 		doc.company = company_or_throw(d.get("company"))
-		doc.weight_date = d.get("weight_date") or today()
+		weight_date, is_backdated = backdate.resolve(d, "weight_date")
+		backdate.assert_allowed(is_backdated)
+		doc.weight_date = weight_date
+		backdate.stamp(doc, is_backdated)
 		doc.measured_by = d.get("measured_by") or current_employee()
 		doc.method = d.get("method") or None
 		doc.weight_kg = weight
