@@ -22,6 +22,7 @@ def _a_feedable_herd():
 
 class TestBackdatedFeeding(IntegrationTestCase):
 	def setUp(self):
+		self.addCleanup(_set_window, 0)
 		_set_window(1)
 		self.herd = _a_feedable_herd()
 		if not self.herd:
