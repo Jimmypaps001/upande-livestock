@@ -20,6 +20,7 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 
+from upande_livestock.serverscripts.common import backdate
 from upande_livestock.serverscripts.common.animal import retire_animal
 from upande_livestock.serverscripts.disposal.scrap_livestock_asset import _scrap_livestock_asset
 from upande_livestock.serverscripts.disposal.sell_livestock_asset import _sell_livestock_asset
@@ -28,6 +29,14 @@ SALE_TYPES = ("Sold",)
 
 
 class LivestockDisposal(Document):
+	def validate(self):
+		# custom_is_backdated is read_only on the form only; a REST client can set it
+		# alongside a date that is not in the past and collect the guard exemption and
+		# the stock suppression it buys. Clear a claim the date does not support —
+		# the flag stays stored, never derived, so this only ever unsets a false one.
+		backdate.assert_not_future(self.disposal_date, "Disposal Date")
+		backdate.sanitise(self, "disposal_date")
+
 	def on_submit(self):
 		self.post_asset_disposal()
 		retire_animal(self.animal, self.disposal_type)
@@ -41,6 +50,25 @@ class LivestockDisposal(Document):
 		record and retire the animal. customer/sale_price stay optional fields —
 		see livestock_disposal.json — with no mandatory_depends_on.
 		"""
+		# A backdated disposal records that the animal left and retires it, but posts
+		# no money. _sell_livestock_asset raises a Sales Invoice and
+		# _scrap_livestock_asset a write-off Journal Entry, both against a real ledger
+		# — and neither is what the operator agreed to under the backdating banner,
+		# which says in as many words that stocks are not being affected. The animal
+		# is still retired by on_submit(); only the postings wait.
+		#
+		# A later reconciliation finds them with
+		#     custom_is_backdated = 1 AND sales_invoice IS NULL AND writeoff_journal_entry IS NULL
+		# — Livestock Disposal has no dedicated "unposted" flag either, and those two
+		# link fields are filled by nothing but the postings skipped here.
+		if self.get("custom_is_backdated"):
+			frappe.msgprint(
+				_("Backdated: the animal was retired, but no asset sale or write-off was posted."),
+				alert=True,
+				indicator="orange",
+			)
+			return
+
 		if self.disposal_type in SALE_TYPES and not (self.customer and self.sale_price):
 			frappe.msgprint(
 				_("No Customer or sale price set, so the asset sale was not posted."),

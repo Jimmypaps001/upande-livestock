@@ -166,3 +166,68 @@ class TestManufactureConcentrateStillChecksStock(IntegrationTestCase):
 			_engine.manufacture_concentrate(self.item_code, qty=10**9)
 		self.assertIn("Not enough stock", str(caught.exception))
 		self.assertEqual(frappe.db.count("Work Order"), before)
+
+
+class TestBackdatedFeedingNeedsTheWindow(IntegrationTestCase):
+	"""Feeding was the one backdated write the window did not gate.
+
+	Every other backdated path calls `backdate.assert_allowed`, so with the
+	switch off — the default — a weight record dated last month is refused. No
+	feeding path called it at all, so the same closed switch let `manual_feed`
+	and `manufacture_feed` post a Work Order and four Stock Entries against a
+	month-old date. Feeding is the one backdated write that still MOVES stock,
+	which makes it the last one that should have been ungated.
+
+	The window is forced CLOSED here — the opposite of TestBackdatedFeeding
+	above, which opens it.
+	"""
+
+	def setUp(self):
+		self.addCleanup(_set_window, 0)
+		_set_window(0)
+		self.herd = _a_feedable_herd()
+		if not self.herd:
+			self.skipTest("no herd on kaitet.local can currently be fed")
+		self.employee = frappe.db.get_value("Employee", {"status": "Active"}, "name")
+		if not self.employee:
+			self.skipTest("no active Employee on this site")
+		self.addCleanup(frappe.db.rollback)
+
+	def test_a_backdated_run_is_refused_while_the_window_is_closed(self):
+		before = frappe.db.count("Work Order")
+		with self.assertRaises(frappe.ValidationError) as caught:
+			_engine.manufacture_herd_feed(
+				self.herd, employee=self.employee, portion=0.05, posting_date=add_days(today(), -1)
+			)
+		self.assertIn("Backdating is closed", str(caught.exception))
+		self.assertEqual(frappe.db.count("Work Order"), before, "nothing may post behind the refusal")
+
+	def test_a_backdated_issue_is_refused_too(self):
+		"""feed_herd is the other door into a dated Stock Entry."""
+		with self.assertRaises(frappe.ValidationError) as caught:
+			_engine.feed_herd(self.herd, 1, employee=self.employee, posting_date=add_days(today(), -1))
+		self.assertIn("Backdating is closed", str(caught.exception))
+
+	def test_todays_run_is_untouched_by_the_closed_window(self):
+		"""The control. A closed window must not stop normal feeding — that is
+		the whole distinction between a gate and an outage."""
+		res = _engine.manufacture_herd_feed(
+			self.herd, employee=self.employee, portion=0.05, posting_date=today()
+		)
+		self.assertTrue(res["issue_stock_entry"])
+
+	def test_a_future_dated_run_is_refused_whatever_the_window_says(self):
+		"""backdate.resolve deliberately does not call a forward date backdated,
+		so the window would never have caught this one. A feed run dated
+		tomorrow posted real Stock Entries on a day that has not happened."""
+		for window in (0, 1):
+			with self.subTest(window=window):
+				_set_window(window)
+				with self.assertRaises(frappe.ValidationError) as caught:
+					_engine.manufacture_herd_feed(
+						self.herd,
+						employee=self.employee,
+						portion=0.05,
+						posting_date=add_days(today(), 1),
+					)
+				self.assertIn("cannot be in the future", str(caught.exception))

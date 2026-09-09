@@ -13,6 +13,8 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import date_diff, flt, getdate, today
 
+from upande_livestock.serverscripts.common import backdate
+
 
 class LivestockWeightRecord(Document):
 	def validate(self):
@@ -21,6 +23,12 @@ class LivestockWeightRecord(Document):
 
 		if getdate(self.weight_date) > getdate(today()):
 			frappe.throw(_("Weight Date cannot be in the future."))
+
+		# custom_is_backdated is read_only on the form only; a REST client can set it
+		# alongside a date that is not in the past and collect the guard exemption and
+		# the stock suppression it buys. Clear a claim the date does not support —
+		# the flag stays stored, never derived, so this only ever unsets a false one.
+		backdate.sanitise(self, "weight_date")
 
 		self.set_previous_weight()
 

@@ -10,6 +10,14 @@ from upande_livestock.serverscripts.common.event_link import cancel_event_for, s
 
 
 class LivestockHealthCase(Document):
+	def validate(self):
+		# custom_is_backdated is read_only on the form only; a REST client can set it
+		# alongside a date that is not in the past and collect the guard exemption and
+		# the stock suppression it buys. Clear a claim the date does not support —
+		# the flag stays stored, never derived, so this only ever unsets a false one.
+		backdate.assert_not_future(self.opened_date, "Opened Date")
+		backdate.sanitise(self, "opened_date")
+
 	def on_submit(self):
 		sync_event_for(self, "Health Case")
 		self.post_drug_issue()

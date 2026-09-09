@@ -181,3 +181,67 @@ class TestTunedBomUom(IntegrationTestCase):
 		"""The passthrough path must stay green with the fix in place — an
 		unmodified recipe still creates nothing."""
 		self.assertEqual(tuned_bom(self.herd, self.lines), self.base.name)
+
+
+class TestTunedBomBatchSize(IntegrationTestCase):
+	"""Reuse must match on BOM.quantity too, not only on the lines.
+
+	`_engine.manufacture_herd_feed` reads `per_head = flt(bom.quantity)` and
+	multiplies the whole run by it. A non-default BOM for the same item with
+	byte-identical lines but `quantity = 100` was therefore a valid match for a
+	tune of a `quantity = 1` herd BOM — and reusing it scaled the run a
+	hundredfold, silently, with no shortage warning until four Stock Entries had
+	already been sized from it.
+	"""
+
+	def setUp(self):
+		self.herd = _a_herd()
+		self.base = frappe.get_doc("BOM", frappe.db.get_value("Herds", self.herd, "bom"))
+		self.lines = [{"item_code": row.item_code, "qty": flt(row.qty)} for row in self.base.items]
+		self.lines[0]["qty"] = flt(self.lines[0]["qty"]) + 7
+
+	def tearDown(self):
+		frappe.db.rollback()
+
+	def _decoy_at(self, quantity):
+		"""A submitted, active, non-default BOM carrying exactly the tune we are
+		about to ask for, but built at a different batch size."""
+		doc = frappe.copy_doc(self.base)
+		doc.is_active = 1
+		doc.is_default = 0
+		doc.quantity = quantity
+		by_item = {row.item_code: row for row in self.base.items}
+		doc.set("items", [])
+		for row in self.lines:
+			base_row = by_item[row["item_code"]]
+			doc.append(
+				"items",
+				{
+					"item_code": row["item_code"],
+					"item_name": base_row.item_name,
+					"qty": row["qty"],
+					"uom": base_row.uom,
+					"stock_uom": base_row.stock_uom,
+					"conversion_factor": base_row.conversion_factor,
+				},
+			)
+		doc.insert(ignore_permissions=True)
+		doc.submit()
+		return doc
+
+	def test_a_matching_tune_at_another_batch_size_is_not_reused(self):
+		decoy = self._decoy_at(flt(self.base.quantity) + 99)
+		name = tuned_bom(self.herd, self.lines)
+		self.assertNotEqual(
+			name,
+			decoy.name,
+			"a BOM with the same lines but a different batch size scales the run by "
+			"quantity, so it is not an equivalent recipe",
+		)
+		self.assertEqual(flt(frappe.db.get_value("BOM", name, "quantity")), flt(self.base.quantity))
+
+	def test_a_matching_tune_at_the_same_batch_size_is_still_reused(self):
+		"""The control — the guard must not defeat reuse, which is the whole
+		reason _existing_match exists."""
+		decoy = self._decoy_at(flt(self.base.quantity))
+		self.assertEqual(tuned_bom(self.herd, self.lines), decoy.name)

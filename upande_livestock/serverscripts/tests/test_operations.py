@@ -109,6 +109,32 @@ def _suspend_sex_routing(case):
 	case.addCleanup(restore)
 
 
+def _restore_backdating_window():
+	"""Close the backdating window and make it stick.
+
+	`frappe.db.set_single_value` alone is inside the test transaction; nothing
+	commits after the last cleanup, so the close was discarded while an earlier
+	`_purge` had already committed the OPEN state. Commit, then drop the Singles
+	cache so a later module in the same run reads the closed value.
+	"""
+	frappe.db.set_single_value("Livestock Settings", "custom_backdating_open", 0)
+	frappe.db.commit()
+	frappe.clear_cache(doctype="Livestock Settings")
+
+
+def _open_backdating_window(case):
+	"""Open the window for a case that records past-dated events, and close it
+	again — for real — when the case is done.
+
+	Since the backdating ruling, a past-dated write is REFUSED through every
+	path while the window is shut, so any test whose fixture is dated in the
+	past needs this. Registered as the first cleanup so it runs last, after the
+	`_purge` helpers that commit.
+	"""
+	case.addCleanup(_restore_backdating_window)
+	frappe.db.set_single_value("Livestock Settings", "custom_backdating_open", 1)
+
+
 def _assert_ok(case, res, what):
 	case.assertTrue(res.get("ok"), f"{what} failed: {res.get('error')}")
 	return res
@@ -126,10 +152,14 @@ class TestEventDateFallback(IntegrationTestCase):
 	"""
 
 	def setUp(self):
-		frappe.db.set_single_value("Livestock Settings", "custom_backdating_open", 1)
-		self.addCleanup(
-			frappe.db.set_single_value, "Livestock Settings", "custom_backdating_open", 0
-		)
+		# The restore has to COMMIT. addCleanup is LIFO, so this one runs last —
+		# after _purge below, which commits — and an uncommitted set_single_value
+		# at the very end of the process is simply rolled back. That is how a full
+		# `run-tests --app` run kept leaving custom_backdating_open = 1 on
+		# kaitet.local, disabling the age/interval/duplicate guards site-wide for
+		# every backdated record until someone noticed. Registered first so it
+		# runs even if a later setUp statement raises.
+		_open_backdating_window(self)
 		self.cow = _make_cow("ZZ OPS DATE COW")
 		self.addCleanup(_purge, "Animal", self.cow.name)
 		self.addCleanup(_purge_events_for, self.cow.name)

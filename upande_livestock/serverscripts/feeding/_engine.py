@@ -526,7 +526,15 @@ def manufacture_herd_feed(
 	# thing to be told about. The operator is then resolved before anything
 	# posts: finding that out afterwards would leave a manufactured batch with
 	# no way to move it out, a half-done state that reads as feed in the store.
+	backdate.assert_not_future(posting_date, _("Date fed"))
 	if posting_date and getdate(posting_date) < getdate(today()):
+		# Feeding is the one backdated write that still MOVES stock — a Work Order
+		# and four Stock Entries — so it is the one that most needs the window, and
+		# it was the one path that never asked. With the switch off (the default) a
+		# backdated weight record was refused while a month-old feed run posted.
+		# `assert_allowed(True)` rather than a resolved flag: reaching here already
+		# means the date is in the past.
+		backdate.assert_allowed(True)
 		# Deferred import — see the note by the top-level imports: _availability
 		# imports resolve_requirement from this module, so importing it there
 		# would be circular.
@@ -615,6 +623,9 @@ def feed_herd(herd, qty, employee=None, posting_date=None):
 	qty = flt(qty)
 	if qty <= 0:
 		frappe.throw("Enter a quantity greater than zero.")
+	backdate.assert_not_future(posting_date, _("Date fed"))
+	if posting_date and getdate(posting_date) < getdate(today()):
+		backdate.assert_allowed(True)
 	herd_doc, bom, heads = _herd_bom(herd)
 	return _issue_feed(herd, bom, qty, _operator_or_throw(employee), posting_date=posting_date)
 

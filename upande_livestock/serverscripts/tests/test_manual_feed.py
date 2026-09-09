@@ -89,3 +89,23 @@ class TestManualFeed(IntegrationTestCase):
 			str(frappe.db.get_value("Stock Entry", res["issue_stock_entry"], "posting_date")),
 			today(),
 		)
+
+	def test_a_fractional_head_count_is_refused(self):
+		"""The desk sent 2.7 and int() quietly fed 2 — a tenth of the herd's
+		ration missing, with nothing on screen to say so. The handset already
+		refused a fraction; the server now agrees with it, so REST and both
+		clients answer the same way."""
+		res = manual_feed(
+			{"herd": self.herd, "lines": self.lines, "heads": 2.7, "employee": self.employee}
+		)
+		self.assertIn("error", res)
+		self.assertIn("whole number", res["error"])
+
+	def test_a_whole_head_count_sent_as_a_float_is_still_accepted(self):
+		"""JSON has one number type: a form sending 2 may put 2.0 on the wire.
+		That is a whole animal count, and refusing it would break every client."""
+		res = manual_feed(
+			{"herd": self.herd, "lines": self.lines, "heads": 2.0, "employee": self.employee}
+		)
+		self.assertNotIn("error", res, res.get("error"))
+		self.assertEqual(res["heads"], 2)

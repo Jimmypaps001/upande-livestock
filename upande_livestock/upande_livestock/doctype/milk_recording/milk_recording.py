@@ -5,6 +5,8 @@ import frappe
 from frappe.model.document import Document
 from frappe.utils import flt
 
+from upande_livestock.serverscripts.common import backdate
+
 
 def _item_account(item_code, company, fieldname):
 	"""Resolve an item's account the way Frappe 16 does: Item Defaults, then the
@@ -54,12 +56,41 @@ class MilkRecording(Document):
 		if self.get("discard_reason") == "Other" and not self.get("discard_reason_notes"):
 			frappe.throw("Describe the reason for the discard.")
 
+		# custom_is_backdated is read_only on the form only; a REST client can set it
+		# alongside a date that is not in the past and collect the guard exemption and
+		# the stock suppression it buys. Clear a claim the date does not support —
+		# the flag stays stored, never derived, so this only ever unsets a false one.
+		backdate.assert_not_future(self.recording_date, "Recording Date")
+		backdate.sanitise(self, "recording_date")
+
 	def on_submit(self):
 		"""Post the milk into stock (+ a best-effort revenue Journal Entry).
 
 		Ported from the "Milk Recording After Submit - Stock Entry" Server Script.
 		Item / warehouses / stock-entry-type / accounts all come from Livestock
-		Settings or this record — no hardcoded company or warehouse."""
+		Settings or this record — no hardcoded company or warehouse.
+
+		A BACKDATED RECORDING POSTS NOTHING. Loading three months of milk notebooks
+		under a banner that reads "You are not affecting stocks" used to add three
+		months of production to *today's* milk balance, because nothing here asked
+		whether the record was historical — and the two postings did not even agree
+		with each other about the day, since the Stock Entry set `posting_date`
+		without `set_posting_time`, which ERPNext then overwrote with now, while the
+		Journal Entry kept `recording_date`. The yield, the discard and the revenue
+		are all still recorded on the document; a later reconciliation finds the
+		work left to do with
+
+		    custom_is_backdated = 1 AND stock_entry IS NULL
+
+		Milk Recording carries no dedicated "unposted" flag of its own (Livestock
+		Event's `custom_unposted_drugs` has no twin here), and inventing one is
+		schema this fix pass is not authorised to add — the pair above identifies
+		the same set exactly, because the only route that fills `stock_entry` is the
+		one skipped below.
+		"""
+		if self.get("custom_is_backdated"):
+			return
+
 		company = frappe.db.get_single_value("Livestock Settings", "custom_default_company")
 		milk_item = frappe.db.get_single_value("Livestock Settings", "custom_milk_item")
 		target_wh = self.target_warehouse or frappe.db.get_single_value(
@@ -94,6 +125,11 @@ class MilkRecording(Document):
 		se = frappe.new_doc("Stock Entry")
 		se.stock_entry_type = se_type
 		se.company = company
+		# Without set_posting_time ERPNext replaces both of the next two lines with
+		# "now" on insert, so the comment above was describing an intention the code
+		# did not carry out: two milkings on one day both landed at the submit time,
+		# and a recording entered a day late landed on the wrong day entirely.
+		se.set_posting_time = 1
 		se.posting_date = self.recording_date
 		se.posting_time = self.milking_time or "00:00:00"
 		se.custom_milking_time = self.milking_time

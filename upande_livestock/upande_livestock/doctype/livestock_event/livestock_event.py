@@ -353,6 +353,19 @@ class LivestockEvent(Document):
 
 	def validate(self):
 		# ============================================================
+		# THE DATE, BEFORE ANYTHING TRUSTS IT
+		# ============================================================
+		# custom_is_backdated is read_only, which is a desk affordance and nothing
+		# more: a client with create rights can POST it set to 1 alongside today's
+		# event_date over REST and collect both things the flag buys — the guard
+		# exemption at guards.check_guards() and the drug/semen stock suppression in
+		# post_stock_issue() below, which does not consult the backdating window at
+		# all. Clear a claim the date does not support. The flag is still STORED,
+		# never derived: this only unsets one that is false.
+		backdate.assert_not_future(self.event_date, _("Event Date"))
+		backdate.sanitise(self, "event_date")
+
+		# ============================================================
 		# CONDITIONAL MANDATORY: OPERATOR
 		# ============================================================
 		# operator carries mandatory_depends_on: "eval:!doc.reference_doctype"

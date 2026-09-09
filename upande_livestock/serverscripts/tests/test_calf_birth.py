@@ -22,7 +22,12 @@ from upande_livestock.serverscripts.common import herd_movement as hm
 from upande_livestock.serverscripts.breeding.create_service_event import create_service_event
 from upande_livestock.serverscripts.breeding.record_calf_births import record_calf_births
 from upande_livestock.serverscripts.common.animal import resolve_calf_herd
-from upande_livestock.serverscripts.tests.test_operations import _make_cow, _purge, _purge_events_for
+from upande_livestock.serverscripts.tests.test_operations import (
+	_make_cow,
+	_open_backdating_window,
+	_purge,
+	_purge_events_for,
+)
 
 
 def _employee():
@@ -59,6 +64,11 @@ class TestBirthOutcomes(IntegrationTestCase):
 	"""One calving, three calves, three different outcomes."""
 
 	def setUp(self):
+		# The chain below is dated 285 days back, which since the backdating
+		# ruling is a backdated write and is refused outright while the window is
+		# shut. It used to pass only because another module leaked the window
+		# open; with that leak fixed this class has to open it itself.
+		_open_backdating_window(self)
 		self.employee = _employee()
 		if not self.employee:
 			raise unittest.SkipTest("no active Employee on this site")

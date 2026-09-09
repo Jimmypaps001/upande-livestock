@@ -46,11 +46,26 @@ def _clean(lines):
 	return [{"item_code": item, "qty": totals[item]} for item in order]
 
 
-def _existing_match(item, signature):
-	"""A submitted non-default BOM for `item` whose lines match, or None."""
+def _existing_match(item, signature, quantity):
+	"""A submitted non-default BOM for `item` whose lines AND batch size match.
+
+	`quantity` is part of the identity, not decoration. `_engine` reads
+	`per_head = flt(bom.quantity)` and scales the whole run by it, so two BOMs
+	with byte-identical lines and quantities of 1 and 100 make runs that differ
+	by a factor of a hundred. Matching on the lines alone would hand back the
+	wrong one of those — silently, and only for a farm that happens to keep a
+	batch-sized BOM for the same item, which is exactly what the BOM list on this
+	site already looks like.
+	"""
 	for row in frappe.get_all(
 		"BOM",
-		filters={"item": item, "docstatus": 1, "is_default": 0, "is_active": 1},
+		filters={
+			"item": item,
+			"docstatus": 1,
+			"is_default": 0,
+			"is_active": 1,
+			"quantity": flt(quantity),
+		},
 		fields=["name"],
 		order_by="creation desc",
 	):
@@ -81,7 +96,9 @@ def tuned_bom(herd, lines):
 	if _signature([{"item_code": r.item_code, "qty": r.qty} for r in base.items]) == signature:
 		return base.name
 
-	found = _existing_match(base.item, signature)
+	# The tuned BOM is a copy of the base, so it inherits the base's batch size;
+	# only a BOM with the SAME batch size is an equivalent of what we would build.
+	found = _existing_match(base.item, signature, base.quantity)
 	if found:
 		return found
 

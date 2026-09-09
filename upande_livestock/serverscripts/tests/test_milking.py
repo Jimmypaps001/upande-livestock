@@ -17,6 +17,7 @@ these pin it, and pin that a supplied time still wins.
 
 import frappe
 from frappe.tests import IntegrationTestCase
+from frappe.utils import today
 
 from upande_livestock.serverscripts.milking.create_milk_recording import create_milk_recording
 
@@ -43,7 +44,12 @@ class TestMilkRecordingTime(IntegrationTestCase):
 	def _record(self, **extra):
 		return create_milk_recording({
 			"herd": self.herd,
-			"recording_date": "2026-09-03",
+			# today(), not a fixed past date: these tests are about milking_time,
+			# and a hardcoded past date makes them backdated writes, which the
+			# closed window refuses. They used to pass only because another
+			# module leaked the window open — a dependency on a global setting
+			# that has nothing to do with what is being tested.
+			"recording_date": today(),
 			"total_yield_kg": 10.0,
 			"remarks": self.MARKER,
 			**extra,
