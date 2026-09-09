@@ -8,6 +8,12 @@ Relying on ERPNext's own NegativeStockError instead was tried and is not good
 enough for this screen: it names the first item it trips over, gives no date, and
 by the time it fires a Work Order and a transfer have already been written and
 have to be rolled back. This runs first and writes nothing.
+
+`resolve_requirement` reloads the BOM document and walks the candidate
+warehouses — none of that varies by day, only the ledger balance does. So every
+function below resolves the requirement AT MOST ONCE and then reuses the
+resolved lines for however many days it needs to price; only `_short_lines_on`
+runs per day, and all it does per day is `get_stock_balance`.
 """
 
 import frappe
@@ -24,9 +30,14 @@ from upande_livestock.serverscripts.feeding._engine import resolve_requirement
 SEARCH_DAYS = 90
 
 
-def shortfalls_on(bom_no, total_qty, posting_date):
-	"""Rows the stores could not cover on `posting_date`. Read-only."""
-	_bom, lines = resolve_requirement(bom_no, total_qty)
+def _short_lines_on(lines, posting_date):
+	"""Shortfall rows for already-resolved `lines` on `posting_date`.
+
+	The only day-dependent work is the `get_stock_balance` read per line —
+	`lines` itself (required qty, source warehouse, item, uom) does not change
+	from one day to the next, so callers resolve it once and pass it in here
+	however many times they need to price a day.
+	"""
 	day = getdate(posting_date)
 	short = []
 	for line in lines:
@@ -52,35 +63,50 @@ def shortfalls_on(bom_no, total_qty, posting_date):
 	return short
 
 
-def earliest_workable_date(bom_no, total_qty, from_date, to_date):
-	"""The first day in the range on which every line is covered, or None.
+def shortfalls_on(bom_no, total_qty, posting_date):
+	"""Rows the stores could not cover on `posting_date`. Read-only."""
+	_bom, lines = resolve_requirement(bom_no, total_qty)
+	return _short_lines_on(lines, posting_date)
 
-	Walks forward rather than back: the answer a user needs is the earliest day
-	that works, and stock generally accumulates, so the first hit is the answer.
-	"""
+
+def _earliest_workable_date_for_lines(lines, from_date, to_date):
+	"""Same walk as `earliest_workable_date`, over already-resolved `lines`."""
 	day = getdate(from_date)
 	last = getdate(to_date)
 	while day <= last:
-		if not shortfalls_on(bom_no, total_qty, day):
+		if not _short_lines_on(lines, day):
 			return str(day)
 		day = getdate(add_days(day, 1))
 	return None
 
 
+def earliest_workable_date(bom_no, total_qty, from_date, to_date):
+	"""The first day in the range on which every line is covered, or None.
+
+	Walks forward rather than back: the answer a user needs is the earliest day
+	that works, and stock generally accumulates, so the first hit is the answer.
+	Resolves the requirement once, up front, then reprices each candidate day
+	against those same lines.
+	"""
+	_bom, lines = resolve_requirement(bom_no, total_qty)
+	return _earliest_workable_date_for_lines(lines, from_date, to_date)
+
+
 def assert_can_cover_on(bom_no, total_qty, posting_date):
 	"""Throw a message a farm worker can act on, or return silently."""
-	short = shortfalls_on(bom_no, total_qty, posting_date)
+	_bom, lines = resolve_requirement(bom_no, total_qty)
+	short = _short_lines_on(lines, posting_date)
 	if not short:
 		return
 
-	lines = "\n".join(
-		_("{0}: needed {1:,.2f} {2}, store held {3:,.2f}").format(
-			row["item_name"], row["required"], row["uom"], row["available"]
+	lines_msg = "\n".join(
+		_("{0}: needed {1:,.2f} {2}, store held {3:,.2f}, short {4:,.2f} {2}").format(
+			row["item_name"], row["required"], row["uom"], row["available"], row["short"]
 		)
 		for row in short
 	)
-	workable = earliest_workable_date(
-		bom_no, total_qty, posting_date, add_days(getdate(posting_date), SEARCH_DAYS)
+	workable = _earliest_workable_date_for_lines(
+		lines, posting_date, add_days(getdate(posting_date), SEARCH_DAYS)
 	)
 	when = (
 		_("Earliest date this run works: {0}.").format(workable)
@@ -89,7 +115,7 @@ def assert_can_cover_on(bom_no, total_qty, posting_date):
 	)
 	frappe.throw(
 		_("This feed run cannot post on {0}.\n\n{1}\n\n{2}\n\nNothing was posted.").format(
-			getdate(posting_date), lines, when
+			getdate(posting_date), lines_msg, when
 		),
 		title=_("Not enough stock on that day"),
 	)

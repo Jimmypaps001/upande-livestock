@@ -27,13 +27,25 @@ class TestFeedAvailability(IntegrationTestCase):
 
 	def test_today_matches_the_engine(self):
 		"""Today's answer must agree with resolve_requirement, which reads Bin.
-		Two different answers for the same day is the bug this guards."""
+		Two different answers for the same day is the bug this guards. A quantity
+		so large today's stock cannot possibly cover it forces both sides to
+		report shortfalls first — an empty-vs-empty match would prove nothing
+		about agreement."""
 		from upande_livestock.serverscripts.feeding._engine import resolve_requirement
 
-		_, lines = resolve_requirement(self.bom, 100)
-		engine_short = {ln["item_code"] for ln in lines if ln["short_qty"] > 0}
-		ours = {r["item_code"] for r in _availability.shortfalls_on(self.bom, 100, today())}
+		huge_qty = 10 ** 9
+		_bom, huge_lines = resolve_requirement(self.bom, huge_qty)
+		engine_short = {ln["item_code"] for ln in huge_lines if ln["short_qty"] > 0}
+		self.assertTrue(engine_short, "expected the engine to be short on a run this large")
+		ours = {r["item_code"] for r in _availability.shortfalls_on(self.bom, huge_qty, today())}
 		self.assertEqual(ours, engine_short)
+
+		# Also check an ordinary quantity, in case the two paths diverge only
+		# at small scale.
+		_bom, lines = resolve_requirement(self.bom, 100)
+		engine_short_100 = {ln["item_code"] for ln in lines if ln["short_qty"] > 0}
+		ours_100 = {r["item_code"] for r in _availability.shortfalls_on(self.bom, 100, today())}
+		self.assertEqual(ours_100, engine_short_100)
 
 	def test_assert_names_every_short_item_and_a_date(self):
 		with self.assertRaises(frappe.ValidationError) as caught:
