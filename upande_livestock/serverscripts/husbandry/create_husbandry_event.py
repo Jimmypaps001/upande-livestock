@@ -6,6 +6,7 @@ from frappe import _
 
 from upande_livestock.serverscripts.common.envelope import as_dict, guard, run
 from upande_livestock.serverscripts.common.events import new_livestock_event
+from upande_livestock.serverscripts.common import backdate
 from upande_livestock.serverscripts.common import stock as livestock_stock
 from upande_livestock.serverscripts.husbandry._shared import HUSBANDRY_TYPES, _clean_drug_rows, _husbandry_targets, _type_consumes_drugs
 
@@ -45,8 +46,14 @@ def create_husbandry_event(payload):
 		# storekeeper can reconcile. The events are then stamped with that entry,
 		# and LivestockEvent.post_stock_issue's `self.stock_entry` guard stops each
 		# one posting again.
+		#
+		# A backdated round posts nothing. The drug rows are still written onto
+		# every event and flagged, so the quantities survive for a reconciliation
+		# pass, but the store's balance is not rewritten months after the fact.
+		_date, is_backdated = backdate.resolve(d)
+		unposted = backdate.suppresses_stock(event_type, is_backdated)
 		stock_entry = None
-		if drugs:
+		if drugs and not unposted:
 			rows = [
 				{
 					"item_code": drug["item_code"],
@@ -73,6 +80,8 @@ def create_husbandry_event(payload):
 				doc.append("drug_issues", dict(drug, stock_entry_ref=stock_entry))
 			if stock_entry:
 				doc.stock_entry = stock_entry
+			if unposted and drugs:
+				doc.custom_unposted_drugs = 1
 			doc.insert()
 			doc.submit()
 			created.append(doc.name)

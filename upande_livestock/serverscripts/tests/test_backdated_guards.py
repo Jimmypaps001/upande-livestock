@@ -17,6 +17,7 @@ class TestBackdatedGuards(IntegrationTestCase):
 	must be refused for a live entry and allowed for a historical one."""
 
 	def setUp(self):
+		self.addCleanup(_set_window, 0)
 		_set_window(0)
 		tag = frappe.generate_hash(length=10)
 		self.animal = frappe.get_doc(
@@ -30,10 +31,7 @@ class TestBackdatedGuards(IntegrationTestCase):
 			}
 		).insert(ignore_permissions=True)
 		self.operator = frappe.db.get_value("Employee", {"status": "Active"}, "name")
-
-	def tearDown(self):
-		_set_window(0)
-		frappe.db.rollback()
+		self.addCleanup(frappe.db.rollback)
 
 	def _event(self, event_date, backdated=0):
 		doc = frappe.get_doc(

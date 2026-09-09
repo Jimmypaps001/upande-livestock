@@ -4,6 +4,7 @@
 from frappe.model.document import Document
 from frappe.utils import flt, getdate, today
 
+from upande_livestock.serverscripts.common import backdate
 from upande_livestock.serverscripts.common import stock as livestock_stock
 from upande_livestock.serverscripts.common.event_link import cancel_event_for, sync_event_for
 
@@ -38,7 +39,15 @@ class LivestockHealthCase(Document):
 		single `drug_stock_entry` flag on the parent would let the first round
 		issue and silently swallow every round after it. Each row remembers its
 		own Stock Entry, and only rows without one are issued.
+
+		A backdated case records its treatments without moving stock: the rows
+		and their quantities stay on the case for a later reconciliation, but the
+		store's balance is not rewritten for a treatment given months ago.
 		"""
+		if self.get("custom_is_backdated"):
+			self.db_set("drug_stock_entry", None, update_modified=False)
+			return
+
 		warehouse = livestock_stock.drug_warehouse()
 		pending = [t for t in (self.treatments or []) if t.drug_item and not t.stock_entry_ref]
 		if not pending:

@@ -4,6 +4,7 @@
 from frappe.model.document import Document
 from frappe.utils import flt
 
+from upande_livestock.serverscripts.common import backdate
 from upande_livestock.serverscripts.common import stock as livestock_stock
 from upande_livestock.serverscripts.common.event_link import cancel_event_for, sync_event_for
 
@@ -27,6 +28,11 @@ class LivestockDiagnosis(Document):
 		so an amend cannot double-issue.
 		"""
 		if self.stock_entry:
+			return
+
+		# A backdated check-up records what was given without moving stock — see
+		# LivestockHealthCase.post_drug_issue for the same reasoning.
+		if self.get("custom_is_backdated"):
 			return
 
 		default_wh = livestock_stock.drug_warehouse()

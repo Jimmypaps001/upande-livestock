@@ -18,11 +18,9 @@ def _operator():
 
 class TestNewLivestockEventStamps(IntegrationTestCase):
 	def setUp(self):
+		self.addCleanup(_set_window, 0)
 		_set_window(1)
 		self.operator = _operator()
-
-	def tearDown(self):
-		_set_window(0)
 
 	def test_a_past_date_is_stamped(self):
 		past = add_days(today(), -45)

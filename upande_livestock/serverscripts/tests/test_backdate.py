@@ -45,8 +45,8 @@ class TestBackdateResolve(IntegrationTestCase):
 
 
 class TestBackdateWindow(IntegrationTestCase):
-	def tearDown(self):
-		_set_window(0)
+	def setUp(self):
+		self.addCleanup(_set_window, 0)
 
 	def test_window_reads_the_setting(self):
 		_set_window(1)

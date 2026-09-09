@@ -19,6 +19,7 @@ from frappe.model.document import Document
 from frappe.model.naming import make_autoname
 from frappe.utils import flt, getdate, nowdate
 
+from upande_livestock.serverscripts.common import backdate
 from upande_livestock.serverscripts.common import stock as livestock_stock
 
 from upande_livestock.serverscripts.common.animal import create_calf
@@ -1066,6 +1067,17 @@ class LivestockEvent(Document):
 		# live on the source document, which posts them itself. Without this the
 		# mirror would warn "recorded with no drugs issued" for every check-up.
 		if self.reference_doctype:
+			return
+
+		# A backdated event records what was consumed without moving it. The
+		# store's balance today is the result of what has actually been issued
+		# from it; rewriting it for a treatment given in March would make the
+		# shelf and the ledger disagree in the present to make them agree in the
+		# past. The rows stay on the document and the flag marks them, so a
+		# reconciliation can post them deliberately later.
+		if backdate.suppresses_stock(self, self.get("custom_is_backdated")):
+			if self.get("drug_issues") or self.get("semen_item"):
+				self.db_set("custom_unposted_drugs", 1, update_modified=False)
 			return
 
 		rows, what = [], None
