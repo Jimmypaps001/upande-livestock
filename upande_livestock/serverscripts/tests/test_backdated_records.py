@@ -7,18 +7,21 @@ Every event-shaped write (new_livestock_event) already stamps and is covered by
 test_backdated_events.py. These five — weight, milk recording, health case,
 check-up and disposal — build their own document directly rather than going
 through new_livestock_event, so each needed the same three lines added by hand:
-resolve, assert_allowed, stamp. This file only exercises weight and milk
-recording directly (the other three share the identical shape and are exercised
-for the guard/refusal behaviour in test_operations.py); it is here to catch a
-mis-wired stamp, not to re-prove the whole endpoint.
+resolve, assert_allowed, stamp. Each is asserted here on two points: the stamp
+itself, and that the document's own date field carries the past date given —
+the second catches a date key wired to the wrong field, which the stamp alone
+would not.
 """
 
 import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import add_days, add_months, today
 
-from upande_livestock.serverscripts.weights.create_weight_record import create_weight_record
+from upande_livestock.serverscripts.disposal.record_disposal import record_disposal
+from upande_livestock.serverscripts.health.create_check_up import create_check_up
+from upande_livestock.serverscripts.health.create_health_case import create_health_case
 from upande_livestock.serverscripts.milking.create_milk_recording import create_milk_recording
+from upande_livestock.serverscripts.weights.create_weight_record import create_weight_record
 
 
 def _set_window(value):
@@ -87,6 +90,51 @@ class TestBackdatedRecords(IntegrationTestCase):
 		self.assertNotIn("error", res, res.get("error"))
 		doc = frappe.get_doc("Milk Recording", res["name"])
 		self.assertEqual(doc.custom_is_backdated, 1)
+
+	def test_a_backdated_health_case_is_stamped(self):
+		past = add_days(today(), -12)
+		res = create_health_case(
+			{
+				"animal": self.animal.name,
+				"opened_date": past,
+				"presenting_symptoms": "Off feed, warm to touch",
+				"opened_by": self.operator,
+			}
+		)
+		self.assertNotIn("error", res, res.get("error"))
+		doc = frappe.get_doc("Livestock Health Case", res["name"])
+		self.assertEqual(doc.custom_is_backdated, 1)
+		self.assertEqual(str(doc.opened_date), past)
+
+	def test_a_backdated_check_up_is_stamped(self):
+		past = add_days(today(), -12)
+		res = create_check_up(
+			{
+				"animal": self.animal.name,
+				"diagnosis_date": past,
+				"action_taken": "Logged — monitor",
+				"operator": self.operator,
+			}
+		)
+		self.assertNotIn("error", res, res.get("error"))
+		doc = frappe.get_doc("Livestock Diagnosis", res["name"])
+		self.assertEqual(doc.custom_is_backdated, 1)
+		self.assertEqual(str(doc.diagnosis_date), past)
+
+	def test_a_backdated_disposal_is_stamped(self):
+		past = add_days(today(), -12)
+		res = record_disposal(
+			{
+				"animal": self.animal.name,
+				"disposal_date": past,
+				"disposal_type": "Died — Disease",
+				"reason_details": "test",
+			}
+		)
+		self.assertNotIn("error", res, res.get("error"))
+		doc = frappe.get_doc("Livestock Disposal", res["name"])
+		self.assertEqual(doc.custom_is_backdated, 1)
+		self.assertEqual(str(doc.disposal_date), past)
 
 	def test_a_backdated_record_is_refused_when_the_window_is_closed(self):
 		_set_window(0)
