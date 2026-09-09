@@ -56,7 +56,8 @@
   "follow_up_date",
   "related_case",
   "sb_amend",
-  "amended_from"
+  "amended_from",
+  "custom_is_backdated"
  ],
  "fields": [
   {
@@ -363,6 +364,15 @@
    "no_copy": 1,
    "options": "Livestock Diagnosis",
    "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "custom_is_backdated",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Backdated",
    "read_only": 1,
    "search_index": 1
   }

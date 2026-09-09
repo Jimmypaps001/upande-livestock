@@ -36,7 +36,8 @@
   "reason_details",
   "witness",
   "sb_amend",
-  "amended_from"
+  "amended_from",
+  "custom_is_backdated"
  ],
  "fields": [
   {
@@ -219,6 +220,15 @@
    "no_copy": 1,
    "options": "Sales Invoice",
    "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "custom_is_backdated",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Backdated",
+   "read_only": 1,
+   "search_index": 1
   }
  ],
  "grid_page_length": 50,

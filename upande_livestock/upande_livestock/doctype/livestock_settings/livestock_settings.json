@@ -89,7 +89,9 @@
   "steamer_herd",
   "steamer_days_from_heifers",
   "cb_steamers",
-  "steamer_days_from_lactation"
+  "steamer_days_from_lactation",
+  "sb_backdating",
+  "custom_backdating_open"
  ],
  "fields": [
   {
@@ -601,6 +603,18 @@
    "default": "60",
    "label": "Dry Days · arriving from Low Yield",
    "description": "A cow arrives with 2 months to calving."
+  },
+  {
+   "fieldname": "sb_backdating",
+   "fieldtype": "Section Break",
+   "label": "Backdating"
+  },
+  {
+   "default": "0",
+   "description": "While this is on, backdated records skip the age, interval and duplicate guards. Today's records are always guarded. Turn it off once the history load is finished.",
+   "fieldname": "custom_backdating_open",
+   "fieldtype": "Check",
+   "label": "Backdating Open"
   }
  ],
  "grid_page_length": 50,

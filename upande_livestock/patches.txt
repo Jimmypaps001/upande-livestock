@@ -39,3 +39,4 @@ upande_livestock.patches.relink_pregnancy_to_service
 # picker were closed to a user holding only those roles — which is what a farm
 # hand holds. Read only, and only for the two roles that run and plan the store.
 upande_livestock.patches.grant_livestock_item_read
+upande_livestock.patches.add_backdating_fields

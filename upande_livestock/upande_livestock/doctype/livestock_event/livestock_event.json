@@ -77,7 +77,10 @@
   "stock_entry",
   "tab_more",
   "sb_amended",
-  "amended_from"
+  "amended_from",
+  "custom_is_backdated",
+  "custom_unposted_drugs",
+  "custom_feed_mode"
  ],
  "fields": [
   {
@@ -523,6 +526,33 @@
    "label": "Stock Entry",
    "no_copy": 1,
    "options": "Stock Entry",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "custom_is_backdated",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Backdated",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "default": "0",
+   "depends_on": "eval:doc.custom_unposted_drugs",
+   "description": "Drug rows were recorded on this event but never issued from the store.",
+   "fieldname": "custom_unposted_drugs",
+   "fieldtype": "Check",
+   "label": "Drugs Not Issued",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "depends_on": "eval:doc.event_type=='Feeding'",
+   "fieldname": "custom_feed_mode",
+   "fieldtype": "Select",
+   "label": "Feed Mode",
+   "options": "\nSystem\nManual",
    "read_only": 1
   }
  ],
