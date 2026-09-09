@@ -68,6 +68,19 @@ STOCK_ENTRY_TYPES = {
 }
 FALLBACK_TYPE = "Material Issue"
 
+# None of vaccination, deworming, treatment or service carries a time of day —
+# only a Date field (LivestockEvent.event_date) — so a backdated issue has
+# nothing of its own to be stamped with. `set_posting_time = 1` with no
+# `posting_time` set is harmless today, since ERPNext fills the gap with "now",
+# but "now" on a day months in the past is not a real time either, and a
+# caller that ever runs this after midnight would post a past issue after a
+# future one dated the day before. 06:00 is the farm's own convention for
+# "when the day's stock work happens" — `_engine.FEED_RUN_TIME` uses the same
+# value for the same reason; it is not shared as a single constant because
+# importing it here would import `feeding._engine`, which already imports this
+# module, and that is circular.
+EVENT_POSTING_TIME = "06:00:00"
+
 
 def stock_entry_type_for(what):
 	"""The named type for this kind of issue, or the generic one if unknown.
@@ -190,6 +203,11 @@ def issue_items(rows, remarks, company=None, posting_date=None, employee=None, w
 	if posting_date:
 		se.set_posting_time = 1
 		se.posting_date = posting_date
+		if getdate(posting_date) < getdate(today()):
+			# See EVENT_POSTING_TIME. Only for a genuinely past date — a caller
+			# that passes today's date explicitly (as a live issue may) keeps
+			# stamping its real clock time, exactly as before.
+			se.posting_time = EVENT_POSTING_TIME
 	# See the module docstring: the PPE script requires exactly one employee here.
 	if se.meta.has_field("custom_employee"):
 		se.custom_employee = employee

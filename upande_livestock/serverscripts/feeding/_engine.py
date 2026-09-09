@@ -62,6 +62,28 @@ from upande_livestock.serverscripts.common import stock as livestock_stock
 
 DEFAULT_FEED_STORE = "Concentrate Mixing Store - KR"
 
+# The clock time a backdated feed run is stamped with. `posting_date` alone
+# means `set_posting_time = 1` with no `posting_time` set — harmless today,
+# because ERPNext still fills the gap with "now", but "now" is meaningless for
+# a run dated months ago, and a caller that ever passes a genuinely past date
+# with the clock past midnight would get a stamp that disagrees with the Work
+# Order it belongs to. 06:00 matches `planned_start_date` below, the farm's own
+# convention for when a feed run happens, so the Work Order and every Stock
+# Entry it produces agree on when the run was.
+FEED_RUN_TIME = "06:00:00"
+
+
+def _is_backdated(posting_date):
+	"""True only for a genuinely past date, never for today's.
+
+	`manufacture_herd_feed` is called with `posting_date=today()` for an
+	ordinary live run (see test_todays_run_is_untouched_by_the_closed_window),
+	not only `None` — so gating the explicit posting_time below on mere
+	truthiness would replace today's real clock time with 06:00 for that
+	call shape. Only a date earlier than today gets the fixed stamp.
+	"""
+	return bool(posting_date) and getdate(posting_date) < getdate(today())
+
 
 def _feed_store():
 	store = frappe.db.get_single_value("Livestock Settings", "custom_feed_wip_warehouse")
@@ -412,7 +434,7 @@ def _run_manufacture(
 	wo.use_multi_level_bom = 0
 	wo.skip_transfer = 0
 	if posting_date:
-		wo.planned_start_date = "{0} 06:00:00".format(posting_date)
+		wo.planned_start_date = "{0} {1}".format(posting_date, FEED_RUN_TIME)
 	if herd and wo.meta.has_field("custom_herd"):
 		wo.custom_herd = herd
 	if heads and wo.meta.has_field("custom_no_of_cows"):
@@ -428,6 +450,12 @@ def _run_manufacture(
 		if posting_date:
 			stock_entry.set_posting_time = 1
 			stock_entry.posting_date = posting_date
+			if _is_backdated(posting_date):
+				# See FEED_RUN_TIME: without this ERPNext fills the gap with "now",
+				# which would put the transfer/manufacture at a different clock
+				# time than the Work Order they belong to. Left alone for today's
+				# date so a live run keeps stamping its real clock time.
+				stock_entry.posting_time = FEED_RUN_TIME
 		return stock_entry
 
 	transfer = _dated(frappe.get_doc(make_stock_entry(wo.name, "Material Transfer for Manufacture", qty)))
@@ -645,6 +673,11 @@ def _issue_feed(herd, bom, qty, employee, posting_date=None, feed_mode="System")
 	if posting_date:
 		se.set_posting_time = 1
 		se.posting_date = posting_date
+		if _is_backdated(posting_date):
+			# See FEED_RUN_TIME: this issue belongs to the same run as the
+			# transfer and manufacture above it, so it takes the same clock
+			# time. Left alone for today's date, which keeps its real one.
+			se.posting_time = FEED_RUN_TIME
 	if se.meta.has_field("custom_employee"):
 		se.custom_employee = employee
 	if se.meta.has_field("custom_employee_data"):

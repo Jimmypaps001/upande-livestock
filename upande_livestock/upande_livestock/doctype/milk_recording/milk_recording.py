@@ -64,17 +64,33 @@ class MilkRecording(Document):
 		backdate.sanitise(self, "recording_date")
 
 	def on_submit(self):
+		"""Post the milk into stock (+ a best-effort revenue Journal Entry) — unless
+		this recording is backdated, in which case nothing posts. See
+		`post_stock_and_revenue` for what "post" means and why a backdated one
+		skips it.
+		"""
+		if self.get("custom_is_backdated"):
+			return
+		self.post_stock_and_revenue()
+
+	def post_stock_and_revenue(self):
 		"""Post the milk into stock (+ a best-effort revenue Journal Entry).
 
 		Ported from the "Milk Recording After Submit - Stock Entry" Server Script.
 		Item / warehouses / stock-entry-type / accounts all come from Livestock
 		Settings or this record — no hardcoded company or warehouse.
 
-		A BACKDATED RECORDING POSTS NOTHING. Loading three months of milk notebooks
-		under a banner that reads "You are not affecting stocks" used to add three
-		months of production to *today's* milk balance, because nothing here asked
-		whether the record was historical — and the two postings did not even agree
-		with each other about the day, since the Stock Entry set `posting_date`
+		Runs on `self.recording_date` / `self.milking_time`, never today's — which
+		is what lets it double as the replay path. `on_submit` calls this directly
+		for a live (non-backdated) recording; `serverscripts/milking/replay_deferred_milk.py`
+		calls it later, on the same document, for one that was backdated at submit
+		time and so skipped this the first time round.
+
+		A BACKDATED RECORDING POSTS NOTHING AT SUBMIT TIME. Loading three months of
+		milk notebooks under a banner that reads "You are not affecting stocks" used
+		to add three months of production to *today's* milk balance, because nothing
+		asked whether the record was historical — and the two postings did not even
+		agree with each other about the day, since the Stock Entry set `posting_date`
 		without `set_posting_time`, which ERPNext then overwrote with now, while the
 		Journal Entry kept `recording_date`. The yield, the discard and the revenue
 		are all still recorded on the document; a later reconciliation finds the
@@ -85,12 +101,9 @@ class MilkRecording(Document):
 		Milk Recording carries no dedicated "unposted" flag of its own (Livestock
 		Event's `custom_unposted_drugs` has no twin here), and inventing one is
 		schema this fix pass is not authorised to add — the pair above identifies
-		the same set exactly, because the only route that fills `stock_entry` is the
-		one skipped below.
+		the same set exactly, because the only route that fills `stock_entry` is
+		this one, whether it runs from `on_submit` or from the replay endpoint.
 		"""
-		if self.get("custom_is_backdated"):
-			return
-
 		company = frappe.db.get_single_value("Livestock Settings", "custom_default_company")
 		milk_item = frappe.db.get_single_value("Livestock Settings", "custom_milk_item")
 		target_wh = self.target_warehouse or frappe.db.get_single_value(
