@@ -360,7 +360,7 @@ def _run_manufacture(
 	heads=None,
 	allow_shortage=False,
 	posting_date=None,
-	already_verified=True,
+	already_verified=False,
 ):
 	"""Work Order -> Material Transfer for Manufacture -> Manufacture.
 

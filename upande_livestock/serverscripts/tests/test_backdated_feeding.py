@@ -131,3 +131,37 @@ class TestBackdatedFeeding(IntegrationTestCase):
 				posting_date=add_days(today(), -1),
 			)
 		self.assertTrue(res["issue_stock_entry"])
+
+
+class TestManufactureConcentrateStillChecksStock(IntegrationTestCase):
+	"""`_run_manufacture`'s `already_verified` flag exists so a caller that has
+	already judged a run does not get judged again — `manufacture_herd_feed`
+	sets it. `manufacture_concentrate` passes no such flag and has no check of
+	its own, so it depends entirely on `_run_manufacture`'s default. Pinned
+	here because that default flipping the wrong way (`True`) is exactly what
+	happened once already in this task: it silently switched off stock
+	verification for concentrate manufacture, with nothing red to catch it."""
+
+	def setUp(self):
+		row = frappe.db.get_value(
+			"Item", {"default_bom": ["is", "set"]}, ["name", "default_bom"], as_dict=True
+		)
+		if not row:
+			self.skipTest("no item on kaitet.local has a default BOM")
+		self.item_code = row.name
+
+	def tearDown(self):
+		frappe.db.rollback()
+
+	def test_a_run_the_stores_cannot_cover_is_still_refused(self):
+		"""A genuine shortfall, not a mocked one: a quantity nothing on this
+		site stocks in that order of magnitude (the same technique
+		test_feed_availability.py's test_today_matches_the_engine uses to force
+		a real shortfall). If `already_verified` ever defaults to True again,
+		this creates a Work Order and Stock Entries with no check at all,
+		instead of raising."""
+		before = frappe.db.count("Work Order")
+		with self.assertRaises(frappe.ValidationError) as caught:
+			_engine.manufacture_concentrate(self.item_code, qty=10**9)
+		self.assertIn("Not enough stock", str(caught.exception))
+		self.assertEqual(frappe.db.count("Work Order"), before)
