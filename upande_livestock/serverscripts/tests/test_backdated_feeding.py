@@ -2,9 +2,10 @@ from unittest import mock
 
 import frappe
 from frappe.tests import IntegrationTestCase
-from frappe.utils import add_days, today
+from frappe.utils import add_days, flt, now_datetime, to_timedelta, today
+from erpnext.stock.utils import get_combine_datetime, get_stock_balance
 
-from upande_livestock.serverscripts.feeding import _engine
+from upande_livestock.serverscripts.feeding import _engine, feed_day_status
 
 
 def _set_window(value):
@@ -231,3 +232,136 @@ class TestBackdatedFeedingNeedsTheWindow(IntegrationTestCase):
 						posting_date=add_days(today(), 1),
 					)
 				self.assertIn("cannot be in the future", str(caught.exception))
+
+
+class TestSameDayBackdatedStagger(IntegrationTestCase):
+	"""Two backdated feed runs for one herd on one date used to both price and
+	post at the same instant (FEED_RUN_TIME, for both) — so the second never
+	saw the first's consumption in the ledger. It read the same stale balance
+	the first run had already reduced, passed a check it should have failed,
+	and only found out at ERPNext's own NegativeStockError, after a Work
+	Order and a transfer already existed. See `_engine._run_posting_time` and
+	`feed_day_status.runs_already_posted`.
+
+	The day used throughout is `today() - 3`, not `-1`: a herd may genuinely
+	already have real feed history from yesterday, but a run count is read
+	fresh here (via `runs_already_posted`) rather than assumed to be zero, so
+	whatever this farm's real ledger already holds for that day does not
+	matter to any assertion below.
+	"""
+
+	def setUp(self):
+		self.addCleanup(_set_window, 0)
+		_set_window(1)
+		self.herd = _a_feedable_herd()
+		if not self.herd:
+			self.skipTest("no herd on kaitet.local can currently be fed")
+		self.employee = frappe.db.get_value("Employee", {"status": "Active"}, "name")
+		if not self.employee:
+			self.skipTest("no active Employee on this site")
+		self.addCleanup(frappe.db.rollback)
+		self.day = add_days(today(), -3)
+		_herd_doc, bom, _heads = _engine._herd_bom(self.herd)
+		self.ration_item = bom.item
+		# Read fresh rather than assumed: whatever this farm's ledger already
+		# holds for this herd on this day, the two runs below must slot in
+		# after it, not before it.
+		self.runs_before = feed_day_status.runs_already_posted(
+			self.ration_item, self.herd, self.day
+		)
+		self.expected_first_time = _engine._run_posting_time(self.runs_before)
+		self.expected_second_time = _engine._run_posting_time(self.runs_before + 1)
+		self.assertNotEqual(
+			self.expected_first_time,
+			self.expected_second_time,
+			"the two slots must differ for this test to mean anything",
+		)
+
+	def test_a_second_backdated_run_sees_the_first_runs_consumption(self):
+		first = _engine.manufacture_herd_feed(
+			self.herd, employee=self.employee, portion=0.05, posting_date=self.day
+		)
+		first_time = frappe.db.get_value(
+			"Stock Entry", first["transfer_stock_entry"], "posting_time"
+		)
+		self.assertEqual(first_time, to_timedelta(self.expected_first_time))
+
+		transfer = frappe.get_doc("Stock Entry", first["transfer_stock_entry"])
+		row = transfer.items[0]
+		consumed_item, consumed_wh, consumed_qty = row.item_code, row.s_warehouse, flt(row.qty)
+
+		# The balance before ANY of today's test writes touched this day —
+		# this is exactly what the original bug's check kept reading no
+		# matter how many runs had already gone out that day.
+		start_of_day = flt(get_stock_balance(consumed_item, consumed_wh, self.day, "00:00:00"))
+
+		# What the SECOND run's availability check must read: its own, later
+		# instant, by which the first run's transfer has already posted.
+		seen_by_second_check = flt(
+			get_stock_balance(consumed_item, consumed_wh, self.day, self.expected_second_time)
+		)
+		self.assertAlmostEqual(seen_by_second_check, start_of_day - consumed_qty, places=4)
+
+		second = _engine.manufacture_herd_feed(
+			self.herd, employee=self.employee, portion=0.05, posting_date=self.day
+		)
+		second_time = frappe.db.get_value(
+			"Stock Entry", second["transfer_stock_entry"], "posting_time"
+		)
+		self.assertEqual(second_time, to_timedelta(self.expected_second_time))
+
+	def test_the_two_runs_stock_entries_have_strictly_increasing_posting_datetime(self):
+		first = _engine.manufacture_herd_feed(
+			self.herd, employee=self.employee, portion=0.05, posting_date=self.day
+		)
+		second = _engine.manufacture_herd_feed(
+			self.herd, employee=self.employee, portion=0.05, posting_date=self.day
+		)
+		for key in ("transfer_stock_entry", "manufacture_stock_entry", "issue_stock_entry"):
+			first_doc = frappe.db.get_value("Stock Entry", first[key], ["posting_date", "posting_time"])
+			second_doc = frappe.db.get_value("Stock Entry", second[key], ["posting_date", "posting_time"])
+			first_dt = get_combine_datetime(first_doc[0], first_doc[1])
+			second_dt = get_combine_datetime(second_doc[0], second_doc[1])
+			self.assertLess(first_dt, second_dt, f"{key} must post strictly after the first run's")
+
+	def test_a_second_run_the_store_genuinely_cannot_cover_is_refused_by_our_check(self):
+		"""Refused by `_availability.assert_can_cover_on` before anything posts —
+		not by ERPNext's NegativeStockError, which would only fire after a Work
+		Order and a transfer already existed. That distinction is the whole
+		point of the pre-flight check."""
+		_engine.manufacture_herd_feed(
+			self.herd, employee=self.employee, portion=0.05, posting_date=self.day
+		)
+		before_wo = frappe.db.count("Work Order")
+		before_se = frappe.db.count("Stock Entry")
+		with self.assertRaises(frappe.ValidationError) as caught:
+			_engine.manufacture_herd_feed(
+				self.herd,
+				employee=self.employee,
+				heads=10**9,
+				portion=1.0,
+				posting_date=self.day,
+			)
+		message = str(caught.exception)
+		self.assertIn("cannot post on", message)
+		self.assertIn("Nothing was posted", message)
+		self.assertNotIn("NegativeStockError", message)
+		self.assertEqual(frappe.db.count("Work Order"), before_wo, "our check must run before any Work Order")
+		self.assertEqual(frappe.db.count("Stock Entry"), before_se, "our check must run before any Stock Entry")
+
+	def test_a_run_dated_today_still_stamps_the_current_clock_time(self):
+		"""Only backdated runs are staggered — see `_is_backdated`. A run dated
+		today must keep stamping the real clock time, not a computed slot."""
+		just_before = now_datetime()
+		res = _engine.manufacture_herd_feed(
+			self.herd, employee=self.employee, portion=0.05, posting_date=today()
+		)
+		just_after = now_datetime()
+		posting_date, posting_time = frappe.db.get_value(
+			"Stock Entry", res["issue_stock_entry"], ["posting_date", "posting_time"]
+		)
+		posted_dt = get_combine_datetime(posting_date, posting_time)
+		self.assertTrue(
+			just_before <= posted_dt <= just_after,
+			f"expected {posted_dt} between {just_before} and {just_after}",
+		)

@@ -30,13 +30,23 @@ from upande_livestock.serverscripts.feeding._engine import resolve_requirement
 SEARCH_DAYS = 90
 
 
-def _short_lines_on(lines, posting_date):
+def _short_lines_on(lines, posting_date, posting_time=None):
 	"""Shortfall rows for already-resolved `lines` on `posting_date`.
 
 	The only day-dependent work is the `get_stock_balance` read per line —
 	`lines` itself (required qty, source warehouse, item, uom) does not change
 	from one day to the next, so callers resolve it once and pass it in here
 	however many times they need to price a day.
+
+	`posting_time` matters as much as the date for a day that already has an
+	earlier run on it: two backdated runs for the same herd on the same date
+	both used to price at the same implicit instant, so the second never saw
+	the first's consumption and passed a check it should have failed — the
+	gap only showed up at ERPNext's own submit, after a Work Order and a
+	transfer already existed. Passing the exact time the run is about to post
+	at (see `_engine._run_posting_time`) makes this read exactly what that
+	posting will see. Left `None` (get_stock_balance's own default) for every
+	other caller here, which only ever prices a single, first-of-the-day run.
 	"""
 	day = getdate(posting_date)
 	short = []
@@ -47,7 +57,7 @@ def _short_lines_on(lines, posting_date):
 		warehouse = line["source_warehouse"]
 		if not warehouse:
 			continue
-		have = flt(get_stock_balance(line["item_code"], warehouse, day))
+		have = flt(get_stock_balance(line["item_code"], warehouse, day, posting_time))
 		if have + 1e-9 < required:
 			short.append(
 				{
@@ -63,10 +73,11 @@ def _short_lines_on(lines, posting_date):
 	return short
 
 
-def shortfalls_on(bom_no, total_qty, posting_date):
-	"""Rows the stores could not cover on `posting_date`. Read-only."""
+def shortfalls_on(bom_no, total_qty, posting_date, posting_time=None):
+	"""Rows the stores could not cover on `posting_date` (at `posting_time`,
+	when given — see `_short_lines_on`). Read-only."""
 	_bom, lines = resolve_requirement(bom_no, total_qty)
-	return _short_lines_on(lines, posting_date)
+	return _short_lines_on(lines, posting_date, posting_time)
 
 
 def _earliest_workable_date_for_lines(lines, from_date, to_date):
@@ -92,10 +103,15 @@ def earliest_workable_date(bom_no, total_qty, from_date, to_date):
 	return _earliest_workable_date_for_lines(lines, from_date, to_date)
 
 
-def assert_can_cover_on(bom_no, total_qty, posting_date):
-	"""Throw a message a farm worker can act on, or return silently."""
+def assert_can_cover_on(bom_no, total_qty, posting_date, posting_time=None):
+	"""Throw a message a farm worker can act on, or return silently.
+
+	`posting_time` — see `_short_lines_on` — must be the exact time this run is
+	about to post at when a same-day run has already gone out; otherwise this
+	check and what actually posts are answering slightly different questions.
+	"""
 	_bom, lines = resolve_requirement(bom_no, total_qty)
-	short = _short_lines_on(lines, posting_date)
+	short = _short_lines_on(lines, posting_date, posting_time)
 	if not short:
 		return
 

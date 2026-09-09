@@ -21,7 +21,7 @@ Read-guarded on Herds.
 """
 
 import frappe
-from frappe.utils import flt, today
+from frappe.utils import flt, getdate, today
 
 from upande_livestock.serverscripts.common.envelope import guard_read, run
 from upande_livestock.serverscripts.feeding import _engine as feeding
@@ -30,25 +30,51 @@ from upande_livestock.serverscripts.feeding import _engine as feeding
 RUNS_PER_DAY = 2
 
 
-def _issued_today(item_code, herd):
-	"""Ration units issued to this herd today, from the stock ledger.
+def _issues_on(item_code, herd, day):
+	"""Material Issue runs against this herd's ration item on `day`, one row
+	per Stock Entry, from the stock ledger.
 
 	Matched on the ration item and the day, not on the Livestock Event: the
 	event is written after the issue and a failure between the two would make
 	the feed look un-issued when the store had already given it out.
+
+	Shared by `_issued_today` (sums the qty, for today's screen) and
+	`runs_already_posted` (counts the rows, for `_engine`'s same-day stagger)
+	so the two questions are always answered from the same set of runs — they
+	can never disagree about what already happened on a given day.
 	"""
-	rows = frappe.db.sql(
-		"""SELECT IFNULL(SUM(sed.qty), 0)
+	return frappe.db.sql(
+		"""SELECT se.name, IFNULL(SUM(sed.qty), 0) AS qty
 		   FROM `tabStock Entry Detail` sed
 		   JOIN `tabStock Entry` se ON se.name = sed.parent
 		   WHERE se.docstatus = 1
 		     AND se.purpose = 'Material Issue'
 		     AND sed.item_code = %(item)s
 		     AND DATE(se.posting_date) = %(day)s
-		     AND se.remarks LIKE %(herd)s""",
-		{"item": item_code, "day": today(), "herd": f"%{herd}%"},
+		     AND se.remarks LIKE %(herd)s
+		   GROUP BY se.name""",
+		{"item": item_code, "day": day, "herd": f"%{herd}%"},
+		as_dict=True,
 	)
-	return flt(rows[0][0]) if rows else 0.0
+
+
+def _issued_today(item_code, herd):
+	"""Ration units issued to this herd today, from the stock ledger."""
+	return sum(flt(r.qty) for r in _issues_on(item_code, herd, today()))
+
+
+def runs_already_posted(item_code, herd, posting_date):
+	"""How many Material Issue runs already stand for this herd's ration item
+	on `posting_date`.
+
+	`_engine.manufacture_herd_feed` calls this to work out where a new
+	backdated run falls in that day's sequence, so it can post at a later
+	time than the one before it — see `_engine._run_posting_time`. This reuses
+	`_issues_on`'s exact matching rather than a second, separately-written
+	count, so this and `_issued_today`/the day screen can never disagree about
+	what already happened on that date.
+	"""
+	return len(_issues_on(item_code, herd, getdate(posting_date)))
 
 
 @frappe.whitelist()

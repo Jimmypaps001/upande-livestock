@@ -45,6 +45,7 @@ NOT WHITELISTED
 """
 
 import math
+from datetime import datetime, timedelta
 
 import frappe
 from frappe import _
@@ -83,6 +84,44 @@ def _is_backdated(posting_date):
 	call shape. Only a date earlier than today gets the fixed stamp.
 	"""
 	return bool(posting_date) and getdate(posting_date) < getdate(today())
+
+
+# How much later each further same-day backdated run posts. Two backdated runs
+# for one herd on one date used to both stamp FEED_RUN_TIME and both price
+# against `get_stock_balance` at the same instant, so the second never saw the
+# first in the ledger — it read the morning's balance, passed a check it
+# should have failed, and only found out at ERPNext's own submit, after a Work
+# Order and a transfer already existed. The farm feeds twice, and its second
+# feed is an afternoon job, not a same-morning re-run — so the second run of a
+# day lands 8 hours after the first (06:00 -> 14:00), a plausible second
+# feeding time, not a token minute later. Each further run (more than two in a
+# day is a manual correction, not the normal programme) steps another 8 hours.
+RUN_TIME_STEP_HOURS = 8
+
+# However many corrections pile onto one day, the last one still has to land
+# on THAT day. Capped short of midnight so a pathological run count can never
+# roll the posting time into tomorrow, where it would sort after entries that
+# have not happened yet.
+LAST_RUN_TIME = "23:00:00"
+
+
+def _run_posting_time(runs_before):
+	"""The clock time the (runs_before + 1)th backdated run of a day posts at.
+
+	`runs_before` is how many Material Issue runs already stand for this herd's
+	ration item on that date — see `feed_day_status.runs_already_posted`, the
+	one place that counts them; nothing here recounts it independently, so the
+	two can never disagree about what already happened that day.
+
+	`runs_before == 0` returns `FEED_RUN_TIME` unchanged, so a lone backdated
+	run — the common case — behaves exactly as it always has.
+	"""
+	base = datetime.strptime(FEED_RUN_TIME, "%H:%M:%S")
+	cap = datetime.strptime(LAST_RUN_TIME, "%H:%M:%S")
+	candidate = base + timedelta(hours=RUN_TIME_STEP_HOURS * runs_before)
+	if candidate > cap:
+		candidate = cap
+	return candidate.strftime("%H:%M:%S")
 
 
 def _feed_store():
@@ -383,6 +422,7 @@ def _run_manufacture(
 	allow_shortage=False,
 	posting_date=None,
 	already_verified=False,
+	posting_time=FEED_RUN_TIME,
 ):
 	"""Work Order -> Material Transfer for Manufacture -> Manufacture.
 
@@ -393,6 +433,13 @@ def _run_manufacture(
 	`posting_date` puts the whole run on a past day. All three documents take it,
 	because a transfer dated today feeding a manufacture dated in March is not a
 	run that happened — it is two runs that disagree.
+
+	`posting_time` is the clock time to stamp a *backdated* run with (ignored
+	for today's date — see `_is_backdated`). Defaults to `FEED_RUN_TIME` for
+	every caller but `manufacture_herd_feed`, which passes the staggered time a
+	same-day run actually posts at, so this Work Order's `planned_start_date`
+	and every Stock Entry it produces agree with the availability check that
+	already judged this run against that same instant.
 
 	`already_verified` skips the live-stock check below. Set it when the caller
 	has already judged this run against the right ledger — `manufacture_herd_feed`
@@ -434,7 +481,7 @@ def _run_manufacture(
 	wo.use_multi_level_bom = 0
 	wo.skip_transfer = 0
 	if posting_date:
-		wo.planned_start_date = "{0} {1}".format(posting_date, FEED_RUN_TIME)
+		wo.planned_start_date = "{0} {1}".format(posting_date, posting_time)
 	if herd and wo.meta.has_field("custom_herd"):
 		wo.custom_herd = herd
 	if heads and wo.meta.has_field("custom_no_of_cows"):
@@ -455,7 +502,7 @@ def _run_manufacture(
 				# which would put the transfer/manufacture at a different clock
 				# time than the Work Order they belong to. Left alone for today's
 				# date so a live run keeps stamping its real clock time.
-				stock_entry.posting_time = FEED_RUN_TIME
+				stock_entry.posting_time = posting_time
 		return stock_entry
 
 	transfer = _dated(frappe.get_doc(make_stock_entry(wo.name, "Material Transfer for Manufacture", qty)))
@@ -520,6 +567,13 @@ def manufacture_herd_feed(
 	that cannot post is refused with a date the operator can act on rather than
 	an ERPNext error after two documents already exist.
 
+	A SECOND backdated run for the same herd on the same date is not judged (or
+	stamped) at the same instant as the first: see `_run_posting_time`. Both the
+	availability check below and every document `_run_manufacture`/`_issue_feed`
+	write use that same computed time, so what the check reads is exactly what
+	gets posted — this is the whole fix for a second run silently reading the
+	morning's stale balance and passing a check it should have failed.
+
 	Nothing is committed here. The manufacture and the issue have to stand or
 	fall together, and envelope.run() relies on the rollback.
 	"""
@@ -555,7 +609,8 @@ def manufacture_herd_feed(
 	# posts: finding that out afterwards would leave a manufactured batch with
 	# no way to move it out, a half-done state that reads as feed in the store.
 	backdate.assert_not_future(posting_date, _("Date fed"))
-	if posting_date and getdate(posting_date) < getdate(today()):
+	run_posting_time = FEED_RUN_TIME
+	if _is_backdated(posting_date):
 		# Feeding is the one backdated write that still MOVES stock — a Work Order
 		# and four Stock Entries — so it is the one that most needs the window, and
 		# it was the one path that never asked. With the switch off (the default) a
@@ -563,12 +618,18 @@ def manufacture_herd_feed(
 		# `assert_allowed(True)` rather than a resolved flag: reaching here already
 		# means the date is in the past.
 		backdate.assert_allowed(True)
-		# Deferred import — see the note by the top-level imports: _availability
-		# imports resolve_requirement from this module, so importing it there
-		# would be circular.
-		from upande_livestock.serverscripts.feeding import _availability
+		# Deferred imports — see the note by the top-level imports: both of these
+		# import this module (`_availability` imports `resolve_requirement`,
+		# `feed_day_status` imports the module wholesale), so importing either at
+		# the top would be circular.
+		from upande_livestock.serverscripts.feeding import _availability, feed_day_status
 
-		_availability.assert_can_cover_on(bom.name, total_qty, posting_date)
+		# How many runs already stand for this herd's ration item on this date —
+		# the single count `feed_day_status` also shows the operator, read here
+		# rather than recounted, so the two can never disagree about the day.
+		runs_before = feed_day_status.runs_already_posted(bom.item, herd, posting_date)
+		run_posting_time = _run_posting_time(runs_before)
+		_availability.assert_can_cover_on(bom.name, total_qty, posting_date, run_posting_time)
 	else:
 		_assert_can_cover(bom.item, bom.name, total_qty, frappe.parse_json(allow_shortage))
 	employee = _operator_or_throw(employee)
@@ -587,8 +648,17 @@ def manufacture_herd_feed(
 		# different, contradicting question, and it is exactly how a run the
 		# historical check passed was still wrongly refused.
 		already_verified=True,
+		posting_time=run_posting_time,
 	)
-	issue = _issue_feed(herd, bom, total_qty, employee, posting_date=posting_date, feed_mode=feed_mode)
+	issue = _issue_feed(
+		herd,
+		bom,
+		total_qty,
+		employee,
+		posting_date=posting_date,
+		feed_mode=feed_mode,
+		posting_time=run_posting_time,
+	)
 	res.update(
 		{
 			"heads": heads,
@@ -658,7 +728,7 @@ def feed_herd(herd, qty, employee=None, posting_date=None):
 	return _issue_feed(herd, bom, qty, _operator_or_throw(employee), posting_date=posting_date)
 
 
-def _issue_feed(herd, bom, qty, employee, posting_date=None, feed_mode="System"):
+def _issue_feed(herd, bom, qty, employee, posting_date=None, feed_mode="System", posting_time=FEED_RUN_TIME):
 	"""Post the Material Issue and put the feeding on the herd's timeline."""
 	store = _feed_store()
 	company = _company()
@@ -676,8 +746,11 @@ def _issue_feed(herd, bom, qty, employee, posting_date=None, feed_mode="System")
 		if _is_backdated(posting_date):
 			# See FEED_RUN_TIME: this issue belongs to the same run as the
 			# transfer and manufacture above it, so it takes the same clock
-			# time. Left alone for today's date, which keeps its real one.
-			se.posting_time = FEED_RUN_TIME
+			# time — `posting_time` defaults to FEED_RUN_TIME for every caller
+			# but `manufacture_herd_feed`, which passes the staggered time a
+			# same-day run actually posts at. Left alone for today's date,
+			# which keeps its real one.
+			se.posting_time = posting_time
 	if se.meta.has_field("custom_employee"):
 		se.custom_employee = employee
 	if se.meta.has_field("custom_employee_data"):
