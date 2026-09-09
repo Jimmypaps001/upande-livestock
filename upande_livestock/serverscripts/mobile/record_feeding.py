@@ -53,9 +53,12 @@ def record_feeding(payload=None):
 				allow_shortage=d.get("allow_shortage", False),
 				employee=d.get("employee"),
 				portion=d.get("portion", 1.0),
+				posting_date=d.get("posting_date"),
 			)
 		if action == "issue":
-			return issue_feed(herd, d.get("qty"), employee=d.get("employee"))
+			return issue_feed(
+				herd, d.get("qty"), employee=d.get("employee"), posting_date=d.get("posting_date")
+			)
 		frappe.throw(
 			frappe._("{0} is not a feeding action. Known: info, day, manufacture, issue.").format(
 				action

@@ -16,12 +16,16 @@ from upande_livestock.serverscripts.feeding import _engine as feeding
 
 
 @frappe.whitelist()
-def manufacture_feed(herd, allow_shortage=False, employee=None, portion=1.0):
+def manufacture_feed(herd, allow_shortage=False, employee=None, portion=1.0, posting_date=None):
 	def go():
 		guard("Work Order")
 		guard("Stock Entry")
 		res = feeding.manufacture_herd_feed(
-			herd, allow_shortage=allow_shortage, employee=employee, portion=portion
+			herd,
+			allow_shortage=allow_shortage,
+			employee=employee,
+			portion=portion,
+			posting_date=posting_date,
 		)
 		res["ok"] = True
 		return res

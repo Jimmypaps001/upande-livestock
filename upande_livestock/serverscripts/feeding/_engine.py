@@ -48,10 +48,17 @@ import math
 
 import frappe
 from frappe import _
-from frappe.utils import flt, today
+from frappe.utils import flt, getdate, today
 from erpnext.manufacturing.doctype.work_order.work_order import make_stock_entry
 
+from upande_livestock.serverscripts.common import backdate
 from upande_livestock.serverscripts.common import stock as livestock_stock
+
+# _availability imports resolve_requirement from this module, so this cannot be
+# a top-level import without a circular import (confirmed empirically: bench
+# console raises ImportError: cannot import name 'resolve_requirement' from
+# partially initialized module). manufacture_herd_feed imports it lazily
+# instead, at the one call site that needs it.
 
 DEFAULT_FEED_STORE = "Concentrate Mixing Store - KR"
 
@@ -345,12 +352,16 @@ def _assert_can_cover(production_item, bom_no, qty, allow_shortage=False):
 	return lines
 
 
-def _run_manufacture(production_item, bom_no, qty, herd=None, heads=None, allow_shortage=False):
+def _run_manufacture(production_item, bom_no, qty, herd=None, heads=None, allow_shortage=False, posting_date=None):
 	"""Work Order -> Material Transfer for Manufacture -> Manufacture.
 
 	One route for both stages. WIP and FG are both the feed store; each required
 	item is sourced from the warehouse ``_pick_source`` chose, which is the same
 	warehouse the availability check reported on.
+
+	`posting_date` puts the whole run on a past day. All three documents take it,
+	because a transfer dated today feeding a manufacture dated in March is not a
+	run that happened — it is two runs that disagree.
 	"""
 	qty = flt(qty)
 	if qty <= 0:
@@ -378,6 +389,8 @@ def _run_manufacture(production_item, bom_no, qty, herd=None, heads=None, allow_
 	wo.transfer_material_against = "Work Order"
 	wo.use_multi_level_bom = 0
 	wo.skip_transfer = 0
+	if posting_date:
+		wo.planned_start_date = "{0} 06:00:00".format(posting_date)
 	if herd and wo.meta.has_field("custom_herd"):
 		wo.custom_herd = herd
 	if heads and wo.meta.has_field("custom_no_of_cows"):
@@ -389,11 +402,17 @@ def _run_manufacture(production_item, bom_no, qty, herd=None, heads=None, allow_
 	wo.save(ignore_permissions=True)
 	wo.submit()
 
-	transfer = frappe.get_doc(make_stock_entry(wo.name, "Material Transfer for Manufacture", qty))
+	def _dated(stock_entry):
+		if posting_date:
+			stock_entry.set_posting_time = 1
+			stock_entry.posting_date = posting_date
+		return stock_entry
+
+	transfer = _dated(frappe.get_doc(make_stock_entry(wo.name, "Material Transfer for Manufacture", qty)))
 	transfer.insert(ignore_permissions=True)
 	transfer.submit()
 
-	manufacture = frappe.get_doc(make_stock_entry(wo.name, "Manufacture", qty))
+	manufacture = _dated(frappe.get_doc(make_stock_entry(wo.name, "Manufacture", qty)))
 	manufacture.insert(ignore_permissions=True)
 	manufacture.submit()
 
@@ -403,12 +422,22 @@ def _run_manufacture(production_item, bom_no, qty, herd=None, heads=None, allow_
 		"bom_no": bom_no,
 		"produced_qty": qty,
 		"store": store,
+		"posting_date": posting_date or today(),
 		"transfer_stock_entry": transfer.name,
 		"manufacture_stock_entry": manufacture.name,
 	}
 
 
-def manufacture_herd_feed(herd, allow_shortage=False, employee=None, portion=1.0):
+def manufacture_herd_feed(
+	herd,
+	allow_shortage=False,
+	employee=None,
+	portion=1.0,
+	posting_date=None,
+	bom_no=None,
+	heads=None,
+	feed_mode="System",
+):
 	"""Manufacture the herd's TMR and issue the whole batch to that herd.
 
 	Total produced = heads * BOM.quantity; every raw material and the
@@ -432,10 +461,34 @@ def manufacture_herd_feed(herd, allow_shortage=False, employee=None, portion=1.0
 	to refuse. `feed_day_status` is what tells the screen how much of the day is
 	left; nothing here enforces it.
 
+	`bom_no` and `heads` override what the herd says. Manual feeding supplies
+	both: a tuned recipe, and the number of head actually at the trough, which
+	is not always the number on the herd record.
+
+	`posting_date` puts the run on a past day. Availability is then judged
+	against the ledger as it stood then, before anything is written, so a run
+	that cannot post is refused with a date the operator can act on rather than
+	an ERPNext error after two documents already exist.
+
 	Nothing is committed here. The manufacture and the issue have to stand or
-	fall together, and api/operations._run() relies on the rollback.
+	fall together, and envelope.run() relies on the rollback.
 	"""
-	herd_doc, bom, heads = _herd_bom(herd)
+	# When the caller states a head count, do not let _herd_bom refuse the run
+	# for the herd's own count being zero. A herd record that says 0 while eight
+	# animals stand at the trough is exactly the situation manual feeding is for,
+	# and the operator has just told us the real number.
+	if heads:
+		bom = frappe.get_doc("BOM", bom_no or frappe.db.get_value("Herds", herd, "bom"))
+		if not bom.name:
+			frappe.throw(_("Herd {0} has no BOM linked.").format(herd))
+	else:
+		herd_doc, bom, herd_heads = _herd_bom(herd)
+		if bom_no:
+			bom = frappe.get_doc("BOM", bom_no)
+		heads = herd_heads
+	heads = int(heads)
+	if heads <= 0:
+		frappe.throw(_("Enter how many animals were fed."))
 	per_head = flt(bom.quantity) or 1.0
 	portion = flt(portion) or 1.0
 	if portion <= 0:
@@ -446,19 +499,34 @@ def manufacture_herd_feed(herd, allow_shortage=False, employee=None, portion=1.0
 	# thing to be told about. The operator is then resolved before anything
 	# posts: finding that out afterwards would leave a manufactured batch with
 	# no way to move it out, a half-done state that reads as feed in the store.
-	_assert_can_cover(bom.item, bom.name, total_qty, frappe.parse_json(allow_shortage))
+	if posting_date and getdate(posting_date) < getdate(today()):
+		# Deferred import — see the note by the top-level imports: _availability
+		# imports resolve_requirement from this module, so importing it there
+		# would be circular.
+		from upande_livestock.serverscripts.feeding import _availability
+
+		_availability.assert_can_cover_on(bom.name, total_qty, posting_date)
+	else:
+		_assert_can_cover(bom.item, bom.name, total_qty, frappe.parse_json(allow_shortage))
 	employee = _operator_or_throw(employee)
 
 	res = _run_manufacture(
-		bom.item, bom.name, total_qty, herd=herd, heads=heads, allow_shortage=frappe.parse_json(allow_shortage)
+		bom.item,
+		bom.name,
+		total_qty,
+		herd=herd,
+		heads=heads,
+		allow_shortage=frappe.parse_json(allow_shortage),
+		posting_date=posting_date,
 	)
-	issue = _issue_feed(herd, bom, total_qty, employee)
+	issue = _issue_feed(herd, bom, total_qty, employee, posting_date=posting_date, feed_mode=feed_mode)
 	res.update(
 		{
 			"heads": heads,
 			"per_head_qty": per_head,
 			"portion": portion,
 			"uom": bom.uom,
+			"feed_mode": feed_mode,
 			"issued_qty": issue["issued_qty"],
 			"issue_stock_entry": issue["stock_entry"],
 			"livestock_event": issue["livestock_event"],
@@ -505,7 +573,7 @@ def _operator_or_throw(employee=None):
 	return employee
 
 
-def feed_herd(herd, qty, employee=None):
+def feed_herd(herd, qty, employee=None, posting_date=None):
 	"""Issue `qty` of a herd's TMR out of the store.
 
 	Not the normal path any more — manufacturing issues its own batch. This
@@ -515,10 +583,10 @@ def feed_herd(herd, qty, employee=None):
 	if qty <= 0:
 		frappe.throw("Enter a quantity greater than zero.")
 	herd_doc, bom, heads = _herd_bom(herd)
-	return _issue_feed(herd, bom, qty, _operator_or_throw(employee))
+	return _issue_feed(herd, bom, qty, _operator_or_throw(employee), posting_date=posting_date)
 
 
-def _issue_feed(herd, bom, qty, employee):
+def _issue_feed(herd, bom, qty, employee, posting_date=None, feed_mode="System"):
 	"""Post the Material Issue and put the feeding on the herd's timeline."""
 	store = _feed_store()
 	company = _company()
@@ -530,6 +598,9 @@ def _issue_feed(herd, bom, qty, employee):
 	se.stock_entry_type = livestock_stock.stock_entry_type_for("Feeding")
 	se.purpose = "Material Issue"
 	se.company = company
+	if posting_date:
+		se.set_posting_time = 1
+		se.posting_date = posting_date
 	if se.meta.has_field("custom_employee"):
 		se.custom_employee = employee
 	if se.meta.has_field("custom_employee_data"):
@@ -544,10 +615,12 @@ def _issue_feed(herd, bom, qty, employee):
 	se.insert(ignore_permissions=True)
 	se.submit()
 	# No frappe.db.commit() here: it stranded the Stock Entry when the Livestock
-	# Event below failed, and defeats the rollback api/operations._run() relies on.
+	# Event below failed, and defeats the rollback envelope.run() relies on.
 	# The request (or the caller) owns the commit.
 
-	event = _record_feeding_event(herd, item, qty, bom.uom, employee, se.name)
+	event = _record_feeding_event(
+		herd, item, qty, bom.uom, employee, se.name, event_date=posting_date, feed_mode=feed_mode
+	)
 
 	return {
 		"stock_entry": se.name,
@@ -561,24 +634,31 @@ def _issue_feed(herd, bom, qty, employee):
 	}
 
 
-def _record_feeding_event(herd, item, qty, uom, employee, stock_entry):
+def _record_feeding_event(herd, item, qty, uom, employee, stock_entry, event_date=None, feed_mode="System"):
 	"""Put the feeding on the herd's timeline as a Feeding Livestock Event.
 
 	Herd-level, with no animal: feed goes to a trough, not to one cow, and
 	LivestockEvent.validate() has a matching exemption for exactly this case. One
 	event per animal would mean 119 identical rows for a single feed issue.
 
+	`event_date` used to be hardcoded to today, which put every backdated run on
+	the wrong day of the herd's timeline while its Stock Entry sat on the right
+	one — the two records of the same act disagreeing.
+
 	The event is best-effort. The feed has physically left the store once the Stock
 	Entry submits, so a timeline write that fails must not roll that back and leave
 	the books disagreeing with the yard — it warns instead.
 	"""
+	event_date = event_date or today()
 	try:
 		doc = frappe.new_doc("Livestock Event")
 		doc.event_type = "Feeding"
-		doc.event_date = today()
+		doc.event_date = event_date
 		doc.current_herd = herd
 		doc.operator = employee
 		doc.stock_entry = stock_entry
+		doc.custom_feed_mode = feed_mode
+		backdate.stamp(doc, getdate(event_date) < getdate(today()))
 		doc.remarks = "Feed issued: {0} {1} of {2}".format(qty, uom or "", item)
 		doc.flags.ignore_permissions = True
 		doc.insert(ignore_permissions=True)

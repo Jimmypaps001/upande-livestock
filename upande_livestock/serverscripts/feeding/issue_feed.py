@@ -9,10 +9,10 @@ from upande_livestock.serverscripts.feeding import _engine as feeding
 
 
 @frappe.whitelist()
-def issue_feed(herd, qty, employee=None):
+def issue_feed(herd, qty, employee=None, posting_date=None):
 	def go():
 		guard("Stock Entry")
-		res = feeding.feed_herd(herd, qty, employee=employee)
+		res = feeding.feed_herd(herd, qty, employee=employee, posting_date=posting_date)
 		res["ok"] = True
 		return res
 
