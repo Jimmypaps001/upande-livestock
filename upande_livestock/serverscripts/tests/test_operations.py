@@ -116,9 +116,20 @@ def _assert_ok(case, res, what):
 
 class TestEventDateFallback(IntegrationTestCase):
 	"""event_date is canonical — a form that sends only the type-specific date
-	must not leave event_date defaulting to today."""
+	must not leave event_date defaulting to today.
+
+	Every case here builds an event dated in the past, which is now a backdated
+	write in its own right, so the backdating window has to be open for the
+	build to be allowed at all. That gate is exercised on its own terms in
+	test_backdated_events.py; here it is just a precondition for testing
+	event_date precedence.
+	"""
 
 	def setUp(self):
+		frappe.db.set_single_value("Livestock Settings", "custom_backdating_open", 1)
+		self.addCleanup(
+			frappe.db.set_single_value, "Livestock Settings", "custom_backdating_open", 0
+		)
 		self.cow = _make_cow("ZZ OPS DATE COW")
 		self.addCleanup(_purge, "Animal", self.cow.name)
 		self.addCleanup(_purge_events_for, self.cow.name)

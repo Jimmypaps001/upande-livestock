@@ -7,8 +7,8 @@ canonical `event_date` — from being set five slightly different ways.
 """
 
 import frappe
-from frappe.utils import today
 
+from upande_livestock.serverscripts.common import backdate
 from upande_livestock.serverscripts.common.employee import employee_or_throw
 
 
@@ -22,11 +22,19 @@ def new_livestock_event(d, event_type, date_key=None):
 	`event_date`. Without it a backdated entry stored the right `service_date` and
 	an `event_date` of today, leaving the two out of step and the interval guards
 	reading the wrong day.
+
+	The same date decides whether this is a historical record. `backdate.resolve`
+	uses exactly the precedence above, so the date the event carries and the date
+	it is judged by are the same date by construction rather than by agreement.
 	"""
+	event_date, is_backdated = backdate.resolve(d, date_key)
+	backdate.assert_allowed(is_backdated)
+
 	doc = frappe.new_doc("Livestock Event")
 	doc.animal = d.get("animal")
 	doc.event_type = event_type
-	doc.event_date = d.get("event_date") or (d.get(date_key) if date_key else None) or today()
+	doc.event_date = event_date
 	doc.operator = employee_or_throw(d.get("operator"))
 	doc.remarks = d.get("remarks")
+	backdate.stamp(doc, is_backdated)
 	return doc
