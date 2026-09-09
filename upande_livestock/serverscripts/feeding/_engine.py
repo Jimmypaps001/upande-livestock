@@ -352,7 +352,16 @@ def _assert_can_cover(production_item, bom_no, qty, allow_shortage=False):
 	return lines
 
 
-def _run_manufacture(production_item, bom_no, qty, herd=None, heads=None, allow_shortage=False, posting_date=None):
+def _run_manufacture(
+	production_item,
+	bom_no,
+	qty,
+	herd=None,
+	heads=None,
+	allow_shortage=False,
+	posting_date=None,
+	already_verified=True,
+):
 	"""Work Order -> Material Transfer for Manufacture -> Manufacture.
 
 	One route for both stages. WIP and FG are both the feed store; each required
@@ -362,6 +371,16 @@ def _run_manufacture(production_item, bom_no, qty, herd=None, heads=None, allow_
 	`posting_date` puts the whole run on a past day. All three documents take it,
 	because a transfer dated today feeding a manufacture dated in March is not a
 	run that happened — it is two runs that disagree.
+
+	`already_verified` skips the live-stock check below. Set it when the caller
+	has already judged this run against the right ledger — `manufacture_herd_feed`
+	always has, against the historical ledger for a backdated run or the live one
+	for today's — and judging it again here, unconditionally against today's Bin,
+	is not a second opinion: it is a second, DIFFERENT question for a backdated
+	run, one that contradicts the first ("the store cannot cover it today" is true
+	of a run from last month even when the store covered it back then). Left
+	False for `manufacture_concentrate`, which has no check of its own and still
+	needs this one.
 	"""
 	qty = flt(qty)
 	if qty <= 0:
@@ -369,7 +388,10 @@ def _run_manufacture(production_item, bom_no, qty, herd=None, heads=None, allow_
 
 	store = _feed_store()
 	company = _company()
-	lines = _assert_can_cover(production_item, bom_no, qty, allow_shortage)
+	if already_verified:
+		_bom, lines = resolve_requirement(bom_no, qty)
+	else:
+		lines = _assert_can_cover(production_item, bom_no, qty, allow_shortage)
 	source_of = {ln["item_code"]: ln["source_warehouse"] for ln in lines}
 
 	wo = frappe.new_doc("Work Order")
@@ -478,9 +500,14 @@ def manufacture_herd_feed(
 	# animals stand at the trough is exactly the situation manual feeding is for,
 	# and the operator has just told us the real number.
 	if heads:
-		bom = frappe.get_doc("BOM", bom_no or frappe.db.get_value("Herds", herd, "bom"))
-		if not bom.name:
+		# Resolve the name and check it before loading the document: get_doc("BOM",
+		# None) raises DoesNotExistError ("BOM None not found") itself, before
+		# `bom` is ever assigned — which reads as an ERPNext internal error
+		# instead of the message written for the operator below.
+		bom_name = bom_no or frappe.db.get_value("Herds", herd, "bom")
+		if not bom_name:
 			frappe.throw(_("Herd {0} has no BOM linked.").format(herd))
+		bom = frappe.get_doc("BOM", bom_name)
 	else:
 		herd_doc, bom, herd_heads = _herd_bom(herd)
 		if bom_no:
@@ -518,6 +545,12 @@ def manufacture_herd_feed(
 		heads=heads,
 		allow_shortage=frappe.parse_json(allow_shortage),
 		posting_date=posting_date,
+		# Already judged above — against the historical ledger for a backdated
+		# run, or the live one otherwise. _run_manufacture must not judge it a
+		# second time against today's Bin: for a backdated run that is a
+		# different, contradicting question, and it is exactly how a run the
+		# historical check passed was still wrongly refused.
+		already_verified=True,
 	)
 	issue = _issue_feed(herd, bom, total_qty, employee, posting_date=posting_date, feed_mode=feed_mode)
 	res.update(

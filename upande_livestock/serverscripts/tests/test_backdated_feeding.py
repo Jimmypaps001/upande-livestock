@@ -1,3 +1,5 @@
+from unittest import mock
+
 import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import add_days, today
@@ -85,4 +87,47 @@ class TestBackdatedFeeding(IntegrationTestCase):
 		"""Every existing caller passes nothing (but for an employee, since the
 		bench test runner has none — see setUp). They must keep working."""
 		res = _engine.manufacture_herd_feed(self.herd, employee=self.employee, portion=0.05)
+		self.assertTrue(res["issue_stock_entry"])
+
+	def test_a_backdated_run_the_ledger_covered_is_not_re_refused_by_todays_stock(self):
+		"""A backdated run that the historical ledger covered must not then be
+		refused by _run_manufacture's own check against today's Bin — that used
+		to be exactly what happened: `manufacture_herd_feed` judged the run
+		against the ledger as it stood on the posting date, and then
+		`_run_manufacture` judged it again, unconditionally, against today's
+		stock. Two different questions, and the second could refuse a run the
+		first had already correctly allowed — defeating the feature's main
+		case, a farm entering last month's feeding for stock since consumed.
+
+		This cannot be pinned against real stock history on kaitet.local: every
+		feedable herd's BOM was checked by hand (looking back 60 days, per
+		line) and none has a line whose stock today is lower than it was on any
+		earlier day in that window — this farm's stock only goes down between
+		restocks, never up, in the period available. Fabricating the gap with
+		backdated Stock Entries was rejected too: ERPNext can enqueue an async
+		stock-repost job for a backdated write, which runs outside this test's
+		transaction and could touch the real ledger even after rollback.
+
+		So this pins the seam directly instead. `_assert_can_cover` (the live
+		check) is forced to refuse unconditionally. The run is backdated to
+		yesterday with the same small portion the other tests in this file use
+		successfully for today — a quantity the real historical ledger
+		certainly covers, since the underlying stock has not moved between
+		yesterday and today for this herd. If the run still succeeds, the live
+		check was never consulted for it, which is exactly what
+		`already_verified=True` is for. If the old double-check bug were still
+		there, this run would be refused by the stub below even though the
+		real historical check, running for real, already passed it.
+		"""
+
+		def _refuse_unconditionally(*args, **kwargs):
+			frappe.throw("today's stock cannot cover it (forced by test)")
+
+		with mock.patch.object(_engine, "_assert_can_cover", side_effect=_refuse_unconditionally):
+			res = _engine.manufacture_herd_feed(
+				self.herd,
+				employee=self.employee,
+				portion=0.05,
+				posting_date=add_days(today(), -1),
+			)
 		self.assertTrue(res["issue_stock_entry"])
