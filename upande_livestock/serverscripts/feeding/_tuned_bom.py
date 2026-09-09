@@ -135,6 +135,14 @@ def tuned_bom(herd, lines):
 				"conversion_factor": conversion_factor,
 			},
 		)
+	# ignore_permissions on both insert and submit: this BOM is machinery, not a
+	# document the operator authors. It is minted on their behalf and they never
+	# see it, and ERPNext offers no other route to a hand-tuned recipe — a Work
+	# Order refuses an inactive BOM, and hand-edited required_items quantities
+	# are reset on save (both proven empirically on this site; see the module
+	# docstring). The authorization actually being exercised is "manufacture
+	# feed and move stock", and that is checked one layer up, in manual_feed's
+	# guard("Work Order") and guard("Stock Entry").
 	doc.insert(ignore_permissions=True)
 	doc.submit()
 	return doc.name

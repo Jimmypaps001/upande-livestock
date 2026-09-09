@@ -1,7 +1,10 @@
+import inspect
+
 import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import flt, today
 
+from upande_livestock.serverscripts.feeding import manual_feed as manual_feed_module
 from upande_livestock.serverscripts.feeding._engine import get_herd_feeding_program
 from upande_livestock.serverscripts.feeding.manual_feed import manual_feed
 
@@ -109,3 +112,38 @@ class TestManualFeed(IntegrationTestCase):
 		)
 		self.assertNotIn("error", res, res.get("error"))
 		self.assertEqual(res["heads"], 2)
+
+	def test_no_bom_guard_is_present(self):
+		"""Pins down a fix that was tried and reverted: guard("BOM") was added
+		here on the theory that _tuned_bom's insert/submit needed a permission
+		check somewhere. It does not — see _tuned_bom.py and the module
+		docstring. The BOM it mints is machinery the operator never sees, and
+		the real authorization ("manufacture feed and move stock") is already
+		covered by guard("Work Order") and guard("Stock Entry") above.
+
+		A real end-to-end version of this — sign in as a user who can create a
+		Work Order and a Stock Entry but not a BOM, and prove manual_feed still
+		completes — is not practical to build on kaitet.local: every actual
+		user holding Livestock Attendant or Livestock Stores also holds other
+		roles (Manufacturing User, Stock Manager, ...) that grant BOM create in
+		their own right, and role docperms show Stock Entry create for those
+		two roles comes only from a *different* role (Stock User), not from the
+		livestock role itself. Assembling an isolated user with exactly the
+		right role combination — and nothing else that happens to widen it —
+		is real setup with its own ways to be subtly wrong, for a fact this
+		static check already pins down directly: guard("BOM") must not be
+		reintroduced into this endpoint. So this asserts the source instead of
+		faking the stronger test.
+		"""
+		# The function body, not the module — the module docstring above
+		# names guard("BOM") in prose to explain why it was removed, and that
+		# mention must not itself trip this check.
+		source = inspect.getsource(manual_feed_module.manual_feed)
+		self.assertNotIn(
+			'guard("BOM")',
+			source,
+			"manual_feed must not guard BOM create — Livestock Attendant and "
+			"Livestock Stores can manual-feed but have no BOM create right, and "
+			"the tuned BOM is machinery authorized by the Work Order/Stock "
+			"Entry guards, not by a BOM permission of its own",
+		)

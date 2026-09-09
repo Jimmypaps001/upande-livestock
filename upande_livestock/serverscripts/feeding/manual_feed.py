@@ -10,16 +10,19 @@ It is the same engine underneath — a Work Order, a transfer, a manufacture and
 an issue, all on one posting date. Only the recipe and the head count come from
 the request instead of from the herd.
 
-Guards Work Order, Stock Entry and BOM because that is what this path creates:
-`manufacture_herd_feed` mints the Work Order and the four Stock Entries — the
-same two DocTypes `manufacture_feed` guards for the system path — and
-`tuned_bom` inserts and submits a BOM. All three are written with
-`ignore_permissions=True`, so the guard here is the only check on any of them.
+Guards Work Order and Stock Entry because that is the authorization actually
+being exercised here: "manufacture feed and move stock", the same two
+DocTypes `manufacture_feed` guards for the system path. `tuned_bom` also
+inserts and submits a BOM, but deliberately unguarded — see its module
+docstring for why that BOM is machinery, not something to gate on.
 
 NOTE FOR WHOEVER MAINTAINS THE ROLES: on kaitet.local the Livestock Attendant
-and Livestock Stores roles carry Work Order create but NOT BOM create, so the
-BOM guard refuses manual feeding for them until a manager grants it. That is a
-permission decision, not a code one — the app ships no docperm fixtures.
+and Livestock Stores roles carry Work Order create but NOT BOM create — a
+`guard("BOM")` here was tried and reverted because it refused manual feeding
+for exactly the two roles that do it, from the moment it shipped. Granting
+those roles BOM create would fix that guard at the cost of a strictly larger
+grant (create a BOM anywhere in manufacturing) for a strictly narrower need
+(feed a herd manually), which is why the guard was removed instead.
 """
 
 import frappe
@@ -37,10 +40,6 @@ def manual_feed(payload):
 	def go():
 		guard("Work Order")
 		guard("Stock Entry")
-		# tuned_bom() inserts and submits a BOM with ignore_permissions, so without
-		# this a user with no BOM rights still has one minted on their behalf — the
-		# same hole guard("Work Order") was added to close for wo.insert().
-		guard("BOM")
 		d = as_dict(payload)
 
 		herd = d.get("herd")
