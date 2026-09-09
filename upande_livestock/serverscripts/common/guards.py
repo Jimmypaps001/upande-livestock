@@ -31,6 +31,7 @@ import frappe
 from frappe import _
 from frappe.utils import cint, date_diff, flt, getdate
 
+from upande_livestock.serverscripts.common import backdate
 from upande_livestock.serverscripts.common.timings import TIMING_DEFAULTS, read_setting
 
 # event_type -> the Livestock Settings field and its default. The default is
@@ -354,8 +355,22 @@ def _check_duplicate(doc):
 
 
 def check_guards(doc):
-	"""Run every guard that applies to this event's type."""
+	"""Run every guard that applies to this event's type.
+
+	A backdated record skips them all while the backdating window is open. The
+	rules here describe how a herd is *managed* — serve no younger than fifteen
+	months, do not deworm twice in a fortnight — and history does not always
+	comply. Refusing it would mean the books can never be made to match what
+	happened. Closing the window puts every rule back, including over the
+	history that was loaded, so this is an amnesty with an end date rather than
+	a permanent hole.
+
+	The exemption keys on the flag, not on the window alone: an entry made for
+	today while a load is in progress is a live entry and stays guarded.
+	"""
 	if not doc.event_type or not doc.animal:
+		return
+	if doc.get("custom_is_backdated") and backdate.window_open():
 		return
 	_check_age(doc)
 	_check_age_window(doc)
