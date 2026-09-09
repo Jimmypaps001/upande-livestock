@@ -78,3 +78,27 @@
 	if (window.frappe && frappe.after_ajax) frappe.after_ajax(start);
 	else window.addEventListener("load", start);
 })();
+
+// Same-tab navigation for /livestock_app.
+//
+// Frappe hard-codes target="_blank" on every URL-type workspace-sidebar item
+// (sidebar_item.html), so a sidebar link to the React app opens a new tab.
+// Intercept those clicks and navigate in the current tab instead. Capture
+// phase, so this wins before Frappe's own handler. Scoped to /livestock_app —
+// every other link on the desk is left alone.
+(function () {
+	document.addEventListener(
+		"click",
+		function (e) {
+			var a = e.target && e.target.closest && e.target.closest("a[href]");
+			if (!a) return;
+			var href = a.getAttribute("href") || "";
+			if (href.indexOf("/livestock_app") === 0) {
+				e.preventDefault();
+				e.stopPropagation();
+				window.location.href = href;
+			}
+		},
+		true
+	);
+})();

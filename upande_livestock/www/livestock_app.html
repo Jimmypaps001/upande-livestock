@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Upande Livestock · Feeding</title>
+		<link rel="icon" type="image/png" href="/assets/upande_livestock/images/upande_logo.png" />
+		<link rel="apple-touch-icon" href="/assets/upande_livestock/images/upande_logo.png" />
+		<!-- Poppins is self-hosted via @font-face in the bundled livestock_css. -->
+		<link rel="stylesheet" href="{{ livestock_css }}" />
+
+		<style>
+			.navbar.navbar-light { display: none !important; }
+			.web-footer { display: none !important; }
+			html, body { height: 100%; margin: 0; padding: 0; background: #f4f3ef; }
+			body { overflow: hidden; }
+			#livestock-root { height: 100vh; width: 100%; overflow: auto;
+				font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+			.page-content, .container, main.container { max-width: none !important; padding: 0 !important; margin: 0 !important; }
+		</style>
+	</head>
+	<body>
+		<div id="livestock-root"></div>
+
+		<script type="application/json" id="livestock-bootstrap">{{ bootstrap_json | safe }}</script>
+		<script>
+			(function () {
+				var bootEl = document.getElementById("livestock-bootstrap");
+				var boot = {};
+				try { boot = JSON.parse(bootEl.textContent || "{}"); } catch (_) {}
+				window.LIVESTOCK = {
+					csrf_token: boot.csrf_token || window.csrf_token || "",
+					bootstrap: boot
+				};
+			})();
+		</script>
+		<script type="module" src="{{ livestock_js }}"></script>
+	</body>
+</html>

@@ -6,6 +6,12 @@ tags
 node_modules
 __pycache__
 
+# Vite build output for the React frontend (frontend/ -> here). Rebuilt by
+# `npm run build`; a committed bundle would conflict on every build and go
+# stale against the source beside it.
+upande_livestock/public/dist
+package-lock.json
+
 # Source documents the app is built against, not part of it. The August 2026
 # feed formulations govern every concentrate and TMR BOM here — see
 # demo/build_concentrates.py and demo/build_feed_rations.py, which carry the
