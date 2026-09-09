@@ -13,6 +13,7 @@ endpoints — or that they moved.
   "day"         how much of today's ration has gone out, and what is owed
   "manufacture" mix the TMR (a Work Order), which also issues it to the herd
   "issue"       issue an already-mixed quantity
+  "manual"      mix and issue a tuned recipe for a head count the operator gave
 
 `manufacture` takes a `portion`: the farm feeds twice a day, so 0.5 mixes and
 issues half the ration and two runs make the day. The phone gets the suggested
@@ -31,6 +32,7 @@ from upande_livestock.serverscripts.common.envelope import as_dict, run
 from upande_livestock.serverscripts.feeding.feed_day_status import feed_day_status
 from upande_livestock.serverscripts.feeding.feeding_program import feeding_program
 from upande_livestock.serverscripts.feeding.issue_feed import issue_feed
+from upande_livestock.serverscripts.feeding.manual_feed import manual_feed
 from upande_livestock.serverscripts.feeding.manufacture_feed import manufacture_feed
 
 
@@ -59,10 +61,21 @@ def record_feeding(payload=None):
 			return issue_feed(
 				herd, d.get("qty"), employee=d.get("employee"), posting_date=d.get("posting_date")
 			)
-		frappe.throw(
-			frappe._("{0} is not a feeding action. Known: info, day, manufacture, issue.").format(
-				action
+		if action == "manual":
+			return manual_feed(
+				{
+					"herd": herd,
+					"lines": d.get("lines"),
+					"heads": d.get("heads"),
+					"portion": d.get("portion"),
+					"posting_date": d.get("posting_date"),
+					"employee": d.get("employee"),
+				}
 			)
+		frappe.throw(
+			frappe._(
+				"{0} is not a feeding action. Known: info, day, manufacture, issue, manual."
+			).format(action)
 		)
 
 	return run(go, "livestock mobile record_feeding failed")
