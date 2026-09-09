@@ -30,7 +30,7 @@ def window_open() -> bool:
 	return bool(frappe.db.get_single_value("Livestock Settings", "custom_backdating_open"))
 
 
-def resolve(payload: dict, date_key: str = None) -> tuple:
+def resolve(payload: dict, date_key: str | None = None) -> tuple:
 	"""Return ``(date, is_backdated)`` for a write request.
 
 	Precedence is `event_date`, then the type-specific date, then today —
