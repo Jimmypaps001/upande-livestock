@@ -44,7 +44,7 @@ describe("seedManualRows", () => {
   });
 });
 
-describe("the portion slider", () => {
+describe("the portion switch", () => {
   const day = { day_kg: 5106 } as FeedDayStatus;
 
   it("offers exactly two positions", () => {

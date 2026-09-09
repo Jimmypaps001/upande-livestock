@@ -8,7 +8,7 @@ import { DateFed } from "@/components/feeding/DateFed";
 import { DayStatus } from "@/components/feeding/DayStatus";
 import { ManualConfig } from "@/components/feeding/ManualConfig";
 import { Mark, Notice, Pill } from "@/components/feeding/Notice";
-import { PortionSlider } from "@/components/feeding/PortionSlider";
+import { PortionSwitch } from "@/components/feeding/PortionSwitch";
 import { RequirementTable } from "@/components/feeding/RequirementTable";
 import { Button } from "@/components/ui/button";
 import {
@@ -126,7 +126,7 @@ export function Feeding() {
       setProgram(p);
       const dayStatus = isError(d) ? null : d;
       setDay(dayStatus);
-      // The suggested portion is snapped to the nearer of the two the slider
+      // The suggested portion is snapped to the nearer of the two the switch
       // offers: the server may answer 0.37 for a herd already part-fed, and
       // this screen never shows a decimal.
       const suggested = dayStatus?.suggested_portion ?? 1;
@@ -340,7 +340,7 @@ export function Feeding() {
                   <div className="flex flex-wrap items-end justify-between gap-5">
                     <div className="flex w-full max-w-xs flex-col gap-2">
                       <Label className="text-[var(--sd-muted)]">This run</Label>
-                      <PortionSlider portion={portion} onChange={setPortion} />
+                      <PortionSwitch portion={portion} onChange={setPortion} />
                     </div>
                     <div className="flex flex-col gap-1">
                       <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-[var(--sd-quiet)]">

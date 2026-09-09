@@ -202,15 +202,15 @@ export function seedManualRows(program: FeedingProgram): ManualRow[] {
  * The only two portions the screen offers.
  *
  * The farm feeds twice a day, so a run is half the day or the whole of it.
- * The slider carries these; the operator never types a decimal and never sees
- * one — they see the kilograms the choice produces.
+ * The switch carries these; the operator never types a decimal and never
+ * sees one — they see the kilograms the choice produces.
  */
 export const PORTIONS = [
   { portion: 0.5, label: "Half day" },
   { portion: 1, label: "Full day" },
 ] as const;
 
-/** Kilograms this run would put in the trough, live as the slider moves.
+/** Kilograms this run would put in the trough, live as the switch flips.
  *  `day_kg` is a whole day for the whole herd; the portion scales it. */
 export function runKg(day: FeedDayStatus | null, portion: number): number | null {
   if (!day) return null;
