@@ -56,6 +56,7 @@ def record_feeding(payload=None):
 				employee=d.get("employee"),
 				portion=d.get("portion", 1.0),
 				posting_date=d.get("posting_date"),
+				bom_no=d.get("bom_no"),
 			)
 		if action == "issue":
 			return issue_feed(
