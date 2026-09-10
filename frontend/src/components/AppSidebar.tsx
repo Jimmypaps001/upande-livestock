@@ -4,6 +4,7 @@ import {
   Baby,
   Beaker,
   ClipboardList,
+  ClipboardPen,
   Droplets,
   FileText,
   Heart,
@@ -89,6 +90,12 @@ const NAV: NavSection[] = [
         icon: Warehouse,
         hint: "What the feed stores are holding",
       },
+      {
+        view: "rations",
+        label: "Rations",
+        icon: ClipboardPen,
+        hint: "Which recipe each herd was fed, and the milk beside it",
+      },
     ],
   },
   {
@@ -128,6 +135,7 @@ export const BUILT_VIEWS: ReadonlySet<View> = new Set<View>([
   "feeding",
   "concentrate",
   "stock",
+  "rations",
   "settings",
 ]);
 

@@ -13,6 +13,9 @@ const Concentrate = lazy(() =>
   import("@/pages/Concentrate").then((m) => ({ default: m.Concentrate })),
 );
 const Stock = lazy(() => import("@/pages/Stock").then((m) => ({ default: m.Stock })));
+const Rations = lazy(() =>
+  import("@/pages/Rations").then((m) => ({ default: m.Rations })),
+);
 const Dashboard = lazy(() =>
   import("@/pages/Dashboard").then((m) => ({ default: m.Dashboard })),
 );
@@ -30,6 +33,7 @@ const TITLES: Record<View, string> = {
   feeding: "Feeding",
   concentrate: "Concentrate",
   stock: "Feed in Store",
+  rations: "Rations",
   milking: "Milking",
   movement: "Movement",
   "drying-off": "Drying Off",
@@ -52,6 +56,7 @@ const PAGES: Partial<Record<View, React.ComponentType>> = {
   feeding: Feeding,
   concentrate: Concentrate,
   stock: Stock,
+  rations: Rations,
   dashboard: Dashboard,
   settings: Settings,
 };
