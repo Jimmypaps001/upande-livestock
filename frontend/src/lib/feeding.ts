@@ -195,16 +195,15 @@ export function feedDayStatus(herd: string): Promise<Envelope<FeedDayStatus>> {
   return call(RECORD_FEEDING, { payload: { action: "day", herd } });
 }
 
-/** Mix and issue the herd's own ration. `portion` is 0.5 (one of the day's two
- *  runs) or 1.0 (the whole day) — see PORTIONS.
+/** Mix and issue a herd's ration through the System path. `portion` is 0.5
+ *  (one of the day's two runs) or 1.0 (the whole day) — see PORTIONS.
  *
- *  `bom_no` is threaded through so a picker's choice reaches the server, but
- *  as of this writing `record_feeding`'s "manufacture" action (and
- *  `manufacture_feed.py` beneath it) only ever mixes the herd's own standing
- *  BOM — it does not read this field back out of the payload. Call this only
- *  for the standing recipe; a recipe the picker offers as "used before" has
- *  to go through `manualFeed` below with `base_bom` set, which is the one
- *  route already wired end-to-end to `manufacture_herd_feed(bom_no=...)`. See
+ *  `bom_no` carries the recipe picker's choice — the herd's standing ration
+ *  when omitted, or a previously-used recipe otherwise — straight to
+ *  `manufacture_feed.py`, which validates it against the herd through
+ *  `_base_for` before mixing. This is the only path the System tab calls: a
+ *  run through here is always recorded `feed_mode="System"`, whether it
+ *  reruns the standing ration or an unedited previously-used recipe. See
  *  Feeding.tsx's `mixAndFeed`. */
 export function manufactureFeed(args: {
   herd: string;
@@ -215,10 +214,10 @@ export function manufactureFeed(args: {
   return call(RECORD_FEEDING, { payload: { action: "manufacture", ...args } });
 }
 
-/** Mix and issue a recipe — either one the operator wrote by hand, or an
- *  unedited recipe picked from `herdRecipes` (see `seedRowsFromRecipe` and
- *  Feeding.tsx's `mixAndFeed`). `lines[].qty` is per head IN THE BASE BOM'S
- *  RECIPE UOM — see seedManualRows / seedRowsFromRecipe.
+/** Mix and issue a hand-tuned recipe from the Manual tab — reserved for lines
+ *  the operator has actually edited; an unchanged recipe run is a System run
+ *  and goes through `manufactureFeed` instead. `lines[].qty` is per head IN
+ *  THE BASE BOM'S RECIPE UOM — see seedManualRows / seedRowsFromRecipe.
  *
  *  `base_bom` names the recipe this tune starts from — the herd's standing
  *  ration when omitted, or a previously-used recipe the operator picked. When

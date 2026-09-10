@@ -215,28 +215,16 @@ export function Feeding() {
     setMixing(true);
     setFailure(null);
     setSuccess(null);
-    // The standing recipe still goes through the ordinary system path
-    // unchanged. A previously-tuned recipe has to go through manualFeed
-    // instead — see manufactureFeed's docstring in lib/feeding.ts for why —
-    // sending that recipe's own lines untouched, so tuned_bom recognises the
-    // tune as unedited and hands back the same bom_no rather than minting a
-    // new one.
-    const r =
-      usingStandingRecipe || !selectedRecipe
-        ? await manufactureFeed({
-            herd: program.herd,
-            portion,
-            posting_date: effectiveDate,
-            bom_no: selectedBom || undefined,
-          })
-        : await manualFeed({
-            herd: program.herd,
-            lines: selectedRecipe.lines.map((ln) => ({ item_code: ln.item_code, qty: ln.qty })),
-            heads: program.heads,
-            posting_date: effectiveDate,
-            base_bom: selectedRecipe.bom_no,
-            portion,
-          });
+    // The System tab always runs through manufactureFeed, standing ration or
+    // a previously-used recipe alike — bom_no carries the picker's choice,
+    // and manufacture_feed.py validates it against the herd. No hand-tuning
+    // happens on this tab, so nothing here ever goes through manualFeed.
+    const r = await manufactureFeed({
+      herd: program.herd,
+      portion,
+      posting_date: effectiveDate,
+      bom_no: selectedBom || undefined,
+    });
     setMixing(false);
     if (isError(r)) {
       setFailure(r.error);
