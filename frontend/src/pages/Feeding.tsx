@@ -286,8 +286,12 @@ export function Feeding() {
     load(program.herd, false);
   }
 
-  const kg = runKg(day, portion);
-  const rationQty = runRationQty(program, portion);
+  // Both follow the recipe picker, not just the standing programme — see
+  // runKg/runRationQty's docstrings for why the standing ration still reads
+  // off the day/programme figures while a previously-used or tuned pick
+  // recomputes from its own per-head amount.
+  const kg = runKg(day, portion, selectedRecipe, program?.heads);
+  const rationQty = runRationQty(program, portion, selectedRecipe);
   const manualDisabled = !program ? "Select a herd first." : null;
 
   return (
@@ -430,7 +434,11 @@ export function Feeding() {
                       </span>
                       {rationQty != null && (
                         <span className="text-[11px] text-[var(--sd-quiet)]">
-                          {fmt(rationQty)} {program.uom} of {program.production_item_name}
+                          {fmt(rationQty)}{" "}
+                          {selectedRecipe && !selectedRecipe.is_standing
+                            ? selectedRecipe.uom
+                            : program.uom}{" "}
+                          of {program.production_item_name}
                         </span>
                       )}
                     </div>

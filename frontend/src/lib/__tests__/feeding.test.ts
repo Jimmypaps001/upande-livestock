@@ -3,6 +3,7 @@ import {
   manualRowsDirty,
   PORTIONS,
   runKg,
+  runRationQty,
   seedManualRows,
   seedRowsFromRecipe,
   type FeedDayStatus,
@@ -59,6 +60,8 @@ const recipe = {
   created: "2026-09-04 02:30:04.152679",
   per_head_qty: 1,
   uom: "Kilogram",
+  times_fed: 0,
+  last_fed: "",
   lines: [
     { item_code: "4040010082", item_name: "Silage - Farm Produced", qty: 35, uom: "Kilogram" },
     { item_code: "4040010034", item_name: "Hay - Pure Boma Rhode (15kgs Min.)", qty: 2, uom: "Kilogram" },
@@ -123,5 +126,41 @@ describe("the portion switch", () => {
   it("turns a portion into the kilograms the operator sees", () => {
     expect(runKg(day, 0.5)).toBe(2553);
     expect(runKg(day, 1)).toBe(5106);
+  });
+});
+
+/** The bug this guards: picking a recipe other than the standing ration used
+ *  to leave the "goes in the trough" preview reading the standing ration's
+ *  own day/programme figures — the same mistake as seeding the manual rows
+ *  from the wrong source, in a different spot on the page. `-010` (1.0 kg
+ *  per head against its siblings' 12.3) is the case that makes it visible:
+ *  picking it must show ~1/12 of what the standing ration would, not the
+ *  standing figure unchanged. */
+describe("runKg / runRationQty follow the selected recipe, not just the standing one", () => {
+  const day = { day_kg: 5106 } as FeedDayStatus; // the STANDING ration's day total for 50 heads
+  const program = { heads: 50, total_manufacture_qty: 615 } as FeedingProgram; // standing: 12.3/head
+  const standing = { is_standing: true, per_head_qty: 12.3 } as Recipe;
+  const outlier = { is_standing: false, per_head_qty: 1.0 } as Recipe; // "-010"
+
+  it("still reads the day/programme figures when the standing ration is picked", () => {
+    expect(runKg(day, 1, standing, program.heads)).toBe(5106);
+    expect(runRationQty(program, 1, standing)).toBe(615);
+  });
+
+  it("still reads the day/programme figures when nothing is picked (defaults to standing)", () => {
+    expect(runKg(day, 1, null, program.heads)).toBe(5106);
+    expect(runRationQty(program, 1, null)).toBe(615);
+  });
+
+  it("recomputes from the recipe's own per-head amount once a non-standing recipe is picked", () => {
+    // 1.0 kg/head x 50 heads = 50, not the standing ration's 5106/615 —
+    // roughly a twelfth, exactly the -010 case the brief describes.
+    expect(runKg(day, 1, outlier, program.heads)).toBe(50);
+    expect(runRationQty(program, 1, outlier)).toBe(50);
+  });
+
+  it("scales the recomputed figure with the portion switch too", () => {
+    expect(runKg(day, 0.5, outlier, program.heads)).toBe(25);
+    expect(runRationQty(program, 0.5, outlier)).toBe(25);
   });
 });

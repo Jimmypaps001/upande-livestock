@@ -129,9 +129,20 @@ export type ConcentrateWeeklyPlan = {
 export type RecipeLine = { item_code: string; item_name: string; qty: number; uom: string };
 
 /** A recipe `herd_recipes` can offer for one herd: the standing ration
- *  (`is_standing`), or a BOM tuned for this herd before. `lines` travel with
- *  it — that is what lets a picker seed the manual tab without a second
- *  round trip. */
+ *  (`is_standing`, `kind` "Standing"), a BOM tuned for this herd before
+ *  (`kind` "Tuned"), or a BOM the herd was genuinely fed before but which was
+ *  never a hand-tune (`kind` "Previous" — reached only through Work Order
+ *  history, per herd_recipes.py). `lines` travel with it — that is what lets
+ *  a picker seed the manual tab without a second round trip.
+ *
+ *  `per_head_qty`/`uom` are the BOM's own header quantity/uom — the same
+ *  produced item for every recipe offered for a herd (herd_recipes.py's
+ *  `_runnable` only offers BOMs of the herd's standing item), so recipes are
+ *  comparable to one another and to the herd's day/programme figures without
+ *  any conversion. They are NOT interchangeable numbers, though: one BOM can
+ *  carry a per-head amount a fraction of its siblings' (see RecipePicker's
+ *  outlier check) — that difference is exactly what a bare list of recipe
+ *  names would hide. */
 export type Recipe = {
   bom_no: string;
   item_code: string;
@@ -141,6 +152,12 @@ export type Recipe = {
   created: string;
   per_head_qty: number;
   uom: string;
+  /** How many submitted Work Orders this herd has actually run on this
+   *  recipe. 0 for a tune minted but never mixed. */
+  times_fed: number;
+  /** The most recent of those runs' `planned_start_date`, or "" when
+   *  `times_fed` is 0. */
+  last_fed: string;
   lines: RecipeLine[];
 };
 
@@ -353,15 +370,56 @@ export const PORTIONS = [
   { portion: 1, label: "Full day" },
 ] as const;
 
-/** Kilograms this run would put in the trough, live as the switch flips.
- *  `day_kg` is a whole day for the whole herd; the portion scales it. */
-export function runKg(day: FeedDayStatus | null, portion: number): number | null {
+/**
+ * Kilograms this run would put in the trough, live as the switch flips OR
+ * the recipe changes.
+ *
+ * For the standing ration this follows the day's own remaining-today
+ * accounting exactly as before (`day.day_kg`) — a herd already fed once this
+ * morning is owed the remainder, not another half. But `feed_day_status`
+ * only ever answers for the herd's standing ration (`Herds.bom`); it takes
+ * no `bom_no` and has no "remaining today" figure for anything else. So once
+ * the operator picks a previously-used or tuned recipe instead, the preview
+ * falls back to that recipe's own per-head amount times the head count —
+ * exactly what a manufacture run against it would actually mix.
+ *
+ * `recipe.per_head_qty` is already in the produced item's own uom (see
+ * `Recipe`'s docstring) — never converted here, same as everywhere else in
+ * this file.
+ */
+export function runKg(
+  day: FeedDayStatus | null,
+  portion: number,
+  recipe?: Recipe | null,
+  heads?: number,
+): number | null {
+  if (recipe && !recipe.is_standing) {
+    if (!heads) return null;
+    return (Number(recipe.per_head_qty) || 0) * heads * portion;
+  }
   if (!day) return null;
   return (Number(day.day_kg) || 0) * portion;
 }
 
-/** The same run in ration units, which is what the Work Order is written in. */
-export function runRationQty(program: FeedingProgram | null, portion: number): number | null {
+/**
+ * The same run in ration units, which is what the Work Order is written in.
+ *
+ * Same recipe-follows-selection rule as `runKg`: the standing ration reads
+ * off `program.total_manufacture_qty` (the server's own figure, batch
+ * rounding included), and a previously-used or tuned recipe is recomputed
+ * from its own per-head amount instead — `total_manufacture_qty` is only
+ * ever the standing ration's, since `feeding_program` takes no `bom_no`
+ * either.
+ */
+export function runRationQty(
+  program: FeedingProgram | null,
+  portion: number,
+  recipe?: Recipe | null,
+): number | null {
+  if (recipe && !recipe.is_standing) {
+    if (!program?.heads) return null;
+    return (Number(recipe.per_head_qty) || 0) * program.heads * portion;
+  }
   if (!program) return null;
   return (Number(program.total_manufacture_qty) || 0) * portion;
 }
