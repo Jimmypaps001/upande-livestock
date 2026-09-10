@@ -253,8 +253,11 @@ scheduler_events = {
 	# Ex "CHECK OVERDUE PREGNANCY DIAGNOSES" Server Script (Daily).
 	"daily": [
 		"upande_livestock.serverscripts.alerts.tasks.check_overdue_pregnancy_diagnoses",
-		# Captures what should be said about herd movement. It records alerts; it
-		# does not deliver them — that channel is still to be decided.
+		# Captures what should be said about herd movement and calving, records
+		# it as Livestock Alerts, and delivers the open ones as Notification Log
+		# rows to the livestock roles responsible for each kind. The channel is
+		# serverscripts/common/notifications.py; delivery is idempotent on the
+		# alert row, so this running nightly does not re-send anything.
 		"upande_livestock.serverscripts.alerts.raise_alerts.raise_alerts",
 	],
 }

@@ -8,9 +8,11 @@ against a calf and a service against a weaner. They are now derived from where
 an animal stands in the herd structure — derived, because a list marked by hand
 drifts the first time a herd is renamed or added.
 
-Alerts are CAPTURED, not delivered. Nothing here sends anything; the tests hold
-that line deliberately, because the channel has not been chosen and a test that
-asserted an email would freeze that decision.
+Alerts are captured HERE and delivered ELSEWHERE. The channel has since been
+chosen — Frappe's Notification Log, via common/notifications.py — and the line
+these tests hold has moved with it: this module still must not grow a transport
+of its own. What it may do is hand finished alerts to the one module that
+delivers them. See tests/test_notifications.py for the delivery promises.
 """
 
 import unittest
@@ -177,12 +179,37 @@ class TestAlerts(IntegrationTestCase):
 		doc.reload()
 		self.assertFalse(doc.actioned_on, "reopening clears the stamp")
 
-	def test_nothing_here_sends_anything(self):
-		"""Deliberate. The channel has not been chosen, and a test asserting an
-		email would freeze that decision before it is made."""
+	def test_this_module_grows_no_transport_of_its_own(self):
+		"""Delivery is delegated, not inlined.
+
+		A second way to send — an frappe.sendmail here, an SMS POST there —
+		is how an audience decision made once in common/notifications.py
+		quietly becomes three different decisions.
+		"""
 		import inspect
 
 		src = inspect.getsource(herd_alerts)
 		for forbidden in ("sendmail", "send_email", "Notification Log", "requests.post"):
 			self.assertNotIn(forbidden, src,
-			                 "alerts are captured, not delivered — {} does not belong here".format(forbidden))
+			                 f"delivery belongs to common/notifications — {forbidden} does not belong here")
+
+	def test_raising_also_delivers(self):
+		"""The alerts this module records reach somebody.
+
+		The comment in hooks.py used to say the channel "is still to be
+		decided"; this is the test that says it has been.
+		"""
+		from upande_livestock.serverscripts.common import notifications
+
+		result = herd_alerts.raise_alerts()
+		self.assertIn("delivery", result, "raise_alerts no longer reports a delivery")
+		open_alerts = frappe.get_all("Livestock Alert", filters={"status": "Open"}, pluck="name")
+		if not open_alerts:
+			raise unittest.SkipTest("nothing open on this site to deliver")
+		self.assertTrue(
+			frappe.db.exists("Notification Log", {
+				"document_type": notifications.ANCHOR,
+				"document_name": ("in", open_alerts),
+			}),
+			"open alerts exist but nobody was told",
+		)

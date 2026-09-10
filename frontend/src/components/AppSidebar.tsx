@@ -3,6 +3,7 @@ import {
   ArrowRightLeft,
   Baby,
   Beaker,
+  Bell,
   ClipboardList,
   ClipboardPen,
   Droplets,
@@ -38,6 +39,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useUnreadNotifications } from "@/hooks/use-notifications";
 import { routeHash, type View } from "@/lib/router";
 import upandeLogo from "@/assets/upande_logo.png";
 
@@ -137,6 +139,7 @@ export const BUILT_VIEWS: ReadonlySet<View> = new Set<View>([
   "stock",
   "rations",
   "settings",
+  "notifications",
 ]);
 
 export function AppSidebar({
@@ -148,6 +151,7 @@ export function AppSidebar({
 }) {
   const { state, toggle } = useSidebar();
   const collapsed = state === "collapsed";
+  const { unread } = useUnreadNotifications();
 
   return (
     <Sidebar collapsible="icon">
@@ -227,6 +231,40 @@ export function AppSidebar({
       </SidebarContent>
       <SidebarFooter>
         <SidebarMenu>
+          {/* Pinned to the footer rather than listed under Herd: it is not a
+              part of the herd, it is how the herd reaches you, and it must stay
+              reachable without scrolling the nav. */}
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              asChild
+              isActive={view === "notifications"}
+              className="relative"
+              title={
+                unread
+                  ? `${unread} unread notification${unread === 1 ? "" : "s"}`
+                  : "Notifications"
+              }
+            >
+              <a
+                href={routeHash("notifications")}
+                onClick={(e) => {
+                  e.preventDefault();
+                  onNavigate("notifications");
+                }}
+              >
+                <Bell className="h-4 w-4" />
+                <span>Notifications</span>
+                {unread > 0 && (
+                  <span
+                    aria-label={`${unread} unread`}
+                    className="ml-auto inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--sd-sev-critical)] px-1 text-[10px] font-semibold tabular-nums text-white group-data-[collapsible=icon]:absolute group-data-[collapsible=icon]:top-0 group-data-[collapsible=icon]:right-0 group-data-[collapsible=icon]:ml-0"
+                  >
+                    {unread > 99 ? "99+" : unread}
+                  </span>
+                )}
+              </a>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton
               onClick={toggle}

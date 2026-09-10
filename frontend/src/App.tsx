@@ -22,6 +22,9 @@ const Dashboard = lazy(() =>
 const Settings = lazy(() =>
   import("@/pages/Settings").then((m) => ({ default: m.Settings })),
 );
+const Notifications = lazy(() =>
+  import("@/pages/Notifications").then((m) => ({ default: m.Notifications })),
+);
 
 const TITLES: Record<View, string> = {
   dashboard: "Dashboard",
@@ -48,6 +51,7 @@ const TITLES: Record<View, string> = {
   "health-case": "Health Case",
   disposal: "Disposal",
   settings: "Settings",
+  notifications: "Notifications",
 };
 
 /** The surfaces this frontend implements. Everything else renders a
@@ -59,6 +63,7 @@ const PAGES: Partial<Record<View, React.ComponentType>> = {
   rations: Rations,
   dashboard: Dashboard,
   settings: Settings,
+  notifications: Notifications,
 };
 
 export function App() {

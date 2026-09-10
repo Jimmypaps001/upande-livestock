@@ -25,7 +25,7 @@
  "fields": [
   {"fieldname": "alert_kind", "fieldtype": "Select", "label": "Alert", "reqd": 1, "in_list_view": 1,
    "in_standard_filter": 1,
-   "options": "Bull Cull Due\nMove Due\nMove Overdue\nCow Open Too Long"},
+   "options": "Bull Cull Due\nMove Due\nMove Overdue\nCow Open Too Long\nCalving Due\nPregnancy Check Overdue"},
   {"fieldname": "severity", "fieldtype": "Select", "label": "Severity", "in_list_view": 1,
    "in_standard_filter": 1, "options": "Due\nOverdue"},
   {"fieldname": "alert_date", "fieldtype": "Date", "label": "Raised On", "reqd": 1, "in_list_view": 1},

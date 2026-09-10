@@ -1,6 +1,86 @@
-"""Scheduled livestock reproductive-alert tasks, ported from a sandboxed Frappe Scheduler Event Server Script."""
+"""Scheduled livestock reproductive-alert tasks, ported from a sandboxed Frappe Scheduler Event Server Script.
+
+The five ToDo sweeps below are unchanged. What is new is that the first of them
+— the overdue pregnancy check, the one thing here that is genuinely late rather
+than merely upcoming — now also raises a `Livestock Alert`, and that this task
+delivers the open alerts at the end.
+
+A ToDo and a notification are not the same thing and neither replaces the other:
+a ToDo is a work item somebody is assigned and closes, a notification is how a
+person finds out at all. The ToDos keep their audience (the serving operator);
+the alert reaches the breeder, the vet and the manager, who may not be that
+operator.
+"""
 
 import frappe
+
+from upande_livestock.serverscripts.alerts import raise_alerts as herd_alerts
+from upande_livestock.serverscripts.common import herd_movement, notifications
+
+#: Days after a service by which a diagnosis should have been recorded, when
+#: Livestock Settings has no `pregnancy_check_days_after_service`. Sixty is the
+#: number the SQL below has always hardcoded, so an unset field changes nothing.
+DEFAULT_PREGNANCY_CHECK_DAYS = 60
+
+
+def pregnancy_check_days():
+	configured = herd_movement.settings().get("pregnancy_check_days_after_service")
+	return int(configured or 0) or DEFAULT_PREGNANCY_CHECK_DAYS
+
+
+def raise_pregnancy_check_alerts():
+	"""Record a `Pregnancy Check Overdue` alert per service still undiagnosed.
+
+	Deliberately NOT reusing the ToDo query above it. That one excludes anything
+	that already has a ToDo raised today, which is the right dedupe for a ToDo
+	and the wrong one for an alert: an alert is deduplicated on whether one is
+	still open (`herd_alerts.already_open`), so that a check overdue for a month
+	is one row and one notification rather than thirty of each.
+	"""
+	due_after = pregnancy_check_days()
+	overdue = frappe.db.sql(
+		"""
+		SELECT e.name AS service, e.animal, e.service_date,
+		       a.tag_number, a.burn_name, a.current_herd,
+		       DATEDIFF(CURDATE(), e.service_date) AS days_since
+		FROM `tabLivestock Event` e
+		JOIN `tabAnimal` a ON a.name = e.animal
+		WHERE e.event_type = 'Service'
+		  AND e.pregnancy_confirmation_status = 'Pending'
+		  AND e.docstatus = 1
+		  AND DATEDIFF(CURDATE(), e.service_date) > %(due)s
+		  AND IFNULL(a.disabled, 0) = 0
+		  AND a.status NOT IN ('Dead', 'Deceased', 'Sold', 'Culled', 'Disposed')
+		""",
+		{"due": due_after},
+		as_dict=True,
+	)
+
+	raised = 0
+	for r in overdue:
+		if herd_alerts.already_open("Pregnancy Check Overdue", r.animal):
+			continue
+		label = r.tag_number or r.burn_name or r.animal
+		days = int(r.days_since or 0)
+		doc = frappe.new_doc("Livestock Alert")
+		doc.alert_kind = "Pregnancy Check Overdue"
+		doc.alert_date = frappe.utils.nowdate()
+		doc.animal = r.animal
+		doc.herd = r.current_herd
+		doc.severity = "Overdue"
+		doc.message = (
+			f"{label} was served {days} days ago and still has no pregnancy diagnosis "
+			f"— {days - due_after} days past the {due_after}-day check."
+		)
+		doc.detail = frappe.as_json({
+			"service": r.service,
+			"service_date": str(r.service_date),
+			"days_since": days,
+			"check_due_after_days": due_after,
+		})
+		doc.insert(ignore_permissions=True)
+		raised += 1
+	return raised
 
 
 def check_overdue_pregnancy_diagnoses():
@@ -302,5 +382,16 @@ def check_overdue_pregnancy_diagnoses():
 
 	frappe.db.commit()
 
+	# ============================================================
+	# 6. RAISE AND DELIVER THE ALERTS THE ToDos ABOVE ONLY IMPLIED
+	# ============================================================
+
+	raised = raise_pregnancy_check_alerts()
+	delivery = notifications.deliver_open_alerts()
+	frappe.db.commit()
+
 	# Log completion
-	frappe.logger().info("Completed Daily Reproductive Alerts")
+	frappe.logger().info(
+		f"Completed Daily Reproductive Alerts — {raised} alerts raised, "
+		f"{delivery['delivered']} notifications delivered"
+	)
