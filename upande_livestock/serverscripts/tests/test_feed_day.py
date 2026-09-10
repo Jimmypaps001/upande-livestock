@@ -97,3 +97,74 @@ class TestConcentratePlan(IntegrationTestCase):
 	def test_a_plan_of_no_days_is_refused(self):
 		result = concentrate_plan(0)
 		self.assertIn("error", result)
+
+
+class TestConcentratePlanCarriesTheRecipeLines(IntegrationTestCase):
+	"""The mixing page shows what goes in the mixer, one batch at a time.
+
+	Two things have to hold. The quantities must be the recipe's own
+	(`BOM Item.qty`/`.uom`), not stock units — the rule every recipe reader in
+	this app follows, because hay is written in kg and stocked in BALE at cf
+	0.07. And the batch those lines make has to be stated in the payload:
+	`to_mix_kg` is rounded up to whole batches, so lines printed under the run
+	total without `batch_qty` beside them read as one enormous load.
+	"""
+
+	# The lactating concentrate on this site.
+	CONCENTRATE = "4040010086"
+
+	def test_every_row_carries_its_recipe_in_recipe_units(self):
+		plan = concentrate_plan(7)
+		self.assertTrue(plan.get("ok"), plan.get("error"))
+		self.assertTrue(plan["concentrates"], "expected concentrates on this site")
+		for row in plan["concentrates"]:
+			expected = frappe.get_all(
+				"BOM Item",
+				filters={"parent": row["bom_no"], "parenttype": "BOM"},
+				fields=["item_code", "qty", "uom"],
+				order_by="idx asc",
+			)
+			self.assertEqual(
+				[ln["item_code"] for ln in row["lines"]],
+				[r.item_code for r in expected],
+				f"{row['item_code']} does not carry the lines of {row['bom_no']}",
+			)
+			for line, want in zip(row["lines"], expected, strict=True):
+				self.assertEqual(line["uom"], want.uom)
+				self.assertAlmostEqual(flt(line["qty"]), flt(want.qty), places=4)
+
+	def test_the_lines_are_one_batch_and_the_payload_says_so(self):
+		"""Unscaled, deliberately — the mixer is loaded a batch at a time and
+		`batches` says how many times. What must not happen is lines that could
+		be read as the whole run, so the batch they make travels with them."""
+		plan = concentrate_plan(7)
+		row = next(
+			(r for r in plan["concentrates"] if r["item_code"] == self.CONCENTRATE),
+			None,
+		)
+		if not row:
+			self.skipTest(f"{self.CONCENTRATE} is not in this site's concentrate plan")
+		bom = frappe.db.get_value("BOM", row["bom_no"], ["quantity", "uom"], as_dict=True)
+		self.assertAlmostEqual(flt(row["batch_qty"]), flt(bom.quantity), places=4)
+		self.assertEqual(row["batch_uom"], bom.uom)
+		self.assertTrue(row["batch_qty"], "a row's lines are meaningless without their batch")
+		if row["batches"] > 1:
+			self.assertNotAlmostEqual(flt(row["batch_qty"]), flt(row["to_mix_kg"]), places=4)
+
+	def test_hay_style_conversions_are_not_reported_in_stock_units(self):
+		plan = concentrate_plan(7)
+		checked = 0
+		for row in plan["concentrates"]:
+			for want in frappe.get_all(
+				"BOM Item",
+				filters={"parent": row["bom_no"], "parenttype": "BOM"},
+				fields=["item_code", "qty", "uom", "stock_qty", "stock_uom"],
+			):
+				if want.uom == want.stock_uom:
+					continue
+				line = next(ln for ln in row["lines"] if ln["item_code"] == want.item_code)
+				self.assertEqual(line["uom"], want.uom)
+				self.assertNotAlmostEqual(flt(line["qty"]), flt(want.stock_qty), places=4)
+				checked += 1
+		if not checked:
+			self.skipTest("no concentrate recipe on this site has a mixed-UOM line")

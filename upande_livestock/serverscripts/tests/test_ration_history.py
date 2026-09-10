@@ -258,3 +258,59 @@ class TestRationHistory(IntegrationTestCase):
 		listed = {h["herd"] for h in res["herds"]}
 		fed = {r.herd for r in _submitted_herd_work_orders()}
 		self.assertEqual(listed, fed)
+
+
+# Hay on this site: written in kg on every herd BOM, stocked in BALE at a
+# conversion factor of 0.07. The item that makes "recipe units, not stock
+# units" a fourteen-fold error rather than a pedantic one.
+HAY = "4040010034"
+
+
+class TestRationHistoryCarriesTheRecipeLines(IntegrationTestCase):
+	"""An operator opening a day wants to know what went in the mixer.
+
+	The lines have to be the recipe's own — `BOM Item.qty`/`.uom` — because
+	the stock figure for hay is a fourteenth of the kilograms anybody weighed.
+	"""
+
+	def test_every_row_carries_the_lines_of_the_bom_it_cites(self):
+		res = ration_history(limit=50)
+		self.assertTrue(res.get("ok"), res.get("error"))
+		self.assertTrue(res["rows"], "expected ration history on this site")
+		for row in res["rows"]:
+			expected = frappe.get_all(
+				"BOM Item",
+				filters={"parent": row["bom_no"], "parenttype": "BOM"},
+				fields=["item_code"],
+				order_by="idx asc",
+			)
+			self.assertEqual(
+				[ln["item_code"] for ln in row["lines"]],
+				[r.item_code for r in expected],
+				f"{row['fed_on']} {row['herd']} cites {row['bom_no']}",
+			)
+
+	def test_hay_comes_back_in_kilograms_not_bales(self):
+		rows = ration_history(limit=200)["rows"]
+		checked = 0
+		for row in rows:
+			recipe = {
+				r.item_code: r
+				for r in frappe.get_all(
+					"BOM Item",
+					filters={"parent": row["bom_no"], "parenttype": "BOM", "item_code": HAY},
+					fields=["item_code", "qty", "uom", "stock_qty", "stock_uom"],
+				)
+			}
+			if HAY not in recipe:
+				continue
+			hay = recipe[HAY]
+			if hay.uom == hay.stock_uom:
+				continue
+			line = next(ln for ln in row["lines"] if ln["item_code"] == HAY)
+			self.assertEqual(line["uom"], hay.uom)
+			self.assertAlmostEqual(flt(line["qty"]), flt(hay.qty), places=4)
+			self.assertNotAlmostEqual(flt(line["qty"]), flt(hay.stock_qty), places=4)
+			checked += 1
+		if not checked:
+			raise unittest.SkipTest("no row in the recent history carries hay in a non-stock UOM")

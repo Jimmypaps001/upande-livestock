@@ -52,9 +52,11 @@ def default_semen_item():
 # A Material Issue tells you stock left; it does not tell you why. Naming the
 # reason on the Stock Entry Type means a storekeeper reading the stock ledger can
 # see a deworming round without opening the document, and a report can group by
-# it. Each of these has purpose "Material Issue" — they are the same transaction,
-# labelled honestly. SCP set this precedent with Chemical Spray and Chemical
-# Loaning; livestock was still posting everything as the generic type.
+# it. Every type here is the transaction it was always going to be, labelled
+# honestly: the issues carry purpose "Material Issue", the two mixes at the end
+# carry "Manufacture". SCP set this precedent with Chemical Spray, Chemical
+# Loaning and Chemical Mixing; livestock was still posting everything as the
+# generic type.
 STOCK_ENTRY_TYPES = {
 	"Vaccination": "Vaccination",
 	"Deworming": "Deworming",
@@ -65,8 +67,24 @@ STOCK_ENTRY_TYPES = {
 	"Check Up": "Animal Health Check",
 	"Service": "Semen Issue",
 	"Feeding": "Animal Feeding",
+	# The two mixes. These are NOT Material Issues — each is the Manufacture
+	# leg of a Work Order — and they are two different jobs on this farm: a
+	# concentrate is mixed into the store as an input, a ration is mixed and
+	# eaten the same morning. Both were posting as the bare "Manufacture", so
+	# the ledger could not tell the mill from the mixer wagon. Named to match
+	# SCP's "Chemical Mixing", which is the same shape of entry.
+	"Concentrate Manufacture": "Concentrate Mixing",
+	"Ration Manufacture": "Ration Mixing",
 }
 FALLBACK_TYPE = "Material Issue"
+# The generic type to fall back on for the kinds that are not Material Issues.
+# A Manufacture entry given "Material Issue" would not merely be labelled
+# vaguely, it would be the wrong transaction — ERPNext reads purpose off the
+# type — so the fallback has to follow the kind, not the module's majority.
+FALLBACK_TYPES = {
+	"Concentrate Manufacture": "Manufacture",
+	"Ration Manufacture": "Manufacture",
+}
 
 # None of vaccination, deworming, treatment or service carries a time of day —
 # only a Date field (LivestockEvent.event_date) — so a backdated issue has
@@ -89,10 +107,11 @@ def stock_entry_type_for(what):
 	leaving the store, it should just be labelled less precisely until somebody
 	adds it here and to the installer.
 	"""
-	name = STOCK_ENTRY_TYPES.get((what or "").strip())
+	key = (what or "").strip()
+	name = STOCK_ENTRY_TYPES.get(key)
 	if name and frappe.db.exists("Stock Entry Type", name):
 		return name
-	return FALLBACK_TYPE
+	return FALLBACK_TYPES.get(key, FALLBACK_TYPE)
 
 
 def check_availability(rows, posting_date=None):

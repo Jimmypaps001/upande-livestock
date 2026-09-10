@@ -16,6 +16,15 @@ somebody tunes a recipe, and the page would claim the farm has been feeding
 today's mix since March. The Work Order remembers what was actually used, so
 that is what is reported.
 
+**Every row carries the recipe's own lines.** An operator opening a day wants
+to know what went in the mixer, and the answer has to be in the units the
+recipe is written in — `BOM Item.qty`/`.uom`, never `stock_qty`/`stock_uom`.
+Hay is 5 kg on every herd BOM here but stocked in BALE at a conversion factor
+of 0.07, so the stock figure would show a fourteenth of the hay. The lines for
+every distinct recipe on the page are fetched in ONE query (`_recipe_lines`),
+not per row: the page returns up to a thousand rows and the same recipe fills
+most of them.
+
 **Milk is placed beside the ration, never divided by it.** Milk does not come
 from one day's feed — it comes from weeks of them, from stage of lactation,
 from weather, from who was milking. So this endpoint offers a window
@@ -30,6 +39,7 @@ from frappe.utils import add_days, flt, getdate
 
 from upande_livestock.serverscripts.common.choices import herd_label_map
 from upande_livestock.serverscripts.common.envelope import guard_read, run
+from upande_livestock.serverscripts.feeding import _recipe_lines
 
 # Which days' milk to read for a ration fed on day D, and what to call the
 # figure that comes back. Nothing here is a claim about lag — the farm picks
@@ -259,6 +269,9 @@ def ration_history(herd=None, from_date=None, to_date=None, milk_window=None, li
 		by_day = _milk_by_day(herds, first, milk_last) if milk_visible else {}
 		modes = _feed_modes(herds, first, last)
 		labels = herd_label_map()
+		# One query for every distinct recipe on the page, however many rows
+		# cite it — see the module docstring.
+		lines_by_bom = _recipe_lines.lines_for([r["bom_no"] for r in rows])
 		averaged = len(offsets) > 1
 
 		out = []
@@ -276,6 +289,8 @@ def ration_history(herd=None, from_date=None, to_date=None, milk_window=None, li
 					# from -011, and it is the only thing that does.
 					"recipe": r["bom_item_name"] or r["item_code"] or r["bom_no"],
 					"ration_kind": r["ration_kind"] or "",
+					# In RECIPE qty/uom. See the module docstring.
+					"lines": lines_by_bom.get(r["bom_no"], []),
 					"qty": flt(r["qty"]),
 					"uom": r["uom"] or "",
 					"runs": int(r["runs"]),

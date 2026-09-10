@@ -77,17 +77,33 @@ def _existing_match(item, signature, quantity):
 	return None
 
 
+def _was_fed_to(herd, bom_no):
+	"""Has this herd actually been mixed this recipe? The Work Order says so.
+
+	The authoritative record of what a herd was really fed — the same source
+	`ration_history` reports from and `herd_recipes` offers from. It has to be
+	a route into this check because the `custom_herd` stamp never covered it:
+	only the six standing rations were ever stamped, so every recipe this farm
+	fed before the stamps existed would otherwise be refused here the moment a
+	picker offered it.
+	"""
+	return bool(
+		frappe.db.exists("Work Order", {"custom_herd": herd, "bom_no": bom_no, "docstatus": 1})
+	)
+
+
 def _base_for(herd, base_bom):
 	"""The BOM to copy from: the herd's own standing ration when `base_bom`
 	is not given (today's behaviour, unchanged), or `base_bom` itself once
 	proven to actually belong to this herd.
 
-	"Belongs to this herd" means: it *is* the herd's standing BOM, or its
-	`custom_herd` names this herd — the same two ways `herd_recipes` builds a
-	herd's recipe list, so nothing can be tuned into a herd's feed that the
-	picker could not itself have offered. Anything else is refused outright;
-	a caller must not be able to walk an arbitrary BOM from elsewhere on the
-	site into this herd's feed by naming it directly.
+	"Belongs to this herd" means: it *is* the herd's standing BOM, its
+	`custom_herd` names this herd, or this herd has been fed it — the same
+	three ways `herd_recipes` builds a herd's recipe list, so nothing can be
+	tuned into a herd's feed that the picker could not itself have offered,
+	and nothing the picker offers is refused here. Anything else is refused
+	outright; a caller must not be able to walk an arbitrary BOM from
+	elsewhere on the site into this herd's feed by naming it directly.
 	"""
 	standing_name = frappe.db.get_value("Herds", herd, "bom")
 	if not standing_name:
@@ -103,9 +119,46 @@ def _base_for(herd, base_bom):
 		frappe.throw(
 			_("BOM {0} is not a recipe for {1}'s ration item.").format(base_bom, herd)
 		)
-	if base.name != standing_name and base.custom_herd != herd:
+	if (
+		base.name != standing_name
+		and base.custom_herd != herd
+		and not _was_fed_to(herd, base.name)
+	):
 		frappe.throw(_("BOM {0} does not belong to herd {1}.").format(base_bom, herd))
 	return base
+
+
+def _carry_forward(doc, herd):
+	"""Make a copy of an OLD recipe insertable, without changing its recipe.
+
+	A BOM that has sat untouched for months is not necessarily a BOM that will
+	save. Nothing revalidates it until something copies it, and the picker now
+	offers recipes going back to March. Two things on this site were waiting
+	there, both found by tuning from BOM-Dry/Steamers/Incalf Heifers-004:
+
+	`buying_price_list` — every BOM made before 2026-05 carries "Standard
+	Buying" while the site holds no Price List records at all, so the insert
+	dies with "Could not find Price List: Standard Buying". Dead metadata from
+	whatever imported them: these BOMs cost at `rm_cost_as_per = Valuation
+	Rate` and never consult it. Dropped only when it genuinely does not
+	resolve, so a site that does keep price lists is untouched.
+
+	`custom_farm` — a mandatory Link (SCP's, on BOM) that 2,565 of this site's
+	BOMs predate and leave blank, so the insert dies with MandatoryError. The
+	herd's own standing ration knows the answer (Kapkolia, for every herd
+	here), and a recipe tuned for this herd is mixed on the same farm the herd
+	is fed on, so it is carried forward from there rather than guessed.
+
+	Neither touches an ingredient or a quantity. If the base BOM already
+	answers, its answer stands.
+	"""
+	if doc.buying_price_list and not frappe.db.exists("Price List", doc.buying_price_list):
+		doc.buying_price_list = None
+	if doc.meta.has_field("custom_farm") and not doc.get("custom_farm"):
+		standing_name = frappe.db.get_value("Herds", herd, "bom")
+		farm = frappe.db.get_value("BOM", standing_name, "custom_farm") if standing_name else None
+		if farm:
+			doc.custom_farm = farm
 
 
 def tuned_bom(herd, lines, base_bom=None):
@@ -143,6 +196,7 @@ def tuned_bom(herd, lines, base_bom=None):
 	base_row_by_item = {row.item_code: row for row in base.items}
 
 	doc = frappe.copy_doc(base)
+	_carry_forward(doc, herd)
 	doc.is_active = 1  # ERPNext refuses a Work Order against anything else
 	doc.is_default = 0
 	# The back-link to the herd this ration was made for, so a BOM's

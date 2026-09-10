@@ -44,3 +44,8 @@ upande_livestock.patches.add_backdating_fields
 # the herds already point at (Herds.bom), as "Standing". Must run after the
 # custom_field.json fixture sync creates those BOM fields.
 upande_livestock.patches.backfill_standing_ration_boms
+# The two feed mixes were both posting as the bare "Manufacture" type, so the
+# ledger could not tell the concentrate mill from the mixer wagon. Names them,
+# alongside SCP's "Chemical Mixing"; _engine._run_manufacture then asks
+# common/stock.stock_entry_type_for() which of the two a run is.
+upande_livestock.patches.create_feed_mixing_stock_entry_types

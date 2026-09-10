@@ -73,6 +73,13 @@ DEFAULT_FEED_STORE = "Concentrate Mixing Store - KR"
 # Entry it produces agree on when the run was.
 FEED_RUN_TIME = "06:00:00"
 
+# Which mix a run is, for `common.stock.stock_entry_type_for`. Two jobs, two
+# named Stock Entry Types: a concentrate is milled INTO the store as an input,
+# a ration is mixed and eaten the same morning. Both used to post as the bare
+# "Manufacture" and the ledger could not tell them apart.
+CONCENTRATE_MANUFACTURE = "Concentrate Manufacture"
+RATION_MANUFACTURE = "Ration Manufacture"
+
 
 def _is_backdated(posting_date):
 	"""True only for a genuinely past date, never for today's.
@@ -417,6 +424,7 @@ def _run_manufacture(
 	production_item,
 	bom_no,
 	qty,
+	what,
 	herd=None,
 	heads=None,
 	allow_shortage=False,
@@ -429,6 +437,19 @@ def _run_manufacture(
 	One route for both stages. WIP and FG are both the feed store; each required
 	item is sourced from the warehouse ``_pick_source`` chose, which is the same
 	warehouse the availability check reported on.
+
+	`what` is which of the two mixes this is — "Concentrate Manufacture" or
+	"Ration Manufacture" — and it names the Stock Entry Type the manufacture
+	posts under (see ``common.stock.STOCK_ENTRY_TYPES``). Positional and
+	required, deliberately: both mixes used to land in the ledger as the bare
+	"Manufacture" type and nothing could tell the concentrate mill from the
+	mixer wagon, so a new caller must state which it is rather than inherit a
+	default. It is passed in rather than inferred from ``production_item``
+	because the caller already knows — ``manufacture_concentrate`` is only ever
+	a concentrate, ``manufacture_herd_feed`` only ever a ration — while the
+	item would have to be guessed at through Livestock Settings, and a farm
+	that adds a concentrate without listing it there would silently start
+	mislabelling its ledger.
 
 	`posting_date` puts the whole run on a past day. All three documents take it,
 	because a transfer dated today feeding a manufacture dated in March is not a
@@ -510,6 +531,12 @@ def _run_manufacture(
 	transfer.submit()
 
 	manufacture = _dated(frappe.get_doc(make_stock_entry(wo.name, "Manufacture", qty)))
+	# `make_stock_entry`'s second argument is the *purpose*, and it leaves
+	# `stock_entry_type` equal to it — the generic "Manufacture". Naming the
+	# type here keeps the purpose (both named types carry purpose
+	# "Manufacture", so Stock Entry's own validate resolves back to it) while
+	# the ledger gains the one word that says which mix this was.
+	manufacture.stock_entry_type = livestock_stock.stock_entry_type_for(what)
 	manufacture.insert(ignore_permissions=True)
 	manufacture.submit()
 
@@ -638,6 +665,7 @@ def manufacture_herd_feed(
 		bom.item,
 		bom.name,
 		total_qty,
+		RATION_MANUFACTURE,
 		herd=herd,
 		heads=heads,
 		allow_shortage=frappe.parse_json(allow_shortage),
@@ -688,7 +716,11 @@ def manufacture_concentrate(item_code, qty=None, bom_no=None, allow_shortage=Fal
 	qty = flt(qty) or (flt(bom.quantity) or 1.0)
 
 	res = _run_manufacture(
-		bom.item, bom.name, qty, allow_shortage=frappe.parse_json(allow_shortage)
+		bom.item,
+		bom.name,
+		qty,
+		CONCENTRATE_MANUFACTURE,
+		allow_shortage=frappe.parse_json(allow_shortage),
 	)
 	frappe.db.commit()
 	res["uom"] = bom.uom

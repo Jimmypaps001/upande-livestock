@@ -24,6 +24,20 @@ run a fifth of a batch on purpose — `batches` is the honest number and
 "mix 6.3 tonnes" while the store has no canola is worse than no plan, because
 it looks like a decision has been made.
 
+`lines` is the recipe ONE BATCH at a time — the BOM as written, unscaled — and
+`batch_qty`/`batch_uom` beside it say what those lines make. That is the
+choice, and it is deliberate: a concentrate BOM is a batch recipe stated per
+1000 kg, the mixer is loaded one batch at a time, and `batches` already says
+how many times to load it. Scaling the lines to `to_mix_kg` would print
+quantities nobody ever weighs out — and for a row needing four batches it would
+read as one enormous load. The payload names the batch so the page cannot show
+the lines under the run total by accident; multiply by `batches` for the week's
+raw material draw, which is what `short` already reports.
+
+Lines are in RECIPE qty/uom (`BOM Item.qty`/`.uom`), never stock units — the
+same rule the ration picker and the ration history follow, and for the same
+reason: hay is written in kg and stocked in BALE at cf 0.07.
+
 Read-guarded on Item — it discloses stock balances across the farm.
 """
 
@@ -34,6 +48,7 @@ from frappe.utils import flt
 
 from upande_livestock.serverscripts.common.envelope import guard_read, run
 from upande_livestock.serverscripts.feeding import _engine as feeding
+from upande_livestock.serverscripts.feeding import _recipe_lines
 
 DEFAULT_DAYS = 7
 BATCH_KG = 1000.0
@@ -99,6 +114,24 @@ def _raw_shortfall(bom_no, produce_kg):
 	]
 
 
+def _batch_sizes(bom_nos):
+	"""{bom_no: row} carrying what one batch of each recipe makes.
+
+	`BOM.quantity`/`uom`, not the BATCH_KG constant: the constant is what the
+	plan rounds up to, this is what the recipe itself says it produces, and a
+	row's `lines` are only readable next to the number they make.
+	"""
+	wanted = sorted({name for name in (bom_nos or []) if name})
+	if not wanted:
+		return {}
+	return {
+		row.name: row
+		for row in frappe.get_all(
+			"BOM", filters={"name": ["in", wanted]}, fields=["name", "quantity", "uom"]
+		)
+	}
+
+
 @frappe.whitelist()
 def concentrate_plan(days=DEFAULT_DAYS):
 	def go():
@@ -109,18 +142,32 @@ def concentrate_plan(days=DEFAULT_DAYS):
 		if span <= 0:
 			frappe.throw(frappe._("A plan has to cover at least one day."))
 
+		demand = _herd_demand(span)
+		# One query for every recipe on the page and one for their batch sizes.
+		# There are five concentrates on this site, but a loop of per-row
+		# fetches is a loop either way.
+		bom_nos = [entry["bom_no"] for entry in demand.values()]
+		lines_by_bom = _recipe_lines.lines_for(bom_nos)
+		batch_of = _batch_sizes(bom_nos)
+
 		rows = []
-		for code, entry in sorted(_herd_demand(span).items()):
+		for code, entry in sorted(demand.items()):
 			on_hand = _on_hand(code)
 			to_mix = max(entry["needed_kg"] - on_hand, 0.0)
 			batches = math.ceil(to_mix / BATCH_KG) if to_mix > 0 else 0
 			to_mix_kg = batches * BATCH_KG
 			short = _raw_shortfall(entry["bom_no"], to_mix_kg)
+			batch = batch_of.get(entry["bom_no"])
 			rows.append(
 				{
 					"item_code": code,
 					"item_name": frappe.db.get_value("Item", code, "item_name") or code,
 					"bom_no": entry["bom_no"],
+					# The recipe for ONE batch, in recipe units, with the batch it
+					# makes named beside it. See the module docstring.
+					"lines": lines_by_bom.get(entry["bom_no"], []),
+					"batch_qty": flt(batch.quantity) if batch else 0.0,
+					"batch_uom": (batch.uom if batch else "") or "",
 					"per_day_kg": round(entry["per_day_kg"], 2),
 					"needed_kg": round(entry["needed_kg"], 2),
 					"on_hand_kg": round(on_hand, 2),
