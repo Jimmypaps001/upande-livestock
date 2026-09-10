@@ -9,11 +9,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { isError } from "@/lib/frappe";
-import { concentratePlan, type ConcentrateWeeklyPlan } from "@/lib/feeding";
+import {
+  concentratePlan,
+  manufactureConcentrate,
+  type ConcentrateWeeklyPlan,
+  type ConcentrateWeeklyRow,
+} from "@/lib/feeding";
 import { fmt, num } from "@/lib/utils";
 
 /**
- * Concentrate: what the farm holds and what it must mix.
+ * Concentrate: what the farm holds and what it must mix — and the mixer runs
+ * from here.
  *
  * Its own surface rather than a section on the feeding page, because it is a
  * different question asked by a different person on a different day — the
@@ -24,15 +30,30 @@ import { fmt, num } from "@/lib/utils";
  * count — so nothing is typed in and a herd that grows moves the plan on its
  * own.
  *
- * Mixing is NOT wired here on purpose. `manufacture_concentrate` stays on the
- * desk block, which is live beside this page; this slice is read-only until
- * that is asked for.
+ * `manufacture_concentrate` is the same Work Order → transfer → manufacture
+ * route the desk's Livestock Operations block already runs. `can_mix` is
+ * checked here before a request is ever sent — the plan already knows a row
+ * is short, so refusing locally is a better answer than a round trip to a
+ * stock error. Only one row runs at a time: the whole plan is refreshed after
+ * a mix because a batch changes the raw-material picture for every other row
+ * that draws on the same ingredients, not just the one just run.
+ *
+ * `manufacture_concentrate` commits partway through (Work Order, then each
+ * Stock Entry) rather than standing or falling as one transaction — a known,
+ * deliberately deferred gap. A failure partway can leave a Work Order behind
+ * with no Stock Entry against it, so a refusal here is not proof nothing
+ * happened; the plan reload after every attempt is what surfaces the truth.
  */
 export function Concentrate() {
   const [days, setDays] = useState("7");
   const [plan, setPlan] = useState<ConcentrateWeeklyPlan | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  const [qtyByItem, setQtyByItem] = useState<Record<string, string>>({});
+  const [mixingItem, setMixingItem] = useState<string | null>(null);
+  const [mixError, setMixError] = useState<string | null>(null);
+  const [mixSuccess, setMixSuccess] = useState<string | null>(null);
 
   const load = useCallback(async (span: number) => {
     setLoading(true);
@@ -45,11 +66,55 @@ export function Concentrate() {
     }
     setError(null);
     setPlan(r);
+    // Fresh figures from the server replace whatever the operator had typed —
+    // an edited quantity from before a mix belongs to a plan that no longer
+    // exists.
+    setQtyByItem({});
   }, []);
 
   useEffect(() => {
     load(7);
   }, [load]);
+
+  function changeQty(itemCode: string, value: string) {
+    setQtyByItem((prev) => ({ ...prev, [itemCode]: value }));
+  }
+
+  async function mix(row: ConcentrateWeeklyRow) {
+    setMixError(null);
+    setMixSuccess(null);
+    // The plan already knows this row is short; do not send it and let the
+    // server refuse.
+    if (!row.can_mix) {
+      const short = row.short.map((s) => s.item_name || s.item_code).filter(Boolean);
+      setMixError(
+        `${row.item_name} cannot be mixed yet${short.length ? ` — short: ${short.join(", ")}.` : "."}`,
+      );
+      return;
+    }
+    const qty = num(qtyByItem[row.item_code] ?? String(row.to_mix_kg));
+    if (qty <= 0) {
+      setMixError("Enter a quantity greater than zero.");
+      return;
+    }
+    setMixingItem(row.item_code);
+    const r = await manufactureConcentrate({
+      item_code: row.item_code,
+      qty,
+      bom_no: row.bom_no,
+    });
+    setMixingItem(null);
+    if (isError(r)) {
+      setMixError(r.error);
+      return;
+    }
+    setMixSuccess(
+      `Mixed ${fmt(r.produced_qty)} ${r.uom || "kg"} of ${row.item_name} — Work Order ${
+        r.work_order
+      }.`,
+    );
+    load(plan?.days || num(days) || 7);
+  }
 
   const shortRows = (plan?.concentrates || []).filter(
     (c) => c.to_mix_kg > 0 && !c.can_mix,
@@ -59,9 +124,12 @@ export function Concentrate() {
     <Page>
       <PageHeading eyebrow="Upande Livestock · Feeding" title="Concentrate">
         How much of each concentrate the herds will eat over the days you set, what the
-        stores already hold, and how many whole batches close the gap. Mixing a batch is
-        still done from the desk block.
+        stores already hold, and how many whole batches close the gap. Run a batch
+        straight from a row below once the raw materials cover it.
       </PageHeading>
+
+      {mixError && <Notice tone="error">{mixError}</Notice>}
+      {mixSuccess && <Notice tone="ok">{mixSuccess}</Notice>}
 
       <Card>
         <CardHeader className="flex flex-col gap-4">
@@ -119,7 +187,14 @@ export function Concentrate() {
               />
             </FigureRow>
           )}
-          <PlanTable plan={plan} error={error} />
+          <PlanTable
+            plan={plan}
+            error={error}
+            qtyByItem={qtyByItem}
+            onQtyChange={changeQty}
+            onMix={mix}
+            mixingItem={mixingItem}
+          />
         </CardContent>
       </Card>
 
@@ -158,11 +233,6 @@ export function Concentrate() {
           </CardContent>
         </Card>
       )}
-
-      <Notice tone="info">
-        Mixing a batch is not wired into this page. Run it from the Livestock Operations
-        block on the desk, which is live and unchanged.
-      </Notice>
     </Page>
   );
 }

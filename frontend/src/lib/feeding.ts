@@ -115,6 +115,22 @@ export type ConcentrateWeeklyPlan = {
   total_batches: number;
 };
 
+/** What `manufacture_concentrate` hands back once the Work Order and its two
+ *  Stock Entries exist. `ok` is always true here — a refusal comes back as
+ *  `{error}` instead, per the envelope, and never reaches this shape. */
+export type ConcentrateMixResult = {
+  work_order: string;
+  production_item: string;
+  bom_no: string;
+  produced_qty: number;
+  store: string;
+  posting_date: string;
+  transfer_stock_entry: string;
+  manufacture_stock_entry: string;
+  uom: string;
+  ok?: boolean;
+};
+
 /* ── Endpoints ─────────────────────────────────────────────────────────────
    `record_feeding` is the one frozen path for the herd feed screen: the
    phone (and now this page) does not have to know that manufacturing and
@@ -124,6 +140,8 @@ const RECORD_FEEDING = "upande_livestock.serverscripts.mobile.record_feeding.rec
 const MANUAL_FEED = "upande_livestock.serverscripts.feeding.manual_feed.manual_feed";
 const CONCENTRATE_PLAN =
   "upande_livestock.serverscripts.feeding.concentrate_plan.concentrate_plan";
+const MANUFACTURE_CONCENTRATE =
+  "upande_livestock.serverscripts.feeding.manufacture_concentrate.manufacture_concentrate";
 const FEED_OPTIONS = "upande_livestock.serverscripts.feeding.feed_options.feed_options";
 
 export function feedOptions(): Promise<Envelope<{ herds: HerdOption[] }>> {
@@ -161,6 +179,19 @@ export function manualFeed(args: {
 
 export function concentratePlan(days: number): Promise<Envelope<ConcentrateWeeklyPlan>> {
   return call(CONCENTRATE_PLAN, { days });
+}
+
+/** Run one concentrate's batch. `qty` and `bom_no` come off the plan row the
+ *  operator is acting on — `to_mix_kg` by default, but the operator may raise
+ *  or lower it before this is called; `can_mix` is checked by the caller
+ *  before this is ever reached, never by re-asking the server. Endpoint takes
+ *  its arguments directly (no `payload` wrapper) — see manufacture_concentrate.py. */
+export function manufactureConcentrate(args: {
+  item_code: string;
+  qty: number;
+  bom_no?: string | null;
+}): Promise<Envelope<ConcentrateMixResult>> {
+  return call(MANUFACTURE_CONCENTRATE, { ...args });
 }
 
 /* ── The two rules the screen must not break ───────────────────────────── */
