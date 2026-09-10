@@ -5,6 +5,7 @@ import { ManualConfig } from "@/components/feeding/ManualConfig";
 import { Mark, Notice, Pill } from "@/components/feeding/Notice";
 import { PortionSwitch } from "@/components/feeding/PortionSwitch";
 import { PostingDate } from "@/components/feeding/PostingDate";
+import { RecipePicker, recipeLabel } from "@/components/feeding/RecipePicker";
 import { RequirementTable } from "@/components/feeding/RequirementTable";
 import { Figure, FigureRow } from "@/components/Figure";
 import { Page, PageHeading } from "@/components/PageShell";
@@ -30,15 +31,18 @@ import {
   feedDayStatus,
   feedOptions,
   feedingProgram,
+  herdRecipes,
   manualFeed,
+  manualRowsDirty,
   manufactureFeed,
   runKg,
   runRationQty,
-  seedManualRows,
+  seedRowsFromRecipe,
   type FeedDayStatus,
   type FeedingProgram,
   type HerdOption,
   type ManualRow,
+  type Recipe,
 } from "@/lib/feeding";
 import { fmt, num, todayISO } from "@/lib/utils";
 
@@ -68,13 +72,22 @@ export function Feeding() {
   const [portion, setPortion] = useState(0.5);
   const [mixing, setMixing] = useState(false);
 
-  // Manual tab — seeded once per herd, then the operator's edits are left
-  // alone: re-seeding on every refresh would wipe a half-typed recipe under
-  // their fingers.
+  // Manual tab — seeded once per herd (and once per recipe pick), then the
+  // operator's edits are left alone: re-seeding on every refresh would wipe a
+  // half-typed recipe under their fingers.
   const [manualRows, setManualRows] = useState<ManualRow[] | null>(null);
+  const [manualSeed, setManualSeed] = useState<ManualRow[] | null>(null);
   const [manualHerd, setManualHerd] = useState<string | null>(null);
   const [manualHeads, setManualHeads] = useState("");
   const [manualBusy, setManualBusy] = useState(false);
+
+  // The recipe picker, shared by both tabs so a choice on one is the same
+  // choice on the other. `standingBom` is the herd's normal ration —
+  // `herd_recipes`' default — and `selectedBom` is whichever recipe (standing
+  // or previously tuned) is currently in play.
+  const [recipes, setRecipes] = useState<Recipe[]>([]);
+  const [standingBom, setStandingBom] = useState("");
+  const [selectedBom, setSelectedBom] = useState("");
 
   useEffect(() => {
     feedOptions().then((r) => {
@@ -91,13 +104,22 @@ export function Feeding() {
       if (!name) {
         setProgram(null);
         setDay(null);
+        setRecipes([]);
+        setStandingBom("");
         return;
       }
       setLoading(true);
       setFailure(null);
       // The day's state travels with the programme: the farm feeds twice, so
-      // "what does this herd need" is not the question at the trough.
-      const [p, d] = await Promise.all([feedingProgram(name), feedDayStatus(name)]);
+      // "what does this herd need" is not the question at the trough. The
+      // recipe list travels with it too — both tabs' pickers read from the
+      // same fetch, so there is never a second round trip to seed the manual
+      // tab's rows once a recipe is chosen.
+      const [p, d, rec] = await Promise.all([
+        feedingProgram(name),
+        feedDayStatus(name),
+        herdRecipes(name),
+      ]);
       setLoading(false);
       if (isError(p)) {
         setProgram(null);
@@ -113,8 +135,34 @@ export function Feeding() {
       // this screen never shows a decimal.
       const suggested = dayStatus?.suggested_portion ?? 1;
       setPortion(suggested > 0 && suggested <= 0.5 ? 0.5 : 1);
+
+      // The recipe list refreshes on every load (e.g. a fresh tune just
+      // minted shows up next time), but only a herd switch — never a mere
+      // refresh after a run — resets which recipe is selected and re-seeds
+      // the manual rows. That reset is unconditional here because it is a
+      // different herd: there is nothing from the previous herd worth
+      // protecting.
+      if (isError(rec)) {
+        setRecipes([]);
+        setStandingBom("");
+        if (seedManual) {
+          setSelectedBom("");
+          setManualRows(null);
+          setManualSeed(null);
+          setManualHerd(p.herd);
+          setManualHeads(String(p.heads || ""));
+        }
+        return;
+      }
+      setRecipes(rec.recipes || []);
+      setStandingBom(rec.standing_bom);
       if (seedManual) {
-        setManualRows(seedManualRows(p));
+        const standing =
+          rec.recipes.find((r) => r.bom_no === rec.standing_bom) || rec.recipes[0];
+        setSelectedBom(rec.standing_bom);
+        const seeded = standing ? seedRowsFromRecipe(standing) : [];
+        setManualRows(seeded);
+        setManualSeed(seeded);
         setManualHerd(p.herd);
         setManualHeads(String(p.heads || ""));
       }
@@ -132,25 +180,74 @@ export function Feeding() {
   /** Live mode always posts today, whatever the field last held. */
   const effectiveDate = backdating ? postDate : todayISO();
 
+  const selectedRecipe = recipes.find((r) => r.bom_no === selectedBom) || null;
+  const usingStandingRecipe = !selectedBom || selectedBom === standingBom;
+
+  /**
+   * The picker's onChange, shared by both tabs.
+   *
+   * Re-seeding is silent when the manual rows still match what was last
+   * seeded — there is nothing to lose. Once the operator has typed something
+   * different, switching recipes asks first: this moves real stock, and a
+   * hand-tuned quantity discarded without warning is exactly the mistake the
+   * confirm is here to catch. Cancelling leaves the selection and the rows
+   * exactly as they were.
+   */
+  function chooseRecipe(bomNo: string) {
+    if (bomNo === selectedBom) return;
+    const recipe = recipes.find((r) => r.bom_no === bomNo);
+    if (!recipe) return;
+    if (manualRowsDirty(manualRows, manualSeed)) {
+      const ok = window.confirm(
+        `Switching to "${recipeLabel(recipe)}" replaces the quantities you've entered with that ` +
+          "recipe's own amounts. Continue?",
+      );
+      if (!ok) return;
+    }
+    setSelectedBom(bomNo);
+    const seeded = seedRowsFromRecipe(recipe);
+    setManualRows(seeded);
+    setManualSeed(seeded);
+  }
+
   async function mixAndFeed() {
     if (!program) return;
     setMixing(true);
     setFailure(null);
     setSuccess(null);
-    const r = await manufactureFeed({
-      herd: program.herd,
-      portion,
-      posting_date: effectiveDate,
-    });
+    // The standing recipe still goes through the ordinary system path
+    // unchanged. A previously-tuned recipe has to go through manualFeed
+    // instead — see manufactureFeed's docstring in lib/feeding.ts for why —
+    // sending that recipe's own lines untouched, so tuned_bom recognises the
+    // tune as unedited and hands back the same bom_no rather than minting a
+    // new one.
+    const r =
+      usingStandingRecipe || !selectedRecipe
+        ? await manufactureFeed({
+            herd: program.herd,
+            portion,
+            posting_date: effectiveDate,
+            bom_no: selectedBom || undefined,
+          })
+        : await manualFeed({
+            herd: program.herd,
+            lines: selectedRecipe.lines.map((ln) => ({ item_code: ln.item_code, qty: ln.qty })),
+            heads: program.heads,
+            posting_date: effectiveDate,
+            base_bom: selectedRecipe.bom_no,
+            portion,
+          });
     setMixing(false);
     if (isError(r)) {
       setFailure(r.error);
       return;
     }
+    const recipeNote =
+      !usingStandingRecipe && selectedRecipe ? ` using ${selectedRecipe.item_name}` : "";
     setSuccess(
       `Manufactured and issued ${fmt(r.produced_qty)} ${r.uom || ""} to ${
         program.herd_label || program.herd
-      } — Work Order ${r.work_order}, issued on ${r.issue_stock_entry}.`,
+      }${recipeNote} — Work Order ${r.work_order}, issued on ${r.issue_stock_entry}.`,
     );
     setLastRunMode(effectiveDate !== todayISO() ? "Backdated" : null);
     load(program.herd, false);
@@ -173,11 +270,16 @@ export function Feeding() {
       return;
     }
     setManualBusy(true);
+    // The chosen recipe is the base the tune descends from — never always
+    // the herd's standing ration — so a tune made from a previously-used
+    // recipe stays a descendant of what the operator was actually looking
+    // at, not of a ration they may have since moved away from.
     const r = await manualFeed({
       herd: program.herd,
       lines,
       heads,
       posting_date: effectiveDate,
+      base_bom: selectedBom || undefined,
     });
     setManualBusy(false);
     if (isError(r)) {
@@ -190,7 +292,8 @@ export function Feeding() {
       }, issued on ${r.issue_stock_entry}.`,
     );
     setLastRunMode(effectiveDate !== todayISO() ? "Manual · Backdated" : "Manual");
-    // Reseed from the fresh programme next time this herd is chosen.
+    // Reseed from the fresh programme (and the possibly-just-minted recipe
+    // list) next time this herd is chosen.
     setManualHerd(null);
     load(program.herd, false);
   }
@@ -266,6 +369,13 @@ export function Feeding() {
               </TabsList>
 
               <TabsContent value="system" className="flex flex-col gap-5">
+                <RecipePicker
+                  recipes={recipes}
+                  value={selectedBom}
+                  onChange={chooseRecipe}
+                  idPrefix="feed-system"
+                />
+
                 <FigureRow>
                   <Figure label="Head count" value={String(program.heads)} />
                   <Figure
@@ -302,6 +412,14 @@ export function Feeding() {
                   Warehouses. A line is sourced from the first store that can cover it in
                   full. What each concentrate would take to mix is on the Concentrate
                   page.
+                  {!usingStandingRecipe && (
+                    <>
+                      {" "}
+                      The figures above are the standing ration's — this run will mix the
+                      recipe selected above instead, and the store is still checked when it
+                      posts.
+                    </>
+                  )}
                 </p>
 
                 <DayStatus day={day} />
@@ -333,12 +451,12 @@ export function Feeding() {
                   <div className="flex flex-wrap items-center gap-3">
                     <Button
                       onClick={mixAndFeed}
-                      disabled={mixing || !program.can_manufacture}
+                      disabled={mixing || (usingStandingRecipe && !program.can_manufacture)}
                     >
                       {mixing ? "Mixing…" : "Mix & feed"}
                     </Button>
                     {effectiveDate !== todayISO() && <Mark>Backdated · {effectiveDate}</Mark>}
-                    {!program.can_manufacture && (
+                    {usingStandingRecipe && !program.can_manufacture && (
                       <span className="text-[12px] text-[var(--sd-quiet)]">
                         A short line has to be covered before this run can post.
                       </span>
@@ -347,7 +465,13 @@ export function Feeding() {
                 </div>
               </TabsContent>
 
-              <TabsContent value="manual">
+              <TabsContent value="manual" className="flex flex-col gap-5">
+                <RecipePicker
+                  recipes={recipes}
+                  value={selectedBom}
+                  onChange={chooseRecipe}
+                  idPrefix="feed-manual"
+                />
                 <ManualConfig
                   rows={manualHerd === program.herd ? manualRows : null}
                   onRowsChange={setManualRows}

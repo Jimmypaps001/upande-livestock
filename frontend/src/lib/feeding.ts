@@ -115,6 +115,37 @@ export type ConcentrateWeeklyPlan = {
   total_batches: number;
 };
 
+/** One line of a recipe, in RECIPE qty/uom — `BOM Item.qty`/`uom` for ONE
+ *  head, never `stock_qty`/`stock_uom`. See herd_recipes.py's module
+ *  docstring: hay is written as kg on every standing BOM but stocked in BALE
+ *  at cf 0.07, so this is never converted here — it is sent to `manualFeed`
+ *  exactly as it arrived. */
+export type RecipeLine = { item_code: string; item_name: string; qty: number; uom: string };
+
+/** A recipe `herd_recipes` can offer for one herd: the standing ration
+ *  (`is_standing`), or a BOM tuned for this herd before. `lines` travel with
+ *  it — that is what lets a picker seed the manual tab without a second
+ *  round trip. */
+export type Recipe = {
+  bom_no: string;
+  item_code: string;
+  item_name: string;
+  kind: string;
+  is_standing: boolean;
+  created: string;
+  per_head_qty: number;
+  uom: string;
+  lines: RecipeLine[];
+};
+
+export type HerdRecipes = {
+  herd: string;
+  /** The bom_no `herd_recipes` picks as this herd's default — always the
+   *  first, standing entry of `recipes`. */
+  standing_bom: string;
+  recipes: Recipe[];
+};
+
 /** What `manufacture_concentrate` hands back once the Work Order and its two
  *  Stock Entries exist. `ok` is always true here — a refusal comes back as
  *  `{error}` instead, per the envelope, and never reaches this shape. */
@@ -143,9 +174,17 @@ const CONCENTRATE_PLAN =
 const MANUFACTURE_CONCENTRATE =
   "upande_livestock.serverscripts.feeding.manufacture_concentrate.manufacture_concentrate";
 const FEED_OPTIONS = "upande_livestock.serverscripts.feeding.feed_options.feed_options";
+const HERD_RECIPES = "upande_livestock.serverscripts.feeding.herd_recipes.herd_recipes";
 
 export function feedOptions(): Promise<Envelope<{ herds: HerdOption[] }>> {
   return call(FEED_OPTIONS, {});
+}
+
+/** A herd's standing ration plus every recipe tuned for it before — the
+ *  source for the recipe picker on both tabs. Ordered standing-first, then
+ *  tuned newest-first; see herd_recipes.py. */
+export function herdRecipes(herd: string): Promise<Envelope<HerdRecipes>> {
+  return call(HERD_RECIPES, { herd });
 }
 
 export function feedingProgram(herd: string): Promise<Envelope<FeedingProgram>> {
@@ -157,24 +196,46 @@ export function feedDayStatus(herd: string): Promise<Envelope<FeedDayStatus>> {
 }
 
 /** Mix and issue the herd's own ration. `portion` is 0.5 (one of the day's two
- *  runs) or 1.0 (the whole day) — see PORTIONS. */
+ *  runs) or 1.0 (the whole day) — see PORTIONS.
+ *
+ *  `bom_no` is threaded through so a picker's choice reaches the server, but
+ *  as of this writing `record_feeding`'s "manufacture" action (and
+ *  `manufacture_feed.py` beneath it) only ever mixes the herd's own standing
+ *  BOM — it does not read this field back out of the payload. Call this only
+ *  for the standing recipe; a recipe the picker offers as "used before" has
+ *  to go through `manualFeed` below with `base_bom` set, which is the one
+ *  route already wired end-to-end to `manufacture_herd_feed(bom_no=...)`. See
+ *  Feeding.tsx's `mixAndFeed`. */
 export function manufactureFeed(args: {
   herd: string;
   portion: number;
   posting_date: string;
+  bom_no?: string;
 }): Promise<Envelope<FeedRunResult>> {
   return call(RECORD_FEEDING, { payload: { action: "manufacture", ...args } });
 }
 
-/** Mix and issue a recipe the operator wrote, for a head count they counted.
- *  `lines[].qty` is per head IN THE BASE BOM'S RECIPE UOM — see seedManualRows. */
+/** Mix and issue a recipe — either one the operator wrote by hand, or an
+ *  unedited recipe picked from `herdRecipes` (see `seedRowsFromRecipe` and
+ *  Feeding.tsx's `mixAndFeed`). `lines[].qty` is per head IN THE BASE BOM'S
+ *  RECIPE UOM — see seedManualRows / seedRowsFromRecipe.
+ *
+ *  `base_bom` names the recipe this tune starts from — the herd's standing
+ *  ration when omitted, or a previously-used recipe the operator picked. When
+ *  `lines` reproduce `base_bom` unedited, `manual_feed.py`'s `tuned_bom`
+ *  returns `base_bom` itself rather than minting a duplicate — see its module
+ *  docstring. `portion` defaults to a full day; the System tab still offers
+ *  the half/full switch even when it runs through here for a tuned recipe. */
 export function manualFeed(args: {
   herd: string;
   lines: Array<{ item_code: string; qty: number }>;
   heads: number;
   posting_date: string;
+  base_bom?: string;
+  portion?: number;
 }): Promise<Envelope<FeedRunResult>> {
-  return call(MANUAL_FEED, { payload: { ...args, portion: 1 } });
+  const { portion, ...rest } = args;
+  return call(MANUAL_FEED, { payload: { ...rest, portion: portion ?? 1 } });
 }
 
 export function concentratePlan(days: number): Promise<Envelope<ConcentrateWeeklyPlan>> {
@@ -227,6 +288,52 @@ export function seedManualRows(program: FeedingProgram): ManualRow[] {
     uom: ln.recipe_uom,
     qty: heads ? (Number(ln.recipe_qty) || 0) / heads : 0,
   }));
+}
+
+/**
+ * Seed the manual rows from a recipe the picker offered — the standing
+ * ration by default, or one previously tuned for this herd.
+ *
+ * `herd_recipes` already answers in per-head recipe qty/uom (`BOM Item.qty`/
+ * `uom`), the same units `seedManualRows` derives by hand above — so this is
+ * a straight copy, no division and no unit conversion. NEVER convert `qty`
+ * here for the same reason as `seedManualRows`: hay is written in kg on the
+ * recipe but stocked in BALE at cf 0.07.
+ */
+export function seedRowsFromRecipe(recipe: Recipe): ManualRow[] {
+  return (recipe.lines || []).map((ln) => ({
+    item_code: ln.item_code,
+    item_name: ln.item_name,
+    uom: ln.uom,
+    qty: Number(ln.qty) || 0,
+  }));
+}
+
+/** An order-independent fingerprint of a row set: which items, and how much
+ *  of each. Used only to ask "did the operator change anything since this
+ *  was last seeded" — never sent to the server. */
+function rowsFingerprint(rows: ManualRow[]): string {
+  return rows
+    .map((r) => `${r.item_code}:${Number(r.qty) || 0}`)
+    .sort()
+    .join("|");
+}
+
+/**
+ * True when `current` no longer matches `seeded` — the operator has typed
+ * something since the rows were last seeded from a recipe.
+ *
+ * This is what stands between "picking a different recipe" and "silently
+ * throwing away a hand-tuned quantity nobody confirmed discarding": the
+ * picker's onChange re-seeds without asking when this is false, and asks
+ * first when it is true. See Feeding.tsx's `chooseRecipe`.
+ */
+export function manualRowsDirty(
+  current: ManualRow[] | null,
+  seeded: ManualRow[] | null,
+): boolean {
+  if (!current || !seeded) return false;
+  return rowsFingerprint(current) !== rowsFingerprint(seeded);
 }
 
 /**

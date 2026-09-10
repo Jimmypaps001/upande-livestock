@@ -1,10 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
+  manualRowsDirty,
   PORTIONS,
   runKg,
   seedManualRows,
+  seedRowsFromRecipe,
   type FeedDayStatus,
   type FeedingProgram,
+  type ManualRow,
+  type Recipe,
 } from "@/lib/feeding";
 
 /** A 50-head herd whose ration is hay: written in kg on the BOM, stocked in
@@ -41,6 +45,71 @@ describe("seedManualRows", () => {
   it("survives a herd with no head count without dividing by zero", () => {
     const rows = seedManualRows({ ...program, heads: 0 } as FeedingProgram);
     expect(Number.isFinite(rows[0].qty)).toBe(true);
+  });
+});
+
+/** A recipe as `herd_recipes` returns it — lines already per-head, in recipe
+ *  uom, exactly the real output verified against kaitet.local. */
+const recipe = {
+  bom_no: "BOM-Lactating Group 1-015",
+  item_code: "Lactating Group 1",
+  item_name: "Lactating Group 1",
+  kind: "Standing",
+  is_standing: true,
+  created: "2026-09-04 02:30:04.152679",
+  per_head_qty: 1,
+  uom: "Kilogram",
+  lines: [
+    { item_code: "4040010082", item_name: "Silage - Farm Produced", qty: 35, uom: "Kilogram" },
+    { item_code: "4040010034", item_name: "Hay - Pure Boma Rhode (15kgs Min.)", qty: 2, uom: "Kilogram" },
+    { item_code: "4040010086", item_name: "Westwood Dairy Meal - New formulation", qty: 9, uom: "Kilogram" },
+  ],
+} as Recipe;
+
+describe("seedRowsFromRecipe", () => {
+  it("copies qty/uom straight off the recipe's own lines — no division, no conversion", () => {
+    const rows = seedRowsFromRecipe(recipe);
+    expect(rows).toEqual([
+      { item_code: "4040010082", item_name: "Silage - Farm Produced", uom: "Kilogram", qty: 35 },
+      {
+        item_code: "4040010034",
+        item_name: "Hay - Pure Boma Rhode (15kgs Min.)",
+        uom: "Kilogram",
+        qty: 2,
+      },
+      {
+        item_code: "4040010086",
+        item_name: "Westwood Dairy Meal - New formulation",
+        uom: "Kilogram",
+        qty: 9,
+      },
+    ]);
+  });
+});
+
+describe("manualRowsDirty", () => {
+  const seeded: ManualRow[] = [
+    { item_code: "HAY", item_name: "Hay", uom: "Kg", qty: 10 },
+    { item_code: "SILAGE", item_name: "Silage", uom: "Kg", qty: 35 },
+  ];
+
+  it("is not dirty right after seeding — same rows, any order", () => {
+    const current = [seeded[1], seeded[0]];
+    expect(manualRowsDirty(current, seeded)).toBe(false);
+  });
+
+  it("is dirty once a quantity changes", () => {
+    const current = [{ ...seeded[0], qty: 12 }, seeded[1]];
+    expect(manualRowsDirty(current, seeded)).toBe(true);
+  });
+
+  it("is dirty once a row is added or removed", () => {
+    expect(manualRowsDirty([seeded[0]], seeded)).toBe(true);
+  });
+
+  it("is never dirty with nothing seeded yet — there is nothing to protect", () => {
+    expect(manualRowsDirty(seeded, null)).toBe(false);
+    expect(manualRowsDirty(null, seeded)).toBe(false);
   });
 });
 
