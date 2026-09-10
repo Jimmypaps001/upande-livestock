@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
+import { ChevronDown, ChevronRight, Loader2 } from "lucide-react";
 import { Figure, FigureRow } from "@/components/Figure";
+import { IngredientLines } from "@/components/feeding/IngredientLines";
 import { Notice } from "@/components/feeding/Notice";
 import { Page, PageHeading } from "@/components/PageShell";
 import { Button } from "@/components/ui/button";
@@ -75,6 +76,12 @@ function Milk({ row }: { row: RationRow }) {
   );
 }
 
+/** Row key stable enough to track which rows are expanded across a re-render
+ *  — the same triple that already keys the `<tr>` itself. */
+function rationRowKey(row: RationRow): string {
+  return `${row.fed_on}::${row.herd}::${row.bom_no}`;
+}
+
 function RationTable({
   rows,
   milkHeading,
@@ -84,11 +91,26 @@ function RationTable({
   milkHeading: string;
   showHerd: boolean;
 }) {
+  // Which rows are expanded to show their ingredients, kept local to this
+  // table: a herd's card unmounting (the herd filter changed) should not
+  // carry a stale set of open rows into the next one.
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  function toggle(key: string) {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }
+  const dataCols = showHerd ? 7 : 6;
+
   return (
     <div className="overflow-x-auto rounded-[var(--sd-radius-lg)] border border-[var(--sd-line)]">
       <table className="w-full min-w-[52rem] text-[13px]">
         <thead>
           <tr className="border-b border-[var(--sd-line)] text-left text-[11px] uppercase tracking-[0.1em] text-[var(--sd-quiet)]">
+            <th className="w-8 px-2 py-2.5" aria-hidden="true" />
             <th className="px-3 py-2.5 font-medium">Fed on</th>
             {showHerd && <th className="px-3 py-2.5 font-medium">Herd</th>}
             <th className="px-3 py-2.5 font-medium">Recipe</th>
@@ -101,41 +123,68 @@ function RationTable({
           </tr>
         </thead>
         <tbody>
-          {rows.map((row) => (
-            <tr
-              key={`${row.fed_on}::${row.herd}::${row.bom_no}`}
-              className="border-b border-[var(--sd-line-soft)] last:border-0"
-            >
-              <td className="px-3 py-2.5 tabular-nums text-[var(--sd-ink)]">{row.fed_on}</td>
-              {showHerd && (
-                <td className="px-3 py-2.5 text-[var(--sd-muted)]">{row.herd_label}</td>
-              )}
-              <td className="px-3 py-2.5 font-medium text-[var(--sd-ink)]">
-                {row.recipe}
-                {/* The BOM number is what tells one "TMR Calves Meal" from the
-                    next, so it is on the page, not in a tooltip. */}
-                <div className="text-[11px] font-normal text-[var(--sd-quiet)]">
-                  {row.bom_no}
-                  {row.ration_kind ? ` · ${row.ration_kind.toLowerCase()}` : ""}
-                </div>
-              </td>
-              <td className="px-3 py-2.5 text-right tabular-nums">
-                {fmt(row.qty)} <span className="text-[11px] text-[var(--sd-quiet)]">{row.uom}</span>
-                {row.runs > 1 && (
-                  <div className="text-[11px] text-[var(--sd-quiet)]">{row.runs} runs</div>
+          {rows.map((row) => {
+            const key = rationRowKey(row);
+            const isOpen = expanded.has(key);
+            return (
+              <Fragment key={key}>
+                <tr className="border-b border-[var(--sd-line-soft)] last:border-0">
+                  <td className="px-2 py-2.5">
+                    <button
+                      type="button"
+                      aria-expanded={isOpen}
+                      aria-label={isOpen ? "Hide ingredients" : "Show ingredients"}
+                      onClick={() => toggle(key)}
+                      className="flex h-6 w-6 items-center justify-center rounded-md text-[var(--sd-quiet)] transition-colors hover:bg-[var(--sd-bg-soft)] hover:text-[var(--sd-ink)]"
+                    >
+                      {isOpen ? (
+                        <ChevronDown className="h-4 w-4" />
+                      ) : (
+                        <ChevronRight className="h-4 w-4" />
+                      )}
+                    </button>
+                  </td>
+                  <td className="px-3 py-2.5 tabular-nums text-[var(--sd-ink)]">{row.fed_on}</td>
+                  {showHerd && (
+                    <td className="px-3 py-2.5 text-[var(--sd-muted)]">{row.herd_label}</td>
+                  )}
+                  <td className="px-3 py-2.5 font-medium text-[var(--sd-ink)]">
+                    {row.recipe}
+                    {/* The BOM number is what tells one "TMR Calves Meal" from the
+                        next, so it is on the page, not in a tooltip. */}
+                    <div className="text-[11px] font-normal text-[var(--sd-quiet)]">
+                      {row.bom_no}
+                      {row.ration_kind ? ` · ${row.ration_kind.toLowerCase()}` : ""}
+                    </div>
+                  </td>
+                  <td className="px-3 py-2.5 text-right tabular-nums">
+                    {fmt(row.qty)}{" "}
+                    <span className="text-[11px] text-[var(--sd-quiet)]">{row.uom}</span>
+                    {row.runs > 1 && (
+                      <div className="text-[11px] text-[var(--sd-quiet)]">{row.runs} runs</div>
+                    )}
+                  </td>
+                  <td className="px-3 py-2.5 text-right tabular-nums text-[var(--sd-muted)]">
+                    {row.heads || <span className="text-[var(--sd-quiet)]">—</span>}
+                  </td>
+                  <td className="px-3 py-2.5 text-[var(--sd-muted)]">
+                    {row.feed_mode || <span className="text-[var(--sd-quiet)]">—</span>}
+                  </td>
+                  <td className="px-3 py-2.5 text-right tabular-nums">
+                    <Milk row={row} />
+                  </td>
+                </tr>
+                {isOpen && (
+                  <tr className="border-b border-[var(--sd-line-soft)] bg-[var(--sd-bg-soft)] last:border-0">
+                    <td />
+                    <td colSpan={dataCols}>
+                      <IngredientLines lines={row.lines} />
+                    </td>
+                  </tr>
                 )}
-              </td>
-              <td className="px-3 py-2.5 text-right tabular-nums text-[var(--sd-muted)]">
-                {row.heads || <span className="text-[var(--sd-quiet)]">—</span>}
-              </td>
-              <td className="px-3 py-2.5 text-[var(--sd-muted)]">
-                {row.feed_mode || <span className="text-[var(--sd-quiet)]">—</span>}
-              </td>
-              <td className="px-3 py-2.5 text-right tabular-nums">
-                <Milk row={row} />
-              </td>
-            </tr>
-          ))}
+              </Fragment>
+            );
+          })}
         </tbody>
       </table>
     </div>

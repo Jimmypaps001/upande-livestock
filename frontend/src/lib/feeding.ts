@@ -105,6 +105,12 @@ export type ConcentrateWeeklyRow = {
   can_mix: boolean;
   short: Array<{ item_name?: string; item_code?: string }>;
   herds: unknown;
+  /** This batch's own BOM composition — item, quantity, unit, in RECIPE uom
+   *  — for the row expanded open on the Concentrate page. `undefined` until
+   *  `concentrate_plan` is extended to carry it: today it only returns
+   *  `short`, which is the items blocking a batch, not the batch's full
+   *  ingredient list, so it cannot stand in for `lines`. */
+  lines?: RecipeLine[];
 };
 
 export type ConcentrateWeeklyPlan = {

@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react";
-import { Plus, X } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Loader2, X } from "lucide-react";
 import { AmberNotice, Mark, Notice } from "@/components/feeding/Notice";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -46,50 +46,67 @@ export function ManualConfig({
   disabledReason: string | null;
 }) {
   const [term, setTerm] = useState("");
-  const [results, setResults] = useState<
+  const [open, setOpen] = useState(false);
+  // Unfiltered — the server's own matches for the typed term. What is
+  // actually offered (`suggestions` below) still has to drop whatever is
+  // already on this recipe, and that has to stay live: adding a row while
+  // the panel is open must pull it out of the list without a new request.
+  const [rawResults, setRawResults] = useState<
     Array<{ name: string; item_name: string; stock_uom: string }>
   >([]);
-  const [addError, setAddError] = useState<string | null>(null);
+  const [searching, setSearching] = useState(false);
   const timer = useRef<number | undefined>(undefined);
+  const box = useRef<HTMLDivElement | null>(null);
 
+  useEffect(() => {
+    if (!open) return;
+    const onDocClick = (e: MouseEvent) => {
+      if (box.current && !box.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onDocClick);
+    return () => document.removeEventListener("mousedown", onDocClick);
+  }, [open]);
+
+  // Debounced: a request per keystroke against the item master is wasteful,
+  // so the server is asked only once typing pauses for 250ms.
   useEffect(() => {
     window.clearTimeout(timer.current);
     const q = term.trim();
     if (q.length < 2) {
-      setResults([]);
+      setRawResults([]);
+      setSearching(false);
       return;
     }
+    setSearching(true);
     timer.current = window.setTimeout(() => {
-      searchItems(q).then(setResults);
+      searchItems(q).then((found) => {
+        setSearching(false);
+        setRawResults(found);
+      });
     }, 250);
     return () => window.clearTimeout(timer.current);
   }, [term]);
 
-  function addIngredient() {
-    setAddError(null);
-    const code = term.trim();
-    if (!code) {
-      setAddError("Type an item to add.");
-      return;
-    }
-    const current = rows || [];
-    if (current.some((r) => r.item_code === code)) {
-      setAddError("That ingredient is already in the list.");
-      return;
-    }
-    const hit = results.find((it) => it.name === code) || results[0];
-    if (!hit) {
-      setAddError("Item not found.");
-      return;
-    }
+  // Never offer an item already on the recipe — a duplicate row is not
+  // corrupted by `_tuned_bom._clean` (it sums same-item_code lines), but it
+  // reads as broken to the operator, which is reason enough to keep it out
+  // of the list rather than let it be picked twice.
+  const already = useMemo(() => new Set((rows || []).map((r) => r.item_code)), [rows]);
+  const suggestions = useMemo(
+    () => rawResults.filter((it) => !already.has(it.name)),
+    [rawResults, already],
+  );
+
+  function choose(item: { name: string; item_name: string; stock_uom: string }) {
     onRowsChange([
-      ...current,
+      ...(rows || []),
       // A hand-added ingredient has no BOM line, so its recipe unit is its
       // stock unit — the server reads the tuned BOM in that unit.
-      { item_code: hit.name, item_name: hit.item_name, uom: hit.stock_uom, qty: 0 },
+      { item_code: item.name, item_name: item.item_name, uom: item.stock_uom, qty: 0 },
     ]);
     setTerm("");
-    setResults([]);
+    setRawResults([]);
+    setOpen(false);
   }
 
   return (
@@ -147,7 +164,7 @@ export function ManualConfig({
       )}
 
       <div className="flex flex-wrap items-end gap-3">
-        <div className="flex min-w-[16rem] flex-1 flex-col gap-1.5">
+        <div ref={box} className="relative flex min-w-[16rem] flex-1 flex-col gap-1.5">
           <Label htmlFor="fm-item" className="text-[var(--sd-muted)]">
             Add an ingredient{" "}
             <span className="font-normal text-[var(--sd-quiet)]">
@@ -156,25 +173,60 @@ export function ManualConfig({
           </Label>
           <Input
             id="fm-item"
-            list="livestock-fm-items"
+            autoComplete="off"
             placeholder="Item name or code…"
             value={term}
-            onChange={(e) => setTerm(e.target.value)}
+            onFocus={() => setOpen(true)}
+            onChange={(e) => {
+              setTerm(e.target.value);
+              setOpen(true);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") setOpen(false);
+            }}
           />
-          <datalist id="livestock-fm-items">
-            {results.map((it) => (
-              <option key={it.name} value={it.name}>
-                {it.item_name}
-              </option>
-            ))}
-          </datalist>
+          {open && term.trim().length > 0 && (
+            <div className="absolute top-full z-30 mt-1 w-full rounded-[var(--sd-radius-lg)] border border-[var(--sd-line)] bg-[var(--sd-card)] p-1.5 shadow-[0_12px_32px_-16px_rgba(10,10,10,0.4)]">
+              {term.trim().length < 2 ? (
+                <p className="px-2 py-2 text-[12px] text-[var(--sd-muted)]">
+                  Keep typing — at least 2 characters.
+                </p>
+              ) : searching ? (
+                <div className="flex items-center gap-2 px-2 py-2 text-[12px] text-[var(--sd-muted)]">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  Searching…
+                </div>
+              ) : suggestions.length === 0 ? (
+                <p className="px-2 py-2 text-[12px] text-[var(--sd-muted)]">
+                  {rawResults.length > 0
+                    ? "Every match is already on this recipe."
+                    : `No item matches "${term.trim()}".`}
+                </p>
+              ) : (
+                <div className="max-h-56 overflow-y-auto">
+                  {suggestions.map((it) => (
+                    <button
+                      key={it.name}
+                      type="button"
+                      onClick={() => choose(it)}
+                      className="flex w-full items-start gap-2 rounded-[var(--sd-radius)] px-2 py-1.5 text-left text-[13px] transition-colors hover:bg-[var(--sd-bg-soft)]"
+                    >
+                      <span className="min-w-0">
+                        <span className="block truncate font-medium text-[var(--sd-ink)]">
+                          {it.item_name || it.name}
+                        </span>
+                        <span className="block truncate text-[11px] text-[var(--sd-quiet)]">
+                          {it.name} · {it.stock_uom}
+                        </span>
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
-        <Button type="button" variant="outline" onClick={addIngredient}>
-          <Plus className="mr-1.5 h-4 w-4" />
-          Add ingredient
-        </Button>
       </div>
-      {addError && <Notice tone="error">{addError}</Notice>}
 
       <div className="flex flex-wrap items-end gap-4">
         <div className="flex w-40 flex-col gap-1.5">

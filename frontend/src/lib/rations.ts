@@ -1,4 +1,5 @@
 import { call, type Envelope } from "@/lib/frappe";
+import type { RecipeLine } from "@/lib/feeding";
 
 /**
  * The ration record: which recipe a herd was fed, on what day, how much — and
@@ -54,6 +55,11 @@ export type RationRow = {
   milk_kg: number | null;
   /** How many days of the window actually carried a recording. */
   milk_days: number;
+  /** This recipe's ingredients — item, quantity, unit — in RECIPE uom, never
+   *  converted here (see `IngredientLines`). `undefined` when the endpoint
+   *  has not been extended to carry them (as opposed to `[]`, a run with none
+   *  recorded) — the Rations page tells those two apart. */
+  lines?: RecipeLine[];
 };
 
 export type RationHistory = {
