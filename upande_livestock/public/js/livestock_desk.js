@@ -86,11 +86,27 @@
 // Intercept those clicks and navigate in the current tab instead. Capture
 // phase, so this wins before Frappe's own handler. Scoped to /livestock_app —
 // every other link on the desk is left alone.
+//
+// The Livestock Dashboard's own launcher link is not a plain light-DOM
+// anchor: Custom HTML Blocks render inside an *open* shadow root
+// (frappe.create_shadow_element -> attachShadow({mode:"open"})). A listener
+// on `document` still gets `e.target` retargeted to the shadow host for
+// events that originate inside that shadow tree, so `e.target.closest(...)`
+// never sees the anchor. `e.composedPath()` is not retargeted — it lists the
+// real path, shadow DOM or not — so walk that instead of `e.target`.
 (function () {
 	document.addEventListener(
 		"click",
 		function (e) {
-			var a = e.target && e.target.closest && e.target.closest("a[href]");
+			var path = typeof e.composedPath === "function" ? e.composedPath() : [e.target];
+			var a = null;
+			for (var i = 0; i < path.length; i++) {
+				var el = path[i];
+				if (el && el.tagName === "A" && el.hasAttribute && el.hasAttribute("href")) {
+					a = el;
+					break;
+				}
+			}
 			if (!a) return;
 			var href = a.getAttribute("href") || "";
 			if (href.indexOf("/livestock_app") === 0) {
