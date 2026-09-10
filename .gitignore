@@ -9,7 +9,6 @@ __pycache__
 # Vite build output for the React frontend (frontend/ -> here). Rebuilt by
 # `npm run build`; a committed bundle would conflict on every build and go
 # stale against the source beside it.
-upande_livestock/public/dist
 package-lock.json
 
 # Source documents the app is built against, not part of it. The August 2026
