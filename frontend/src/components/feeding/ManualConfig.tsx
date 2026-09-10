@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Plus, X } from "lucide-react";
 import { AmberNotice, Mark, Notice } from "@/components/feeding/Notice";
-import { DateFed } from "@/components/feeding/DateFed";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -30,7 +29,6 @@ export function ManualConfig({
   heads,
   onHeadsChange,
   date,
-  onDateChange,
   onSubmit,
   busy,
   disabledReason,
@@ -39,8 +37,10 @@ export function ManualConfig({
   onRowsChange: (next: ManualRow[]) => void;
   heads: string;
   onHeadsChange: (next: string) => void;
+  /** The page's posting date, set by the Live/Backdate switch at the top.
+   *  Read-only here — this form no longer carries a date of its own, so the
+   *  two tabs cannot disagree about which day a run lands on. */
   date: string;
-  onDateChange: (next: string) => void;
   onSubmit: () => void;
   busy: boolean;
   disabledReason: string | null;
@@ -190,14 +190,13 @@ export function ManualConfig({
             onChange={(e) => onHeadsChange(e.target.value)}
           />
         </div>
-        <DateFed value={date} onChange={onDateChange} idPrefix="fm" />
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
         <Button onClick={onSubmit} disabled={busy || !!disabledReason}>
           {busy ? "Mixing…" : "Mix & feed"}
         </Button>
-        {date !== todayISO() && <Mark>Backdated</Mark>}
+        {date !== todayISO() && <Mark>Backdated · {date}</Mark>}
         {disabledReason && (
           <span className="text-[12px] text-[var(--sd-quiet)]">{disabledReason}</span>
         )}

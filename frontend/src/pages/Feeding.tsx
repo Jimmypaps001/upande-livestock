@@ -1,15 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
-import {
-  ConcentrateCards,
-  ConcentrateWeekly,
-} from "@/components/feeding/ConcentrateSection";
-import { DateFed } from "@/components/feeding/DateFed";
 import { DayStatus } from "@/components/feeding/DayStatus";
 import { ManualConfig } from "@/components/feeding/ManualConfig";
 import { Mark, Notice, Pill } from "@/components/feeding/Notice";
 import { PortionSwitch } from "@/components/feeding/PortionSwitch";
+import { PostingDate } from "@/components/feeding/PostingDate";
 import { RequirementTable } from "@/components/feeding/RequirementTable";
+import { Figure, FigureRow } from "@/components/Figure";
+import { Page, PageHeading } from "@/components/PageShell";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -18,7 +16,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -30,7 +27,6 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { isError } from "@/lib/frappe";
 import {
-  concentratePlan,
   feedDayStatus,
   feedOptions,
   feedingProgram,
@@ -39,29 +35,12 @@ import {
   runKg,
   runRationQty,
   seedManualRows,
-  type ConcentrateWeeklyPlan,
   type FeedDayStatus,
   type FeedingProgram,
   type HerdOption,
   type ManualRow,
 } from "@/lib/feeding";
 import { fmt, num, todayISO } from "@/lib/utils";
-
-function Figure({ label, value, unit }: { label: string; value: string; unit?: string }) {
-  return (
-    <div className="flex flex-col gap-1">
-      <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-[var(--sd-quiet)]">
-        {label}
-      </span>
-      <span className="text-[22px] font-semibold leading-none tracking-[-0.02em] text-[var(--sd-ink)] tabular-nums">
-        {value}
-        {unit && (
-          <span className="ml-1 text-[12px] font-medium text-[var(--sd-muted)]">{unit}</span>
-        )}
-      </span>
-    </div>
-  );
-}
 
 export function Feeding() {
   const [herds, setHerds] = useState<HerdOption[]>([]);
@@ -74,9 +53,19 @@ export function Feeding() {
   const [success, setSuccess] = useState<string | null>(null);
   const [lastRunMode, setLastRunMode] = useState<string | null>(null);
 
+  /**
+   * The day this page posts against — one decision, at the top, for both tabs.
+   *
+   * It used to be two separate controls buried in the two forms, which meant
+   * the operator could set the system tab to a past day and leave the manual
+   * tab on today without either screen saying so. There is one date now, and
+   * the switch above it says which mode the whole page is in.
+   */
+  const [backdating, setBackdating] = useState(false);
+  const [postDate, setPostDate] = useState(todayISO());
+
   // System tab
   const [portion, setPortion] = useState(0.5);
-  const [sysDate, setSysDate] = useState(todayISO());
   const [mixing, setMixing] = useState(false);
 
   // Manual tab — seeded once per herd, then the operator's edits are left
@@ -85,14 +74,7 @@ export function Feeding() {
   const [manualRows, setManualRows] = useState<ManualRow[] | null>(null);
   const [manualHerd, setManualHerd] = useState<string | null>(null);
   const [manualHeads, setManualHeads] = useState("");
-  const [manualDate, setManualDate] = useState(todayISO());
   const [manualBusy, setManualBusy] = useState(false);
-
-  // Weekly concentrate plan
-  const [planDays, setPlanDays] = useState("7");
-  const [plan, setPlan] = useState<ConcentrateWeeklyPlan | null>(null);
-  const [planError, setPlanError] = useState<string | null>(null);
-  const [planLoading, setPlanLoading] = useState(false);
 
   useEffect(() => {
     feedOptions().then((r) => {
@@ -147,29 +129,19 @@ export function Feeding() {
     load(name, true);
   }
 
-  const loadPlan = useCallback(async (days: number) => {
-    setPlanLoading(true);
-    const r = await concentratePlan(days);
-    setPlanLoading(false);
-    if (isError(r)) {
-      setPlan(null);
-      setPlanError(r.error);
-      return;
-    }
-    setPlanError(null);
-    setPlan(r);
-  }, []);
-
-  useEffect(() => {
-    loadPlan(7);
-  }, [loadPlan]);
+  /** Live mode always posts today, whatever the field last held. */
+  const effectiveDate = backdating ? postDate : todayISO();
 
   async function mixAndFeed() {
     if (!program) return;
     setMixing(true);
     setFailure(null);
     setSuccess(null);
-    const r = await manufactureFeed({ herd: program.herd, portion, posting_date: sysDate });
+    const r = await manufactureFeed({
+      herd: program.herd,
+      portion,
+      posting_date: effectiveDate,
+    });
     setMixing(false);
     if (isError(r)) {
       setFailure(r.error);
@@ -180,9 +152,8 @@ export function Feeding() {
         program.herd_label || program.herd
       } — Work Order ${r.work_order}, issued on ${r.issue_stock_entry}.`,
     );
-    setLastRunMode(sysDate !== todayISO() ? "Backdated" : null);
+    setLastRunMode(effectiveDate !== todayISO() ? "Backdated" : null);
     load(program.herd, false);
-    loadPlan(num(planDays) || 7);
   }
 
   async function submitManual() {
@@ -206,7 +177,7 @@ export function Feeding() {
       herd: program.herd,
       lines,
       heads,
-      posting_date: manualDate,
+      posting_date: effectiveDate,
     });
     setManualBusy(false);
     if (isError(r)) {
@@ -218,33 +189,31 @@ export function Feeding() {
         r.work_order
       }, issued on ${r.issue_stock_entry}.`,
     );
-    setLastRunMode(manualDate !== todayISO() ? "Manual · Backdated" : "Manual");
+    setLastRunMode(effectiveDate !== todayISO() ? "Manual · Backdated" : "Manual");
     // Reseed from the fresh programme next time this herd is chosen.
     setManualHerd(null);
     load(program.herd, false);
-    loadPlan(num(planDays) || 7);
   }
 
   const kg = runKg(day, portion);
   const rationQty = runRationQty(program, portion);
-  const manualDisabled = !program
-    ? "Select a herd first."
-    : null;
+  const manualDisabled = !program ? "Select a herd first." : null;
 
   return (
-    <div className="mx-auto flex w-full max-w-[76rem] flex-col gap-6 px-6 py-7">
-      <header className="flex flex-col gap-1">
-        <span className="text-[10px] font-medium uppercase tracking-[0.16em] text-[var(--sd-quiet)]">
-          Upande Livestock · Feeding
-        </span>
-        <h1 className="text-[26px] font-semibold tracking-[-0.02em] text-[var(--sd-ink)]">
-          Herd Feeding Programme
-        </h1>
-        <p className="max-w-[52rem] text-[13px] text-[var(--sd-muted)]">
-          Pick a herd. The ration scales with head count, every line is checked against the
-          feed stores first, and the whole batch is issued to that herd in the same action.
-        </p>
-      </header>
+    <Page>
+      <PageHeading eyebrow="Upande Livestock · Feeding" title="Feeding">
+        Pick a herd. The ration scales with head count, every line is checked against the
+        feed stores first, and the whole batch is issued to that herd in the same action.
+      </PageHeading>
+
+      {/* The day this page posts against, decided before anything is filled in. */}
+      <PostingDate
+        backdating={backdating}
+        onBackdatingChange={setBackdating}
+        date={postDate}
+        onDateChange={setPostDate}
+        idPrefix="feed"
+      />
 
       {failure && <Notice tone="error">{failure}</Notice>}
       {success && (
@@ -297,7 +266,7 @@ export function Feeding() {
               </TabsList>
 
               <TabsContent value="system" className="flex flex-col gap-5">
-                <div className="grid grid-cols-2 gap-5 rounded-[var(--sd-radius-lg)] border border-[var(--sd-line)] bg-[var(--sd-bg-soft)] px-4 py-4 sm:grid-cols-4">
+                <FigureRow>
                   <Figure label="Head count" value={String(program.heads)} />
                   <Figure
                     label="Per head"
@@ -314,7 +283,7 @@ export function Feeding() {
                     value={fmt(program.available_in_store)}
                     unit={program.uom}
                   />
-                </div>
+                </FigureRow>
 
                 {program.can_manufacture ? (
                   <Pill tone="ok">
@@ -331,7 +300,8 @@ export function Feeding() {
                 <p className="text-[12px] text-[var(--sd-quiet)]">
                   Stock is checked in the order set on Livestock Settings → Feed Source
                   Warehouses. A line is sourced from the first store that can cover it in
-                  full.
+                  full. What each concentrate would take to mix is on the Concentrate
+                  page.
                 </p>
 
                 <DayStatus day={day} />
@@ -360,8 +330,6 @@ export function Feeding() {
                     </div>
                   </div>
 
-                  <DateFed value={sysDate} onChange={setSysDate} idPrefix="feed" />
-
                   <div className="flex flex-wrap items-center gap-3">
                     <Button
                       onClick={mixAndFeed}
@@ -369,7 +337,7 @@ export function Feeding() {
                     >
                       {mixing ? "Mixing…" : "Mix & feed"}
                     </Button>
-                    {sysDate !== todayISO() && <Mark>Backdated</Mark>}
+                    {effectiveDate !== todayISO() && <Mark>Backdated · {effectiveDate}</Mark>}
                     {!program.can_manufacture && (
                       <span className="text-[12px] text-[var(--sd-quiet)]">
                         A short line has to be covered before this run can post.
@@ -385,8 +353,7 @@ export function Feeding() {
                   onRowsChange={setManualRows}
                   heads={manualHeads}
                   onHeadsChange={setManualHeads}
-                  date={manualDate}
-                  onDateChange={setManualDate}
+                  date={effectiveDate}
                   onSubmit={submitManual}
                   busy={manualBusy}
                   disabledReason={manualDisabled}
@@ -396,44 +363,6 @@ export function Feeding() {
           )}
         </CardContent>
       </Card>
-
-      {program && <ConcentrateCards cards={program.concentrates} />}
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Concentrate — what the farm holds, and what to mix</CardTitle>
-          <CardDescription>
-            Demand is read off the herds: every ration's concentrate line times its head
-            count. Nothing is typed in. Mixing a batch is still done from the desk block.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4">
-          <div className="flex flex-wrap items-end gap-3">
-            <div className="flex w-32 flex-col gap-1.5">
-              <Label htmlFor="cp-days" className="text-[var(--sd-muted)]">
-                Cover (days)
-              </Label>
-              <Input
-                id="cp-days"
-                type="number"
-                min={1}
-                max={60}
-                step={1}
-                value={planDays}
-                onChange={(e) => setPlanDays(e.target.value)}
-              />
-            </div>
-            <Button
-              variant="outline"
-              onClick={() => loadPlan(num(planDays) || 7)}
-              disabled={planLoading}
-            >
-              {planLoading ? "Reading the stores…" : "Recalculate"}
-            </Button>
-          </div>
-          <ConcentrateWeekly plan={plan} error={planError} />
-        </CardContent>
-      </Card>
-    </div>
+    </Page>
   );
 }

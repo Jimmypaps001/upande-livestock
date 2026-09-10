@@ -18,6 +18,7 @@ import {
   Sun,
   Trash2,
   Utensils,
+  Warehouse,
   Wheat,
 } from "lucide-react";
 import {
@@ -45,15 +46,20 @@ type NavSection = { label: string; items: NavItem[] };
 
 /**
  * The surfaces that exist on the farm today, so the shape of the app is
- * visible from the first slice. Only Feeding is built; everything else routes
- * to a placeholder that says so rather than miming a screen that does not
- * work yet — see pages/Stub.tsx.
+ * visible from the first slice. What is not built yet routes to a placeholder
+ * that says so rather than miming a screen that does not work — see
+ * pages/Stub.tsx.
  */
 const NAV: NavSection[] = [
   {
     label: "Herd",
     items: [
-      { view: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+      {
+        view: "dashboard",
+        label: "Dashboard",
+        icon: LayoutDashboard,
+        hint: "Milk production over time",
+      },
       { view: "animals", label: "Animals", icon: ClipboardList },
       { view: "events", label: "Events", icon: Activity },
       { view: "health", label: "Health", icon: HeartPulse },
@@ -70,7 +76,18 @@ const NAV: NavSection[] = [
         icon: Utensils,
         hint: "Mix and issue a herd's ration",
       },
-      { view: "concentrate", label: "Concentrate", icon: Wheat },
+      {
+        view: "concentrate",
+        label: "Concentrate",
+        icon: Wheat,
+        hint: "What to mix, and what it would take",
+      },
+      {
+        view: "stock",
+        label: "Feed in Store",
+        icon: Warehouse,
+        hint: "What the feed stores are holding",
+      },
     ],
   },
   {
@@ -94,7 +111,12 @@ const NAV: NavSection[] = [
 ];
 
 /** Which views this slice actually implements. The rest render a placeholder. */
-export const BUILT_VIEWS: ReadonlySet<View> = new Set<View>(["feeding"]);
+export const BUILT_VIEWS: ReadonlySet<View> = new Set<View>([
+  "dashboard",
+  "feeding",
+  "concentrate",
+  "stock",
+]);
 
 export function AppSidebar({
   view,

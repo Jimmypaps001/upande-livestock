@@ -1,4 +1,5 @@
 import { Construction } from "lucide-react";
+import { Page, PageHeading } from "@/components/PageShell";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 /**
@@ -10,15 +11,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
  */
 export function Stub({ title }: { title: string }) {
   return (
-    <div className="mx-auto flex w-full max-w-[76rem] flex-col gap-6 px-6 py-7">
-      <header className="flex flex-col gap-1">
-        <span className="text-[10px] font-medium uppercase tracking-[0.16em] text-[var(--sd-quiet)]">
-          Upande Livestock
-        </span>
-        <h1 className="text-[26px] font-semibold tracking-[-0.02em] text-[var(--sd-ink)]">
-          {title}
-        </h1>
-      </header>
+    <Page>
+      <PageHeading eyebrow="Upande Livestock" title={title} />
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-[15px]">
@@ -39,6 +33,6 @@ export function Stub({ title }: { title: string }) {
           </a>
         </CardContent>
       </Card>
-    </div>
+    </Page>
   );
 }
