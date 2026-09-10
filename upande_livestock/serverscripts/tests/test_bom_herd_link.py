@@ -105,16 +105,18 @@ class TestBackfilledStandingRations(IntegrationTestCase):
 		self.assertEqual(got.custom_is_livestock_feed, 1)
 		self.assertEqual(got.custom_ration_kind, "Standing")
 
-	def test_a_shared_standing_bom_is_stamped_but_left_unlinked(self):
-		"""BOM-TMR Calves Meal-011 is the standing ration for both 0-2 and 2-4.
-		A single custom_herd cannot hold both, so it is left blank rather than
-		guessed at — see the patch's module docstring."""
+	def test_a_shared_standing_bom_is_attributed_to_whichever_herd_was_fed_first(self):
+		"""BOM-TMR Calves Meal-011 is the standing ration for both 0-2 and
+		2-4. A single custom_herd cannot hold both, so the backfill resolves
+		it to whichever herd's Feeding history says was actually fed this
+		ration first — see the patch module's docstring for the rule and its
+		tiebreak. On kaitet.local that is 0-2."""
 		bom_name = frappe.db.get_value("Herds", "0-2", "bom")
 		if not bom_name or frappe.db.get_value("Herds", "2-4", "bom") != bom_name:
 			self.skipTest("0-2 and 2-4 no longer share a BOM on this site")
 		got = frappe.db.get_value(
 			"BOM", bom_name, ["custom_herd", "custom_is_livestock_feed", "custom_ration_kind"], as_dict=True
 		)
-		self.assertFalse(got.custom_herd)
+		self.assertEqual(got.custom_herd, "0-2")
 		self.assertEqual(got.custom_is_livestock_feed, 1)
 		self.assertEqual(got.custom_ration_kind, "Standing")
