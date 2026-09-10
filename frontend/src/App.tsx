@@ -25,6 +25,9 @@ const Settings = lazy(() =>
 const Notifications = lazy(() =>
   import("@/pages/Notifications").then((m) => ({ default: m.Notifications })),
 );
+const Milking = lazy(() =>
+  import("@/pages/Milking").then((m) => ({ default: m.Milking })),
+);
 
 const TITLES: Record<View, string> = {
   dashboard: "Dashboard",
@@ -64,6 +67,7 @@ const PAGES: Partial<Record<View, React.ComponentType>> = {
   dashboard: Dashboard,
   settings: Settings,
   notifications: Notifications,
+  milking: Milking,
 };
 
 export function App() {

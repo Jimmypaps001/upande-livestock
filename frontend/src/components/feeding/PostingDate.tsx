@@ -25,6 +25,12 @@ export const BACKDATE_WARNING =
  * is not treated as backdated by the server's own resolver — it would sail
  * through unstamped. The server refuses one too; this is the browser's half of
  * the same rule.
+ *
+ * `dateLabel` and `noun` exist only so a page can name its own event without
+ * forking the control: milking records a "recording" on the "date milked",
+ * feeding posts a "run" on the "date fed", and the switch, the ceiling and the
+ * amber warning must stay identical across both or the two pages teach the
+ * operator two different rules. The defaults are Feeding's own wording.
  */
 export function PostingDate({
   backdating,
@@ -32,12 +38,18 @@ export function PostingDate({
   date,
   onDateChange,
   idPrefix = "posting",
+  dateLabel = "Date fed",
+  noun = "run",
 }: {
   backdating: boolean;
   onBackdatingChange: (next: boolean) => void;
   date: string;
   onDateChange: (next: string) => void;
   idPrefix?: string;
+  /** What the date field is called on this page. */
+  dateLabel?: string;
+  /** What this page posts, singular — "run", "recording". */
+  noun?: string;
 }) {
   const today = todayISO();
 
@@ -90,7 +102,7 @@ export function PostingDate({
               !backdating && "text-[var(--sd-quiet)]",
             )}
           >
-            Date fed
+            {dateLabel}
           </Label>
           <Input
             id={`${idPrefix}-date`}
@@ -105,8 +117,8 @@ export function PostingDate({
 
         <span className="text-[12px] text-[var(--sd-quiet)]">
           {backdating
-            ? "Every run on this page posts on the date above."
-            : "Every run on this page posts today."}
+            ? `Every ${noun} on this page posts on the date above.`
+            : `Every ${noun} on this page posts today.`}
         </span>
       </div>
       {backdating && <AmberNotice>{BACKDATE_WARNING}</AmberNotice>}

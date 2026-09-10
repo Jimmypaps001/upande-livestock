@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import {
   Activity,
   ArrowRightLeft,
@@ -10,6 +11,7 @@ import {
   FileText,
   Heart,
   HeartPulse,
+  Home,
   LayoutDashboard,
   Milk,
   PanelLeftClose,
@@ -39,8 +41,10 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { SidebarUser } from "@/components/SidebarUser";
 import { useUnreadNotifications } from "@/hooks/use-notifications";
 import { routeHash, type View } from "@/lib/router";
+import { cn } from "@/lib/utils";
 import upandeLogo from "@/assets/upande_logo.png";
 
 type IconType = React.ComponentType<{ className?: string }>;
@@ -103,7 +107,12 @@ const NAV: NavSection[] = [
   {
     label: "Operations",
     items: [
-      { view: "milking", label: "Milking", icon: Droplets },
+      {
+        view: "milking",
+        label: "Milking",
+        icon: Droplets,
+        hint: "Record what a herd gave at one milking",
+      },
       { view: "movement", label: "Movement", icon: ArrowRightLeft },
       { view: "drying-off", label: "Drying Off", icon: Sun },
       { view: "calving", label: "Calving", icon: Baby },
@@ -140,6 +149,7 @@ export const BUILT_VIEWS: ReadonlySet<View> = new Set<View>([
   "rations",
   "settings",
   "notifications",
+  "milking",
 ]);
 
 export function AppSidebar({
@@ -152,6 +162,37 @@ export function AppSidebar({
   const { state, toggle } = useSidebar();
   const collapsed = state === "collapsed";
   const { unread } = useUnreadNotifications();
+
+  // The footer is pinned: SidebarContent is the only flexible row in the card
+  // (flex-1 min-h-0, overflow hidden) and the nav scrolls INSIDE the ScrollArea
+  // it holds, so the footer below it never moves. `moreBelow` is the visual half
+  // of that promise — the top border and shadow appear only while nav items are
+  // still hidden under the footer, so it reads as sitting over a scrolling list
+  // rather than as a permanent rule.
+  const navRef = useRef<HTMLDivElement>(null);
+  const [moreBelow, setMoreBelow] = useState(false);
+  useEffect(() => {
+    const vp = navRef.current?.querySelector<HTMLElement>(
+      '[data-slot="scroll-area-viewport"]',
+    );
+    if (!vp) return;
+    const update = () =>
+      setMoreBelow(vp.scrollHeight - vp.scrollTop - vp.clientHeight > 1);
+    update();
+    vp.addEventListener("scroll", update, { passive: true });
+    // ResizeObserver is not in every test environment, and a missing shadow is
+    // not worth a blank sidebar.
+    const RO = typeof ResizeObserver === "function" ? ResizeObserver : null;
+    const ro = RO ? new RO(update) : null;
+    if (ro) {
+      ro.observe(vp);
+      if (vp.firstElementChild) ro.observe(vp.firstElementChild);
+    }
+    return () => {
+      vp.removeEventListener("scroll", update);
+      ro?.disconnect();
+    };
+  }, [collapsed]);
 
   return (
     <Sidebar collapsible="icon">
@@ -185,7 +226,10 @@ export function AppSidebar({
         </div>
       </SidebarHeader>
       <SidebarSeparator />
-      <SidebarContent className="overflow-hidden p-0 group-data-[collapsible=icon]:p-0">
+      <SidebarContent
+        ref={navRef}
+        className="overflow-hidden p-0 group-data-[collapsible=icon]:p-0"
+      >
         <ScrollArea className="h-full w-full">
           <div className="flex flex-col gap-1 p-2 group-data-[collapsible=icon]:p-1">
             {NAV.map((section) => (
@@ -229,11 +273,17 @@ export function AppSidebar({
           </div>
         </ScrollArea>
       </SidebarContent>
-      <SidebarFooter>
+      <SidebarFooter
+        className={cn(
+          "transition-shadow duration-200",
+          moreBelow &&
+            "border-t border-sidebar-border shadow-[0_-6px_14px_-10px_rgba(10,10,10,0.16)]",
+        )}
+      >
+        {/* Notifications — a normal sidebar item, pinned to the footer rather
+            than listed under Herd: it is not a part of the herd, it is how the
+            herd reaches you, and it must stay reachable without scrolling. */}
         <SidebarMenu>
-          {/* Pinned to the footer rather than listed under Herd: it is not a
-              part of the herd, it is how the herd reaches you, and it must stay
-              reachable without scrolling the nav. */}
           <SidebarMenuItem>
             <SidebarMenuButton
               asChild
@@ -254,6 +304,9 @@ export function AppSidebar({
               >
                 <Bell className="h-4 w-4" />
                 <span>Notifications</span>
+                {/* Never rendered at zero — a badge showing 0 is noise that
+                    trains the eye to ignore the one that matters. Collapsed, it
+                    rides the corner of the bell instead of the row's end. */}
                 {unread > 0 && (
                   <span
                     aria-label={`${unread} unread`}
@@ -265,6 +318,12 @@ export function AppSidebar({
               </a>
             </SidebarMenuButton>
           </SidebarMenuItem>
+        </SidebarMenu>
+        <SidebarSeparator />
+
+        {/* Collapse / Expand — a normal sidebar item, pinned here. The label
+            follows the state so the rail's one visible word is never a lie. */}
+        <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton
               onClick={toggle}
@@ -275,10 +334,29 @@ export function AppSidebar({
               ) : (
                 <PanelLeftClose className="h-4 w-4" />
               )}
-              <span>Collapse</span>
+              <span>{collapsed ? "Expand" : "Collapse"}</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
+        <SidebarSeparator />
+
+        {/* Back to Desk, beside the profile chip: a full page load out of this
+            app and into Frappe's own workspace at /app. It sits here rather
+            than in the nav above because it is not one of this app's surfaces —
+            and because somebody new to the app must be able to leave it without
+            hunting. A plain <a href>, deliberately: the desk is a different
+            document, not a hash route. */}
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild title="Back to Desk — the Frappe workspace at /app">
+              <a href="/app">
+                <Home className="h-4 w-4" />
+                <span>Back to Desk</span>
+              </a>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+        <SidebarUser />
       </SidebarFooter>
     </Sidebar>
   );
