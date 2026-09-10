@@ -40,3 +40,7 @@ upande_livestock.patches.relink_pregnancy_to_service
 # hand holds. Read only, and only for the two roles that run and plan the store.
 upande_livestock.patches.grant_livestock_item_read
 upande_livestock.patches.add_backdating_fields
+# Stamps custom_herd/custom_is_livestock_feed/custom_ration_kind on the BOMs
+# the herds already point at (Herds.bom), as "Standing". Must run after the
+# custom_field.json fixture sync creates those BOM fields.
+upande_livestock.patches.backfill_standing_ration_boms

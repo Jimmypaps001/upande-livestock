@@ -108,12 +108,17 @@ doctype_js = {
 # per-herd accounting overrides. Exported so they deploy to every site via migrate.
 fixtures = [
 	{
-		# Only Stock Entry (an ERPNext core doctype) still carries livestock custom
-		# fields — everything on our own doctypes (Herds, Livestock Event, Livestock
-		# Settings) was folded into the DocType JSONs natively. The milk fields are
-		# grouped in a "Milking" section that shows only for Milking stock entries;
-		# the trailing section break keeps the following (non-livestock) fields
-		# visible on other stock-entry types.
+		# Only Stock Entry and BOM (both ERPNext core doctypes) still carry
+		# livestock custom fields — everything on our own doctypes (Herds,
+		# Livestock Event, Livestock Settings) was folded into the DocType JSONs
+		# natively. The milk fields are grouped in a "Milking" section that shows
+		# only for Milking stock entries; the trailing section break keeps the
+		# following (non-livestock) fields visible on other stock-entry types.
+		#
+		# The BOM fields give a tuned/standing ration a back-link to the herd it
+		# was made for: custom_livestock_tab only shows when custom_is_livestock_feed
+		# is set, so a non-livestock BOM (this site also runs upande_scp's
+		# tank-mix BOMs) never sees it.
 		"dt": "Custom Field",
 		"filters": [
 			[
@@ -124,6 +129,10 @@ fixtures = [
 					"Stock Entry-custom_milking_time",
 					"Stock Entry-custom_cows_milked",
 					"Stock Entry-custom_milking_end_section",
+					"BOM-custom_livestock_tab",
+					"BOM-custom_herd",
+					"BOM-custom_is_livestock_feed",
+					"BOM-custom_ration_kind",
 				],
 			]
 		],

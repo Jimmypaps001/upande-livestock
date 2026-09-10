@@ -114,6 +114,12 @@ def tuned_bom(herd, lines):
 	doc = frappe.copy_doc(base)
 	doc.is_active = 1  # ERPNext refuses a Work Order against anything else
 	doc.is_default = 0
+	# The back-link to the herd this ration was made for, so a BOM's
+	# provenance lives with the recipe rather than being inferred. See
+	# fixtures/custom_field.json for the three custom_* fields on BOM.
+	doc.custom_herd = herd
+	doc.custom_is_livestock_feed = 1
+	doc.custom_ration_kind = "Tuned"
 	doc.set("items", [])
 	for row in lines:
 		item = frappe.get_cached_doc("Item", row["item_code"])
