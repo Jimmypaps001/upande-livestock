@@ -56,7 +56,7 @@ def manual_feed(payload):
 		if heads <= 0:
 			frappe.throw(_("Enter how many animals were fed."))
 
-		bom_no = tuned_bom(herd, d.get("lines"))
+		bom_no = tuned_bom(herd, d.get("lines"), base_bom=d.get("base_bom"))
 		return manufacture_herd_feed(
 			herd,
 			employee=d.get("employee"),

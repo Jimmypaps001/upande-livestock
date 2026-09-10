@@ -77,20 +77,51 @@ def _existing_match(item, signature, quantity):
 	return None
 
 
-def tuned_bom(herd, lines):
+def _base_for(herd, base_bom):
+	"""The BOM to copy from: the herd's own standing ration when `base_bom`
+	is not given (today's behaviour, unchanged), or `base_bom` itself once
+	proven to actually belong to this herd.
+
+	"Belongs to this herd" means: it *is* the herd's standing BOM, or its
+	`custom_herd` names this herd — the same two ways `herd_recipes` builds a
+	herd's recipe list, so nothing can be tuned into a herd's feed that the
+	picker could not itself have offered. Anything else is refused outright;
+	a caller must not be able to walk an arbitrary BOM from elsewhere on the
+	site into this herd's feed by naming it directly.
+	"""
+	standing_name = frappe.db.get_value("Herds", herd, "bom")
+	if not standing_name:
+		frappe.throw(_("Herd {0} has no BOM linked.").format(herd))
+	if not base_bom:
+		return frappe.get_doc("BOM", standing_name)
+
+	base = frappe.get_doc("BOM", base_bom)
+	if base.docstatus != 1:
+		frappe.throw(_("BOM {0} is not a submitted BOM.").format(base_bom))
+	standing_item = frappe.db.get_value("BOM", standing_name, "item")
+	if base.item != standing_item:
+		frappe.throw(
+			_("BOM {0} is not a recipe for {1}'s ration item.").format(base_bom, herd)
+		)
+	if base.name != standing_name and base.custom_herd != herd:
+		frappe.throw(_("BOM {0} does not belong to herd {1}.").format(base_bom, herd))
+	return base
+
+
+def tuned_bom(herd, lines, base_bom=None):
 	"""Return a BOM name that makes the herd's feed item to `lines`.
 
-	Returns the herd's own BOM unchanged when the tune matches it — a screen
-	that submits without editing anything should not mint a duplicate.
+	Returns the base BOM unchanged when the tune matches it — a screen that
+	submits without editing anything should not mint a duplicate. The base is
+	the herd's own standing ration (`Herds.bom`) unless `base_bom` names a
+	recipe previously used for this herd, in which case tuning starts from
+	that recipe instead — see `_base_for`.
 	"""
 	lines = _clean(lines)
 	if not lines:
 		frappe.throw(_("A feed run needs at least one ingredient."))
 
-	base_name = frappe.db.get_value("Herds", herd, "bom")
-	if not base_name:
-		frappe.throw(_("Herd {0} has no BOM linked.").format(herd))
-	base = frappe.get_doc("BOM", base_name)
+	base = _base_for(herd, base_bom)
 
 	signature = _signature(lines)
 	if _signature([{"item_code": r.item_code, "qty": r.qty} for r in base.items]) == signature:
