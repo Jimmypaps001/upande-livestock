@@ -16,6 +16,9 @@ const Stock = lazy(() => import("@/pages/Stock").then((m) => ({ default: m.Stock
 const Dashboard = lazy(() =>
   import("@/pages/Dashboard").then((m) => ({ default: m.Dashboard })),
 );
+const Settings = lazy(() =>
+  import("@/pages/Settings").then((m) => ({ default: m.Settings })),
+);
 
 const TITLES: Record<View, string> = {
   dashboard: "Dashboard",
@@ -40,6 +43,7 @@ const TITLES: Record<View, string> = {
   treatment: "Treatment",
   "health-case": "Health Case",
   disposal: "Disposal",
+  settings: "Settings",
 };
 
 /** The surfaces this frontend implements. Everything else renders a
@@ -49,6 +53,7 @@ const PAGES: Partial<Record<View, React.ComponentType>> = {
   concentrate: Concentrate,
   stock: Stock,
   dashboard: Dashboard,
+  settings: Settings,
 };
 
 export function App() {

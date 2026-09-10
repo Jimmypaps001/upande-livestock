@@ -31,6 +31,7 @@ export const VIEWS = [
   "treatment",
   "health-case",
   "disposal",
+  "settings",
 ] as const;
 
 export type View = (typeof VIEWS)[number];

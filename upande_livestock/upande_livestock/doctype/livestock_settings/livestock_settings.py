@@ -23,15 +23,35 @@ ZERO_IS_INVALID = {
 }
 
 
+def reject_invalid_zeros(values: dict, meta=None) -> None:
+	"""Throw if any of `values` sets a field where 0 cannot mean anything real.
+
+	Lifted out of `validate` so the Settings page's write endpoint enforces the
+	same rule in the same words. That endpoint deliberately does not save the
+	whole document — a full save of this Single coerces every *unset* Int to 0
+	(see `install.ensure_livestock_timing_defaults`), which is the incident
+	`patches.repair_zeroed_age_interval_settings` exists to undo — so it cannot
+	get this check for free from `validate`, and a second copy of the rule
+	would be a second copy to keep true.
+
+	Only the keys present in `values` are examined, so a partial patch is
+	checked on exactly what it changes.
+	"""
+	meta = meta or frappe.get_meta("Livestock Settings")
+	for fieldname, default in ZERO_IS_INVALID.items():
+		if fieldname not in values:
+			continue
+		value = values[fieldname]
+		if value in (None, ""):
+			continue
+		if cint(value) == 0:
+			frappe.throw(
+				_("{0} cannot be 0 — that is not a valid configuration. The default is {1}.").format(
+					frappe.bold(meta.get_label(fieldname) or frappe.unscrub(fieldname)), default
+				)
+			)
+
+
 class LivestockSettings(Document):
 	def validate(self):
-		for fieldname, default in ZERO_IS_INVALID.items():
-			value = self.get(fieldname)
-			if value in (None, ""):
-				continue
-			if cint(value) == 0:
-				frappe.throw(
-					_("{0} cannot be 0 — that is not a valid configuration. The default is {1}.").format(
-						frappe.bold(self.meta.get_label(fieldname) or frappe.unscrub(fieldname)), default
-					)
-				)
+		reject_invalid_zeros({f: self.get(f) for f in ZERO_IS_INVALID}, self.meta)

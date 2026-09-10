@@ -103,6 +103,44 @@ export async function call<T>(
   }
 }
 
+/**
+ * Link-field search, through the framework's own autosuggest endpoint.
+ *
+ * `frappe.desk.search.search_link` is what every desk Link field calls, and it
+ * applies the same permission check: a user who may not list Warehouse gets an
+ * empty list, not somebody else's warehouses. Using it here means the settings
+ * page offers only records that exist — the alternative, a text box, is how a
+ * milk warehouse ends up spelled two ways and a month of postings lands
+ * nowhere.
+ *
+ * Returns `null` — not `[]` — when the call itself failed, so a picker can say
+ * "could not search" instead of "no matches", which are different problems.
+ */
+export async function searchLink(
+  doctype: string,
+  term: string,
+  pageLength = 20,
+): Promise<Array<{ value: string; description: string; label?: string }> | null> {
+  try {
+    const res = await fetch("/api/method/frappe.desk.search.search_link", {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Frappe-CSRF-Token": csrf(),
+        "X-Requested-With": "XMLHttpRequest",
+      },
+      body: JSON.stringify({ doctype, txt: term, page_length: pageLength }),
+    });
+    if (!res.ok) return null;
+    const body = await res.json();
+    const rows = body?.message;
+    return Array.isArray(rows) ? rows : null;
+  } catch {
+    return null;
+  }
+}
+
 /** Item-master search, through the same whitelisted read every desk Link field
  *  uses. Every livestock role already reads the item master, so this needs no
  *  endpoint of its own. */

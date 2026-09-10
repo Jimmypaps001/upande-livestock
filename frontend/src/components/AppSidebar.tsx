@@ -14,6 +14,7 @@ import {
   PanelLeftOpen,
   Scale,
   Scissors,
+  SlidersHorizontal,
   Stethoscope,
   Sun,
   Trash2,
@@ -108,6 +109,17 @@ const NAV: NavSection[] = [
       { view: "disposal", label: "Disposal", icon: Trash2 },
     ],
   },
+  {
+    label: "Configuration",
+    items: [
+      {
+        view: "settings",
+        label: "Settings",
+        icon: SlidersHorizontal,
+        hint: "The rules the whole farm runs on",
+      },
+    ],
+  },
 ];
 
 /** Which views this slice actually implements. The rest render a placeholder. */
@@ -116,6 +128,7 @@ export const BUILT_VIEWS: ReadonlySet<View> = new Set<View>([
   "feeding",
   "concentrate",
   "stock",
+  "settings",
 ]);
 
 export function AppSidebar({
