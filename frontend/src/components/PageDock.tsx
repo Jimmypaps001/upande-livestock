@@ -1,81 +1,66 @@
-import { useEffect, useRef, useState } from "react";
+import { DOCK_LINE, dockFade } from "@/lib/use-dock-progress";
 import { cn } from "@/lib/utils";
 
 /**
- * The page's name, caught before it scrolls away.
+ * The page's name, after it has finished travelling out of the page.
  *
- * A 40px title is worth the room it takes at the top of a page and worth none
- * of it halfway down, so it leaves — and takes with it the one thing telling
- * you which of eleven surfaces you are looking at. The dock is that name given
- * somewhere to go: it slides down as the heading leaves and slides back up as
- * the heading returns, so the title is never in two places at once and never
- * in none.
+ * Driven by the same progress value that fades the heading, so the two are one
+ * movement rather than two: the pill starts small and a little high, at the
+ * size and place the heading is leaving from, and settles into the dock as the
+ * heading goes. Nothing appears while something else is still there.
  *
- * It is a real floating surface, so it reads as one: translucent, blurred, and
- * carrying the elevation-3 shadow the scale reserves for chrome over the page.
- * Sitting it flat on the paper would leave the reader guessing whether the
- * content had scrolled under it or stopped.
+ * The scale runs from 0.86 to 1 rather than from the heading's real ratio. A
+ * 40px title shrinking to 14px is a 3× collapse, and at that ratio the text
+ * spends most of the movement illegibly small and arrives with a snap; the
+ * shorter range reads as the same gesture and stays readable throughout.
  *
- * An IntersectionObserver, not a scroll listener: the question is "is the
- * heading on screen", which is the one thing the observer answers natively and
- * a scroll handler only approximates — and it answers it without running code
- * on every frame of every scroll.
+ * The TRANSFORM runs across the whole handover and the OPACITY only across its
+ * second half. Motion is what makes it read as one title travelling; a shared
+ * fade is what made it read as two.
  */
 export function PageDock({
   eyebrow,
   title,
-  watch,
+  progress,
   children,
 }: {
   eyebrow: string;
   title: string;
-  /** The heading this shadows. The dock shows when it is off screen. */
-  watch: React.RefObject<HTMLElement | null>;
+  /** 0 while the heading holds the title, 1 once the dock does. */
+  progress: number;
   /** Controls to carry along — a refresh, a filter the page still needs. */
   children?: React.ReactNode;
 }) {
-  const [docked, setDocked] = useState(false);
-  const frame = useRef<number | undefined>(undefined);
-
-  useEffect(() => {
-    const el = watch.current;
-    if (!el || typeof IntersectionObserver === "undefined") return;
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        // One frame's grace. Without it a heading that lands exactly on the
-        // boundary flickers the dock in and out as the page settles.
-        window.cancelAnimationFrame(frame.current ?? 0);
-        frame.current = window.requestAnimationFrame(() =>
-          setDocked(!entry.isIntersecting),
-        );
-      },
-      // The bottom of the heading has to clear the dock's own height before
-      // the dock appears, or the two overlap for the length of that margin.
-      { rootMargin: "-72px 0px 0px 0px", threshold: 0 },
-    );
-    observer.observe(el);
-    return () => {
-      observer.disconnect();
-      window.cancelAnimationFrame(frame.current ?? 0);
-    };
-  }, [watch]);
+  const opacity = dockFade(progress);
+  const shown = opacity > 0.02;
 
   return (
     <div
-      aria-hidden={!docked}
-      className={cn(
-        "pointer-events-none fixed inset-x-0 top-0 z-40 flex justify-center px-4 pt-3",
-        "transition-[transform,opacity] duration-300 ease-out motion-reduce:transition-none",
-        docked ? "translate-y-0 opacity-100" : "-translate-y-[140%] opacity-0",
-      )}
+      aria-hidden={!shown}
+      className="pointer-events-none fixed inset-x-0 z-40 flex justify-center px-4"
+      style={{ top: DOCK_LINE - 34 }}
     >
       <div
         className={cn(
-          "pointer-events-auto flex max-w-full items-center gap-3 rounded-[var(--sd-radius-pill)]",
+          "flex max-w-full items-center gap-3 rounded-[var(--sd-radius-pill)]",
           "border border-[var(--sd-line-soft)] bg-[color-mix(in_srgb,var(--sd-card)_78%,transparent)]",
           "px-4 py-2 shadow-[var(--sd-shadow-3)] backdrop-blur-xl",
+          shown ? "pointer-events-auto" : "pointer-events-none",
+          // No CSS transition: the movement IS the scroll, and a duration on
+          // top of it would make the pill lag the finger that is dragging it.
+          //
+          // No motion-reduce class either — it would be decoration. The
+          // transform is set inline, and an inline style beats any class, so
+          // motion-reduce:transform-none could never have fired. Nothing here
+          // moves on its own: the 14px lift and 14% scale happen only while the
+          // reader is already scrolling, which is the motion they asked for.
+          "will-change-[transform,opacity]",
         )}
+        style={{
+          opacity,
+          transform: `translateY(${(1 - progress) * -14}px) scale(${0.86 + progress * 0.14})`,
+          transformOrigin: "top center",
+        }}
       >
         <span className="h-px w-3.5 shrink-0 bg-[var(--sd-text)]" aria-hidden />
         <span className="flex min-w-0 items-baseline gap-2">

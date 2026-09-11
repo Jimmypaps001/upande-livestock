@@ -1,6 +1,7 @@
 import { useRef } from "react";
 
 import { PageDock } from "@/components/PageDock";
+import { headingFade, useDockProgress } from "@/lib/use-dock-progress";
 
 /**
  * The frame every surface sits in.
@@ -41,6 +42,7 @@ export function PageHeading({
   // surface in this app has a heading and every one of them scrolls, so making
   // it opt-in would mean eleven identical opt-ins and one page that forgot.
   const ref = useRef<HTMLElement | null>(null);
+  const progress = useDockProgress(ref);
 
   return (
     <>
@@ -54,7 +56,18 @@ export function PageHeading({
               <span className="h-px w-[18px] shrink-0 bg-[var(--sd-text)]" />
               <span className="truncate">{eyebrow}</span>
             </div>
-            <h1 className="text-[28px] font-semibold leading-[1.05] tracking-[-0.03em] text-[var(--sd-ink)] md:text-[40px]">
+            {/* Handed over, not hidden. The title thins out across exactly
+                the stretch of scroll the pill uses to arrive, so at no point
+                are there two of it — which is what the old boolean did in the
+                window where both were drawn. It also lifts a little, so the
+                text reads as leaving upward rather than dissolving in place. */}
+            <h1
+              className="text-[28px] font-semibold leading-[1.05] tracking-[-0.03em] text-[var(--sd-ink)] will-change-[transform,opacity] md:text-[40px]"
+              style={{
+                opacity: headingFade(progress),
+                transform: `translateY(${progress * -10}px)`,
+              }}
+            >
               {title}
             </h1>
           </div>
@@ -70,7 +83,7 @@ export function PageHeading({
           </p>
         )}
       </header>
-      <PageDock eyebrow={eyebrow} title={title} watch={ref} />
+      <PageDock eyebrow={eyebrow} title={title} progress={progress} />
     </>
   );
 }
