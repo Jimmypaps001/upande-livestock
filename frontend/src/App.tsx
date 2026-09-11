@@ -17,6 +17,9 @@ const Stock = lazy(() => import("@/pages/Stock").then((m) => ({ default: m.Stock
 const Rations = lazy(() =>
   import("@/pages/Rations").then((m) => ({ default: m.Rations })),
 );
+const Animals = lazy(() =>
+  import("@/pages/Animals").then((m) => ({ default: m.Animals })),
+);
 const Dashboard = lazy(() =>
   import("@/pages/Dashboard").then((m) => ({ default: m.Dashboard })),
 );
@@ -65,6 +68,7 @@ const PAGES: Partial<Record<View, React.ComponentType>> = {
   concentrate: Concentrate,
   stock: Stock,
   rations: Rations,
+  animals: Animals,
   dashboard: Dashboard,
   settings: Settings,
   notifications: Notifications,
