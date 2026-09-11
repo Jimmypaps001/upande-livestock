@@ -47,11 +47,17 @@ html { font-size: 85%; }
      (doc references/design/ufd-modern-7-scouting.html, 2026-07-15).
      Kept the --sd-* token NAMES so every page that reads them keeps
      working; only the values shifted from cool-gray to warm ink/paper. */
-  /* Lightened from #f4f3ef on 2026-09-11: the paper read as dull rather than
-     warm against the white cards. The warm cast is the same — red, green and
-     blue keep their 0 / -1 / -5 relationship — the whole ramp just sits
-     closer to white, so the cards still separate on their border and shadow. */
-  --sd-bg: #f9f8f4; /* --bg   warm paper */
+  /* Lightened twice on 2026-09-11, #f4f3ef -> #f9f8f4 -> #fbfaf6: the paper
+     read as dull rather than warm against the white cards. It sat 4.2 points of
+     L* below white and now sits 1.8, so the page is nearly as bright as the
+     cards on it and they separate on their hairline border and shadow rather
+     than on their fill.
+
+     The warm cast is unchanged throughout — red, green and blue keep the same
+     0 / -1 / -5 relationship, so the ramp moves toward white without drifting
+     grey. Much past this the cards would need a stronger border to read at
+     all, which is a different design decision from brightening the paper. */
+  --sd-bg: #fbfaf6; /* --bg   warm paper */
   --sd-bg-soft: #e9e7df; /* warm muted chip surface */
   --sd-card: #ffffff; /* --surface-2 */
   --sd-ink: #0a0a0a; /* --ink   headings / strongest text */
