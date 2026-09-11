@@ -42,6 +42,13 @@ export function dockFade(p: number): number {
  *
  * Sampled on a frame, not on the scroll event. Scroll fires far faster than
  * the screen repaints, and the answer is only ever used to paint.
+ *
+ * LISTENED FOR IN THE CAPTURE PHASE, ON THE DOCUMENT. The served page puts
+ * `overflow: hidden` on the body and makes #livestock-root the scroller, so
+ * the window never scrolls and a listener on it never fires — which is exactly
+ * how this shipped doing nothing at all. Scroll events do not bubble, but they
+ * do capture, so one listener on the document catches the scroll whatever
+ * element is doing it and this cannot break again if the shell changes.
  */
 export function useDockProgress(ref: React.RefObject<HTMLElement | null>): number {
   const [progress, setProgress] = useState(0);
@@ -70,10 +77,10 @@ export function useDockProgress(ref: React.RefObject<HTMLElement | null>): numbe
     };
 
     measure();
-    window.addEventListener("scroll", schedule, { passive: true });
+    document.addEventListener("scroll", schedule, { capture: true, passive: true });
     window.addEventListener("resize", schedule);
     return () => {
-      window.removeEventListener("scroll", schedule);
+      document.removeEventListener("scroll", schedule, { capture: true });
       window.removeEventListener("resize", schedule);
       if (frame.current !== undefined) window.cancelAnimationFrame(frame.current);
     };

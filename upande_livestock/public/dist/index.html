@@ -10,7 +10,14 @@
          page behave the same. Inline, because its job is to be on screen in
          the first frame. -->
     <style>
-      html, body { height: 100%; margin: 0; background: #fbfaf6; }
+      /* Mirrors www/livestock_app.html, which is what actually serves this
+         app. The difference mattered: the served page makes #livestock-root
+         the scroller and leaves the window unscrollable, and a dev shell that
+         scrolled the window hid a scroll listener that could never fire in
+         production. */
+      html, body { height: 100%; margin: 0; padding: 0; background: #fbfaf6; }
+      body { overflow: hidden; }
+      #livestock-root { height: 100vh; width: 100%; overflow: auto; }
       .lv-splash {
         position: fixed; inset: 0; z-index: 2147483000;
         display: flex; align-items: center; justify-content: center;
@@ -19,7 +26,7 @@
       .lv-splash img { width: 106px; height: auto; display: block; }
       .lv-splash.lv-leaving { opacity: 0; pointer-events: none; }
     </style>
-    <script type="module" crossorigin src="/assets/upande_livestock/dist/livestock-CNgZYa19.js"></script>
+    <script type="module" crossorigin src="/assets/upande_livestock/dist/livestock-BAv7xYUA.js"></script>
     <link rel="stylesheet" crossorigin href="/assets/upande_livestock/dist/livestock-3JuHLjaF.css">
   </head>
   <body>
