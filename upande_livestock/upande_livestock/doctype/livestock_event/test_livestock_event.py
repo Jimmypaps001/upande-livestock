@@ -1062,7 +1062,15 @@ class TestLivestockEventCalfFieldsMandatory(IntegrationTestCase):
 			lambda: (frappe.db.delete("Livestock Event", {"remarks": marker}), frappe.db.commit())
 		)
 
-	def test_birth_with_animal_preset_and_no_tag_throws(self):
+	def test_birth_with_animal_preset_and_no_tag_takes_the_calfs_own_number(self):
+		"""It used to throw, and that was right while a person typed the number.
+
+		The system issues it now, so a blank means "not issued yet" rather than
+		"forgotten". Where it comes from depends on whether the calf exists: here
+		`animal` is already set, so the number is that animal's own name —
+		allocating a fresh one would stamp a number belonging to nobody onto the
+		event that created her.
+		"""
 		marker = f"calf-tag-mandatory-test-{frappe.generate_hash(length=8)}"
 		self._cleanup_by_remarks(marker)
 		doc = frappe.get_doc(
@@ -1077,8 +1085,8 @@ class TestLivestockEventCalfFieldsMandatory(IntegrationTestCase):
 				"remarks": marker,
 			}
 		)
-		with self.assertRaises(frappe.exceptions.MandatoryError):
-			doc.insert()
+		doc.insert()
+		self.assertEqual(doc.calf_tag_number, self.calf)
 
 	def test_birth_with_animal_preset_and_no_sex_throws(self):
 		marker = f"calf-sex-mandatory-test-{frappe.generate_hash(length=8)}"

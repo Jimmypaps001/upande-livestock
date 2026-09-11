@@ -482,16 +482,28 @@ class LivestockEvent(Document):
 		# API, data import or the mobile client would otherwise be accepted with
 		# neither field set.
 		if self._type_creates_animal() and not self.is_stillborn:
-			if not self.calf_tag_number:
-				frappe.throw(
-					_("Calf Tag / Book Number is mandatory for a Birth event."),
-					frappe.MandatoryError,
-				)
+			# Sex first: it decides the letter the number is issued under, so a
+			# missing sex has to be refused before anything is allocated.
 			if self.calf_sex not in ("Female", "Male"):
 				frappe.throw(
 					_("Calf Sex must be Female or Male for a Birth event."),
 					frappe.MandatoryError,
 				)
+			if not self.calf_tag_number:
+				# Filled in, not refused. Refusing a blank was right when a person
+				# typed the number; now the system issues it, and a blank means
+				# "nobody has issued one yet" — this method's job to settle.
+				#
+				# Where it comes from depends on whether the calf exists. When
+				# `animal` is already set the calf is already in the register and
+				# its number IS its name; allocating a second one would record a
+				# number belonging to nobody on the event that created it.
+				if self.animal:
+					self.calf_tag_number = self.animal
+				else:
+					from upande_livestock.serverscripts.common import animal_id
+
+					self.calf_tag_number = animal_id.allocate(self.calf_sex, self.event_date)
 
 		# ============================================================
 		# CONDITIONAL MANDATORY: ABORTION CAUSE

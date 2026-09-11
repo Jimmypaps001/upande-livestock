@@ -14,7 +14,16 @@ from upande_livestock.serverscripts.common.envelope import as_dict, guard, run
 def _calf_row(calf, outcome):
 	"""Normalise one incoming calf dict for record_calf_births."""
 	tag = (calf.get("name") or "").strip().upper()
-	stillborn = outcome != "Live Birth" or not tag or tag == "STILLBORN"
+	# A missing number is NOT a stillbirth. It used to be — an empty tag meant
+	# nobody had typed one, and a calf with no tag could not be created. Now the
+	# system allocates the number, so "no number given" means "give it one", and
+	# reading it as a death would record a live calf as stillborn and never
+	# create the animal. Death has to be said, not inferred from a blank box.
+	stillborn = (
+		outcome != "Live Birth"
+		or bool(calf.get("is_stillborn"))
+		or tag == "STILLBORN"
+	)
 	return {
 		"tag": tag,
 		"sex": calf.get("sex"),
@@ -112,12 +121,19 @@ def record_birth(payload):
 		# this gate is even reached.
 		created = []
 		if outcome == "Live Birth":
-			created = record_calf_births(
+			births = record_calf_births(
 				{
 					"calving": calving.name,
 					"calves": [_calf_row(c, outcome) for c in calves],
 				}
-			)["created"]
+			)
+			# Propagate, don't index blindly. record_calf_births answers with
+			# {"error": ...} like every endpoint here, and reading ["created"]
+			# off that turned any real failure into KeyError('created') — which
+			# reached the operator as the word "created" and nothing else.
+			if births.get("error"):
+				frappe.throw(births["error"])
+			created = births.get("created") or []
 
 		return {
 			"ok": True,

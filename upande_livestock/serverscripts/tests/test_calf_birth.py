@@ -20,6 +20,7 @@ from frappe.utils import add_days, getdate, today
 
 from upande_livestock.serverscripts.common import herd_movement as hm
 from upande_livestock.serverscripts.breeding.create_service_event import create_service_event
+from upande_livestock.serverscripts.breeding.record_birth import record_birth
 from upande_livestock.serverscripts.breeding.record_calf_births import record_calf_births
 from upande_livestock.serverscripts.common import animal_id
 from upande_livestock.serverscripts.common.animal import create_calf, resolve_calf_herd
@@ -253,3 +254,70 @@ class TestACalfIsGivenItsNumber(IntegrationTestCase):
 	def test_a_calf_with_no_sex_is_refused_before_it_is_numbered(self):
 		with self.assertRaises(frappe.ValidationError):
 			create_calf(dam=self.dam, tag_number=None, sex="", event_date=today())
+
+
+class TestABlankNumberIsNotADeath(IntegrationTestCase):
+	"""Found by recording a real birth on kaitet.local and reading it back.
+
+	An empty tag used to mean stillborn, because nobody had typed a number and a
+	calf without one could not be created. Now the system allocates it, so a
+	live bull calf booked through the API with no number was being written down
+	as stillborn — no Animal, no herd, no head count, and the dam's calving
+	saying she had lost it.
+	"""
+
+	def setUp(self):
+		_open_backdating_window(self)
+		self.employee = _employee()
+		if not self.employee:
+			raise unittest.SkipTest("no active Employee on this site")
+		self.dam = _make_cow("ZZ BLANK NUMBER DAM", months_old=48)
+		self.addCleanup(_purge_events_for, self.dam.name)
+		self.addCleanup(_purge, "Animal", self.dam.name)
+
+		served = add_days(today(), -285)
+		r = create_service_event({
+			"animal": self.dam.name, "service_type": "A.I.",
+			"service_date": served, "operator": self.employee,
+		})
+		if r.get("error"):
+			raise unittest.SkipTest("could not record a service: {}".format(r["error"][:120]))
+		dx = frappe.new_doc("Livestock Event")
+		dx.event_type = "Pregnancy Diagnosis"
+		dx.animal = self.dam.name
+		dx.event_date = add_days(served, 60)
+		dx.operator = self.employee
+		dx.diagnosis_result = "Confirmed"
+		dx.related_service = r["name"]
+		dx.insert(ignore_permissions=True)
+		dx.submit()
+
+	def _book(self, calves):
+		res = record_birth({
+			"dam": self.dam.name, "outcome": "Live Birth", "event_date": today(),
+			"operator": self.employee, "calves": calves,
+		})
+		if res.get("error"):
+			raise unittest.SkipTest("birth refused: {}".format(res["error"][:140]))
+		for c in res.get("calves") or []:
+			if c.get("animal"):
+				self.addCleanup(_purge, "Animal", c["animal"])
+		return res
+
+	def test_a_calf_booked_with_no_number_is_born_alive_and_numbered(self):
+		res = self._book([{"sex": "Male", "birth_weight": 36}])
+		self.assertEqual(len(res["calves"]), 1, "a live calf became a stillbirth")
+		got = res["calves"][0]
+		self.assertTrue(animal_id.parse(got["animal"]), "it was created without a number")
+		self.assertEqual(animal_id.parse(got["animal"])["prefix"], "B")
+
+	def test_it_reaches_the_bull_herd_like_any_other(self):
+		res = self._book([{"sex": "Male"}])
+		self.assertEqual(
+			frappe.db.get_value("Animal", res["calves"][0]["animal"], "current_herd"),
+			hm.settings().get("male_calf_herd"))
+
+	def test_a_stillbirth_still_has_to_be_stated(self):
+		"""Either the outcome, the flag, or the sentinel — never a blank box."""
+		res = self._book([{"sex": "Male", "is_stillborn": 1}])
+		self.assertEqual(res["calves"], [], "an explicit stillbirth created an animal")
