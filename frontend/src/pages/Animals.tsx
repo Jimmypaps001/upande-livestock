@@ -86,11 +86,18 @@ export function Animals() {
             profile && "hidden xl:flex xl:flex-col",
           )}
         >
-          <AnimalSearch
-            animals={SAMPLE_HERD}
-            selectedId={profile?.id ?? null}
-            onSelect={setSelected}
-          />
+          {/* On a surface, like everything else on the page. Loose on the
+              paper it read as chrome rather than content, and it is the one
+              control the page is actually built around. */}
+          <Card className="flex min-h-0 flex-col overflow-hidden">
+            <CardContent className="flex min-h-0 flex-col p-4">
+              <AnimalSearch
+                animals={SAMPLE_HERD}
+                selectedId={profile?.id ?? null}
+                onSelect={setSelected}
+              />
+            </CardContent>
+          </Card>
         </aside>
 
         {/* ── the record ─────────────────────────────────────────────── */}

@@ -45,7 +45,7 @@ export function AnimalSearch({
           onChange={(e) => setTerm(e.target.value)}
           placeholder="Number, name or herd…"
           aria-label="Find an animal"
-          className="h-11 rounded-[var(--sd-radius-pill)] border-transparent bg-[var(--sd-card)] pl-9 pr-9 text-[13px] shadow-[var(--sd-shadow-1)]"
+          className="h-11 rounded-[var(--sd-radius-pill)] border-[var(--sd-line)] bg-[var(--sd-bg-soft)] pl-9 pr-9 text-[13px]"
         />
         {term && (
           <button
@@ -75,9 +75,13 @@ export function AnimalSearch({
                 onClick={() => onSelect(a)}
                 className={cn(
                   "flex w-full items-center gap-3 rounded-[var(--sd-radius-lg)] px-3 py-2.5 text-left transition-all",
+                  // The rows live inside a card, so they mark themselves with
+                  // fill rather than with lift — a row that cast a card's
+                  // shadow inside a card would claim to be above the thing
+                  // holding it.
                   active
-                    ? "bg-[var(--sd-card)] shadow-[var(--sd-shadow-2)]"
-                    : "hover:bg-[var(--sd-card)] hover:shadow-[var(--sd-shadow-1)]",
+                    ? "bg-[var(--sd-bg-soft)]"
+                    : "hover:bg-[var(--sd-bg-soft)]",
                 )}
               >
                 <span

@@ -32,7 +32,12 @@ export const DialogContent = React.forwardRef<
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        "fixed left-1/2 top-1/2 z-50 grid w-full max-w-3xl -translate-x-1/2 -translate-y-1/2 gap-4 border bg-background p-5 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 sm:rounded-lg max-h-[90vh] overflow-auto",
+        // The app's own modal level, its card surface and its card radius, set here
+      // rather than passed per dialog: tailwind-merge cannot tell whether
+      // shadow-[var(--x)] is a shadow or a shadow COLOUR, so an override passed
+      // in className does not displace shadow-lg — both survive and the
+      // built-in wins on source order.
+      "fixed left-1/2 top-1/2 z-50 grid w-full max-w-3xl -translate-x-1/2 -translate-y-1/2 gap-4 border border-[var(--sd-line)] bg-[var(--sd-card)] p-6 shadow-[var(--sd-shadow-4)] duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 sm:rounded-[var(--sd-radius-card)] max-h-[90vh] overflow-auto",
         className,
       )}
       {...props}

@@ -124,7 +124,7 @@ export function CompareDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[92vh] max-w-[min(980px,94vw)] overflow-y-auto">
+      <DialogContent className="max-h-[94vh] w-[min(1240px,96vw)] max-w-none overflow-y-auto">
         <DialogHeader>
           <DialogTitle>How {subject.name} compares</DialogTitle>
           <DialogDescription>
@@ -133,7 +133,7 @@ export function CompareDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,360px)_minmax(0,1fr)]">
+        <div className="grid gap-7 lg:grid-cols-[minmax(0,440px)_minmax(0,1fr)]">
           <div className="flex flex-col gap-4">
             {/* The viewBox is wider than the drawing on purpose: the axis
                 labels sit outside the outer ring, and "INTERVAL" set from the

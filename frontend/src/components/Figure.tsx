@@ -54,7 +54,9 @@ export function Figure({
  * The figures under a chart or a table.
  *
  * One panel in a single lighter tone, with a soft shadow instead of an outline
- * — no rules between the columns and no border around them. The fill is a
+ * — no rules between the columns and no border around them. The shadow is the
+ * inset level, not a card's: this is a recess in the card, and giving it the
+ * card's own shadow made it look like a slab floating on top of one. The fill is a
  * lighter warm paper than the card it sits on, which is all the separation a
  * summary strip needs; ruling it into cells made four related numbers look
  * like four unrelated ones, and a hard outline drew a box around something
@@ -80,7 +82,7 @@ export function FigureRow({ children }: { children: React.ReactNode }) {
   return (
     <div
       className={cn(
-        "grid gap-y-4 rounded-[var(--sd-radius-lg)] bg-[var(--sd-bg-soft)] px-1 py-1 shadow-[var(--sd-shadow-1)]",
+        "grid gap-y-4 rounded-[var(--sd-radius-lg)] bg-[var(--sd-bg-soft)] px-1 py-1 shadow-[var(--sd-shadow-inset)]",
         columns,
       )}
     >

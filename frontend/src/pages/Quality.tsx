@@ -167,9 +167,8 @@ export function Quality() {
                         onClick={() => setActive(p)}
                         className={cn(
                           "flex w-full items-center gap-3 rounded-[var(--sd-radius-lg)] px-3 py-2.5 text-left transition-all",
-                          on
-                            ? "bg-[var(--sd-card)] shadow-[var(--sd-shadow-2)]"
-                            : "hover:bg-[var(--sd-card)] hover:shadow-[var(--sd-shadow-1)]",
+                          // Inside a card: fill marks the selection, not lift.
+                          on ? "bg-[var(--sd-bg-soft)]" : "hover:bg-[var(--sd-bg-soft)]",
                         )}
                       >
                         <FlaskConical

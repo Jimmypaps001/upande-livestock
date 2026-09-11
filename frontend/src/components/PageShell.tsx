@@ -1,3 +1,7 @@
+import { useRef } from "react";
+
+import { PageDock } from "@/components/PageDock";
+
 /**
  * The frame every surface sits in.
  *
@@ -33,32 +37,40 @@ export function PageHeading({
    *  phone where there is no room beside a 40px heading. */
   actions?: React.ReactNode;
 }) {
+  // The heading owns its own dock rather than each page wiring one up. Every
+  // surface in this app has a heading and every one of them scrolls, so making
+  // it opt-in would mean eleven identical opt-ins and one page that forgot.
+  const ref = useRef<HTMLElement | null>(null);
+
   return (
-    <header className="flex flex-col gap-3">
-      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between md:gap-6">
-        <div className="min-w-0">
-          {/* The rule before the eyebrow is the scouting app's, and it earns
-              its place: it stops a 10px tracked label floating unanchored
-              above a 40px heading. */}
-          <div className="mb-2 flex items-center gap-2.5 text-[11px] font-medium uppercase tracking-[0.2em] text-[var(--sd-quiet)]">
-            <span className="h-px w-[18px] shrink-0 bg-[var(--sd-text)]" />
-            <span className="truncate">{eyebrow}</span>
+    <>
+      <header ref={ref} className="flex flex-col gap-3">
+        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between md:gap-6">
+          <div className="min-w-0">
+            {/* The rule before the eyebrow is the scouting app's, and it earns
+                its place: it stops a 10px tracked label floating unanchored
+                above a 40px heading. */}
+            <div className="mb-2 flex items-center gap-2.5 text-[11px] font-medium uppercase tracking-[0.2em] text-[var(--sd-quiet)]">
+              <span className="h-px w-[18px] shrink-0 bg-[var(--sd-text)]" />
+              <span className="truncate">{eyebrow}</span>
+            </div>
+            <h1 className="text-[28px] font-semibold leading-[1.05] tracking-[-0.03em] text-[var(--sd-ink)] md:text-[40px]">
+              {title}
+            </h1>
           </div>
-          <h1 className="text-[28px] font-semibold leading-[1.05] tracking-[-0.03em] text-[var(--sd-ink)] md:text-[40px]">
-            {title}
-          </h1>
+          {actions && (
+            <div className="flex shrink-0 flex-wrap items-center gap-2 md:pt-1">
+              {actions}
+            </div>
+          )}
         </div>
-        {actions && (
-          <div className="flex shrink-0 flex-wrap items-center gap-2 md:pt-1">
-            {actions}
-          </div>
+        {children && (
+          <p className="max-w-[68ch] text-[13px] leading-relaxed text-[var(--sd-muted)]">
+            {children}
+          </p>
         )}
-      </div>
-      {children && (
-        <p className="max-w-[68ch] text-[13px] leading-relaxed text-[var(--sd-muted)]">
-          {children}
-        </p>
-      )}
-    </header>
+      </header>
+      <PageDock eyebrow={eyebrow} title={title} watch={ref} />
+    </>
   );
 }
