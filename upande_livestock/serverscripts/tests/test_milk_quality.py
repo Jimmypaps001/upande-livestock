@@ -63,6 +63,13 @@ class QualitySettings:
 	def apply(values):
 		for field, value in values.items():
 			frappe.db.set_single_value("Livestock Settings", field, value)
+		# Committed, not left to the class rollback. The teardown helpers in
+		# these classes commit while cancelling recordings, and addCleanup is
+		# LIFO — so a restore that only wrote to the transaction would be undone
+		# by the rollback while the test's own value, already committed by a
+		# later-registered cleanup, survived. That is how this suite left the
+		# farm set to "Afterwards" and refused every milking in the run after.
+		frappe.db.commit()
 		frappe.clear_cache()
 
 	def restore(self):
