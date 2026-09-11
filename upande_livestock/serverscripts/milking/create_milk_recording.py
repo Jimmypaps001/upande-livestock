@@ -7,13 +7,13 @@ import frappe
 from frappe import _
 from frappe.utils import flt, nowtime
 
-from upande_livestock.serverscripts.common import backdate
+from upande_livestock.serverscripts.common import backdate, quality
 from upande_livestock.serverscripts.common.employee import current_employee
 from upande_livestock.serverscripts.common.envelope import as_dict, guard, run
 
 
 @frappe.whitelist()
-def create_milk_recording(payload):
+def create_milk_recording(payload, from_handset=False):
 	def go():
 		guard("Milk Recording")
 		d = as_dict(payload)
@@ -58,11 +58,28 @@ def create_milk_recording(payload):
 		doc.price_per_kg = price
 		doc.milk_revenue = net * price
 		doc.cost_center = frappe.db.get_value("Herds", herd, "cost_center")
-		doc.bulk_scc = flt(d.get("bulk_scc")) or None
-		doc.protein_percent = flt(d.get("protein_percent")) or None
+
+		# Lab figures, when the farm takes them at the parlour. When it takes
+		# them afterwards these are ignored even if a caller sends them, so the
+		# setting is the single answer to "where does the SCC go" rather than a
+		# suggestion any client can overrule.
+		if quality.captured_at_milking():
+			doc.bulk_scc = flt(d.get("bulk_scc")) or None
+			doc.protein_percent = flt(d.get("protein_percent")) or None
+			doc.fat_percent = flt(d.get("fat_percent")) or None
+			if not quality.has_readings(d) and quality.required_at_milking() and not from_handset:
+				frappe.throw(
+					_("This farm records milk quality at milking. Enter the bulk tank "
+					  "SCC, protein or fat before saving, or turn that requirement off "
+					  "in Livestock Settings.")
+				)
+
 		doc.remarks = d.get("remarks")
 		doc.insert()
 		doc.submit()  # fires "Milk Recording After Submit - Stock Entry"
+		# After submit, because the flag is written with db_set and the document
+		# has to exist to carry it.
+		quality.stamp_pending(doc)
 		doc.reload()
 
 		return {
@@ -72,6 +89,7 @@ def create_milk_recording(payload):
 			"revenue": doc.milk_revenue,
 			"stock_entry": doc.stock_entry,
 			"journal_entry": doc.journal_entry,
+			"quality_pending": bool(doc.get("custom_quality_pending")),
 		}
 
 	return run(go, "livestock create_milk_recording failed")

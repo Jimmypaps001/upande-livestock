@@ -22,6 +22,10 @@ from upande_livestock.serverscripts.milking.create_milk_recording import create_
 @frappe.whitelist()
 def record_milking(payload=None):
 	def go():
-		return create_milk_recording(as_dict(payload))
+		# from_handset: a milker at the parlour cannot have a bulk tank SCC, so
+		# the "quality required at milking" rule never blocks them. The recording
+		# is saved and flagged as awaiting quality instead, and turns up on the
+		# Quality page for whoever has the creamery docket.
+		return create_milk_recording(as_dict(payload), from_handset=True)
 
 	return run(go, "livestock mobile record_milking failed")

@@ -45,7 +45,8 @@
   "remarks",
   "sb_amend",
   "amended_from",
-  "custom_is_backdated"
+  "custom_is_backdated",
+  "custom_quality_pending"
  ],
  "fields": [
   {
@@ -112,19 +113,19 @@
    "label": "Discarded (kg)"
   },
   {
+   "depends_on": "eval:doc.discarded_kg > 0",
+   "description": "Milk poured away is a loss. Recording why is the only way it can be reduced.",
    "fieldname": "discard_reason",
    "fieldtype": "Select",
    "label": "Reason for Discard",
-   "options": "\nMastitis\nAntibiotic withdrawal\nColostrum\nSpoiled / soured\nSpilled\nFailed quality test\nOther",
-   "depends_on": "eval:doc.discarded_kg > 0",
    "mandatory_depends_on": "eval:doc.discarded_kg > 0",
-   "description": "Milk poured away is a loss. Recording why is the only way it can be reduced."
+   "options": "\nMastitis\nAntibiotic withdrawal\nColostrum\nSpoiled / soured\nSpilled\nFailed quality test\nOther"
   },
   {
+   "depends_on": "eval:doc.discard_reason == 'Other'",
    "fieldname": "discard_reason_notes",
    "fieldtype": "Small Text",
    "label": "Discard Notes",
-   "depends_on": "eval:doc.discard_reason == 'Other'",
    "mandatory_depends_on": "eval:doc.discard_reason == 'Other'"
   },
   {
@@ -221,18 +222,21 @@
    "label": "Lab Results (recorded separately)"
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "bulk_scc",
    "fieldtype": "Float",
    "label": "Bulk Tank SCC (cells/ml × 1000)"
   },
   {
+   "allow_on_submit": 1,
+   "description": "Not recorded at milking. Kept because two existing recordings hold a value and deleting the field would destroy it.",
    "fieldname": "fat_percent",
    "fieldtype": "Float",
-   "label": "Fat %",
    "hidden": 1,
-   "description": "Not recorded at milking. Kept because two existing recordings hold a value and deleting the field would destroy it."
+   "label": "Fat %"
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "protein_percent",
    "fieldtype": "Float",
    "label": "Protein %"
@@ -242,6 +246,7 @@
    "fieldtype": "Column Break"
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "lab_test_date",
    "fieldtype": "Date",
    "label": "Lab Test Date"
@@ -282,6 +287,14 @@
    "label": "Backdated",
    "read_only": 1,
    "search_index": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "description": "Set when this recording has no lab figures and the farm expects some.",
+   "fieldname": "custom_quality_pending",
+   "fieldtype": "Check",
+   "label": "Awaiting Quality",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
@@ -296,60 +309,60 @@
  "owner": "Administrator",
  "permissions": [
   {
-   "role": "System Manager",
-   "permlevel": 0,
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
    "idx": 1,
-   "read": 1,
-   "write": 1,
-   "create": 1,
-   "delete": 1,
-   "submit": 1,
-   "cancel": 1,
-   "amend": 1,
-   "report": 1,
-   "export": 1,
+   "permlevel": 0,
    "print": 1,
-   "email": 1,
-   "share": 1
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
   },
   {
-   "role": "Livestock Manager",
-   "permlevel": 0,
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
    "idx": 2,
-   "read": 1,
-   "write": 1,
-   "create": 1,
-   "delete": 1,
-   "submit": 1,
-   "cancel": 1,
-   "amend": 1,
-   "report": 1,
-   "export": 1,
+   "permlevel": 0,
    "print": 1,
-   "email": 1,
-   "share": 1
+   "read": 1,
+   "report": 1,
+   "role": "Livestock Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
   },
   {
-   "role": "Livestock Milker",
-   "permlevel": 0,
+   "create": 1,
+   "email": 1,
    "idx": 3,
-   "read": 1,
-   "write": 1,
-   "create": 1,
-   "submit": 1,
-   "report": 1,
+   "permlevel": 0,
    "print": 1,
-   "email": 1,
-   "share": 1
+   "read": 1,
+   "report": 1,
+   "role": "Livestock Milker",
+   "share": 1,
+   "submit": 1,
+   "write": 1
   },
   {
-   "role": "Livestock Attendant",
-   "permlevel": 0,
+   "email": 1,
    "idx": 4,
+   "permlevel": 0,
+   "print": 1,
    "read": 1,
    "report": 1,
-   "print": 1,
-   "email": 1
+   "role": "Livestock Attendant"
   }
  ],
  "row_format": "Dynamic",

@@ -98,6 +98,13 @@ TIMING_DEFAULTS = {
 FLOAT_TIMING_DEFAULTS = {
 	"default_calf_herd_min_age": 0.0,
 	"default_calf_herd_max_age": 2.0,
+	# Bulk tank somatic cell count, in thousands of cells per ml, above which a
+	# reading is worth saying something about. 400 is the EU bulk limit and what
+	# most Kenyan creameries price against. A Float rather than an Int because
+	# it is a threshold on a measurement, not a count of days — and here rather
+	# than in TIMING_DEFAULTS because get_timing() cint()s and ZERO_IS_INVALID
+	# would refuse the 0 that legitimately means "do not check".
+	"custom_quality_scc_ceiling": 400.0,
 }
 
 # The single structure the seeder (and its enforcing test) walk. Not consumed

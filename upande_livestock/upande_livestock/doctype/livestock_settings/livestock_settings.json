@@ -92,7 +92,13 @@
   "cb_steamers",
   "steamer_days_from_lactation",
   "sb_backdating",
-  "custom_backdating_open"
+  "custom_backdating_open",
+  "sb_milk_quality",
+  "custom_milk_quality_capture",
+  "custom_quality_required_at_milking",
+  "cb_milk_quality",
+  "custom_quality_required_in_lab",
+  "custom_quality_scc_ceiling"
  ],
  "fields": [
   {
@@ -623,6 +629,44 @@
    "fieldname": "custom_backdating_open",
    "fieldtype": "Check",
    "label": "Backdating Open"
+  },
+  {
+   "fieldname": "sb_milk_quality",
+   "fieldtype": "Section Break",
+   "label": "Milk Quality"
+  },
+  {
+   "default": "At milking",
+   "description": "At milking puts the lab fields on the milking form. Afterwards hides them there and collects them on the Quality page instead.",
+   "fieldname": "custom_milk_quality_capture",
+   "fieldtype": "Select",
+   "label": "Milk Quality Captured",
+   "options": "At milking\nAfterwards"
+  },
+  {
+   "depends_on": "eval:doc.custom_milk_quality_capture=='At milking'",
+   "description": "Refuse a milking recorded from the desk with no lab figures. The handset is never blocked — it flags the recording as awaiting quality instead.",
+   "fieldname": "custom_quality_required_at_milking",
+   "fieldtype": "Check",
+   "label": "Quality Required At Milking"
+  },
+  {
+   "fieldname": "cb_milk_quality",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "1",
+   "description": "Keep a recording on the Quality page until its lab figures are in. Off, the page still lists them but nothing chases.",
+   "fieldname": "custom_quality_required_in_lab",
+   "fieldtype": "Check",
+   "label": "Quality Required In The Lab Step"
+  },
+  {
+   "default": "400",
+   "description": "Above this a reading is called out on the Quality page. 0 turns the check off.",
+   "fieldname": "custom_quality_scc_ceiling",
+   "fieldtype": "Float",
+   "label": "Bulk Tank SCC Ceiling (× 1000)"
   }
  ],
  "grid_page_length": 50,
