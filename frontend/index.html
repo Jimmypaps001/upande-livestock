@@ -16,14 +16,8 @@
         display: flex; align-items: center; justify-content: center;
         background: #ffffff; transition: opacity 280ms ease;
       }
-      .lv-splash img { width: 132px; height: auto; display: block;
-        animation: lv-breathe 1400ms ease-in-out infinite; }
+      .lv-splash img { width: 106px; height: auto; display: block; }
       .lv-splash.lv-leaving { opacity: 0; pointer-events: none; }
-      @keyframes lv-breathe {
-        0%, 100% { opacity: 1; transform: scale(1); }
-        50% { opacity: .55; transform: scale(.94); }
-      }
-      @media (prefers-reduced-motion: reduce) { .lv-splash img { animation: none; } }
     </style>
   </head>
   <body>

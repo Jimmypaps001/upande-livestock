@@ -1,4 +1,4 @@
-import{k as o}from"../livestock-Cv-Ecg6t.js";/**
+import{k as o}from"../livestock-D4p5NN3Y.js";/**
  * @license lucide-react v0.475.0 - ISC
  *
  * This source code is licensed under the ISC license.

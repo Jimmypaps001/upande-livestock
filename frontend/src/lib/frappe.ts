@@ -12,6 +12,8 @@
  *    the server named; see lib/feeding.ts.
  */
 
+import { requestFinished, requestStarted } from "@/lib/splash";
+
 export interface LivestockBootstrap {
   user: string;
   full_name: string;
@@ -62,6 +64,12 @@ export async function call<T>(
   method: string,
   args: Record<string, unknown> = {},
 ): Promise<Envelope<T>> {
+  // Bracketed so the loading cover knows whether the app is still waiting on
+  // anything. Every endpoint comes through here, which is why no page has to
+  // say a word about it. The finally is what makes the count trustworthy: a
+  // request that throws still has to decrement, or the cover waits out its
+  // whole cap on a request that is already over.
+  requestStarted();
   try {
     const res = await fetch(`/api/method/${method}`, {
       method: "POST",
@@ -100,6 +108,8 @@ export async function call<T>(
     return { error: "No response from the server." };
   } catch {
     return { error: "Network error — the request did not reach the server." };
+  } finally {
+    requestFinished();
   }
 }
 

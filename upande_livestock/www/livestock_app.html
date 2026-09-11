@@ -30,15 +30,12 @@
 				background: #ffffff;
 				transition: opacity 280ms ease;
 			}
-			/* No radius and no box: the mark is its own silhouette on nothing. */
-			.lv-splash img { width: 132px; height: auto; display: block; }
+			/* No radius and no box: the mark is its own silhouette on nothing.
+			   Still, too: the cover now holds for a full second, and a logo
+			   breathing at you for that long is fidgeting rather than telling
+			   you anything. Frappe's own splash is static for the same reason. */
+			.lv-splash img { width: 106px; height: auto; display: block; }
 			.lv-splash.lv-leaving { opacity: 0; pointer-events: none; }
-			@keyframes lv-breathe {
-				0%, 100% { opacity: 1; transform: scale(1); }
-				50% { opacity: .55; transform: scale(.94); }
-			}
-			.lv-splash img { animation: lv-breathe 1400ms ease-in-out infinite; }
-			@media (prefers-reduced-motion: reduce) { .lv-splash img { animation: none; } }
 		</style>
 	</head>
 	<body>

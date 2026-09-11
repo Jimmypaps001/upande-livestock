@@ -93,18 +93,8 @@
 	// discarding paints nothing.
 	var ID = "lv-splash";
 
-	function keyframes() {
-		if (document.getElementById("lv-splash-keyframes")) return;
-		var st = document.createElement("style");
-		st.id = "lv-splash-keyframes";
-		st.textContent =
-			"@keyframes lv-breathe{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.55;transform:scale(.94)}}";
-		document.head.appendChild(st);
-	}
-
 	window.__livestockSplash = function () {
 		if (document.getElementById(ID)) return;
-		keyframes();
 		var el = document.createElement("div");
 		el.id = ID;
 		el.setAttribute(
@@ -117,8 +107,7 @@
 		img.alt = "Upande Livestock";
 		img.setAttribute(
 			"style",
-			"width:132px;height:auto;display:block;" +
-				"animation:lv-breathe 1400ms ease-in-out infinite"
+"width:106px;height:auto;display:block"
 		);
 		el.appendChild(img);
 		document.body.appendChild(el);
