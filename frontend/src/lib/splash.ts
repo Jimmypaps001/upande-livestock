@@ -6,7 +6,11 @@
  * that crossing is a flash of half-painted page. The markup and the styling
  * live in `www/livestock_app.html` so the cover is on screen in the first
  * frame, before this bundle — or its stylesheet — has loaded. This module only
- * decides when it comes down, and puts it back up on the way out.
+ * decides when it comes down.
+ *
+ * Coming IN is the only direction that needs one. Leaving for the desk raises
+ * Frappe's own splash the moment /app starts loading, and two covers handing
+ * over to each other is one more than the crossing needs.
  *
  * WHEN IT COMES DOWN. Three conditions, in order:
  *
@@ -90,58 +94,4 @@ export function requestStarted(): void {
 export function requestFinished(): void {
   inFlight = Math.max(0, inFlight - 1);
   settle();
-}
-
-/**
- * Put the cover back up, for a navigation that leaves this app.
- *
- * Rebuilt rather than kept hidden, because it is removed on the way in: one
- * that lingered in the DOM for the whole session would be a single stray CSS
- * change away from covering the app.
- *
- * Styling is inline here for the same reason it is inline in the shell — this
- * runs at the moment of leaving, and a class whose stylesheet is being torn
- * down paints nothing.
- */
-export function raiseSplash(): void {
-  if (document.getElementById(ID)) return;
-  const el = document.createElement("div");
-  el.id = ID;
-  el.className = "lv-splash";
-  el.setAttribute(
-    "style",
-    [
-      "position:fixed",
-      "inset:0",
-      "z-index:2147483000",
-      "display:flex",
-      "align-items:center",
-      "justify-content:center",
-      "background:#ffffff",
-    ].join(";"),
-  );
-
-  const img = document.createElement("img");
-  img.src = "/assets/upande_livestock/images/upande_mark.svg";
-  img.alt = "Upande Livestock";
-  img.setAttribute("style", "width:106px;height:auto;display:block");
-
-  el.appendChild(img);
-  document.body.appendChild(el);
-}
-
-/**
- * Leave for another document, showing the cover on the way.
- *
- * The navigation is deferred by a frame so the browser paints the cover before
- * it starts tearing this page down — assign location.href in the same tick and
- * the cover never appears.
- */
-export function leaveTo(href: string): void {
-  raiseSplash();
-  window.requestAnimationFrame(() => {
-    window.setTimeout(() => {
-      window.location.href = href;
-    }, 60);
-  });
 }
