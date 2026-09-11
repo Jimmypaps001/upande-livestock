@@ -1,13 +1,16 @@
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
-import { ChevronDown, ChevronRight, Loader2 } from "lucide-react";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import { Figure, FigureRow } from "@/components/Figure";
 import { IngredientLines } from "@/components/feeding/IngredientLines";
 import { Notice } from "@/components/feeding/Notice";
+import { DatePicker } from "@/components/DatePicker";
 import { Page, PageHeading } from "@/components/PageShell";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { RefreshButton } from "@/components/RefreshButton";
+import { HEADER_PILL } from "@/components/header-controls";
+import { Card, CardContent, CardDescription, CardHeader,
+  CardHeaderRow,
+  CardHeading,
+  CardTools, CardTitle } from "@/components/ui/card";
 import {
   Select,
   SelectContent,
@@ -28,7 +31,7 @@ import {
   type RationHistory,
   type RationRow,
 } from "@/lib/rations";
-import { fmt } from "@/lib/utils";
+import { cn, fmt } from "@/lib/utils";
 
 /**
  * Rations — the record of what each herd was actually fed.
@@ -239,21 +242,22 @@ export function Rations() {
       {error && <Notice tone="error">{error}</Notice>}
 
       <Card>
-        <CardHeader className="flex flex-col gap-4">
-          <div className="flex flex-col gap-1">
-            <CardTitle>What was fed</CardTitle>
-            <CardDescription>
-              Narrow to one herd to read its recipe history in order, or leave it on every
-              herd to see the farm's last few weeks.
-            </CardDescription>
-          </div>
-          <div className="flex flex-wrap items-end gap-3">
-            <div className="flex w-full max-w-[20rem] flex-col gap-1.5">
-              <Label htmlFor="rations-herd" className="text-[var(--sd-muted)]">
-                Herd
-              </Label>
+        <CardHeaderRow className="flex-col items-stretch gap-3 sm:flex-col">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
+            <CardHeading>
+              <CardTitle>What was fed</CardTitle>
+              <CardDescription>
+                Narrow to one herd to read its recipe history in order, or leave it on
+                every herd to see the farm's last few weeks.
+              </CardDescription>
+            </CardHeading>
+            <CardTools>
               <Select value={herd} onValueChange={setHerd}>
-                <SelectTrigger id="rations-herd">
+                <SelectTrigger
+                  id="rations-herd"
+                  aria-label="Herd"
+                  className={cn(HEADER_PILL, "max-w-[14rem]")}
+                >
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -265,16 +269,15 @@ export function Rations() {
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-            <div className="flex w-full max-w-[22rem] flex-col gap-1.5">
-              <Label htmlFor="rations-window" className="text-[var(--sd-muted)]">
-                Milk window
-              </Label>
               <Select
                 value={milkWindow}
                 onValueChange={(v) => setMilkWindow(v as MilkWindow)}
               >
-                <SelectTrigger id="rations-window">
+                <SelectTrigger
+                  id="rations-window"
+                  aria-label="Milk window"
+                  className={cn(HEADER_PILL, "max-w-[15rem]")}
+                >
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -288,38 +291,27 @@ export function Rations() {
                   )}
                 </SelectContent>
               </Select>
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="rations-from" className="text-[var(--sd-muted)]">
-                From
-              </Label>
-              <Input
+              <DatePicker
                 id="rations-from"
-                type="date"
                 value={fromDate}
-                onChange={(e) => setFromDate(e.target.value)}
+                max={toDate || undefined}
+                onChange={setFromDate}
+                aria-label="From"
               />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="rations-to" className="text-[var(--sd-muted)]">
-                To
-              </Label>
-              <Input
+              <DatePicker
                 id="rations-to"
-                type="date"
                 value={toDate}
-                onChange={(e) => setToDate(e.target.value)}
+                min={fromDate || undefined}
+                onChange={setToDate}
+                aria-label="To"
               />
-            </div>
-            <Button variant="outline" onClick={load} disabled={loading}>
-              {loading ? "Reading the mix runs…" : "Refresh"}
-            </Button>
-            {loading && <Loader2 className="h-4 w-4 animate-spin text-[var(--sd-quiet)]" />}
+              <RefreshButton onClick={load} loading={loading} label="the mix runs" />
+            </CardTools>
           </div>
           <p className="text-[12px] text-[var(--sd-quiet)]">
             {WINDOW_HINTS[data?.milk_window || milkWindow]}
           </p>
-        </CardHeader>
+        </CardHeaderRow>
         <CardContent className="flex flex-col gap-3">
           <FigureRow>
             <Figure label="Ration days" value={String(rows.length)} hint="herd × day × recipe" />

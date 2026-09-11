@@ -1,12 +1,20 @@
 import { useEffect, useMemo, useState } from "react";
-import { Loader2, RefreshCw } from "lucide-react";
 import { MilkChart } from "@/components/dashboard/MilkChart";
 import { Figure, FigureRow } from "@/components/Figure";
 import { Notice } from "@/components/feeding/Notice";
 import { Page, PageHeading } from "@/components/PageShell";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
+import { RefreshButton } from "@/components/RefreshButton";
+import { HEADER_PILL } from "@/components/header-controls";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardHeaderRow,
+  CardHeading,
+  CardTitle,
+  CardTools,
+} from "@/components/ui/card";
 import {
   Select,
   SelectContent,
@@ -92,62 +100,43 @@ export function Dashboard() {
       {failure && <Notice tone="error">{failure}</Notice>}
 
       <Card>
-        <CardHeader className="flex flex-col gap-4">
-          <div className="flex flex-col gap-1">
+        <CardHeaderRow>
+          <CardHeading>
             <CardTitle>Net milk against date</CardTitle>
             <CardDescription>
               Net is what was sellable — total yield less anything discarded. Hover a
               point for the day's figure.
             </CardDescription>
-          </div>
-          <div className="flex flex-wrap items-end gap-3">
-            <div className="flex w-full max-w-[16rem] flex-col gap-1.5">
-              <Label htmlFor="dash-herd" className="text-[var(--sd-muted)]">
-                Herd
-              </Label>
-              <Select value={herd} onValueChange={setHerd}>
-                <SelectTrigger id="dash-herd">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={ALL_HERDS}>Every herd</SelectItem>
-                  {herds.map((h) => (
-                    <SelectItem key={h} value={h}>
-                      {h}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex w-full max-w-[16rem] flex-col gap-1.5">
-              <Label htmlFor="dash-window" className="text-[var(--sd-muted)]">
-                Window
-              </Label>
-              <Select value={String(days)} onValueChange={(v) => setDays(Number(v))}>
-                <SelectTrigger id="dash-window">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {WINDOWS.map((w) => (
-                    <SelectItem key={w.days} value={String(w.days)}>
-                      {w.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <Button variant="outline" onClick={load} disabled={loading}>
-              <RefreshCw className="mr-1.5 h-4 w-4" />
-              Refresh
-            </Button>
-            {loading && (
-              <span className="flex items-center gap-2 text-[13px] text-[var(--sd-muted)]">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Reading the recordings…
-              </span>
-            )}
-          </div>
-        </CardHeader>
+          </CardHeading>
+          <CardTools>
+            <Select value={herd} onValueChange={setHerd}>
+              <SelectTrigger id="dash-herd" aria-label="Herd" className={HEADER_PILL}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL_HERDS}>Every herd</SelectItem>
+                {herds.map((h) => (
+                  <SelectItem key={h} value={h}>
+                    {h}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={String(days)} onValueChange={(v) => setDays(Number(v))}>
+              <SelectTrigger id="dash-window" aria-label="Window" className={HEADER_PILL}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {WINDOWS.map((w) => (
+                  <SelectItem key={w.days} value={String(w.days)}>
+                    {w.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <RefreshButton onClick={load} loading={loading} label="the recordings" />
+          </CardTools>
+        </CardHeaderRow>
         <CardContent className="flex flex-col gap-5">
           <MilkChart points={points} />
           <FigureRow>

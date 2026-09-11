@@ -1,6 +1,7 @@
 import { lazy, Suspense } from "react";
 import { AppSidebar } from "@/components/AppSidebar";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { Stub } from "@/pages/Stub";
 import { useRoute, type View } from "@/lib/router";
 
@@ -75,21 +76,26 @@ export function App() {
   const Built = PAGES[view];
 
   return (
-    <SidebarProvider>
-      <AppSidebar view={view} onNavigate={navigate} />
+    // One provider at the root: every icon-only control on every page needs a
+    // tooltip to say what it does, and a per-card provider would restart the
+    // shared open/close delay each time the pointer crossed a card boundary.
+    <TooltipProvider delayDuration={200}>
+      <SidebarProvider>
+        <AppSidebar view={view} onNavigate={navigate} />
       {/* min-w-0 so a wide table inside the workspace scrolls in its own box
           instead of refusing to shrink and pushing the page sideways. */}
-      <SidebarInset className="min-w-0">
-        <Suspense
-          fallback={
-            <div className="px-4 py-4 text-[13px] text-[var(--sd-muted)] md:px-6 md:py-6">
-              Loading…
-            </div>
-          }
-        >
-          {Built ? <Built /> : <Stub title={TITLES[view]} />}
-        </Suspense>
-      </SidebarInset>
-    </SidebarProvider>
+        <SidebarInset className="min-w-0">
+          <Suspense
+            fallback={
+              <div className="px-4 py-4 text-[13px] text-[var(--sd-muted)] md:px-6 md:py-6">
+                Loading…
+              </div>
+            }
+          >
+            {Built ? <Built /> : <Stub title={TITLES[view]} />}
+          </Suspense>
+        </SidebarInset>
+      </SidebarProvider>
+    </TooltipProvider>
   );
 }

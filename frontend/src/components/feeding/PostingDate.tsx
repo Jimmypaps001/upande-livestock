@@ -1,5 +1,5 @@
 import { AmberNotice } from "@/components/feeding/Notice";
-import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/DatePicker";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { cn, todayISO } from "@/lib/utils";
@@ -104,14 +104,13 @@ export function PostingDate({
           >
             {dateLabel}
           </Label>
-          <Input
+          <DatePicker
             id={`${idPrefix}-date`}
-            type="date"
-            className="w-[11rem]"
             value={backdating ? date : today}
             max={today}
             disabled={!backdating}
-            onChange={(e) => onDateChange(e.target.value)}
+            onChange={onDateChange}
+            aria-label={dateLabel}
           />
         </div>
 

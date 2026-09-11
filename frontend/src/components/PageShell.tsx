@@ -23,21 +23,41 @@ export function PageHeading({
   eyebrow,
   title,
   children,
+  actions,
 }: {
   eyebrow: string;
   title: string;
   children?: React.ReactNode;
+  /** Controls that belong to the page rather than to any one card. Right
+   *  aligned on the title's own line from `md` up, stacked beneath it on a
+   *  phone where there is no room beside a 40px heading. */
+  actions?: React.ReactNode;
 }) {
   return (
-    <header className="flex flex-col gap-1">
-      <span className="text-[10px] font-medium uppercase tracking-[0.16em] text-[var(--sd-quiet)]">
-        {eyebrow}
-      </span>
-      <h1 className="text-[26px] font-semibold tracking-[-0.02em] text-[var(--sd-ink)]">
-        {title}
-      </h1>
+    <header className="flex flex-col gap-3">
+      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between md:gap-6">
+        <div className="min-w-0">
+          {/* The rule before the eyebrow is the scouting app's, and it earns
+              its place: it stops a 10px tracked label floating unanchored
+              above a 40px heading. */}
+          <div className="mb-2 flex items-center gap-2.5 text-[11px] font-medium uppercase tracking-[0.2em] text-[var(--sd-quiet)]">
+            <span className="h-px w-[18px] shrink-0 bg-[var(--sd-text)]" />
+            <span className="truncate">{eyebrow}</span>
+          </div>
+          <h1 className="text-[28px] font-semibold leading-[1.05] tracking-[-0.03em] text-[var(--sd-ink)] md:text-[40px]">
+            {title}
+          </h1>
+        </div>
+        {actions && (
+          <div className="flex shrink-0 flex-wrap items-center gap-2 md:pt-1">
+            {actions}
+          </div>
+        )}
+      </div>
       {children && (
-        <p className="max-w-[64rem] text-[13px] text-[var(--sd-muted)]">{children}</p>
+        <p className="max-w-[68ch] text-[13px] leading-relaxed text-[var(--sd-muted)]">
+          {children}
+        </p>
       )}
     </header>
   );

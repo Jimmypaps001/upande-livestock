@@ -82,3 +82,48 @@ export const CardFooter = React.forwardRef<
   />
 ));
 CardFooter.displayName = "CardFooter";
+
+/**
+ * The controls that belong to a card — refresh, a filter, a window picker.
+ *
+ * They sit at the TOP RIGHT of the card head, on the title's own line, so the
+ * eye meets the card's name and its controls in one pass instead of reading
+ * past a stack of dropdowns to find out what it is looking at. Wrap the title
+ * and description in CardHeading beside it.
+ */
+export const CardTools = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement>
+>(({ className, ...props }, ref) => (
+  <div
+    ref={ref}
+    className={cn("flex shrink-0 flex-wrap items-center justify-end gap-2", className)}
+    {...props}
+  />
+));
+CardTools.displayName = "CardTools";
+
+/** The title/description column that sits opposite CardTools. */
+export const CardHeading = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement>
+>(({ className, ...props }, ref) => (
+  <div ref={ref} className={cn("flex min-w-0 flex-col gap-1", className)} {...props} />
+));
+CardHeading.displayName = "CardHeading";
+
+/** A card head with its tools pinned top-right. */
+export const CardHeaderRow = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement>
+>(({ className, ...props }, ref) => (
+  <div
+    ref={ref}
+    className={cn(
+      "flex flex-col gap-3 p-5 sm:flex-row sm:items-start sm:justify-between sm:gap-6",
+      className,
+    )}
+    {...props}
+  />
+));
+CardHeaderRow.displayName = "CardHeaderRow";

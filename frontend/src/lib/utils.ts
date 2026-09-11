@@ -29,3 +29,22 @@ export function todayISO(): string {
   const p = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 }
+
+/** A Date as the YYYY-MM-DD the API speaks. Local parts, not UTC: the farm's
+ *  day is the farm's day, and toISOString() would shift it across midnight
+ *  for anyone east of Greenwich. */
+export function ymd(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+/** The inverse. Built from parts rather than new Date(s), which parses a bare
+ *  YYYY-MM-DD as UTC midnight and lands on the previous day in a western
+ *  timezone. */
+export function parseYmd(s: string): Date | undefined {
+  const [y, m, d] = (s || "").split("-").map(Number);
+  if (!y || !m || !d) return undefined;
+  return new Date(y, m - 1, d);
+}

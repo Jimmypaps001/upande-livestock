@@ -58,7 +58,12 @@ html { font-size: 85%; }
      grey. Much past this the cards would need a stronger border to read at
      all, which is a different design decision from brightening the paper. */
   --sd-bg: #fbfaf6; /* --bg   warm paper */
-  --sd-bg-soft: #e9e7df; /* warm muted chip surface */
+  /* The inset surface — a panel sitting ON a white card (figure strips, day
+     status, table sub-rows). Lifted from #e9e7df on 2026-09-11: at L* 91.6 it
+     read as a dark slab dropped on the card rather than a recess in it. At
+     95.8 it is 4.2 below the card, which is enough to read as inset and not
+     enough to fight the card for attention. */
+  --sd-bg-soft: #f5f3ed;
   --sd-card: #ffffff; /* --surface-2 */
   --sd-ink: #0a0a0a; /* --ink   headings / strongest text */
   --sd-text: #3a3a34; /* --ink-3 body text */
@@ -71,8 +76,11 @@ html { font-size: 85%; }
   --sd-accent: #2a2a26; /* --ink-2 */
   --sd-accent-fg: #fafaf6;
   --sd-accent-2: #0a0a0a; /* --ink   primary */
-  --sd-pistachio: #e9e7df;
-  --sd-pistachio-2: #ded9cd;
+  /* Chips, badges and secondary buttons sit one step BELOW the inset panel.
+     They used to be the same value, which left a chip invisible on the panel
+     it sat in. */
+  --sd-pistachio: #ece9e0;
+  --sd-pistachio-2: #e0dbd0;
   --sd-target: #d9a514; /* --trap-500 gold */
   /* Ink gradient — the active sidebar pill / primary emphasis fill
      (reference --grad-ink). Used by the [data-active] override below. */
@@ -145,7 +153,7 @@ html { font-size: 85%; }
   --sidebar-foreground: #1a1a18; /* --ink-1 */
   --sidebar-primary: #0a0a0a; /* active item bg (gradient overrides) */
   --sidebar-primary-foreground: #fafaf6;
-  --sidebar-accent: #efece4; /* hover / active-hover */
+  --sidebar-accent: #f1eee7; /* hover / active-hover */
   --sidebar-accent-foreground: #0a0a0a;
   --sidebar-border: rgba(10, 10, 10, 0.08);
   --sidebar-ring: rgba(10, 10, 10, 0.28);

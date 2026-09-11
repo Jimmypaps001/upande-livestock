@@ -1,12 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Loader2, Search } from "lucide-react";
+import { Search } from "lucide-react";
 import { Figure, FigureRow } from "@/components/Figure";
 import { Notice } from "@/components/feeding/Notice";
 import { Page, PageHeading } from "@/components/PageShell";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { RefreshButton } from "@/components/RefreshButton";
+import { HEADER_PILL } from "@/components/header-controls";
+import { Card, CardContent, CardDescription, CardHeader,
+  CardHeaderRow,
+  CardHeading,
+  CardTools, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -22,7 +25,7 @@ import {
   totalsByUom,
   type StoreItem,
 } from "@/lib/stock";
-import { fmt } from "@/lib/utils";
+import { cn, fmt } from "@/lib/utils";
 
 /**
  * What the feed stores hold.
@@ -150,54 +153,50 @@ export function Stock() {
       {error && <Notice tone="error">{error}</Notice>}
 
       <Card>
-        <CardHeader className="flex flex-col gap-4">
-          <div className="flex flex-col gap-1">
+        <CardHeaderRow>
+          <CardHeading>
             <CardTitle>Stores</CardTitle>
             <CardDescription>
               Every warehouse the feed items sit in, in the order Livestock Settings names
               them.
             </CardDescription>
-          </div>
-          <div className="flex flex-wrap items-end gap-3">
-            <div className="flex w-full max-w-[24rem] flex-col gap-1.5">
-              <Label htmlFor="stock-wh" className="text-[var(--sd-muted)]">
-                Store
-              </Label>
-              <Select value={warehouse} onValueChange={setWarehouse}>
-                <SelectTrigger id="stock-wh">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={ALL_WAREHOUSES}>Every store</SelectItem>
-                  {warehouses.map((w) => (
-                    <SelectItem key={w} value={w}>
-                      {w}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          </CardHeading>
+          <CardTools>
+            <Select value={warehouse} onValueChange={setWarehouse}>
+              <SelectTrigger
+                id="stock-wh"
+                aria-label="Store"
+                className={cn(HEADER_PILL, "max-w-[16rem]")}
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL_WAREHOUSES}>Every store</SelectItem>
+                {warehouses.map((w) => (
+                  <SelectItem key={w} value={w}>
+                    {w}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--sd-quiet)]" />
+              <Input
+                id="stock-q"
+                aria-label="Find an item"
+                className="h-9 w-[14rem] rounded-full border-transparent bg-[var(--sd-card)] pl-8 text-xs shadow-[var(--sd-shadow-1)]"
+                placeholder="Name, code or store…"
+                value={term}
+                onChange={(e) => setTerm(e.target.value)}
+              />
             </div>
-            <div className="flex w-full max-w-[20rem] flex-col gap-1.5">
-              <Label htmlFor="stock-q" className="text-[var(--sd-muted)]">
-                Find an item
-              </Label>
-              <div className="relative">
-                <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--sd-quiet)]" />
-                <Input
-                  id="stock-q"
-                  className="pl-8"
-                  placeholder="Name, code or store…"
-                  value={term}
-                  onChange={(e) => setTerm(e.target.value)}
-                />
-              </div>
-            </div>
-            <Button variant="outline" onClick={() => load(warehouse)} disabled={loading}>
-              {loading ? "Reading the stores…" : "Refresh"}
-            </Button>
-            {loading && <Loader2 className="h-4 w-4 animate-spin text-[var(--sd-quiet)]" />}
-          </div>
-        </CardHeader>
+            <RefreshButton
+              onClick={() => load(warehouse)}
+              loading={loading}
+              label="the stores"
+            />
+          </CardTools>
+        </CardHeaderRow>
         <CardContent>
           <FigureRow>
             <Figure
