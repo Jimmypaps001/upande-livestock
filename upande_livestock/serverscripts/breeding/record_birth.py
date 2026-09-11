@@ -18,7 +18,10 @@ def _calf_row(calf, outcome):
 	return {
 		"tag": tag,
 		"sex": calf.get("sex"),
-		"burn_name": tag,
+		# The number identifies the calf; the name is what the farm calls her.
+		# They used to be the same string, which meant every calf booked here was
+		# named after its own register entry.
+		"burn_name": (calf.get("burn_name") or "").strip() or tag,
 		"birth_weight": calf.get("birth_weight"),
 		"is_stillborn": 1 if stillborn else 0,
 		"herd": calf.get("herd"),

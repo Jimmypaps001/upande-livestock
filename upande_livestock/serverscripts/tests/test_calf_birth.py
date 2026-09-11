@@ -16,12 +16,13 @@ import unittest
 
 import frappe
 from frappe.tests import IntegrationTestCase
-from frappe.utils import add_days, today
+from frappe.utils import add_days, getdate, today
 
 from upande_livestock.serverscripts.common import herd_movement as hm
 from upande_livestock.serverscripts.breeding.create_service_event import create_service_event
 from upande_livestock.serverscripts.breeding.record_calf_births import record_calf_births
-from upande_livestock.serverscripts.common.animal import resolve_calf_herd
+from upande_livestock.serverscripts.common import animal_id
+from upande_livestock.serverscripts.common.animal import create_calf, resolve_calf_herd
 from upande_livestock.serverscripts.tests.test_operations import (
 	_make_cow,
 	_open_backdating_window,
@@ -199,3 +200,56 @@ class TestMovementSuggestions(IntegrationTestCase):
 		before = frappe.db.count("Livestock Event", {"event_type": "Movement"})
 		hm.suggestions()
 		self.assertEqual(frappe.db.count("Livestock Event", {"event_type": "Movement"}), before)
+
+
+class TestACalfIsGivenItsNumber(IntegrationTestCase):
+	"""The number is assigned, not typed.
+
+	A tag typed twice is two animals sharing an identity, and on a form filled in
+	at the side of a calving pen that is not a rare accident.
+	"""
+
+	def setUp(self):
+		self.dam = frappe.db.get_value(
+			"Animal", {"sex": "Female", "status": "Active", "disabled": 0}, "name")
+		if not self.dam:
+			raise unittest.SkipTest("no live cow on this site")
+		self.made = []
+		self.addCleanup(self._clean)
+
+	def _clean(self):
+		for name in self.made:
+			if frappe.db.exists("Animal", name):
+				frappe.delete_doc("Animal", name, force=True, ignore_permissions=True)
+		frappe.db.commit()
+
+	def _calf(self, sex, tag=None, born=None):
+		name = create_calf(dam=self.dam, tag_number=tag, sex=sex,
+		                   event_date=born or today())
+		self.made.append(name)
+		return name
+
+	def test_a_calf_booked_with_no_tag_is_given_one(self):
+		self.assertTrue(animal_id.parse(self._calf("Female")))
+
+	def test_a_heifer_gets_an_a_and_a_bull_gets_a_b(self):
+		self.assertEqual(animal_id.parse(self._calf("Female"))["prefix"], "A")
+		self.assertEqual(animal_id.parse(self._calf("Male"))["prefix"], "B")
+
+	def test_the_year_is_the_year_it_was_born(self):
+		got = animal_id.parse(self._calf("Female"))
+		self.assertEqual(got["year"], getdate(today()).year)
+
+	def test_twins_do_not_share_a_number(self):
+		"""Both are born the same day to the same dam; nothing else separates
+		them, so the allocator has to."""
+		self.assertNotEqual(self._calf("Female"), self._calf("Female"))
+
+	def test_a_supplied_number_is_tidied_rather_than_taken_literally(self):
+		"""A letter O where a zero belongs is the register's habit, not a
+		different animal."""
+		self.assertEqual(self._calf("Female", tag="AO97/26"), "A097/26")
+
+	def test_a_calf_with_no_sex_is_refused_before_it_is_numbered(self):
+		with self.assertRaises(frappe.ValidationError):
+			create_calf(dam=self.dam, tag_number=None, sex="", event_date=today())
