@@ -18,8 +18,10 @@ package-lock.json
 # do not diff, so they are kept out of the history rather than versioned in it.
 references/
 
-# Debug artefacts, not source: browser automation logs and page dumps,
-# and the screenshots taken while reviewing a design change.
+# Debug artefacts, not source: browser automation logs and page dumps, and
+# the screenshots taken while reviewing a design change. Scoped to the repo
+# root and to the automation's own folder — an unanchored *.png would also
+# swallow real image assets under public/images, which is a quiet way to lose
+# a logo.
 .playwright-mcp/
-*.png
-!upande_livestock/public/dist/assets/*.png
+/*.png

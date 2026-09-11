@@ -43,15 +43,15 @@ export function raiseSplash(): void {
     "display:flex",
     "align-items:center",
     "justify-content:center",
-    "background:#fbfaf6",
+    "background:#ffffff",
   ].join(";"));
 
   const img = document.createElement("img");
-  img.src = "/assets/upande_livestock/images/upande_logo.png";
+  img.src = "/assets/upande_livestock/images/upande_mark.svg";
   img.alt = "Upande Livestock";
   img.setAttribute(
     "style",
-    "width:76px;height:76px;border-radius:18px;display:block;animation:lv-breathe 1400ms ease-in-out infinite",
+    "width:132px;height:auto;display:block;animation:lv-breathe 1400ms ease-in-out infinite",
   );
 
   el.appendChild(img);
