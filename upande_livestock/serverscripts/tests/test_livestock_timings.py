@@ -109,7 +109,16 @@ def _delete_and_commit(doctype, name):
 	behind in the live database forever, inflating tabLivestock Event's row
 	count past 576.
 	"""
+	herd = frappe.db.get_value("Animal", name, "current_herd") if doctype == "Animal" else None
 	frappe.db.delete(doctype, {"name": name})
+	# A raw delete skips Animal.after_delete, which is what recomputes the
+	# headcount. A calving now moves the dam into the milking herd, so a fixture
+	# torn down this way left that herd counting a cow who no longer exists —
+	# and the feeding tests manufacture a ration against that count.
+	if herd:
+		from upande_livestock.serverscripts.common.animal import recompute_herd_count
+
+		recompute_herd_count(herd)
 	frappe.db.commit()
 
 
@@ -162,6 +171,15 @@ class TestTimingsAreEnforcedServerSide(ResetsLivestockTimings, IntegrationTestCa
 		doc.insert()
 		self.addCleanup(_delete_and_commit, "Livestock Event", doc.name)
 		doc.submit()
+		# A calving moves the dam into the milking herd, as a Movement of its
+		# own. This fixture owns that row too, or it is left behind pointing at
+		# an animal this teardown is about to delete.
+		for spawned in frappe.get_all(
+			"Livestock Event",
+			filters={"animal": self.animal.name, "event_type": "Movement"},
+			pluck="name",
+		):
+			self.addCleanup(_delete_and_commit, "Livestock Event", spawned)
 		return doc
 
 	def test_configured_post_calving_block_is_enforced(self):

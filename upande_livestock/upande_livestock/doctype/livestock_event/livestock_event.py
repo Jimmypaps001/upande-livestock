@@ -126,6 +126,59 @@ class LivestockEvent(Document):
 			return False
 		return bool(frappe.db.get_value("Livestock Event Type", self.event_type, "creates_animal"))
 
+	def move_dam_after_calving(self):
+		"""Put the dam in the herd a fresh cow belongs to, as a real Movement.
+
+		A Movement event and not a bare db.set_value, because the move IS the
+		history: days_in_current_herd measures from the last Movement into a
+		herd, and the dry period a cow gets in Steamers is decided by the herd
+		she arrived from. A cow teleported by a field write has no arrival, so
+		both of those questions get the wrong answer for the rest of her life.
+
+		NOT DONE WHEN SHE HAS MOVED SINCE. Backdating a calving from six months
+		ago must not drag a cow out of the herd she is standing in today — she
+		may have been served, confirmed and dried off again since. The calving
+		is still recorded; only the move is skipped, and the reason is said out
+		loud rather than left as silence.
+		"""
+		from upande_livestock.serverscripts.common import herd_movement
+
+		if not self.animal:
+			return
+		destination = herd_movement.post_calving_herd()
+		if not destination:
+			return
+		current = frappe.db.get_value("Animal", self.animal, "current_herd")
+		if current == destination:
+			return
+
+		moved_since = frappe.db.exists("Livestock Event", {
+			"animal": self.animal,
+			"event_type": "Movement",
+			"docstatus": 1,
+			"event_date": [">", self.event_date],
+		})
+		if moved_since:
+			frappe.msgprint(
+				_("{0} has moved herds since {1}, so this calving leaves her where she is.").format(
+					self.animal, frappe.utils.formatdate(self.event_date)),
+				alert=True, indicator="orange")
+			return
+
+		move = frappe.new_doc("Livestock Event")
+		move.event_type = "Movement"
+		move.animal = self.animal
+		move.event_date = self.event_date
+		move.new_herd = destination
+		move.current_herd = current or ""
+		move.operator = self.operator
+		move.remarks = _("Calved on {0} — {1}").format(
+			frappe.utils.formatdate(self.event_date), self.name)
+		if self.meta.has_field("custom_is_backdated"):
+			move.custom_is_backdated = self.get("custom_is_backdated") or 0
+		move.insert(ignore_permissions=True)
+		move.submit()
+
 	def create_calf_if_needed(self):
 		"""For a Birth event with no animal yet, create the calf and point at it.
 
@@ -874,8 +927,14 @@ class LivestockEvent(Document):
 		# ============================================================
 
 		if self.event_type == "Movement":
-			if not self.current_herd:
-				# Get current herd from animal
+			# Only while the document is new. validate() runs twice — once at
+			# insert, once at submit — and the herd movement processor further
+			# down this same method has already written the new herd onto the
+			# Animal by the time the second pass arrives. Re-reading it there
+			# makes current_herd equal new_herd and trips the guard below, so an
+			# animal that had NO herd could never be moved into one: the insert
+			# succeeded and the submit threw "cannot be the same".
+			if not self.current_herd and self.is_new():
 				animal_herd = frappe.db.get_value("Animal", self.animal, "current_herd")
 				if animal_herd:
 					self.current_herd = animal_herd
@@ -1043,9 +1102,40 @@ class LivestockEvent(Document):
 		self.refresh_calving_birth_count()
 		self.close_pregnancy_after_abortion()
 		self.post_stock_issue()
+		# On submit, not validate: a draft calving is somebody still typing, and
+		# moving a cow out of the dry herd on a draft is a move nothing reverses.
+		# validate also runs twice — once at insert, once at submit — which would
+		# have made the move race its own second attempt.
+		if self.event_type == "Calving":
+			self.move_dam_after_calving()
 
 	def on_cancel(self):
 		self.refresh_calving_birth_count()
+		self.undo_movement()
+
+	def undo_movement(self):
+		"""Put the animal back where a cancelled Movement took her from.
+
+		Cancelling the move used to leave the animal in the herd it had put her
+		in, and both headcounts untouched — so a move recorded by mistake could
+		be cancelled and the mistake stayed. Now that a calving moves the dam,
+		cancelling a calving that was entered wrongly has to be able to undo it.
+
+		Skipped when she is no longer in the herd this move delivered her to: a
+		later move has already superseded this one, and dragging her back would
+		undo that instead.
+		"""
+		if self.event_type != "Movement" or not self.animal or not self.new_herd:
+			return
+		from upande_livestock.serverscripts.common.animal import recompute_herd_count
+
+		if frappe.db.get_value("Animal", self.animal, "current_herd") != self.new_herd:
+			return
+		frappe.db.set_value("Animal", self.animal, "current_herd", self.current_herd or None,
+		                    update_modified=False)
+		recompute_herd_count(self.new_herd)
+		if self.current_herd:
+			recompute_herd_count(self.current_herd)
 
 	def _type_consumes_drugs(self):
 		"""Whether this event type takes drugs out of a store.

@@ -18,7 +18,15 @@ from upande_livestock.patches.relink_pregnancy_to_service import execute
 
 
 def _purge(doctype, name):
+	herd = frappe.db.get_value("Animal", name, "current_herd") if doctype == "Animal" else None
 	frappe.db.delete(doctype, {"name": name})
+	# A raw delete skips Animal.after_delete, which is what recomputes the
+	# headcount. A calving now moves the dam into the milking herd, so a fixture
+	# torn down this way left that herd counting a cow who no longer exists.
+	if herd:
+		from upande_livestock.serverscripts.common.animal import recompute_herd_count
+
+		recompute_herd_count(herd)
 	frappe.db.commit()
 
 
@@ -56,6 +64,16 @@ class TestRelinkPregnancyToService(IntegrationTestCase):
 		doc.insert()
 		self.addCleanup(_purge, "Livestock Event", doc.name)
 		doc.submit()
+		# A submitted calving moves the dam into the milking herd, as a Movement
+		# of its own. This fixture owns that row too, or it outlives the animal
+		# it points at and leaves the herd count one too many.
+		if event_type == "Calving":
+			for spawned in frappe.get_all(
+				"Livestock Event",
+				filters={"animal": animal, "event_type": "Movement"},
+				pluck="name",
+			):
+				self.addCleanup(_purge, "Livestock Event", spawned)
 		return doc
 
 	def _service_and_diagnosis(self, animal, service_date="2025-09-01"):

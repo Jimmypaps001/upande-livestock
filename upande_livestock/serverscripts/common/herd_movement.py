@@ -66,6 +66,65 @@ def next_growth_herd(herd):
 	return rungs[i + 1]["herd"]
 
 
+def post_calving_herd():
+	"""Where a cow goes the moment she calves.
+
+	A fresh cow is a milking cow, so this is the high-yield herd unless the farm
+	says otherwise. The explicit setting exists because "high yield" is this
+	farm's arrangement, not a rule — a farm that sends fresh cows to a transition
+	group for a fortnight needs somewhere to say so.
+	"""
+	s = settings()
+	explicit = s.get("post_calving_herd")
+	if explicit and frappe.db.exists("Herds", explicit):
+		return explicit
+	high = s.get("high_yield_herd")
+	return high if high and frappe.db.exists("Herds", high) else None
+
+
+def calving_destinations(dam):
+	"""Where the dam and each kind of calf stand once this calving is recorded.
+
+	Answered before anything is written, so the person at the pen can see it and
+	stop if it is wrong. Sex decides the calves and nothing else does; the dam
+	goes wherever a fresh cow goes.
+	"""
+	row = frappe.db.get_value("Animal", dam, ["current_herd", "burn_name", "sex"], as_dict=True) \
+		if dam else None
+	from_herd = row.current_herd if row else None
+	to_herd = post_calving_herd()
+
+	return {
+		"dam": {
+			"animal": dam,
+			"label": (row.burn_name if row else None) or dam,
+			"from_herd": from_herd,
+			"to_herd": to_herd,
+			"will_move": bool(to_herd and from_herd != to_herd),
+			"reason": _dam_reason(from_herd, to_herd),
+		},
+		"female_calf": {
+			"to_herd": calf_herd("Female"),
+			"reason": "a heifer calf joins the growth ladder",
+		},
+		"male_calf": {
+			"to_herd": calf_herd("Male"),
+			"reason": "a bull calf goes to the bull herd",
+		},
+	}
+
+
+def _dam_reason(from_herd, to_herd):
+	if not to_herd:
+		return ("no herd is set for a cow that has just calved — "
+		        "set High Yield Herd in Livestock Settings")
+	if from_herd == to_herd:
+		return "already in the herd a fresh cow belongs to"
+	if not from_herd:
+		return "joins the milking herd"
+	return "a fresh cow is a milking cow"
+
+
 def calf_herd(sex):
 	"""Where a newborn goes. Sex decides this and nothing else does."""
 	s = settings()

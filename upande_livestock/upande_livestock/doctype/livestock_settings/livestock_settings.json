@@ -80,6 +80,7 @@
   "heifer_dry_off_before_calving_days",
   "sb_lactation",
   "high_yield_herd",
+  "post_calving_herd",
   "high_yield_days_from_conception",
   "max_open_days",
   "cb_lactation",
@@ -433,28 +434,28 @@
    "label": "Herd Movement"
   },
   {
+   "description": "Which herd a newborn enters. A calf's sex decides this and nothing else does.",
    "fieldname": "sb_calf_intake",
    "fieldtype": "Section Break",
-   "label": "A · Calf Intake",
-   "description": "Which herd a newborn enters. A calf's sex decides this and nothing else does."
+   "label": "A · Calf Intake"
   },
   {
+   "description": "Normally the first rung of the growth ladder below.",
    "fieldname": "female_calf_herd",
    "fieldtype": "Link",
-   "options": "Herds",
    "label": "Female Calf Herd",
-   "description": "Normally the first rung of the growth ladder below."
+   "options": "Herds"
   },
   {
    "fieldname": "cb_calf_intake",
    "fieldtype": "Column Break"
   },
   {
+   "description": "Bull calves. Culling settings below apply to this herd.",
    "fieldname": "male_calf_herd",
    "fieldtype": "Link",
-   "options": "Herds",
    "label": "Male Calf Herd",
-   "description": "Bull calves. Culling settings below apply to this herd."
+   "options": "Herds"
   },
   {
    "fieldname": "sb_bull_cull",
@@ -462,100 +463,107 @@
    "label": "Bull Culling"
   },
   {
+   "default": "0",
+   "description": "Some farms sell a bull calf almost as soon as it is born. Tick this and the system will warn before the window closes.",
    "fieldname": "cull_bulls_after_birth",
    "fieldtype": "Check",
-   "default": "0",
-   "label": "Cull Bulls After Birth",
-   "description": "Some farms sell a bull calf almost as soon as it is born. Tick this and the system will warn before the window closes."
+   "label": "Cull Bulls After Birth"
   },
   {
+   "default": "14",
+   "depends_on": "cull_bulls_after_birth",
+   "description": "Longest a bull calf should remain before it is sold.",
    "fieldname": "bull_cull_max_days",
    "fieldtype": "Int",
-   "default": "14",
-   "label": "Maximum Days on Farm",
-   "depends_on": "cull_bulls_after_birth",
-   "description": "Longest a bull calf should remain before it is sold."
+   "label": "Maximum Days on Farm"
   },
   {
    "fieldname": "cb_bull_cull",
    "fieldtype": "Column Break"
   },
   {
+   "default": "75",
+   "depends_on": "cull_bulls_after_birth",
+   "description": "At 75% of 14 days the warning fires on day 10.5.",
    "fieldname": "bull_cull_warn_percent",
    "fieldtype": "Percent",
-   "default": "75",
-   "label": "Warn At (% of window)",
-   "depends_on": "cull_bulls_after_birth",
-   "description": "At 75% of 14 days the warning fires on day 10.5."
+   "label": "Warn At (% of window)"
   },
   {
+   "description": "The herds a heifer climbs before she is old enough to serve, in order. The first row is where female calves land; the last should be marked 'exits on service'.",
    "fieldname": "sb_growth_ladder",
    "fieldtype": "Section Break",
-   "label": "B · Growth Ladder",
-   "description": "The herds a heifer climbs before she is old enough to serve, in order. The first row is where female calves land; the last should be marked 'exits on service'."
+   "label": "B · Growth Ladder"
   },
   {
    "fieldname": "growth_ladder",
    "fieldtype": "Table",
-   "options": "Herd Growth Stage",
-   "label": "Growth Ladder"
+   "label": "Growth Ladder",
+   "options": "Herd Growth Stage"
   },
   {
+   "description": "Where a served heifer waits out her first pregnancy. She gives no milk yet, which is why this herd is separate from the lactation groups.",
    "fieldname": "sb_first_pregnancy",
    "fieldtype": "Section Break",
-   "label": "C · First Pregnancy",
-   "description": "Where a served heifer waits out her first pregnancy. She gives no milk yet, which is why this herd is separate from the lactation groups."
+   "label": "C · First Pregnancy"
   },
   {
+   "description": "Entered on a CONFIRMED pregnancy, never on the service alone.",
    "fieldname": "incalf_heifer_herd",
    "fieldtype": "Link",
-   "options": "Herds",
    "label": "Incalf Heifer Herd",
-   "description": "Entered on a CONFIRMED pregnancy, never on the service alone."
+   "options": "Herds"
   },
   {
+   "default": "180",
+   "description": "A heifer that repeatedly fails to conceive should not sit here indefinitely; past this she is flagged for a decision.",
    "fieldname": "incalf_general_days",
    "fieldtype": "Int",
-   "default": "180",
-   "label": "General Time (days)",
-   "description": "A heifer that repeatedly fails to conceive should not sit here indefinitely; past this she is flagged for a decision."
+   "label": "General Time (days)"
   },
   {
    "fieldname": "cb_first_pregnancy",
    "fieldtype": "Column Break"
   },
   {
+   "default": "90",
+   "description": "3 months for a first pregnancy. Counted back from the calving date, which is the service date plus Gestation Period (General tab).",
    "fieldname": "heifer_dry_off_before_calving_days",
    "fieldtype": "Int",
-   "default": "90",
-   "label": "Leaves for Steamers (days before calving)",
-   "description": "3 months for a first pregnancy. Counted back from the calving date, which is the service date plus Gestation Period (General tab)."
+   "label": "Leaves for Steamers (days before calving)"
   },
   {
+   "description": "After her first calving a cow never returns to the growth ladder. She cycles between these herds for the rest of her productive life.",
    "fieldname": "sb_lactation",
    "fieldtype": "Section Break",
-   "label": "D · Lactation Cycle",
-   "description": "After her first calving a cow never returns to the growth ladder. She cycles between these herds for the rest of her productive life."
+   "label": "D · Lactation Cycle"
   },
   {
    "fieldname": "high_yield_herd",
    "fieldtype": "Link",
-   "options": "Herds",
-   "label": "High Yield Herd"
+   "label": "High Yield Herd",
+   "options": "Herds"
   },
   {
+   "description": "Where a cow goes the moment she calves. Falls back to High Yield Herd when blank.",
+   "fieldname": "post_calving_herd",
+   "fieldtype": "Link",
+   "label": "Herd After Calving",
+   "options": "Herds"
+  },
+  {
+   "default": "120",
+   "description": "4 months from conception, then she steps down to the low yield herd.",
    "fieldname": "high_yield_days_from_conception",
    "fieldtype": "Int",
-   "default": "120",
-   "label": "Milked After Conceiving (days)",
-   "description": "4 months from conception, then she steps down to the low yield herd."
+   "label": "Milked After Conceiving (days)"
   },
   {
+   "default": "200",
+   "description": "A cow that has not conceived in this many days has expired from the high yield herd on productivity grounds.",
    "fieldname": "max_open_days",
    "fieldtype": "Int",
-   "default": "200",
-   "label": "Maximum Open Days",
-   "description": "A cow that has not conceived in this many days has expired from the high yield herd on productivity grounds."
+   "label": "Maximum Open Days"
   },
   {
    "fieldname": "cb_lactation",
@@ -564,45 +572,45 @@
   {
    "fieldname": "low_yield_herd",
    "fieldtype": "Link",
-   "options": "Herds",
-   "label": "Low Yield Herd"
+   "label": "Low Yield Herd",
+   "options": "Herds"
   },
   {
+   "default": "60",
+   "description": "2 months. Fixed — it does not vary with yield or anything else.",
    "fieldname": "low_yield_days",
    "fieldtype": "Int",
-   "default": "60",
-   "label": "Days in Low Yield Herd",
-   "description": "2 months. Fixed — it does not vary with yield or anything else."
+   "label": "Days in Low Yield Herd"
   },
   {
+   "description": "Two streams meet here, and how long an animal stays depends on which one it came from — so the duration belongs to the route, not to the herd.",
    "fieldname": "sb_steamers",
    "fieldtype": "Section Break",
-   "label": "Steamers · the dry herd",
-   "description": "Two streams meet here, and how long an animal stays depends on which one it came from — so the duration belongs to the route, not to the herd."
+   "label": "Steamers · the dry herd"
   },
   {
    "fieldname": "steamer_herd",
    "fieldtype": "Link",
-   "options": "Herds",
-   "label": "Steamer Herd"
+   "label": "Steamer Herd",
+   "options": "Herds"
   },
   {
+   "default": "90",
+   "description": "A first-time heifer arrives with 3 months to calving.",
    "fieldname": "steamer_days_from_heifers",
    "fieldtype": "Int",
-   "default": "90",
-   "label": "Dry Days · arriving from Incalf Heifers",
-   "description": "A first-time heifer arrives with 3 months to calving."
+   "label": "Dry Days · arriving from Incalf Heifers"
   },
   {
    "fieldname": "cb_steamers",
    "fieldtype": "Column Break"
   },
   {
+   "default": "60",
+   "description": "A cow arrives with 2 months to calving.",
    "fieldname": "steamer_days_from_lactation",
    "fieldtype": "Int",
-   "default": "60",
-   "label": "Dry Days · arriving from Low Yield",
-   "description": "A cow arrives with 2 months to calving."
+   "label": "Dry Days · arriving from Low Yield"
   },
   {
    "fieldname": "sb_backdating",
@@ -628,38 +636,38 @@
  "owner": "Administrator",
  "permissions": [
   {
-   "role": "System Manager",
-   "permlevel": 0,
-   "idx": 1,
-   "read": 1,
-   "write": 1,
+   "amend": 1,
+   "cancel": 1,
    "create": 1,
    "delete": 1,
-   "submit": 1,
-   "cancel": 1,
-   "amend": 1,
-   "report": 1,
-   "export": 1,
-   "print": 1,
    "email": 1,
-   "share": 1
+   "export": 1,
+   "idx": 1,
+   "permlevel": 0,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
   },
   {
-   "role": "Livestock Manager",
-   "permlevel": 0,
-   "idx": 2,
-   "read": 1,
-   "write": 1,
+   "amend": 1,
+   "cancel": 1,
    "create": 1,
    "delete": 1,
-   "submit": 1,
-   "cancel": 1,
-   "amend": 1,
-   "report": 1,
-   "export": 1,
-   "print": 1,
    "email": 1,
-   "share": 1
+   "export": 1,
+   "idx": 2,
+   "permlevel": 0,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Livestock Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
   }
  ],
  "row_format": "Dynamic",

@@ -49,7 +49,7 @@ from datetime import datetime, timedelta
 
 import frappe
 from frappe import _
-from frappe.utils import flt, getdate, today
+from frappe.utils import cint, flt, getdate, today
 from erpnext.manufacturing.doctype.work_order.work_order import make_stock_entry
 
 from upande_livestock.serverscripts.common import backdate
@@ -202,6 +202,24 @@ def _sub_bom_for(row):
 	return row.bom_no or frappe.db.get_value("Item", row.item_code, "default_bom")
 
 
+def manufacture_qty(per_head, heads, portion=1.0):
+	"""The quantity to manufacture, rounded the way the Work Order will store it.
+
+	87 head at a twentieth of a ration is 4.3500000000000005 in binary floating
+	point. The Work Order stores that rounded to 4.35; the Stock Entry was then
+	built from the raw value, and ERPNext refused it — "For quantity 4.35 should
+	not be greater than allowed quantity 4.35" — because one of them really is
+	greater by 5e-16.
+
+	It bites at some head counts and not others: 86 and 88 are exact, 87 and 111
+	are not. Lactating Group 1 stood at 111 for months, so this was not a corner
+	case waiting to happen. Rounding once, here, means every consumer of the
+	number agrees about what it is.
+	"""
+	precision = cint(frappe.db.get_default("float_precision")) or 3
+	return flt(flt(per_head) * flt(heads) * (flt(portion) or 1.0), precision)
+
+
 def resolve_requirement(bom_no, total_qty):
 	"""Scale `bom_no` to `total_qty` and price every line against the stores.
 
@@ -350,7 +368,7 @@ def get_herd_feeding_program(herd):
 	"""
 	herd_doc, bom, heads = _herd_bom(herd)
 	per_head = flt(bom.quantity) or 1.0
-	total_qty = per_head * heads
+	total_qty = manufacture_qty(per_head, heads)
 	store = _feed_store()
 
 	bom, lines = resolve_requirement(bom.name, total_qty)
@@ -629,7 +647,7 @@ def manufacture_herd_feed(
 	portion = flt(portion) or 1.0
 	if portion <= 0:
 		frappe.throw(_("A feeding run has to be for more than nothing."))
-	total_qty = per_head * heads * portion
+	total_qty = manufacture_qty(per_head, heads, portion)
 
 	# Availability first — it writes nothing, and a shortage is the more useful
 	# thing to be told about. The operator is then resolved before anything
