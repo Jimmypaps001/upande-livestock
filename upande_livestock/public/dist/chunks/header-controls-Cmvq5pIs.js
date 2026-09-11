@@ -1,4 +1,4 @@
-import{k as o,j as a,T as n,p as i,B as h,c as t,q as c}from"../livestock-BLjcNxvU.js";/**
+import{k as o,j as a,T as n,p as i,B as h,c as t,q as c}from"../livestock-BzBCUb3J.js";/**
  * @license lucide-react v0.475.0 - ISC
  *
  * This source code is licensed under the ISC license.

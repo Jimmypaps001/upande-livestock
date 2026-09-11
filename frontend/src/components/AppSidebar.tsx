@@ -44,6 +44,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { SidebarUser } from "@/components/SidebarUser";
 import { useUnreadNotifications } from "@/hooks/use-notifications";
 import { routeHash, type View } from "@/lib/router";
+import { leaveTo } from "@/lib/splash";
 import { cn } from "@/lib/utils";
 import upandeLogo from "@/assets/upande_logo.png";
 
@@ -204,6 +205,14 @@ export function AppSidebar({
           <a
             href="/app"
             title="Open Frappe Desk"
+            onClick={(e) => {
+              // The logo leaves this app exactly as Back to Desk does, so it
+              // shows the same cover. Two ways out of the app that behaved
+              // differently would read as one of them being broken.
+              if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+              e.preventDefault();
+              leaveTo("/app");
+            }}
             className="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-background ring-1 ring-border/60 transition hover:ring-2 hover:ring-border group-data-[collapsible=icon]:size-7"
           >
             <img
@@ -349,7 +358,17 @@ export function AppSidebar({
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton asChild title="Back to Desk — the Frappe workspace at /app">
-              <a href="/app">
+              {/* Still a real <a href>: middle-click, copy-link and a keyboard
+                  Enter all keep working, and the cover is only an ordinary
+                  left click's dressing. */}
+              <a
+                href="/app"
+                onClick={(e) => {
+                  if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+                  e.preventDefault();
+                  leaveTo("/app");
+                }}
+              >
                 <Home className="h-4 w-4" />
                 <span>Back to Desk</span>
               </a>

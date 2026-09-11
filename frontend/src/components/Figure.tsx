@@ -26,7 +26,7 @@ export function Figure({
 }) {
   const empty = value === EMPTY || value === "";
   return (
-    <div className="flex min-w-0 flex-col gap-1.5 bg-[var(--sd-card)] px-5 py-4">
+    <div className="flex min-w-0 flex-col gap-1.5 px-5 py-4">
       <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-[var(--sd-quiet)]">
         {label}
       </span>
@@ -51,23 +51,20 @@ export function Figure({
 }
 
 /**
- * The figures under a chart or a table — a ruled table of numbers, not a
- * coloured slab.
+ * The figures under a chart or a table.
  *
- * It used to be a beige panel, which put a block of colour under every chart
- * and made the summary look heavier than the thing it summarised. The cells
- * are now the card's own white and the structure comes from the rules between
- * them: a 1px grid drawn by letting the container's border colour show through
- * a one-pixel gap. Rules separate without adding weight, which is the whole
- * difference between reading this as part of the card and reading it as
- * something dropped on top.
+ * One panel in a single lighter tone, with a soft shadow instead of an outline
+ * — no rules between the columns and no border around them. The fill is a
+ * lighter warm paper than the card it sits on, which is all the separation a
+ * summary strip needs; ruling it into cells made four related numbers look
+ * like four unrelated ones, and a hard outline drew a box around something
+ * that is part of the card rather than a thing sitting on it.
  *
- * THE COLUMN COUNT COMES FROM THE CHILDREN. A row of two in a four-column grid
- * leaves two cells holding nothing, and once the cells are white those empty
- * cells are two grey rectangles at the end of the row. The beige fill used to
- * hide that, which is exactly why it survived unnoticed until the fill went.
- * Asking the caller to pick a different component for two figures would leave
- * the same trap set for the next person.
+ * THE COLUMN COUNT COMES FROM THE CHILDREN. A row of two figures in a
+ * four-column grid leaves half the panel empty, which on the dashboard's
+ * protein/SCC row meant a wide blank to the right of the last number. Asking
+ * callers to reach for a different component for two figures would leave the
+ * same trap set for whoever adds a third.
  */
 export function FigureRow({ children }: { children: React.ReactNode }) {
   const count = React.Children.toArray(children).length;
@@ -83,7 +80,7 @@ export function FigureRow({ children }: { children: React.ReactNode }) {
   return (
     <div
       className={cn(
-        "grid gap-px overflow-hidden rounded-[var(--sd-radius-lg)] border border-[var(--sd-line)] bg-[var(--sd-line)]",
+        "grid gap-y-4 rounded-[var(--sd-radius-lg)] bg-[var(--sd-bg-soft)] px-1 py-1 shadow-[var(--sd-shadow-1)]",
         columns,
       )}
     >

@@ -12,15 +12,37 @@
 		<style>
 			.navbar.navbar-light { display: none !important; }
 			.web-footer { display: none !important; }
-			html, body { height: 100%; margin: 0; padding: 0; background: #f4f3ef; }
+			html, body { height: 100%; margin: 0; padding: 0; background: #fbfaf6; }
 			body { overflow: hidden; }
 			#livestock-root { height: 100vh; width: 100%; overflow: auto;
 				font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
 			.page-content, .container, main.container { max-width: none !important; padding: 0 !important; margin: 0 !important; }
+
+			/* The cover that holds the screen while the bundle loads.
+			   Inline, and before the stylesheet link resolves, because its whole
+			   job is to be on screen in the first frame — a splash that arrives
+			   with the CSS arrives after the thing it was meant to hide. */
+			.lv-splash {
+				position: fixed; inset: 0; z-index: 2147483000;
+				display: flex; align-items: center; justify-content: center;
+				background: #fbfaf6;
+				transition: opacity 280ms ease;
+			}
+			.lv-splash img { width: 76px; height: 76px; border-radius: 18px; display: block; }
+			.lv-splash.lv-leaving { opacity: 0; pointer-events: none; }
+			@keyframes lv-breathe {
+				0%, 100% { opacity: 1; transform: scale(1); }
+				50% { opacity: .55; transform: scale(.94); }
+			}
+			.lv-splash img { animation: lv-breathe 1400ms ease-in-out infinite; }
+			@media (prefers-reduced-motion: reduce) { .lv-splash img { animation: none; } }
 		</style>
 	</head>
 	<body>
 		<div id="livestock-root"></div>
+		<div class="lv-splash" id="lv-splash">
+			<img src="/assets/upande_livestock/images/upande_logo.png" alt="Upande Livestock" />
+		</div>
 
 		<script type="application/json" id="livestock-bootstrap">{{ bootstrap_json | safe }}</script>
 		<script>

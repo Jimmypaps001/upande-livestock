@@ -79,6 +79,52 @@
 	else window.addEventListener("load", start);
 })();
 
+(function () {
+	// The cover that holds the desk while the livestock app loads.
+	//
+	// Frappe already does this for its own navigations; leaving the desk for
+	// /livestock_app is a full document load, and without a cover the desk sits
+	// there looking clickable for as long as the bundle takes. The app shell
+	// raises the same cover on its own side, so the two page loads read as one
+	// continuous transition rather than two separate blank moments.
+	//
+	// Everything is inline — no class, no stylesheet — because this runs as the
+	// document is being torn down, and a rule in a stylesheet the browser is
+	// discarding paints nothing.
+	var ID = "lv-splash";
+
+	function keyframes() {
+		if (document.getElementById("lv-splash-keyframes")) return;
+		var st = document.createElement("style");
+		st.id = "lv-splash-keyframes";
+		st.textContent =
+			"@keyframes lv-breathe{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.55;transform:scale(.94)}}";
+		document.head.appendChild(st);
+	}
+
+	window.__livestockSplash = function () {
+		if (document.getElementById(ID)) return;
+		keyframes();
+		var el = document.createElement("div");
+		el.id = ID;
+		el.setAttribute(
+			"style",
+			"position:fixed;inset:0;z-index:2147483000;display:flex;align-items:center;" +
+				"justify-content:center;background:#fbfaf6"
+		);
+		var img = document.createElement("img");
+		img.src = "/assets/upande_livestock/images/upande_logo.png";
+		img.alt = "Upande Livestock";
+		img.setAttribute(
+			"style",
+			"width:76px;height:76px;border-radius:18px;display:block;" +
+				"animation:lv-breathe 1400ms ease-in-out infinite"
+		);
+		el.appendChild(img);
+		document.body.appendChild(el);
+	};
+})();
+
 // Same-tab navigation for /livestock_app.
 //
 // Frappe hard-codes target="_blank" on every URL-type workspace-sidebar item
@@ -95,6 +141,15 @@
 // never sees the anchor. `e.composedPath()` is not retargeted — it lists the
 // real path, shadow DOM or not — so walk that instead of `e.target`.
 (function () {
+	// Paint the cover, then navigate on the next frame — assign location.href in
+	// the same tick and the browser never paints what was just appended.
+	function leave(href) {
+		try { window.__livestockSplash(); } catch (_) {}
+		requestAnimationFrame(function () {
+			setTimeout(function () { window.location.href = href; }, 60);
+		});
+	}
+
 	document.addEventListener(
 		"click",
 		function (e) {
@@ -112,7 +167,7 @@
 			if (href.indexOf("/livestock_app") === 0) {
 				e.preventDefault();
 				e.stopPropagation();
-				window.location.href = href;
+				leave(href);
 			}
 		},
 		true
