@@ -24,6 +24,8 @@ from collections import Counter
 
 import frappe
 
+from upande_livestock.serverscripts.common import animal_id
+
 DATA = ("/tmp/claude-1001/-home-ubuntu-stive-code-frappe15-apps-upande-scp/"
         "b6c1bfb1-0cbb-4dc9-8993-2881a8b84c4a/scratchpad/herd_inventory.json")
 
@@ -47,19 +49,11 @@ def _norm(s):
 def _clean_book(raw):
 	"""Tidy a book number without inventing one.
 
-	Two transcription habits run through the sheet: a letter O where a zero
-	belongs (AO63/20 beside A028/19 — the same series typed two ways), and a
-	backslash for the separator. Four entries are not book numbers at all and are
-	left exactly as found rather than guessed at.
+	The implementation moved to common/animal_id.tidy when the register number
+	became the record's name; this keeps the old spelling for the callers and the
+	tests that already use it, rather than leaving two copies to drift.
 	"""
-	b = (raw or "").strip().replace("\\", "/")
-	m = re.match(r"^A[O0](\d{2})/(\d{2})$", b, re.I)
-	if m:
-		return "A0{}/{}".format(m.group(1), m.group(2))
-	m = re.match(r"^A(\d{3})/(\d{2})$", b, re.I)
-	if m:
-		return "A{}/{}".format(m.group(1), m.group(2))
-	return b
+	return animal_id.tidy(raw)
 
 
 def run(apply=False):

@@ -8,6 +8,7 @@ from frappe.utils import add_days, flt, today
 from upande_livestock.patches.backfill_standing_ration_boms import _first_fed_herd, execute
 from upande_livestock.serverscripts.feeding._engine import get_herd_feeding_program
 from upande_livestock.serverscripts.feeding.manual_feed import manual_feed
+from upande_livestock.serverscripts.tests.test_operations import _open_backdating_window
 
 FIELDS = ["custom_herd", "custom_is_livestock_feed", "custom_ration_kind"]
 # custom_is_livestock_feed (Check) is a NOT NULL column; None only works for
@@ -41,6 +42,13 @@ def _a_feedable_herd(herds):
 
 
 class TestBackfillStandingRationBoms(IntegrationTestCase):
+	def setUp(self):
+		# Every case here feeds a herd on a past date to give the backfill
+		# something to attribute. That is a backdated write, refused outright
+		# while the window is shut — so this class passed only on a site where
+		# some other module had left the window open, and failed on a clean one.
+		_open_backdating_window(self)
+
 	def _reset(self, bom_name):
 		"""Blank the three fields on `bom_name` and remember their original
 		values so tearDown can put them back — this patch commits, so a plain

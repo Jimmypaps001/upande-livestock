@@ -16,6 +16,7 @@ import frappe
 from frappe import _
 from frappe.utils import flt
 
+from upande_livestock.serverscripts.common import animal_id
 from upande_livestock.serverscripts.common.timings import read_setting
 
 
@@ -108,13 +109,19 @@ def create_calf(dam, tag_number, sex, event_date, birth_weight=None, burn_name=N
 	its mother's breed. The condition at birth is recorded on the animal because
 	it is a fact about this animal on one day, not a health case to be followed.
 	"""
-	tag = (tag_number or "").strip()
-	if not tag:
-		frappe.throw(_("Calf tag number is required."))
-	if frappe.db.exists("Animal", tag):
-		frappe.throw(_("Animal {0} already exists — pick a different calf tag.").format(tag))
 	if sex not in ("Female", "Male"):
 		frappe.throw(_("Calf sex must be Female or Male."))
+
+	# The number is the farm's own register entry — A039/26 for a heifer, B013/26
+	# for a bull — and the system hands it out rather than asking for it. A tag
+	# that does arrive is tidied (a letter O for the leading zero, a backslash for
+	# the separator) but not otherwise second-guessed: paths that carry their own
+	# identifiers, including the test suite, must keep working.
+	tag = animal_id.tidy(tag_number or "")
+	if not tag:
+		tag = animal_id.allocate(sex, event_date)
+	if frappe.db.exists("Animal", tag):
+		frappe.throw(_("Animal {0} already exists — pick a different calf tag.").format(tag))
 
 	dam_doc = frappe.get_doc("Animal", dam)
 	target_herd = herd or resolve_calf_herd(sex)
