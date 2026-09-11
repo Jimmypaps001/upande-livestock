@@ -1,5 +1,6 @@
-import { useMemo, useState } from "react";
-import { CalendarClock, ChevronLeft } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { BarChart3, CalendarClock, ChevronLeft, ShieldAlert } from "lucide-react";
+import { CompareDialog } from "@/components/animals/CompareDialog";
 import { AnimalPortrait } from "@/components/animals/AnimalPortrait";
 import { AnimalSearch } from "@/components/animals/AnimalSearch";
 import { CycleRing } from "@/components/animals/CycleRing";
@@ -18,7 +19,15 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { SAMPLE_HERD, sampleProfile } from "@/lib/animals-sample";
+import {
+  benchmarkAxes,
+  getHerdBenchmarks,
+  markCullReview,
+  type HerdBenchmarks,
+} from "@/lib/animals-api";
+import { isError } from "@/lib/frappe";
 import { ageFrom, type AnimalSummary } from "@/lib/animals";
+import { Button } from "@/components/ui/button";
 
 /**
  * One animal, whole.
@@ -43,7 +52,19 @@ import { ageFrom, type AnimalSummary } from "@/lib/animals";
  */
 export function Animals() {
   const [selected, setSelected] = useState<AnimalSummary | null>(SAMPLE_HERD[0]);
+  const [comparing, setComparing] = useState(false);
+  const [bench, setBench] = useState<HerdBenchmarks | null>(null);
+  const [culled, setCulled] = useState<Record<string, string>>({});
   const profile = useMemo(() => (selected ? sampleProfile(selected) : null), [selected]);
+
+  // The herd's own medians, which are real even while the profiles are not:
+  // the comparison is the one thing on this page that would be a lie if it
+  // used made-up averages.
+  useEffect(() => {
+    void getHerdBenchmarks().then((r) => {
+      if (!isError(r)) setBench(r);
+    });
+  }, []);
 
   return (
     <Page>
@@ -111,6 +132,12 @@ export function Animals() {
                   </CardContent>
                 </Card>
 
+                <button
+                  type="button"
+                  onClick={() => setComparing(true)}
+                  className="group w-full rounded-[var(--sd-radius-lg)] text-left transition-shadow hover:shadow-[var(--sd-shadow-2)]"
+                  aria-label={`Compare ${profile.name} against the herd`}
+                >
                 <FigureRow>
                   <Figure
                     label="Calvings"
@@ -142,6 +169,20 @@ export function Animals() {
                     }
                   />
                 </FigureRow>
+                </button>
+
+                <div className="-mt-2 flex flex-wrap items-center gap-3">
+                  <Button variant="outline" size="sm" onClick={() => setComparing(true)}>
+                    <BarChart3 className="mr-1.5 h-3.5 w-3.5" />
+                    Compare against the herd
+                  </Button>
+                  {culled[profile.id] && (
+                    <span className="inline-flex items-center gap-1.5 text-[12.5px] text-[var(--sd-sev-critical)]">
+                      <ShieldAlert className="h-3.5 w-3.5" />
+                      Marked for cull review
+                    </span>
+                  )}
+                </div>
 
                 <Card>
                   <CardHeaderRow>
@@ -208,6 +249,21 @@ export function Animals() {
           </Card>
         )}
       </div>
+
+      {profile && (
+        <CompareDialog
+          open={comparing}
+          onOpenChange={setComparing}
+          subject={profile}
+          herd={SAMPLE_HERD}
+          profileFor={sampleProfile}
+          benchmark={benchmarkAxes(bench)}
+          onMarkCull={async (reason) => {
+            const r = await markCullReview(profile.id, reason);
+            if (!isError(r)) setCulled((c) => ({ ...c, [profile.id]: reason }));
+          }}
+        />
+      )}
     </Page>
   );
 }

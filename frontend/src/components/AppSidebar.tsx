@@ -8,6 +8,7 @@ import {
   ClipboardList,
   ClipboardPen,
   Droplets,
+  FlaskConical,
   FileText,
   Heart,
   HeartPulse,
@@ -113,6 +114,12 @@ const NAV: NavSection[] = [
         icon: Droplets,
         hint: "Record what a herd gave at one milking",
       },
+      {
+        view: "quality",
+        label: "Quality",
+        icon: FlaskConical,
+        hint: "File the creamery's figures against a milking",
+      },
       { view: "movement", label: "Movement", icon: ArrowRightLeft },
       { view: "drying-off", label: "Drying Off", icon: Sun },
       { view: "calving", label: "Calving", icon: Baby },
@@ -150,6 +157,8 @@ export const BUILT_VIEWS: ReadonlySet<View> = new Set<View>([
   "settings",
   "notifications",
   "milking",
+  "quality",
+  "animals",
 ]);
 
 export function AppSidebar({

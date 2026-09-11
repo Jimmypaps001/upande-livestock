@@ -1,5 +1,4 @@
-import { Camera } from "lucide-react";
-import { STAGES, ageFrom, type AnimalProfile } from "@/lib/animals";
+import { STAGES, ageFrom, initialsOf, type AnimalProfile } from "@/lib/animals";
 import { cn } from "@/lib/utils";
 
 /**
@@ -28,9 +27,21 @@ export function AnimalPortrait({ animal }: { animal: AnimalProfile }) {
             className="h-full w-full object-cover"
           />
         ) : (
-          <div className="flex h-full w-full flex-col items-center justify-center gap-2.5 text-[var(--sd-quiet)]">
-            <Camera className="h-7 w-7" strokeWidth={1.25} />
-            <span className="text-[11.5px]">No photograph yet</span>
+          // Her initials, not an apology. Most of this herd has no photograph
+          // and probably never will; a panel that said so on every animal would
+          // be reporting the same absence three hundred times. Set in the
+          // stage's own colour so the frame still identifies her at a glance.
+          <div
+            className="flex h-full w-full items-center justify-center"
+            style={{ background: `color-mix(in srgb, ${stage.tone} 16%, var(--sd-bg-soft))` }}
+            aria-label={`${animal.name} — no photograph`}
+          >
+            <span
+              className="select-none text-[64px] font-semibold leading-none tracking-[-0.04em]"
+              style={{ color: `color-mix(in srgb, ${stage.tone} 72%, var(--sd-ink))` }}
+            >
+              {initialsOf(animal.name, animal.id)}
+            </span>
           </div>
         )}
 

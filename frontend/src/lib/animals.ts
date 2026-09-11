@@ -144,3 +144,24 @@ export function daysBetween(from: string, to: string | null, now = new Date()): 
   const b = to ? new Date(to).getTime() : now.getTime();
   return Math.max(0, Math.round((b - a) / 86400000));
 }
+
+/** Two letters to stand in for a photograph.
+ *
+ *  Her name first, because that is what the farm calls her; the register
+ *  number only when she has no name of her own, which is every bull calf —
+ *  "B013/26" has no initials, so the digits are what identifies him. */
+export function initialsOf(name: string, id: string): string {
+  const words = (name || "").trim().split(/\s+/).filter(Boolean);
+  if (words.length >= 2) return (words[0][0] + words[1][0]).toUpperCase();
+  const single = words[0] || "";
+  if (single && !/^[AB]\d{3}\//i.test(single)) return single.slice(0, 2).toUpperCase();
+  const parsed = parse(id);
+  return parsed ? String(parsed.seq).padStart(3, "0").slice(-2) : (id || "?").slice(0, 2).toUpperCase();
+}
+
+/** The three parts of a register number, or null. Kept here so initialsOf can
+ *  fall back on the sequence without the page importing a parser. */
+function parse(id: string): { prefix: string; seq: number; yy: number } | null {
+  const m = /^([AB])(\d{3})\/(\d{2})$/.exec((id || "").trim().toUpperCase());
+  return m ? { prefix: m[1], seq: Number(m[2]), yy: Number(m[3]) } : null;
+}

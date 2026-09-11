@@ -14,6 +14,9 @@ const Concentrate = lazy(() =>
   import("@/pages/Concentrate").then((m) => ({ default: m.Concentrate })),
 );
 const Stock = lazy(() => import("@/pages/Stock").then((m) => ({ default: m.Stock })));
+const Quality = lazy(() =>
+  import("@/pages/Quality").then((m) => ({ default: m.Quality })),
+);
 const Rations = lazy(() =>
   import("@/pages/Rations").then((m) => ({ default: m.Rations })),
 );
@@ -45,6 +48,7 @@ const TITLES: Record<View, string> = {
   stock: "Feed in Store",
   rations: "Rations",
   milking: "Milking",
+  quality: "Quality",
   movement: "Movement",
   "drying-off": "Drying Off",
   calving: "Calving",
@@ -73,6 +77,7 @@ const PAGES: Partial<Record<View, React.ComponentType>> = {
   settings: Settings,
   notifications: Notifications,
   milking: Milking,
+  quality: Quality,
 };
 
 export function App() {

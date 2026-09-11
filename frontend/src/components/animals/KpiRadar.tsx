@@ -21,6 +21,9 @@ const SIZE = 230;
 const C = SIZE / 2;
 const R = 78;
 const RINGS = 3;
+/** Room outside the drawing for the axis labels, which sit past the outer
+ *  ring and would otherwise be clipped by the viewBox. */
+const LABEL_PAD = 40;
 
 export interface RadarAxis {
   key: string;
@@ -101,7 +104,12 @@ export function KpiRadar({ kpis }: { kpis: AnimalKpis }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <svg viewBox={`0 0 ${SIZE} ${SIZE}`} className="h-[200px] w-full" role="img" aria-label="Animal performance">
+      <svg
+        viewBox={`${-LABEL_PAD} 0 ${SIZE + LABEL_PAD * 2} ${SIZE}`}
+        className="h-[200px] w-full"
+        role="img"
+        aria-label="Animal performance"
+      >
         {Array.from({ length: RINGS }, (_, r) => {
           const radius = (R * (r + 1)) / RINGS;
           return (

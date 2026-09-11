@@ -1,0 +1,1 @@
+const a="h-9 w-auto min-w-[8rem] gap-2 rounded-full border-transparent bg-[var(--sd-card)] px-4 text-xs font-medium text-[var(--sd-ink)] shadow-[var(--sd-shadow-1)] transition-shadow hover:shadow-[var(--sd-shadow-2)] focus:ring-0";export{a as H};

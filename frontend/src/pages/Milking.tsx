@@ -30,6 +30,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { isError } from "@/lib/frappe";
+import { getQualityOptions, SKIPPED_NOTICE, type CaptureMode } from "@/lib/quality";
 import {
   buildPayload,
   createMilkRecording,
@@ -99,6 +100,9 @@ export function Milking() {
   const [failure, setFailure] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [lastMode, setLastMode] = useState<string | null>(null);
+  // Where this farm takes its lab figures. Asked once; the form shows the
+  // boxes only when the answer is "here".
+  const [qualityMode, setQualityMode] = useState<CaptureMode>("At milking");
 
   const [backdating, setBackdating] = useState(false);
   const [postDate, setPostDate] = useState(todayISO());
@@ -110,6 +114,14 @@ export function Milking() {
   function set<K extends keyof MilkingForm>(key: K, value: MilkingForm[K]) {
     setForm((f) => ({ ...f, [key]: value }));
   }
+
+  useEffect(() => {
+    // Where this farm takes its lab figures. One call, on mount: the answer
+    // decides whether the SCC and protein boxes belong on this form at all.
+    void getQualityOptions().then((r) => {
+      if (!isError(r)) setQualityMode(r.mode);
+    });
+  }, []);
 
   useEffect(() => {
     milkingOptions().then((r) => {
@@ -320,27 +332,43 @@ export function Milking() {
               />
             </Field>
 
-            <Field id="milk-protein" label="Protein %">
-              <Input
-                id="milk-protein"
-                type="number"
-                min={0}
-                step="any"
-                value={form.proteinPercent}
-                onChange={(e) => set("proteinPercent", e.target.value)}
-              />
-            </Field>
+            {/* The lab figures, only where the farm takes them. In Afterwards
+                mode the server ignores these keys outright, so showing boxes
+                that post nowhere would be a lie the form tells the operator. */}
+            {qualityMode === "At milking" && (
+              <>
+                <Field id="milk-protein" label="Protein %">
+                  <Input
+                    id="milk-protein"
+                    type="number"
+                    min={0}
+                    step="any"
+                    value={form.proteinPercent}
+                    onChange={(e) => set("proteinPercent", e.target.value)}
+                  />
+                </Field>
 
-            <Field id="milk-scc" label="Bulk tank SCC">
-              <Input
-                id="milk-scc"
-                type="number"
-                min={0}
-                step="any"
-                value={form.bulkScc}
-                onChange={(e) => set("bulkScc", e.target.value)}
-              />
-            </Field>
+                <Field id="milk-scc" label="Bulk tank SCC">
+                  <Input
+                    id="milk-scc"
+                    type="number"
+                    min={0}
+                    step="any"
+                    value={form.bulkScc}
+                    onChange={(e) => set("bulkScc", e.target.value)}
+                  />
+                </Field>
+              </>
+            )}
+
+            {/* Said before the button, not after the fact: leaving these blank
+                is allowed and has a consequence, and the operator should know
+                what it is while they can still act on it. */}
+            {qualityMode === "At milking" && !form.proteinPercent && !form.bulkScc && (
+              <div className="sm:col-span-2">
+                <Notice tone="info">{SKIPPED_NOTICE}</Notice>
+              </div>
+            )}
 
             {form.discardReason === "Other" && (
               <Field
