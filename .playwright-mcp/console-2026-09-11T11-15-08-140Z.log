@@ -1,3 +1,0 @@
-[     344ms] [ERROR] Failed to load resource: the server responded with a status of 501 (Unsupported method ('POST')) @ http://localhost:4318/api/method/upande_livestock.serverscripts.notifications.unread_count.unread_count:0
-[     432ms] [ERROR] Failed to load resource: the server responded with a status of 404 (File not found) @ http://localhost:4318/favicon.ico:0
-[     493ms] [ERROR] Failed to load resource: the server responded with a status of 501 (Unsupported method ('POST')) @ http://localhost:4318/api/method/upande_livestock.serverscripts.feeding.feed_options.feed_options:0

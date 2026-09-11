@@ -55,7 +55,11 @@ export const CardDescription = React.forwardRef<
   <div
     ref={ref}
     className={cn(
-      "text-[0.72rem] uppercase tracking-wide text-muted-foreground",
+      // Sentence case, not uppercase. These carry whole sentences — "Net is
+      // what was sellable — total yield less anything discarded" — and a
+      // sentence set in tracked capitals is read letter by letter. Caps belong
+      // on the two-word labels above a figure, not on prose.
+      "text-[12.5px] leading-relaxed text-[var(--sd-muted)]",
       className,
     )}
     {...props}
