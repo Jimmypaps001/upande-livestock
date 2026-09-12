@@ -7,25 +7,6 @@ export const DOCK_LINE = 56;
 export const RAMP = 72;
 
 /**
- * The two halves of the handover, staggered.
- *
- * A straight crossfade puts both copies at half opacity in the middle, which
- * is exactly the "they are both there" the dock was meant to stop — the eye
- * does not read two faint titles as one moving title, it reads them as two.
- * So the heading is gone by 55% and the pill does not start until 45%: they
- * cross within a tenth of the movement, both below a fifth of opacity, and
- * what carries the eye across the gap is the transform, which runs the whole
- * way without interruption.
- */
-export function headingFade(p: number): number {
-  return 1 - Math.min(1, p / 0.55);
-}
-
-export function dockFade(p: number): number {
-  return Math.max(0, Math.min(1, (p - 0.45) / 0.55));
-}
-
-/**
  * How far a heading is through handing itself over to the dock: 0 while it is
  * sitting in the page, 1 once the dock has it.
  *

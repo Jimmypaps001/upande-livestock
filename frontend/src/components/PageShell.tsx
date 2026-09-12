@@ -1,7 +1,8 @@
 import { useRef } from "react";
 
 import { PageDock } from "@/components/PageDock";
-import { headingFade, useDockProgress } from "@/lib/use-dock-progress";
+import { MorphingTitle } from "@/components/MorphingTitle";
+import { useDockProgress } from "@/lib/use-dock-progress";
 
 /**
  * The frame every surface sits in.
@@ -42,7 +43,12 @@ export function PageHeading({
   // surface in this app has a heading and every one of them scrolls, so making
   // it opt-in would mean eleven identical opt-ins and one page that forgot.
   const ref = useRef<HTMLElement | null>(null);
+  const headingSlot = useRef<HTMLHeadingElement | null>(null);
+  const dockSlot = useRef<HTMLSpanElement | null>(null);
   const progress = useDockProgress(ref);
+  // One threshold, not a ramp: the title is a single element that flies, so
+  // there is a moment it leaves rather than a stretch it dissolves over.
+  const docked = progress >= 1;
 
   return (
     <>
@@ -56,17 +62,14 @@ export function PageHeading({
               <span className="h-px w-[18px] shrink-0 bg-[var(--sd-text)]" />
               <span className="truncate">{eyebrow}</span>
             </div>
-            {/* Handed over, not hidden. The title thins out across exactly
-                the stretch of scroll the pill uses to arrive, so at no point
-                are there two of it — which is what the old boolean did in the
-                window where both were drawn. It also lifts a little, so the
-                text reads as leaving upward rather than dissolving in place. */}
+            {/* The slot, not the title. It reserves the space and stays the
+                page's real <h1> for anything reading the document; the text
+                you can see is the flyer, which is aria-hidden. Opacity rather
+                than visibility, because visibility:hidden would take the
+                heading out of the accessibility tree with it. */}
             <h1
-              className="text-[28px] font-semibold leading-[1.05] tracking-[-0.03em] text-[var(--sd-ink)] will-change-[transform,opacity] md:text-[40px]"
-              style={{
-                opacity: headingFade(progress),
-                transform: `translateY(${progress * -10}px)`,
-              }}
+              ref={headingSlot}
+              className="text-[28px] font-semibold leading-[1.05] tracking-[-0.03em] text-[var(--sd-ink)] opacity-0 md:text-[40px]"
             >
               {title}
             </h1>
@@ -83,7 +86,18 @@ export function PageHeading({
           </p>
         )}
       </header>
-      <PageDock eyebrow={eyebrow} title={title} progress={progress} />
+      <PageDock
+        eyebrow={eyebrow}
+        title={title}
+        docked={docked}
+        titleSlot={dockSlot}
+      />
+      <MorphingTitle
+        title={title}
+        headingSlot={headingSlot}
+        dockSlot={dockSlot}
+        docked={docked}
+      />
     </>
   );
 }
