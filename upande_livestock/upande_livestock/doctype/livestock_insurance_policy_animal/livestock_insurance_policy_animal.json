@@ -30,7 +30,7 @@
    "read_only": 1
   },
   {
-   "fetch_from": "animal.custom_breed",
+   "fetch_from": "animal.breed",
    "fieldname": "breed",
    "fieldtype": "Link",
    "in_list_view": 1,
@@ -40,7 +40,6 @@
   },
   {
    "description": "Pulled from the animal's Asset record. Can be overridden per policy.",
-   "fetch_from": "animal.insured_value",
    "fieldname": "insured_value",
    "fieldtype": "Currency",
    "in_list_view": 1,

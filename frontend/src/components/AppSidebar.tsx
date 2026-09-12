@@ -131,7 +131,7 @@ const NAV: NavSection[] = [
       { view: "check-up", label: "Check Up", icon: Stethoscope },
       { view: "treatment", label: "Treatment", icon: Beaker },
       { view: "health-case", label: "Health Case", icon: HeartPulse },
-      { view: "disposal", label: "Disposal", icon: Trash2 },
+      { view: "culling", label: "Culling", icon: Trash2 },
     ],
   },
   {

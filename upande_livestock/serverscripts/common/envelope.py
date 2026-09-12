@@ -48,6 +48,20 @@ def guard_read(doctype: str) -> None:
 		frappe.throw(_("You are not permitted to read {0}.").format(doctype), frappe.PermissionError)
 
 
+def guard_write(doctype: str) -> None:
+	"""Raise if the user can't change an existing `doctype`.
+
+	The third of the set, and not the same question as `guard`. An endpoint that
+	moves a case forward — a vet's verdict, a manager's signature — writes to a
+	document somebody else created, and asking whether the user may CREATE a
+	Livestock Disposal answers a question nobody asked: a farm that lets every
+	herdsman raise a cull case and only a manager amend one is exactly the
+	arrangement these two permissions exist to express.
+	"""
+	if not frappe.has_permission(doctype, "write"):
+		frappe.throw(_("You are not permitted to change {0}.").format(doctype), frappe.PermissionError)
+
+
 def as_dict(value):
 	"""Coerce the whitelist arg (JSON string from fetch, or dict) to a dict."""
 	if isinstance(value, str):

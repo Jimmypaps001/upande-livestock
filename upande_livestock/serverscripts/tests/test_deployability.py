@@ -79,7 +79,7 @@ class TestServerscriptsShape(IntegrationTestCase):
 			source = path.read_text()
 			for fn in _whitelisted(ast.parse(source)):
 				body = ast.get_source_segment(source, fn) or ""
-				if any(t in body for t in ("guard(", "guard_read(", "has_permission(")):
+				if any(t in body for t in ("guard(", "guard_read(", "guard_write(", "has_permission(")):
 					guarded.add(fn.name)
 
 		offenders = []
@@ -95,7 +95,7 @@ class TestServerscriptsShape(IntegrationTestCase):
 			}
 			for fn in _whitelisted(tree):
 				body = ast.get_source_segment(source, fn) or ""
-				if any(t in body for t in ("guard(", "guard_read(", "has_permission(")):
+				if any(t in body for t in ("guard(", "guard_read(", "guard_write(", "has_permission(")):
 					continue
 				# Delegation: every guarded endpoint this module imports and, in
 				# the module as a whole, actually references.
@@ -125,7 +125,7 @@ class TestServerscriptsShape(IntegrationTestCase):
 		fns = _whitelisted(tree)
 		self.assertEqual(len(fns), 1)
 		body = ast.get_source_segment(source, fns[0]) or ""
-		self.assertFalse(any(t in body for t in ("guard(", "guard_read(", "has_permission(")))
+		self.assertFalse(any(t in body for t in ("guard(", "guard_read(", "guard_write(", "has_permission(")))
 		imported = {
 			alias.asname or alias.name
 			for node in ast.walk(tree)

@@ -32,7 +32,7 @@ export const VIEWS = [
   "check-up",
   "treatment",
   "health-case",
-  "disposal",
+  "culling",
   "settings",
   "notifications",
 ] as const;

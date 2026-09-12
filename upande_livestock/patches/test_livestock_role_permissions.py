@@ -101,12 +101,26 @@ class TestLivestockRolePermissions(IntegrationTestCase):
 		self.assertFalse(self._can("Livestock Attendant", "Milk Recording", "create"))
 
 	def test_disposal_is_management_only(self):
+		"""Nobody but management can raise one — the vet's write is not a create."""
 		self.assertTrue(self._can("Livestock Manager", "Livestock Disposal"))
 		for role in ("Livestock Vet", "Livestock Breeder", "Livestock Attendant",
 		             "Livestock Milker", "Livestock Stores"):
 			self.assertFalse(
 				self._can(role, "Livestock Disposal"), f"{role} can dispose of an animal"
 			)
+
+	def test_the_vet_can_answer_a_cull_case_without_being_able_to_post_it(self):
+		"""The one act culling gives him, and its exact edge.
+
+		A disposal needs a veterinary recommendation, and he cannot give one on
+		a document he may not open. What he must never gain along with it is the
+		ability to start a disposal or to post one.
+		"""
+		self.assertTrue(self._can("Livestock Vet", "Livestock Disposal", "read"))
+		self.assertTrue(self._can("Livestock Vet", "Livestock Disposal", "write"))
+		self.assertFalse(self._can("Livestock Vet", "Livestock Disposal", "create"))
+		self.assertFalse(self._can("Livestock Vet", "Livestock Disposal", "submit"))
+		self.assertFalse(self._can("Livestock Vet", "Livestock Disposal", "delete"))
 
 	def test_every_role_can_see_the_animal_it_works_on(self):
 		"""Confinement must not make the job impossible."""

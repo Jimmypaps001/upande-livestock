@@ -86,14 +86,26 @@ class TestNamespaceLivestockRoles(IntegrationTestCase):
 	def test_each_role_is_confined_to_its_job(self):
 		"""A milker cannot treat a cow; a vet cannot dispose of one."""
 		self.assertNotIn("Livestock Milker", _roles_on("Livestock Health Case"))
-		self.assertNotIn("Livestock Vet", _roles_on("Livestock Disposal"))
+		self.assertNotIn("Livestock Attendant", _roles_on("Livestock Disposal"))
 		self.assertNotIn("Livestock Attendant", _roles_on("Livestock Diagnosis"))
 		self.assertNotIn("Livestock Breeder", _roles_on("Milk Recording"))
 
 	def test_disposal_is_management_only(self):
-		self.assertEqual(
-			_roles_on("Livestock Disposal"), {"System Manager", "Livestock Manager"}
-		)
+		"""Raising and posting one, that is. The vet's one act is not disposal.
+
+		This used to assert that no other role appeared on the doctype at all.
+		Culling gives the vet exactly one thing to do with a case — record what
+		he found — and he cannot do it on a document he may not open. So the
+		rule is restated at what it was actually protecting: he may read a case
+		and write a verdict onto it; creating one, submitting one and cancelling
+		one stay with management, which is the whole of "disposing of an animal".
+		"""
+		perms = {p.role: p for p in frappe.get_meta("Livestock Disposal").permissions}
+		self.assertEqual(set(perms), {"System Manager", "Livestock Manager", "Livestock Vet"})
+		vet = perms["Livestock Vet"]
+		self.assertTrue(vet.read and vet.write)
+		for power in ("create", "submit", "cancel", "delete", "amend"):
+			self.assertFalse(vet.get(power), f"a vet can {power} a disposal")
 
 	def test_every_role_can_still_see_the_animal_it_works_on(self):
 		"""Confinement must not go so far that the job becomes impossible."""
