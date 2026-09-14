@@ -68,7 +68,10 @@ export function CompareDialog({
   onOpenChange: (next: boolean) => void;
   subject: AnimalProfile;
   herd: AnimalSummary[];
-  profileFor: (a: AnimalSummary) => AnimalProfile;
+  /** Her full profile if it has arrived. Null while it is still being
+   *  fetched — a comparison of two cows is two trips to the server, and the
+   *  dialog draws what it has rather than blocking on the slowest one. */
+  profileFor: (a: AnimalSummary) => AnimalProfile | null;
   /** The farm's middle cow, 0–1 per axis, in the same order axesFrom returns. */
   benchmark: number[];
   onMarkCull: (reason: string) => Promise<void> | void;
@@ -79,7 +82,10 @@ export function CompareDialog({
   const [marked, setMarked] = useState(false);
 
   const cohort = useMemo(
-    () => [subject, ...others.map(profileFor)].slice(0, MAX),
+    () =>
+      [subject, ...others.map(profileFor)]
+        .filter((a): a is AnimalProfile => !!a)
+        .slice(0, MAX),
     [subject, others, profileFor],
   );
   const axes = useMemo(() => cohort.map((a) => axesFrom(a.kpis)), [cohort]);

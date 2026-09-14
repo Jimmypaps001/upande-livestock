@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { BarChart3, CalendarClock, ChevronLeft, ShieldAlert } from "lucide-react";
 import { CompareDialog } from "@/components/animals/CompareDialog";
 import { AnimalPortrait } from "@/components/animals/AnimalPortrait";
@@ -18,15 +18,16 @@ import {
   CardHeading,
   CardTitle,
 } from "@/components/ui/card";
-import { SAMPLE_HERD, sampleProfile } from "@/lib/animals-sample";
 import {
   benchmarkAxes,
+  getAnimalProfile,
+  getAnimals,
   getHerdBenchmarks,
   markCullReview,
   type HerdBenchmarks,
 } from "@/lib/animals-api";
 import { isError } from "@/lib/frappe";
-import { ageFrom, type AnimalSummary } from "@/lib/animals";
+import { ageFrom, type AnimalProfile, type AnimalSummary } from "@/lib/animals";
 import { Button } from "@/components/ui/button";
 
 /**
@@ -45,17 +46,47 @@ import { Button } from "@/components/ui/button";
  * she has performed. The middle is what has happened to her. The division is
  * deliberate: identity does not scroll, history does.
  *
- * UNWIRED. Everything below reads lib/animals-sample.ts. The shapes in
- * lib/animals.ts are what the endpoints will fill; nothing here reaches the
- * server yet, and the banner says so rather than letting a demo pass for a
- * record.
+ * TWO CALLS, NOT ONE. The search list is redrawn as somebody types; the profile
+ * walks an animal's whole event history. Asking for both together would make
+ * the page as slow as its slowest cow. Profiles are cached as they arrive, so
+ * looking one cow up and then comparing her with two others is three trips,
+ * not three every time the dialog re-renders.
  */
 export function Animals() {
-  const [selected, setSelected] = useState<AnimalSummary | null>(SAMPLE_HERD[0]);
+  const [herd, setHerd] = useState<AnimalSummary[]>([]);
+  const [selected, setSelected] = useState<AnimalSummary | null>(null);
+  const [profiles, setProfiles] = useState<Record<string, AnimalProfile>>({});
   const [comparing, setComparing] = useState(false);
   const [bench, setBench] = useState<HerdBenchmarks | null>(null);
   const [culled, setCulled] = useState<Record<string, string>>({});
-  const profile = useMemo(() => (selected ? sampleProfile(selected) : null), [selected]);
+  const [failure, setFailure] = useState<string | null>(null);
+
+  const profile = selected ? profiles[selected.id] ?? null : null;
+
+  const fetchProfile = useCallback((id: string) => {
+    setProfiles((have) => {
+      if (have[id]) return have;
+      void getAnimalProfile(id).then((r) => {
+        if (!isError(r)) setProfiles((s) => ({ ...s, [id]: r }));
+      });
+      return have;
+    });
+  }, []);
+
+  useEffect(() => {
+    void getAnimals().then((r) => {
+      if (isError(r)) {
+        setFailure(r.error);
+        return;
+      }
+      setHerd(r.animals);
+      setSelected((current) => current ?? r.animals[0] ?? null);
+    });
+  }, []);
+
+  useEffect(() => {
+    if (selected) fetchProfile(selected.id);
+  }, [selected, fetchProfile]);
 
   // The herd's own medians, which are real even while the profiles are not:
   // the comparison is the one thing on this page that would be a lie if it
@@ -73,10 +104,7 @@ export function Animals() {
         her herd, her cycle, her calvings and the events behind them.
       </PageHeading>
 
-      <Notice tone="info">
-        This page is a layout, not a record. The animals, dates and figures below are
-        made up; the endpoints behind them are the next piece of work.
-      </Notice>
+      {failure && <Notice tone="error">{failure}</Notice>}
 
       <div className="grid min-w-0 gap-5 xl:grid-cols-[minmax(0,300px)_minmax(0,1fr)]">
         {/* ── who to look at ─────────────────────────────────────────── */}
@@ -92,7 +120,7 @@ export function Animals() {
           <Card className="flex min-h-0 flex-col overflow-hidden">
             <CardContent className="flex min-h-0 flex-col p-4">
               <AnimalSearch
-                animals={SAMPLE_HERD}
+                animals={herd}
                 selectedId={profile?.id ?? null}
                 onSelect={setSelected}
               />
@@ -262,8 +290,11 @@ export function Animals() {
           open={comparing}
           onOpenChange={setComparing}
           subject={profile}
-          herd={SAMPLE_HERD}
-          profileFor={sampleProfile}
+          herd={herd}
+          profileFor={(a) => {
+            fetchProfile(a.id);
+            return profiles[a.id] ?? null;
+          }}
           benchmark={benchmarkAxes(bench)}
           onMarkCull={async (reason) => {
             const r = await markCullReview(profile.id, reason);

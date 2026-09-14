@@ -1,19 +1,30 @@
 /**
- * The parts of the Animals page that already reach the server.
+ * The Animals page's data, all of it now off the server.
  *
- * The profile itself is still sample data; these two are real because they
- * write, and a page that pretended to mark a cow for review without marking
- * her would be worse than one that could not.
+ * Two calls rather than one: the search list is redrawn as somebody types and
+ * the profile walks an animal's whole event history, so asking for both
+ * together would make the page as slow as its slowest cow.
  */
 import { call, type Envelope } from "@/lib/frappe";
+import type { AnimalProfile, AnimalSummary } from "@/lib/animals";
 
 const MARK = "upande_livestock.serverscripts.animals.mark_cull_review.mark_cull_review";
+const LIST = "upande_livestock.serverscripts.animals.animal_list.animal_list";
+const PROFILE = "upande_livestock.serverscripts.animals.animal_profile.animal_profile";
 const BENCH = "upande_livestock.serverscripts.animals.herd_benchmarks.herd_benchmarks";
 
 export function markCullReview(animal: string, reason: string, marked = true) {
   return call<{ animal: string; marked: boolean; on: string | null }>(MARK, {
     payload: { animal, reason, marked },
   });
+}
+
+export function getAnimals(): Promise<Envelope<{ animals: AnimalSummary[] }>> {
+  return call<{ animals: AnimalSummary[] }>(LIST, {});
+}
+
+export function getAnimalProfile(animal: string): Promise<Envelope<AnimalProfile>> {
+  return call<AnimalProfile>(PROFILE, { payload: { animal } });
 }
 
 export interface HerdBenchmarks {
