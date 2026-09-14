@@ -46,6 +46,20 @@ const Procurement = lazy(() =>
 );
 const Herds = lazy(() => import("@/pages/Herds").then((m) => ({ default: m.Herds })));
 
+// The breeding calendar and the health screens are five and four exports of
+// one module each: they share a scaffold, so splitting them into nine chunks
+// would ship the same component nine times.
+const Service = lazy(() => import("@/pages/Breeding").then((m) => ({ default: m.Service })));
+const Diagnosis = lazy(() => import("@/pages/Breeding").then((m) => ({ default: m.Diagnosis })));
+const Abortion = lazy(() => import("@/pages/Breeding").then((m) => ({ default: m.Abortion })));
+const DryingOff = lazy(() => import("@/pages/Breeding").then((m) => ({ default: m.DryingOff })));
+const Heat = lazy(() => import("@/pages/Breeding").then((m) => ({ default: m.Heat })));
+const CheckUp = lazy(() => import("@/pages/Health").then((m) => ({ default: m.CheckUp })));
+const HealthCase = lazy(() => import("@/pages/Health").then((m) => ({ default: m.HealthCase })));
+const Weight = lazy(() => import("@/pages/Health").then((m) => ({ default: m.Weight })));
+const Husbandry = lazy(() => import("@/pages/Health").then((m) => ({ default: m.Husbandry })));
+const Movement = lazy(() => import("@/pages/Movement").then((m) => ({ default: m.Movement })));
+
 const TITLES: Record<View, string> = {
   dashboard: "Dashboard",
   animals: "Animals",
@@ -69,6 +83,7 @@ const TITLES: Record<View, string> = {
   diagnosis: "Pregnancy Diagnosis",
   husbandry: "Husbandry",
   abortion: "Abortion",
+  heat: "Heat",
   weight: "Weight",
   "check-up": "Check Up",
   treatment: "Treatment",
@@ -95,6 +110,16 @@ const PAGES: Partial<Record<View, React.ComponentType>> = {
   projection: Projection,
   procurement: Procurement,
   herds: Herds,
+  service: Service,
+  diagnosis: Diagnosis,
+  abortion: Abortion,
+  "drying-off": DryingOff,
+  heat: Heat,
+  "check-up": CheckUp,
+  "health-case": HealthCase,
+  weight: Weight,
+  husbandry: Husbandry,
+  movement: Movement,
 };
 
 export function App() {

@@ -55,6 +55,13 @@ SEED_EVENT_TYPES = [
 	{"name": "Dehorning", "creates_animal": 0, "detail_doctype": None},
 	{"name": "Check Up", "creates_animal": 0, "detail_doctype": "Livestock Diagnosis"},
 	{"name": "Health Case", "creates_animal": 0, "detail_doctype": "Livestock Health Case"},
+	# Somebody looked at a cow's figures and thought she should go. A judgement,
+	# not a disposal: she keeps her herd, her place in the head count and her
+	# ration, and culling her is a Livestock Disposal, which is a different act
+	# with a different permission. It was written as a "Check Up" for want of a
+	# type of its own, which put a health record on her timeline for a decision
+	# about her productivity.
+	{"name": "Cull Review", "creates_animal": 0, "detail_doctype": None},
 ]
 
 
