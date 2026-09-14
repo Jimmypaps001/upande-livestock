@@ -1,0 +1,33 @@
+{
+ "app": "upande_livestock",
+ "charts": [],
+ "content": "[{\"id\": \"ulrRationsPage1\", \"type\": \"custom_block\", \"data\": {\"custom_block_name\": \"Livestock Rations\", \"col\": 12}}]",
+ "creation": "2026-07-17 00:00:00.000000",
+ "custom_blocks": [
+  {
+   "custom_block_name": "Livestock Rations",
+   "label": "Livestock Rations"
+  }
+ ],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 0,
+ "icon": "sitemap",
+ "idx": 2,
+ "indicator_color": "green",
+ "is_hidden": 0,
+ "label": "Livestock Rations",
+ "links": [],
+ "module": "Upande Livestock",
+ "name": "Livestock Rations",
+ "number_cards": [],
+ "parent_page": "",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [],
+ "sequence_id": 52.0,
+ "shortcuts": [],
+ "title": "Livestock Rations",
+ "type": "Workspace"
+}

@@ -94,3 +94,44 @@ export function describeChange(d: RationDifference): string {
   if (d.what === "dropped") return `${d.item_name} dropped (was ${d.was})`;
   return `${d.item_name} ${d.what} from ${d.was} to ${d.now}`;
 }
+
+/* ------------------------------------------------------- reading a ration */
+
+const RATIONS = "upande_livestock.serverscripts.feeding.herd_rations.herd_rations";
+
+export interface RationRow {
+  item_code: string;
+  item_name: string;
+  qty: number;
+  uom: string;
+}
+
+export interface HerdRation {
+  herd: string;
+  heads: number;
+  bom: string | null;
+  ration_item: string | null;
+  ration_name: string | null;
+  per_head_kg: number;
+  day_kg: number;
+  lines: RationRow[];
+  lines_total: number;
+  /** Whether the stated output and the lines add up to the same number. */
+  balanced: boolean;
+}
+
+export interface FeedChoice {
+  value: string;
+  label: string;
+  uom: string;
+  on_hand: number;
+}
+
+export interface HerdRations {
+  herds: HerdRation[];
+  feeds: FeedChoice[];
+}
+
+export function getHerdRations(): Promise<Envelope<HerdRations>> {
+  return call<HerdRations>(RATIONS, { payload: {} });
+}

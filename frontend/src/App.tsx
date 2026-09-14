@@ -59,6 +59,9 @@ const HealthCase = lazy(() => import("@/pages/Health").then((m) => ({ default: m
 const Weight = lazy(() => import("@/pages/Health").then((m) => ({ default: m.Weight })));
 const Husbandry = lazy(() => import("@/pages/Health").then((m) => ({ default: m.Husbandry })));
 const Movement = lazy(() => import("@/pages/Movement").then((m) => ({ default: m.Movement })));
+const RationEditor = lazy(() =>
+  import("@/pages/RationEditor").then((m) => ({ default: m.RationEditor })),
+);
 const Calving = lazy(() => import("@/pages/Calving").then((m) => ({ default: m.Calving })));
 const Treatment = lazy(() => import("@/pages/Treatment").then((m) => ({ default: m.Treatment })));
 // The four read-only views share a loader and nothing else heavy, so they ship
@@ -82,6 +85,7 @@ const TITLES: Record<View, string> = {
   concentrate: "Concentrate",
   stock: "Feed in Store",
   rations: "Rations",
+  "ration-editor": "Ration Editor",
   projection: "Feed Projection",
   procurement: "Procurement",
   milking: "Milking",
@@ -136,6 +140,7 @@ const PAGES: Partial<Record<View, React.ComponentType>> = {
   production: Production,
   reports: Reports,
   health: HealthOverview,
+  "ration-editor": RationEditor,
 };
 
 export function App() {
