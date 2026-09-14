@@ -41,6 +41,8 @@ imported and the call dies with a bare NameError naming the app.
 import frappe
 from frappe.utils import flt
 
+from upande_livestock.serverscripts.feeding._standing_ration import set_standing_ration
+
 # Every quantity in the formulation sheet is stated in kilograms, including hay,
 # which this site stocks in bales. Saying so explicitly on each BOM line lets
 # ERPNext convert; leaving it to default silently reads the number as bales.
@@ -317,92 +319,29 @@ def _bom_farm():
 	return frappe.db.get_value("Warehouse", store, "custom_farm") if store else None
 
 
-def _same_recipe(bom_name, merged):
-	"""Does this BOM already say exactly what the formulation says?
-
-	Compared line by line AND against the output, not by name or by date. A
-	recipe is its quantities.
-
-	The output is part of the comparison because this site is full of rations
-	whose lines are right and whose quantity says 1 — the wreckage of the
-	`Livestock Meal` attempt described at the top of this file. Matching on
-	lines alone would adopt one of those as "unchanged" and quietly keep the
-	bug alive.
-	"""
-	if abs(flt(frappe.db.get_value("BOM", bom_name, "quantity"))
-	       - flt(sum(merged.values()))) > 0.0005:
-		return False
-	rows = frappe.get_all("BOM Item", filters={"parent": bom_name},
-	                      fields=["item_code", "qty"])
-	if len(rows) != len(merged):
-		return False
-	for r in rows:
-		want = merged.get(r.item_code)
-		if want is None or abs(flt(r.qty) - flt(want)) > 0.0005:
-			return False
-	return True
-
-
 def _build_bom(ration_item, herd, merged):
-	"""One BOM, one unit, per-head quantities.
+	"""One BOM, one animal's ration, per-head quantities.
 
-	A CHANGED FORMULATION MAKES A NEW BOM, not an edit. A submitted BOM seals:
-	ERPNext refuses "Not allowed to change Qty after submission", and there is
-	nowhere to put the new numbers. So the recipe that matches is reused and a
-	recipe that does not is superseded — the old revision stays submitted and
-	readable, which is what every feed run already posted against it needs.
+	The work is `feeding/_standing_ration.set_standing_ration`, which is what
+	the `set_herd_ration` endpoint calls too: a formulation loaded from a sheet
+	and a formulation typed on a screen are the same act, and two
+	implementations of "a changed recipe supersedes rather than edits" would
+	drift apart the first time one of them was fixed.
 	"""
-	# Matched on the recipe, never on the UOM: ERPNext overwrites BOM.uom with
-	# the item's stock UOM on every save, so it distinguishes nothing here.
-	for candidate in frappe.get_all(
-		"BOM", filters={"item": ration_item, "docstatus": 1},
-		pluck="name", order_by="creation desc",
-	):
-		if _same_recipe(candidate, merged):
-			print("       (unchanged — already built as {})".format(candidate))
-			frappe.db.set_value("Herds", herd, "bom", candidate)
-			if not frappe.db.get_value("BOM", candidate, "is_default"):
-				frappe.db.set_value("BOM", candidate, {"is_default": 1, "is_active": 1})
-			_stamp_standing(candidate, herd)
-			frappe.db.commit()
-			return candidate
-	superseded = frappe.db.get_value(
-		"BOM", {"item": ration_item, "docstatus": 1, "is_default": 1}, "name")
-	if superseded:
-		print("       (supersedes {})".format(superseded))
-
-	weight = _ration_weight(merged)
-	print("       one head's day = {:g} kg".format(weight))
-
-	farm = _bom_farm()
-	if not farm:
-		print("       ! no farm resolved for the BOM — skipped")
+	lines = [{"item_code": code, "qty": qty} for code, qty in merged.items()]
+	try:
+		result = set_standing_ration(herd, lines, ration_item=ration_item)
+	except Exception as e:
+		print("       ! {}".format(str(e)[:120]))
 		return None
-
-	bom = frappe.new_doc("BOM")
-	bom.item = ration_item
-	# One run of this BOM makes one animal's ration. The lines sum to the same
-	# number, so a Work Order for the herd scales both sides together.
-	bom.quantity = weight
-	bom.custom_farm = farm
-	bom.company = frappe.db.get_single_value("Livestock Settings", "custom_default_company")
-	bom.is_active = 1
-	bom.is_default = 1
-	bom.with_operations = 0
-	for code, qty in merged.items():
-		row = bom.append("items", {})
-		row.item_code = code
-		row.qty = qty
-		# The sheet states every line in kilograms, including hay, which is
-		# STOCKED in bales. Leaving the UOM to default gives "2 BALE" where the
-		# recipe means 2 kg — a fourteen-fold error that reads as plausible.
-		row.uom = RECIPE_UOM
-	bom.insert(ignore_permissions=True)
-	bom.submit()
-	_stamp_standing(bom.name, herd)
-	frappe.db.set_value("Herds", herd, "bom", bom.name)
+	if not result["changed"]:
+		print("       (unchanged — already built as {})".format(result["bom"]))
+	else:
+		if result["superseded"]:
+			print("       (supersedes {})".format(result["superseded"]))
+		print("       one head's day = {:g} kg".format(result["per_head_kg"]))
 	frappe.db.commit()
-	return bom.name
+	return result["bom"]
 
 
 def apply_now():
