@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AlertTriangle, ArrowRight, Clock } from "lucide-react";
+import { AlertTriangle, ArrowRight, Clock, Search } from "lucide-react";
 import { DatePicker } from "@/components/DatePicker";
 import { Figure, FigureRow } from "@/components/Figure";
 import { Notice } from "@/components/feeding/Notice";
@@ -11,12 +11,14 @@ import {
   Card, CardContent, CardDescription, CardHeaderRow, CardHeading, CardTitle, CardTools,
 } from "@/components/ui/card";
 import { CheckCircle } from "@/components/ui/check-circle";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { isError } from "@/lib/frappe";
 import {
   getMovementOptions, getMovementSuggestions, moveAnimals,
-  type MoveSuggestion, type MovementOptions, type MovementSuggestions,
+  type AnimalChoice, type MoveSuggestion, type MovementOptions, type MovementSuggestions,
 } from "@/lib/events";
 import { cn, todayISO } from "@/lib/utils";
 
@@ -92,10 +94,9 @@ export function Movement() {
     });
   }
 
-  async function move(herd: string, animals: MoveSuggestion[]) {
-    const chosen = animals.filter((a) => picked.has(a.animal)).map((a) => a.animal);
+  async function moveThese(herd: string, chosen: string[], key: string) {
     if (!chosen.length) return;
-    setBusy(herd);
+    setBusy(key);
     const r = await moveAnimals({
       animals: chosen,
       new_herd: herd,
@@ -119,6 +120,9 @@ export function Movement() {
     setRemarks("");
     void load();
   }
+
+  const move = (herd: string, animals: MoveSuggestion[]) =>
+    moveThese(herd, animals.filter((a) => picked.has(a.animal)).map((a) => a.animal), herd);
 
   return (
     <Page>
@@ -159,6 +163,13 @@ export function Movement() {
         <RefreshButton onClick={load} loading={loading} label="who is due" />
       </div>
 
+      <Tabs defaultValue="due">
+        <TabsList>
+          <TabsTrigger value="due">Due to move</TabsTrigger>
+          <TabsTrigger value="any">Move anyone</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="due" className="flex flex-col gap-5 pt-5">
       {!due ? (
         <Card>
           <CardContent className="pt-6">
@@ -194,7 +205,186 @@ export function Movement() {
           />
         ))
       )}
+        </TabsContent>
+
+        {/* The farm moves animals for reasons no rule knows about — a lame cow
+            off the concrete, a group split for space, a bull out of the way of
+            a visitor. The due list cannot see any of that, so the whole herd is
+            selectable too. */}
+        <TabsContent value="any" className="pt-5">
+          <MoveAnyone
+            animals={options?.animals ?? []}
+            herds={(options?.herds ?? []).map((h) => h.name)}
+            picked={picked}
+            busy={busy === "any"}
+            onToggle={toggle}
+            onPickAll={(ids, on) =>
+              setPicked((s) => {
+                const next = new Set(s);
+                ids.forEach((a) => (on ? next.add(a) : next.delete(a)));
+                return next;
+              })
+            }
+            onMove={(herd, chosen) => moveThese(herd, chosen, "any")}
+          />
+        </TabsContent>
+      </Tabs>
     </Page>
+  );
+}
+
+function MoveAnyone({
+  animals,
+  herds,
+  picked,
+  busy,
+  onToggle,
+  onPickAll,
+  onMove,
+}: {
+  animals: AnimalChoice[];
+  herds: string[];
+  picked: Set<string>;
+  busy: boolean;
+  onToggle: (animal: string) => void;
+  onPickAll: (ids: string[], on: boolean) => void;
+  onMove: (herd: string, chosen: string[]) => void;
+}) {
+  const [term, setTerm] = useState("");
+  const [herd, setHerd] = useState("");
+
+  const results = useMemo(() => {
+    const q = term.trim().toLowerCase();
+    if (!q) return animals;
+    return animals.filter((a) =>
+      [a.name, a.label, a.herd_label || a.herd || ""].some((f) => f.toLowerCase().includes(q)),
+    );
+  }, [animals, term]);
+
+  // Only what is BOTH picked and not already there: a cow selected and then
+  // filtered out of view is still going, and one already standing in the
+  // destination is not a move.
+  const chosen = useMemo(
+    () => animals.filter((a) => picked.has(a.name) && a.herd !== herd).map((a) => a.name),
+    [animals, picked, herd],
+  );
+  const shownIds = results.map((a) => a.name);
+  const allShown = shownIds.length > 0 && shownIds.every((id) => picked.has(id));
+
+  return (
+    <Card>
+      <CardHeaderRow>
+        <CardHeading>
+          <CardTitle>Move anyone</CardTitle>
+          <CardDescription>
+            Search the herd and pick who is going. Nothing here has to be due.
+          </CardDescription>
+        </CardHeading>
+        <CardTools>
+          <select
+            value={herd}
+            onChange={(e) => setHerd(e.target.value)}
+            aria-label="Herd they are moving to"
+            className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+          >
+            <option value="">Moving to…</option>
+            {herds.map((h) => (
+              <option key={h} value={h}>
+                {h}
+              </option>
+            ))}
+          </select>
+          <Button
+            size="sm"
+            disabled={busy || !herd || !chosen.length}
+            onClick={() => onMove(herd, chosen)}
+          >
+            {busy ? "Moving…" : `Move ${chosen.length || ""}`.trim()}
+          </Button>
+        </CardTools>
+      </CardHeaderRow>
+      <CardContent className="flex flex-col gap-3 pt-0">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative min-w-[220px] flex-1">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--sd-quiet)]" />
+            <Input
+              value={term}
+              onChange={(e) => setTerm(e.target.value)}
+              placeholder="Number, name or herd…"
+              aria-label="Find animals to move"
+              className="h-9 rounded-[var(--sd-radius-pill)] bg-[var(--sd-bg-soft)] pl-9 text-[13px]"
+            />
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={!shownIds.length}
+            onClick={() => onPickAll(shownIds, !allShown)}
+            aria-label={
+              allShown ? "Unpick everyone shown" : `Pick all ${shownIds.length} shown`
+            }
+          >
+            {allShown ? "Unpick all shown" : `Select all ${shownIds.length} shown`}
+          </Button>
+          <span className="text-[11.5px] text-[var(--sd-quiet)]">
+            {picked.size} picked
+            {herd && chosen.length !== picked.size
+              ? ` · ${picked.size - chosen.length} already in ${herd}`
+              : ""}
+          </span>
+        </div>
+
+        {!animals.length ? (
+          <RowsSkeleton rows={6} />
+        ) : !results.length ? (
+          <p className="text-[13px] text-[var(--sd-muted)]">Nobody matches that.</p>
+        ) : (
+          <ul className="flex max-h-[460px] flex-col gap-0.5 overflow-y-auto">
+            {results.map((a) => {
+              const on = picked.has(a.name);
+              const here = !!herd && a.herd === herd;
+              return (
+                <li key={a.name}>
+                  <div
+                    className={cn(
+                      "flex items-center gap-3 rounded-[var(--sd-radius-lg)] px-3 py-2.5 transition-colors",
+                      on ? "bg-[var(--sd-bg-soft)]" : "hover:bg-[var(--sd-bg-soft)]",
+                      here && "opacity-50",
+                    )}
+                  >
+                    <CheckCircle
+                      checked={on}
+                      onCheckedChange={() => onToggle(a.name)}
+                      label={`Move ${a.label}`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => onToggle(a.name)}
+                      className="flex min-w-0 flex-1 items-center gap-3 text-left"
+                    >
+                      <span className="flex min-w-0 flex-1 flex-col">
+                        <span className="truncate text-[13px] font-medium text-[var(--sd-ink)]">
+                          {a.label}
+                        </span>
+                        <span className="truncate text-[11.5px] text-[var(--sd-muted)]">
+                          {a.herd_label || a.herd || "no herd"}
+                          {a.repro ? ` · ${a.repro}` : ""}
+                        </span>
+                      </span>
+                      {here && (
+                        <span className="shrink-0 text-[11px] text-[var(--sd-quiet)]">
+                          already there
+                        </span>
+                      )}
+                    </button>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 

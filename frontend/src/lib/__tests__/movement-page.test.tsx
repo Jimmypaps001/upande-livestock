@@ -32,13 +32,24 @@ const suggestions = {
   counts: {},
 };
 
-const call = vi.fn(async (method?: string): Promise<Record<string, unknown>> => {
+const call = vi.fn(async (method?: string, _args?: unknown): Promise<Record<string, unknown>> => {
   const m = method || "";
   if (m.includes("movement_suggestions")) return suggestions;
   if (m.includes("move_animals")) {
     return { ok: true, count: 2, herd: "2-4", emptied_from: ["0-2"], heads: 7 };
   }
-  return { ok: true, animals: [], herds: [], calving_outcomes: [], employee: "HR-EMP-1" };
+  return {
+    ok: true,
+    animals: [
+      { name: "A039/26", label: "APIJA (A039/26)", herd: "Lactating group 1",
+        herd_label: "Lactating group 1", repro: "Open" },
+      { name: "A101/23", label: "SITA (A101/23)", herd: "STEAMERS",
+        herd_label: "STEAMERS", repro: "Dry" },
+    ],
+    herds: [{ name: "STEAMERS", label: "STEAMERS" }, { name: "2-4", label: "2-4" }],
+    calving_outcomes: [],
+    employee: "HR-EMP-1",
+  };
 });
 
 vi.mock("@/lib/frappe", async () => {
@@ -47,6 +58,21 @@ vi.mock("@/lib/frappe", async () => {
 });
 
 const { Movement } = await import("@/pages/Movement");
+
+/**
+ * Switch tabs the way Radix actually switches them.
+ *
+ * `TabsTrigger` activates on FOCUS (activationMode is automatic by default),
+ * not on a synthetic click — a `fireEvent.click` alone leaves the old panel on
+ * screen and the test then fails looking for content that was never asked for.
+ */
+function openTab(name: RegExp) {
+  const tab = screen.getByRole("tab", { name });
+  tab.focus();
+  fireEvent.focus(tab);
+  fireEvent.click(tab);
+  return tab;
+}
 
 const draw = () =>
   render(
@@ -129,5 +155,73 @@ describe("the movement page", () => {
     draw();
     const box = await screen.findByLabelText(/Move APIJA \(A039\/26\)/);
     expect(box.getAttribute("type")).toBe("checkbox");
+  });
+});
+
+
+describe("moving animals nothing says are due", () => {
+  beforeEach(() => call.mockClear());
+
+  it("offers the whole herd, not only the due list", async () => {
+    // The farm moves animals for reasons no rule knows: a lame cow off the
+    // concrete, a group split for space, a bull out of a visitor's way.
+    draw();
+    await screen.findByRole("tab", { name: /Move anyone/ });
+    openTab(/Move anyone/);
+    await waitFor(() => expect(screen.getByText("APIJA (A039/26)")).toBeTruthy());
+    expect(screen.getByText("SITA (A101/23)")).toBeTruthy();
+  });
+
+  it("narrows on a search without asking the server again", async () => {
+    draw();
+    await screen.findByRole("tab", { name: /Move anyone/ });
+    openTab(/Move anyone/);
+    const before = call.mock.calls.length;
+    fireEvent.change(screen.getByLabelText("Find animals to move"), {
+      target: { value: "sita" },
+    });
+    await waitFor(() => expect(screen.queryByText("APIJA (A039/26)")).toBeNull());
+    expect(call.mock.calls.length).toBe(before);
+  });
+
+  it("will not move until a destination is chosen", async () => {
+    draw();
+    await screen.findByRole("tab", { name: /Move anyone/ });
+    openTab(/Move anyone/);
+    fireEvent.click(await screen.findByLabelText("Move APIJA (A039/26)"));
+    // The panel's own Move button, not the row toggles that share the word.
+    const panel = screen.getByRole("tabpanel");
+    expect(
+      (within(panel).getByRole("button", { name: /^Move/ }) as HTMLButtonElement).disabled,
+    ).toBe(true);
+  });
+
+  it("leaves out anyone already standing in the destination", async () => {
+    // Selecting her and sending her to the herd she is in is a Movement event
+    // that says nothing happened, which the server refuses anyway.
+    draw();
+    await screen.findByRole("tab", { name: /Move anyone/ });
+    openTab(/Move anyone/);
+    fireEvent.click(await screen.findByLabelText("Move APIJA (A039/26)"));
+    fireEvent.click(screen.getByLabelText("Move SITA (A101/23)"));
+    fireEvent.change(screen.getByLabelText("Herd they are moving to"), {
+      target: { value: "STEAMERS" },
+    });
+    await waitFor(() => expect(screen.getByText(/already in STEAMERS/)).toBeTruthy());
+    fireEvent.click(screen.getByRole("button", { name: /Move 1/ }));
+    await waitFor(() => {
+      const sent = call.mock.calls.find((c) => String(c[0]).includes("move_animals"));
+      const body = (sent?.[1] as { payload: { animals: string[]; new_herd: string } }).payload;
+      expect(body.animals).toEqual(["A039/26"]);
+      expect(body.new_herd).toBe("STEAMERS");
+    });
+  });
+
+  it("takes everyone the search is showing in one tick", async () => {
+    draw();
+    await screen.findByRole("tab", { name: /Move anyone/ });
+    openTab(/Move anyone/);
+    fireEvent.click(await screen.findByRole("button", { name: /Pick all 2 shown/ }));
+    await waitFor(() => expect(screen.getByText(/2 picked/)).toBeTruthy());
   });
 });
