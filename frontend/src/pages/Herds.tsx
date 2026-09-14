@@ -21,6 +21,8 @@ import { Label } from "@/components/ui/label";
 import { isError } from "@/lib/frappe";
 import { asSummaries, getCullBoard, type FarmAnimal } from "@/lib/culling";
 import { buyInAnimal, createHerd } from "@/lib/herds";
+import { OperatorField } from "@/components/events/OperatorField";
+import { useOperator } from "@/lib/operator";
 import { cn, todayISO } from "@/lib/utils";
 
 /**
@@ -36,6 +38,7 @@ import { cn, todayISO } from "@/lib/utils";
  * her.
  */
 export function Herds() {
+  const who = useOperator();
   const [roster, setRoster] = useState<FarmAnimal[]>([]);
   const [herds, setHerds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -77,6 +80,7 @@ export function Herds() {
 
       <div className="grid min-w-0 gap-5 lg:grid-cols-2">
         <SplitHerd
+          who={who}
           roster={roster}
           loading={loading}
           onReload={load}
@@ -86,6 +90,7 @@ export function Herds() {
           }}
         />
         <BuyIn
+          who={who}
           herds={herds}
           onDone={(m) => {
             setNote(m);
@@ -97,12 +102,16 @@ export function Herds() {
   );
 }
 
+type Who = ReturnType<typeof useOperator>;
+
 function SplitHerd({
+  who,
   roster,
   loading,
   onReload,
   onDone,
 }: {
+  who: Who;
   roster: FarmAnimal[];
   loading: boolean;
   onReload: () => void;
@@ -119,7 +128,7 @@ function SplitHerd({
   async function submit() {
     setBusy(true);
     setFailure(null);
-    const r = await createHerd({ herd_name: name.trim(), animals: picked });
+    const r = await createHerd({ herd_name: name.trim(), animals: picked, operator: who.value });
     setBusy(false);
     if (isError(r)) {
       setFailure(r.error);
@@ -201,7 +210,8 @@ function SplitHerd({
 
         {failure && <Notice tone="error">{failure}</Notice>}
 
-        <Button onClick={submit} disabled={busy || !name.trim()}>
+        {who.needed && <OperatorField operator={who.operator} onChange={who.setOperator} />}
+        <Button onClick={submit} disabled={busy || !name.trim() || who.needed}>
           <Split className="mr-2 h-4 w-4" strokeWidth={1.75} />
           {busy
             ? "Moving…"
@@ -215,9 +225,11 @@ function SplitHerd({
 }
 
 function BuyIn({
+  who,
   herds,
   onDone,
 }: {
+  who: Who;
   herds: string[];
   onDone: (message: string) => void;
 }) {
@@ -248,6 +260,7 @@ function BuyIn({
       purchase_value: price ? Number(price) : undefined,
       date_of_birth: born || undefined,
       arrival_date: arrived,
+      operator: who.value,
     });
     setBusy(false);
     if (isError(r)) {
@@ -366,7 +379,8 @@ function BuyIn({
 
         {failure && <Notice tone="error">{failure}</Notice>}
 
-        <Button onClick={submit} disabled={busy || !herd}>
+        {who.needed && <OperatorField operator={who.operator} onChange={who.setOperator} />}
+        <Button onClick={submit} disabled={busy || !herd || who.needed}>
           <PackagePlus className="mr-2 h-4 w-4" strokeWidth={1.75} />
           {busy ? "Bringing her in…" : "Bring her onto the farm"}
         </Button>

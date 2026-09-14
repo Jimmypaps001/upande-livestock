@@ -223,7 +223,7 @@ export function rejectCull(caseName: string, reason: string) {
   });
 }
 
-export function postCull(caseName: string) {
+export function postCull(caseName: string, operator?: string) {
   return call<{
     name: string;
     animal: string;
@@ -231,10 +231,16 @@ export function postCull(caseName: string) {
     herd_before: string | null;
     herd_now: string | null;
     claim: { name: string; insurer: string; claimed_amount: number } | null;
-  }>(POST, { payload: { case: caseName } });
+  }>(POST, { payload: { case: caseName, operator } });
 }
 
-export function recordMortality(input: { animal: string; death_cause: string; remarks?: string; death_date?: string }) {
+export function recordMortality(input: {
+  animal: string;
+  death_cause: string;
+  remarks?: string;
+  death_date?: string;
+  operator?: string;
+}) {
   return call<{ name: string; animal: string; claim: { name: string; claimed_amount: number } | null }>(
     MORTALITY,
     { payload: input },

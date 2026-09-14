@@ -11,6 +11,7 @@ import {
   Card, CardContent, CardDescription, CardHeaderRow, CardHeading, CardTitle, CardTools,
 } from "@/components/ui/card";
 import { CheckCircle } from "@/components/ui/check-circle";
+import { OperatorField } from "@/components/events/OperatorField";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -20,6 +21,7 @@ import {
   getMovementOptions, getMovementSuggestions, moveAnimals,
   type AnimalChoice, type MoveSuggestion, type MovementOptions, type MovementSuggestions,
 } from "@/lib/events";
+import { useOperator } from "@/lib/operator";
 import { cn, todayISO } from "@/lib/utils";
 
 /**
@@ -47,6 +49,7 @@ export function Movement() {
   const [when, setWhen] = useState(todayISO());
   const [remarks, setRemarks] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
+  const who = useOperator(options?.employee);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -94,15 +97,24 @@ export function Movement() {
     });
   }
 
+  const needsOperator = who.needed;
+
   async function moveThese(herd: string, chosen: string[], key: string) {
     if (!chosen.length) return;
+    if (needsOperator) {
+      setNote(
+        "A movement has to say who made it, and your login has no Employee linked. " +
+          "Put one in the box above, or link an Employee to your user.",
+      );
+      return;
+    }
     setBusy(key);
     const r = await moveAnimals({
       animals: chosen,
       new_herd: herd,
       event_date: when,
       remarks: remarks.trim() || undefined,
-      operator: options?.employee || undefined,
+      operator: who.value,
     });
     setBusy(null);
     if (isError(r)) {
@@ -132,8 +144,11 @@ export function Movement() {
         calf — both are here, and each says which.
       </PageHeading>
 
+      {/* Failures of the page itself sit at the top; what a BUTTON said sits
+          beside the buttons, below — an answer to a click at the bottom of a
+          long page must not appear only above the fold. */}
       {failure && <Notice tone="error">{failure}</Notice>}
-      {note && <Notice tone="info">{note}</Notice>}
+
 
       <FigureRow>
         <Figure loading={!due} label="Due to move" value={String(rows.length)}
@@ -160,8 +175,13 @@ export function Movement() {
             placeholder="Coming into milk."
           />
         </div>
+        {needsOperator && (
+          <OperatorField operator={who.operator} onChange={who.setOperator} />
+        )}
         <RefreshButton onClick={load} loading={loading} label="who is due" />
       </div>
+
+      {note && <Notice tone="info">{note}</Notice>}
 
       <Tabs defaultValue="due">
         <TabsList>
@@ -301,6 +321,11 @@ function MoveAnyone({
           >
             {busy ? "Moving…" : `Move ${chosen.length || ""}`.trim()}
           </Button>
+          {(!herd || !chosen.length) && (
+            <span className="text-[11.5px] text-[var(--sd-quiet)]">
+              {!chosen.length ? "Pick who is going." : "Choose where they are going."}
+            </span>
+          )}
         </CardTools>
       </CardHeaderRow>
       <CardContent className="flex flex-col gap-3 pt-0">
@@ -436,6 +461,9 @@ function DestinationCard({
           <Button size="sm" disabled={busy || !chosen} onClick={onMove}>
             {busy ? "Moving…" : `Move ${chosen || ""}`.trim()}
           </Button>
+          {!chosen && (
+            <span className="text-[11.5px] text-[var(--sd-quiet)]">Pick who is going.</span>
+          )}
         </CardTools>
       </CardHeaderRow>
       <CardContent className="pt-0">

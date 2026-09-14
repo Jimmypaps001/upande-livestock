@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ShieldCheck, Skull } from "lucide-react";
 import { AnimalSearch } from "@/components/animals/AnimalSearch";
 import { Notice } from "@/components/feeding/Notice";
+import { OperatorField } from "@/components/events/OperatorField";
 import { DatePicker } from "@/components/DatePicker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,9 +34,12 @@ import type { AnimalSummary } from "@/lib/animals";
 export function RaiseCase({
   animals,
   onRaised,
+  who,
 }: {
   animals: AnimalSummary[];
   onRaised: (message: string) => void;
+  /** Recording a death moves her out of her herd, which needs an operator. */
+  who: { operator: string; setOperator: (v: string) => void; needed: boolean; value?: string };
 }) {
   const [animal, setAnimal] = useState<string | null>(null);
   const [flow, setFlow] = useState<Flow>("Sale");
@@ -79,6 +83,7 @@ export function RaiseCase({
             death_cause: cause,
             remarks: reason || undefined,
             death_date: when,
+            operator: who.value,
           })
         : await raiseCull({
             animal,
@@ -231,9 +236,12 @@ export function RaiseCase({
       </div>
 
       {failure && <Notice tone="error">{failure}</Notice>}
+      {flow === "Mortality" && who.needed && (
+        <OperatorField operator={who.operator} onChange={who.setOperator} />
+      )}
 
       <div className="flex items-center gap-3">
-        <Button onClick={submit} disabled={!animal || busy}>
+        <Button onClick={submit} disabled={!animal || busy || (flow === "Mortality" && who.needed)}>
           {busy
             ? "Working…"
             : flow === "Mortality"

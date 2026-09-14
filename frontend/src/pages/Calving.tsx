@@ -20,6 +20,8 @@ import {
   type CalvingDestinations,
   type MovementOptions,
 } from "@/lib/events";
+import { OperatorField } from "@/components/events/OperatorField";
+import { useOperator } from "@/lib/operator";
 import { cn, todayISO } from "@/lib/utils";
 
 interface CalfRow {
@@ -63,6 +65,7 @@ export function Calving() {
   const [where, setWhere] = useState<CalvingDestinations | null>(null);
   const [busy, setBusy] = useState(false);
   const [term, setTerm] = useState("");
+  const who = useOperator(options?.employee);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -113,7 +116,7 @@ export function Calving() {
       dam,
       event_date: when,
       remarks: remarks.trim() || undefined,
-      operator: options?.employee || undefined,
+      operator: who.value,
       outcome: calves.every((c) => c.is_stillborn) ? "Still Birth" : "Live Birth",
       calves: calves.map((c) => ({
         sex: c.sex,
@@ -337,7 +340,10 @@ export function Calving() {
                     />
                   </div>
 
-                  <Button onClick={send} disabled={busy}>
+                  {who.needed && (
+                    <OperatorField operator={who.operator} onChange={who.setOperator} />
+                  )}
+                  <Button onClick={send} disabled={busy || who.needed}>
                     <Baby className="mr-2 h-4 w-4" strokeWidth={1.75} />
                     {busy
                       ? "Recording…"

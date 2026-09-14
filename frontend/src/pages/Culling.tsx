@@ -34,6 +34,8 @@ import {
   type CullCase,
   type Verdict,
 } from "@/lib/culling";
+import { OperatorField } from "@/components/events/OperatorField";
+import { useOperator } from "@/lib/operator";
 import { cn, fmt } from "@/lib/utils";
 
 /**
@@ -60,6 +62,7 @@ export function Culling() {
   const [notes, setNotes] = useState("");
   const [price, setPrice] = useState("");
   const [buyer, setBuyer] = useState("");
+  const who = useOperator();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -211,6 +214,7 @@ export function Culling() {
                   buyer={buyer}
                   setBuyer={setBuyer}
                   act={act}
+                  who={who}
                 />
               )}
             </CardContent>
@@ -227,6 +231,7 @@ export function Culling() {
             </CardHeaderRow>
             <CardContent className="pt-0">
               <RaiseCase
+                who={who}
                 animals={roster}
                 onRaised={(m) => {
                   setNote(m);
@@ -348,6 +353,7 @@ function CaseChain({
   buyer,
   setBuyer,
   act,
+  who,
 }: {
   c: CullCase;
   busy: boolean;
@@ -358,6 +364,7 @@ function CaseChain({
   buyer: string;
   setBuyer: (v: string) => void;
   act: (fn: () => Promise<{ error?: string } | Record<string, unknown>>, said: string) => void;
+  who: ReturnType<typeof useOperator>;
 }) {
   const verdicts: readonly Verdict[] =
     c.flow === "Sale" ? (["Fit for sale", "Not fit for sale"] as const) : VERDICTS;
@@ -478,11 +485,13 @@ function CaseChain({
             Posting is the step that cannot be undone by editing a record. She leaves her
             herd, her status becomes final, and the asset is sold or written off.
           </Notice>
+          {who.needed && <OperatorField operator={who.operator} onChange={who.setOperator} />}
           <div className="flex flex-wrap gap-2">
             <Button
-              disabled={busy}
+              disabled={busy || who.needed}
               onClick={() =>
-                act(() => postCull(c.name), `${c.animal} has left the farm and her herd.`)
+                act(() => postCull(c.name, who.value),
+                    `${c.animal} has left the farm and her herd.`)
               }
             >
               Post it

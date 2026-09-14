@@ -89,6 +89,11 @@ describe("the herds page", () => {
   it("announces a bought animal by the farm's number, not the seller's tag", async () => {
     draw();
     await waitFor(() => expect(screen.getByText("APIJA")).toBeTruthy());
+    // No Employee is linked to this login, so the page asks who is doing it —
+    // the server refuses an event that does not say.
+    fireEvent.change(screen.getAllByLabelText("Who is recording this")[1], {
+      target: { value: "HR-EMP-1" },
+    });
     fireEvent.change(screen.getByLabelText(/Their tag for her/), {
       target: { value: "KD-441" },
     });
