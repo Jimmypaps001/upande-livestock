@@ -57,7 +57,7 @@ def list_notifications(category=None, unread_only=0, limit=50, offset=0):
 			"""
 			SELECT n.name, n.subject, n.email_content, n.`read` AS `read`, n.creation,
 			       n.document_type, n.document_name,
-			       a.alert_kind, a.severity, a.animal, a.herd, a.status AS alert_status
+			       a.alert_kind, a.severity, a.animal, a.herd, a.item, a.status AS alert_status
 			FROM `tabNotification Log` n
 			LEFT JOIN `tabLivestock Alert` a ON a.name = n.document_name
 			WHERE {}

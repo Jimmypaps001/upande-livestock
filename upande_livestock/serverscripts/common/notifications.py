@@ -78,6 +78,12 @@ ROLES_FOR_KIND = {
 	# A calving needs a pen prepared and the cow watched, which is attendant
 	# work, as well as the breeder who has been tracking the pregnancy.
 	"Calving Due": ("Livestock Manager", "Livestock Breeder", "Livestock Attendant"),
+	# The store. The keeper is who mixes the next batch and who knows what is on
+	# the floor; the manager is who authorises buying more. Deliberately NOT the
+	# attendant who feeds: he cannot act on it, and a bell he cannot answer is
+	# the one that teaches him to ignore the rest.
+	"Concentrate Low": ("Livestock Manager", "Livestock Stores"),
+	"Concentrate Out": ("Livestock Manager", "Livestock Stores"),
 }
 
 #: A kind nobody thought to map still reaches the person accountable for the

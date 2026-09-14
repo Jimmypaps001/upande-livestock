@@ -11,6 +11,7 @@ to guard against.
 import frappe
 from frappe.utils import today
 
+from upande_livestock.serverscripts.alerts._concentrate import concentrate_alerts
 from upande_livestock.serverscripts.common import herd_movement, notifications
 
 #: How far either side of the expected date a calving is worth mentioning, when
@@ -165,11 +166,20 @@ def collect():
 
 	out += calving_due()
 
+	# The store, not an animal. These carry `item` where the rest carry
+	# `animal` — see alerts/_concentrate.py for why they are here at all.
+	out += concentrate_alerts()
+
 	return out
 
 
-def already_open(kind, animal):
-	"""Is this animal already flagged for this reason, and still unactioned?
+def already_open(kind, animal, item=None):
+	"""Is this already flagged for this reason, and still unactioned?
+
+	Keyed on whichever of the two this kind of alert is ABOUT. A feed alert
+	names an item and no animal, so matching on the animal alone would make
+	every short concentrate the same alert as every other one — the first would
+	suppress the rest, and the farm would hear about one empty bin out of four.
 
 	Was "already raised TODAY", which deduplicated a scheduler run against
 	itself but not against yesterday's: an animal overdue for three weeks
@@ -180,10 +190,11 @@ def already_open(kind, animal):
 	A row that somebody has actioned or dismissed no longer suppresses: if the
 	same animal falls behind again later, that is news again.
 	"""
+	subject = {"item": item} if item else {"animal": animal}
 	return frappe.db.exists("Livestock Alert", {
 		"alert_kind": kind,
-		"animal": animal,
 		"status": "Open",
+		**subject,
 	})
 
 
@@ -197,14 +208,15 @@ def raise_alerts():
 	"""
 	raised = skipped = 0
 	for a in collect():
-		if already_open(a["kind"], a["animal"]):
+		if already_open(a["kind"], a.get("animal"), a.get("item")):
 			skipped += 1
 			continue
 		doc = frappe.new_doc("Livestock Alert")
 		doc.alert_kind = a["kind"]
 		doc.alert_date = today()
-		doc.animal = a["animal"]
-		doc.herd = a["herd"]
+		doc.animal = a.get("animal")
+		doc.herd = a.get("herd")
+		doc.item = a.get("item")
 		doc.severity = a["severity"]
 		doc.message = a["message"]
 		doc.detail = frappe.as_json(a["detail"])

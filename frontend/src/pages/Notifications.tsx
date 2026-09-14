@@ -34,6 +34,7 @@ const TABS: Array<{ value: LivestockCategory | ""; label: string }> = [
   { value: "", label: "All" },
   { value: "movement", label: CATEGORY_LABEL.movement },
   { value: "breeding", label: CATEGORY_LABEL.breeding },
+  { value: "feed", label: CATEGORY_LABEL.feed },
 ];
 
 function Pill({
@@ -208,7 +209,7 @@ export function Notifications() {
             <CardDescription>
               {category || unreadOnly
                 ? "Nothing matches these filters."
-                : "Nothing is due or overdue. The nightly sweep raises alerts about herd movement, culling windows, calving dates and pregnancy checks — they will appear here."}
+                : "Nothing is due or overdue. The nightly sweep raises alerts about herd movement, culling windows, calving dates, pregnancy checks and concentrate running low — they will appear here."}
             </CardDescription>
           </CardHeader>
           <CardContent className="text-[13px] text-[var(--sd-muted)]">

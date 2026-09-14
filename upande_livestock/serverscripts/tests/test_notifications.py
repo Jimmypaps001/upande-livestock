@@ -28,6 +28,7 @@ from frappe.utils import add_days, today
 
 from upande_livestock.serverscripts.alerts import raise_alerts as herd_alerts
 from upande_livestock.serverscripts.alerts._shared import (
+	CATEGORIES,
 	CATEGORY_OF_KIND,
 	KINDS,
 	kinds_in_category,
@@ -96,12 +97,15 @@ class TestTheTaxonomyIsWhole(IntegrationTestCase):
 			self.assertIn(kind, options, f"{kind} is not selectable on Livestock Alert")
 
 	def test_every_kind_has_a_category(self):
+		"""Checked against CATEGORIES rather than a list repeated here — a third
+		category was added and this test was the only thing that still believed
+		there were two."""
 		for kind in KINDS:
-			self.assertIn(CATEGORY_OF_KIND.get(kind), ("movement", "breeding"), kind)
+			self.assertIn(CATEGORY_OF_KIND.get(kind), CATEGORIES, kind)
 
 	def test_every_category_names_at_least_one_kind(self):
-		self.assertTrue(kinds_in_category("movement"))
-		self.assertTrue(kinds_in_category("breeding"))
+		for category in CATEGORIES:
+			self.assertTrue(kinds_in_category(category), category)
 		self.assertEqual(kinds_in_category("not-a-category"), ())
 
 	def test_every_kind_has_an_audience_and_it_is_not_all_six_roles(self):

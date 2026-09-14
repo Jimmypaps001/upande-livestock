@@ -105,6 +105,13 @@ FLOAT_TIMING_DEFAULTS = {
 	# than in TIMING_DEFAULTS because get_timing() cint()s and ZERO_IS_INVALID
 	# would refuse the 0 that legitimately means "do not check".
 	"custom_quality_scc_ceiling": 400.0,
+	# Days of concentrate cover below which the farm wants to be told. Seven,
+	# because this farm mixes weekly: less than a week of cover means the next
+	# mix cannot wait for the next mixing day, which is the moment worth a
+	# warning rather than the moment the bin is empty. A Float because cover is
+	# a measurement and half a day of it is a real answer, and here rather than
+	# in TIMING_DEFAULTS because 0 legitimately means "do not check".
+	"custom_concentrate_cover_days": 7.0,
 }
 
 # The single structure the seeder (and its enforcing test) walk. Not consumed

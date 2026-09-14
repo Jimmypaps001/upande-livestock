@@ -19,13 +19,19 @@ MOVEMENT_KINDS = ("Bull Cull Due", "Move Due", "Move Overdue")
 #: The breeding calendar — something is due, overdue, or has stalled.
 BREEDING_KINDS = ("Cow Open Too Long", "Calving Due", "Pregnancy Check Overdue")
 
-KINDS = MOVEMENT_KINDS + BREEDING_KINDS
+#: The store. These are the only kinds that are NOT about an animal — a
+#: concentrate running out is about a feed and about the whole farm, so they
+#: carry `item` instead of `animal` and are deduplicated on it.
+FEED_KINDS = ("Concentrate Low", "Concentrate Out")
 
-CATEGORIES = ("movement", "breeding")
+KINDS = MOVEMENT_KINDS + BREEDING_KINDS + FEED_KINDS
+
+CATEGORIES = ("movement", "breeding", "feed")
 
 CATEGORY_OF_KIND = {
 	**{k: "movement" for k in MOVEMENT_KINDS},
 	**{k: "breeding" for k in BREEDING_KINDS},
+	**{k: "feed" for k in FEED_KINDS},
 }
 
 

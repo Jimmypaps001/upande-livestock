@@ -132,10 +132,21 @@ class TestAlerts(IntegrationTestCase):
 		herd_alerts.collect()
 		self.assertEqual(frappe.db.count("Livestock Alert"), before)
 
-	def test_every_alert_names_an_animal_and_says_why(self):
+	def test_every_alert_names_its_subject_and_says_why(self):
+		"""An alert has to be actionable, which means naming the thing to act on.
+
+		For six of the eight kinds that is an animal. The two feed kinds name an
+		item instead — a concentrate running out is about a feed and about the
+		whole farm, and there is no one cow to point at. What may never happen
+		is an alert that names neither, because there is then nothing for the
+		person reading it to go and look at.
+		"""
 		for a in herd_alerts.collect():
 			self.assertIn(a["kind"], KINDS)
-			self.assertTrue(a["animal"])
+			self.assertTrue(
+				a.get("animal") or a.get("item"),
+				f"{a['kind']} names neither an animal nor an item",
+			)
 			self.assertTrue(a["message"])
 			self.assertIn(a["severity"], ("Due", "Overdue"))
 

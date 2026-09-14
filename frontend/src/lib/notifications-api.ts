@@ -13,7 +13,7 @@
 
 import { call, isError } from "./frappe";
 
-export type LivestockCategory = "movement" | "breeding";
+export type LivestockCategory = "movement" | "breeding" | "feed";
 
 export type AlertKind =
   | "Bull Cull Due"
@@ -21,7 +21,12 @@ export type AlertKind =
   | "Move Overdue"
   | "Cow Open Too Long"
   | "Calving Due"
-  | "Pregnancy Check Overdue";
+  | "Pregnancy Check Overdue"
+  // The two kinds that are not about an animal. A concentrate running out
+  // stops every herd that eats it, so it names an `item` where the rest name
+  // an `animal`.
+  | "Concentrate Low"
+  | "Concentrate Out";
 
 export interface LivestockNotification {
   name: string;
@@ -35,6 +40,7 @@ export interface LivestockNotification {
   severity?: "Due" | "Overdue" | null;
   animal?: string | null;
   herd?: string | null;
+  item?: string | null;
   alert_status?: string | null;
   category?: LivestockCategory | null;
 }
@@ -44,6 +50,7 @@ const BASE = "upande_livestock.serverscripts.notifications";
 export const CATEGORY_LABEL: Record<LivestockCategory, string> = {
   movement: "Movement",
   breeding: "Breeding",
+  feed: "Feed",
 };
 
 export async function fetchNotifications(

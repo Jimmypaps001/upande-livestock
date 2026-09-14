@@ -13,6 +13,7 @@
   "cb_head",
   "animal",
   "herd",
+  "item",
   "status",
   "sb_body",
   "message",
@@ -23,28 +24,105 @@
   "action_notes"
  ],
  "fields": [
-  {"fieldname": "alert_kind", "fieldtype": "Select", "label": "Alert", "reqd": 1, "in_list_view": 1,
+  {
+   "fieldname": "alert_kind",
+   "fieldtype": "Select",
+   "label": "Alert",
+   "reqd": 1,
+   "in_list_view": 1,
    "in_standard_filter": 1,
-   "options": "Bull Cull Due\nMove Due\nMove Overdue\nCow Open Too Long\nCalving Due\nPregnancy Check Overdue"},
-  {"fieldname": "severity", "fieldtype": "Select", "label": "Severity", "in_list_view": 1,
-   "in_standard_filter": 1, "options": "Due\nOverdue"},
-  {"fieldname": "alert_date", "fieldtype": "Date", "label": "Raised On", "reqd": 1, "in_list_view": 1},
-  {"fieldname": "cb_head", "fieldtype": "Column Break"},
-  {"fieldname": "animal", "fieldtype": "Link", "label": "Animal", "options": "Animal",
-   "in_list_view": 1, "in_standard_filter": 1},
-  {"fieldname": "herd", "fieldtype": "Link", "label": "Herd", "options": "Herds",
-   "in_standard_filter": 1},
-  {"fieldname": "status", "fieldtype": "Select", "label": "Status", "default": "Open",
-   "options": "Open\nActioned\nDismissed", "in_list_view": 1, "in_standard_filter": 1},
-  {"fieldname": "sb_body", "fieldtype": "Section Break"},
-  {"fieldname": "message", "fieldtype": "Small Text", "label": "Message", "read_only": 1},
-  {"fieldname": "detail", "fieldtype": "Code", "label": "Detail", "options": "JSON", "read_only": 1,
-   "description": "The numbers behind the message, kept so a report can use them without re-deriving."},
-  {"fieldname": "sb_action", "fieldtype": "Section Break", "label": "Outcome",
-   "depends_on": "eval:doc.status && doc.status != 'Open'"},
-  {"fieldname": "actioned_by", "fieldtype": "Link", "label": "Actioned By", "options": "User"},
-  {"fieldname": "actioned_on", "fieldtype": "Datetime", "label": "Actioned On"},
-  {"fieldname": "action_notes", "fieldtype": "Small Text", "label": "Notes"}
+   "options": "Bull Cull Due\nMove Due\nMove Overdue\nCow Open Too Long\nCalving Due\nPregnancy Check Overdue\nConcentrate Low\nConcentrate Out"
+  },
+  {
+   "fieldname": "severity",
+   "fieldtype": "Select",
+   "label": "Severity",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "options": "Due\nOverdue"
+  },
+  {
+   "fieldname": "alert_date",
+   "fieldtype": "Date",
+   "label": "Raised On",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "cb_head",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "animal",
+   "fieldtype": "Link",
+   "label": "Animal",
+   "options": "Animal",
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "herd",
+   "fieldtype": "Link",
+   "label": "Herd",
+   "options": "Herds",
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "item",
+   "fieldtype": "Link",
+   "label": "Item",
+   "options": "Item",
+   "description": "The feed this alert is about, when it is about a feed rather than an animal."
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "default": "Open",
+   "options": "Open\nActioned\nDismissed",
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "sb_body",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "message",
+   "fieldtype": "Small Text",
+   "label": "Message",
+   "read_only": 1
+  },
+  {
+   "fieldname": "detail",
+   "fieldtype": "Code",
+   "label": "Detail",
+   "options": "JSON",
+   "read_only": 1,
+   "description": "The numbers behind the message, kept so a report can use them without re-deriving."
+  },
+  {
+   "fieldname": "sb_action",
+   "fieldtype": "Section Break",
+   "label": "Outcome",
+   "depends_on": "eval:doc.status && doc.status != 'Open'"
+  },
+  {
+   "fieldname": "actioned_by",
+   "fieldtype": "Link",
+   "label": "Actioned By",
+   "options": "User"
+  },
+  {
+   "fieldname": "actioned_on",
+   "fieldtype": "Datetime",
+   "label": "Actioned On"
+  },
+  {
+   "fieldname": "action_notes",
+   "fieldtype": "Small Text",
+   "label": "Notes"
+  }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
@@ -55,14 +133,53 @@
  "naming_rule": "Expression",
  "owner": "Administrator",
  "permissions": [
-  {"create": 1, "delete": 1, "email": 1, "export": 1, "print": 1, "read": 1, "report": 1,
-   "role": "Livestock Manager", "share": 1, "write": 1},
-  {"read": 1, "report": 1, "role": "Livestock Attendant", "write": 1},
-  {"read": 1, "report": 1, "role": "Livestock Vet", "write": 1},
-  {"read": 1, "report": 1, "role": "Livestock Breeder", "write": 1},
-  {"read": 1, "report": 1, "role": "Livestock Stores"},
-  {"create": 1, "delete": 1, "email": 1, "export": 1, "print": 1, "read": 1, "report": 1,
-   "role": "System Manager", "share": 1, "write": 1}
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Livestock Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "read": 1,
+   "report": 1,
+   "role": "Livestock Attendant",
+   "write": 1
+  },
+  {
+   "read": 1,
+   "report": 1,
+   "role": "Livestock Vet",
+   "write": 1
+  },
+  {
+   "read": 1,
+   "report": 1,
+   "role": "Livestock Breeder",
+   "write": 1
+  },
+  {
+   "read": 1,
+   "report": 1,
+   "role": "Livestock Stores"
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
  ],
  "sort_field": "creation",
  "sort_order": "DESC",
