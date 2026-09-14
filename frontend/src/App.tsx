@@ -59,6 +59,16 @@ const HealthCase = lazy(() => import("@/pages/Health").then((m) => ({ default: m
 const Weight = lazy(() => import("@/pages/Health").then((m) => ({ default: m.Weight })));
 const Husbandry = lazy(() => import("@/pages/Health").then((m) => ({ default: m.Husbandry })));
 const Movement = lazy(() => import("@/pages/Movement").then((m) => ({ default: m.Movement })));
+const Calving = lazy(() => import("@/pages/Calving").then((m) => ({ default: m.Calving })));
+const Treatment = lazy(() => import("@/pages/Treatment").then((m) => ({ default: m.Treatment })));
+// The four read-only views share a loader and nothing else heavy, so they ship
+// as one chunk rather than four copies of it.
+const Events = lazy(() => import("@/pages/Insights").then((m) => ({ default: m.Events })));
+const Production = lazy(() => import("@/pages/Insights").then((m) => ({ default: m.Production })));
+const Reports = lazy(() => import("@/pages/Insights").then((m) => ({ default: m.Reports })));
+const HealthOverview = lazy(() =>
+  import("@/pages/Insights").then((m) => ({ default: m.HealthOverview })),
+);
 
 const TITLES: Record<View, string> = {
   dashboard: "Dashboard",
@@ -120,6 +130,12 @@ const PAGES: Partial<Record<View, React.ComponentType>> = {
   weight: Weight,
   husbandry: Husbandry,
   movement: Movement,
+  calving: Calving,
+  treatment: Treatment,
+  events: Events,
+  production: Production,
+  reports: Reports,
+  health: HealthOverview,
 };
 
 export function App() {

@@ -48,7 +48,7 @@ export function Service() {
           { name: "sire", label: "Sire", kind: "select", options: o.sires,
             hint: "Or leave blank and note it below." },
           { name: "semen_item", label: "Straw used", kind: "select",
-            options: o.semen_items.map((i) => i.item_code),
+            options: o.semen_items.map((i) => i.value),
             hint: "Issued from the semen store when chosen." },
           { name: "remarks", label: "Notes", kind: "notes",
             placeholder: "Standing heat at 6am, served at 4pm." },

@@ -17,6 +17,22 @@ import { call, type Envelope } from "@/lib/frappe";
 
 const NS = "upande_livestock.serverscripts";
 
+/**
+ * A pickable item out of a store, as `common/stock_items.stock_items` answers.
+ *
+ * `value` is the item code and `label` already carries what is left in store —
+ * "Albendazole 10% Oral Drench (1 L) · 1991.93 Litre in store". Rebuilding that
+ * sentence on the client would be a second place for the units to go wrong,
+ * and feed and drug units are what this app has been burnt by.
+ */
+export interface StockChoice {
+  value: string;
+  label: string;
+  item_name?: string;
+  qty?: number;
+  uom?: string;
+}
+
 export interface AnimalChoice {
   name: string;
   label: string;
@@ -31,7 +47,7 @@ export interface BreedingOptions {
   service_types: string[];
   diagnosis_results: string[];
   sires: string[];
-  semen_items: { item_code: string; item_name?: string; qty?: number }[];
+  semen_items: StockChoice[];
   default_semen_item: string | null;
   service_wait_days: number;
   employee: string | null;
@@ -111,11 +127,79 @@ export const createMovementEvent = (p: Payload) =>
   post<{ name: string }>(`${NS}.movement.create_movement_event.create_movement_event`, p);
 export const getOpenHealthCases = () =>
   call<{ cases: Record<string, unknown>[] }>(`${NS}.health.open_health_cases.open_health_cases`, {});
+export interface CalvingDestinations {
+  dam: { from_herd: string; to_herd: string; will_move: boolean; reason: string };
+  female_calf: { to_herd: string; reason: string };
+  male_calf: { to_herd: string; reason: string };
+}
+
 export const getCalvingDestinations = (dam: string) =>
-  call<{
-    dam: { from_herd: string; to_herd: string; will_move: boolean; reason: string };
-    female_calf: { to_herd: string; reason: string };
-    male_calf: { to_herd: string; reason: string };
-  }>(`${NS}.breeding.calving_destinations.calving_destinations`, { dam });
+  call<CalvingDestinations>(`${NS}.breeding.calving_destinations.calving_destinations`, { dam });
 export const recordBirth = (p: Payload) =>
   post<{ name: string; calves: { animal: string }[] }>(`${NS}.breeding.record_birth.record_birth`, p);
+
+/* --------------------------------------------------------- read-only views */
+
+export interface EventRow {
+  name: string;
+  animal: string | null;
+  current_herd: string | null;
+  new_herd: string | null;
+  event_type: string | null;
+  event_date: string | null;
+  service_type?: string | null;
+}
+
+export interface EventsView {
+  rows: EventRow[];
+  summary: { total?: number; by_type?: Record<string, number> };
+  filters: { types?: string[] };
+  error?: string;
+}
+
+export interface ProductionRow {
+  name: string;
+  recording_date: string;
+  session?: string | null;
+  herd?: string | null;
+  cows_milked?: number | null;
+  total_yield_kg?: number | null;
+  discarded_kg?: number | null;
+  net_yield_kg?: number | null;
+  milk_revenue?: number | null;
+}
+
+export interface ProductionView {
+  rows: ProductionRow[];
+  summary: Record<string, number>;
+  filters: Record<string, unknown>;
+  error?: string;
+}
+
+export interface ReportsView {
+  production: { month_kg?: number; prev_kg?: number; delta_kg?: number; month_rev?: number; prev_rev?: number };
+  health: { active_animals?: number; open_cases?: number; cases_month?: number; open_rate?: number };
+  reproduction: { pregnant?: number; served?: number; open?: number; births_month?: number; preg_rate?: number };
+  herds: { name: string; animals: number }[];
+  error?: string;
+}
+
+export interface OpenCase {
+  value: string;
+  label: string;
+  animal: string;
+}
+
+export interface OpenCasesView {
+  cases: OpenCase[];
+  drug_items: StockChoice[];
+  routes?: string[];
+  employee?: string | null;
+}
+
+export const getEventsView = () => call<EventsView>(`${NS}.dashboard.get_events.get_events`, {});
+export const getProductionView = () =>
+  call<ProductionView>(`${NS}.dashboard.get_production.get_production`, {});
+export const getReportsView = () => call<ReportsView>(`${NS}.dashboard.get_reports.get_reports`, {});
+export const getOpenCases = () =>
+  call<OpenCasesView>(`${NS}.health.open_health_cases.open_health_cases`, {});

@@ -22,8 +22,18 @@ class TestLivestockEventType(IntegrationTestCase):
 	def _assert_event_count(self, expected):
 		self.assertEqual(frappe.db.count("Livestock Event"), expected)
 
-	def test_seeds_all_fifteen_types(self):
-		self.assertEqual(len(SEED_EVENT_TYPES), 17)
+	def test_seeds_every_type_the_app_relies_on(self):
+		"""Named for what it does, not for how many there were.
+
+		It has been "fifteen" through two additions now, asserting 17 and then
+		18 — a name that has to be edited to stay true is one nobody edits. What
+		the count is actually protecting is that nothing falls OUT of the list
+		silently, so it is asserted alongside the thing that would really break:
+		two seeds claiming the same name, where the second would never insert.
+		"""
+		names = [s["name"] for s in SEED_EVENT_TYPES]
+		self.assertEqual(len(names), len(set(names)), "two seeds share a name")
+		self.assertGreaterEqual(len(SEED_EVENT_TYPES), 18)
 
 		# Delete two already-seeded rows and prove ensure_livestock_event_types()
 		# recreates them (with the right flags), rather than merely relying on

@@ -10,7 +10,36 @@ import { cn } from "@/lib/utils";
  * the run would work. Rewording or truncating it would take away the only
  * instruction the operator has, so this renders the string as it arrived —
  * including its blank lines, which is what `whitespace-pre-line` is for.
+ *
+ * SOME OF THOSE MESSAGES CARRY MARKUP. Frappe's own `frappe.throw` takes HTML,
+ * and the app uses it: refusing a calving with no confirmed pregnancy answers
+ * with <b> headings and <br> line breaks laying out three numbered steps. Left
+ * alone, a herdsman reads "<b>❌ No Active Pregnancy Found!</b><br><br>" — the
+ * instruction is there and unreadable. So the tags are turned back into the
+ * line breaks they meant and then dropped.
+ *
+ * TURNED INTO TEXT, NOT RENDERED AS HTML. These strings pass through a server
+ * but some of them carry things a person typed — an animal name, a note on a
+ * case — and `dangerouslySetInnerHTML` on that is an injection waiting for the
+ * one farm whose cow is called something unfortunate.
  */
+
+const BLOCK_BREAK = /<\/?(br|p|div|li|h[1-6])[^>]*>/gi;
+const ANY_TAG = /<[^>]+>/g;
+
+export function plainText(value: React.ReactNode): React.ReactNode {
+  if (typeof value !== "string") return value;
+  if (!value.includes("<")) return value;
+  return value
+    .replace(BLOCK_BREAK, "\n")
+    .replace(ANY_TAG, "")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
 export function Notice({
   tone,
   children,
@@ -35,7 +64,7 @@ export function Notice({
       )}
     >
       <Icon className="mt-0.5 h-4 w-4 shrink-0" />
-      <div className="min-w-0 flex-1">{children}</div>
+      <div className="min-w-0 flex-1">{plainText(children)}</div>
     </div>
   );
 }
@@ -46,7 +75,7 @@ export function AmberNotice({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex items-start gap-2.5 rounded-[var(--sd-radius-lg)] border border-[var(--sd-amber-line)] bg-[var(--sd-amber-bg)] px-3.5 py-3 text-[13px] leading-relaxed text-[var(--sd-amber)]">
       <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-      <div className="min-w-0 flex-1">{children}</div>
+      <div className="min-w-0 flex-1">{plainText(children)}</div>
     </div>
   );
 }

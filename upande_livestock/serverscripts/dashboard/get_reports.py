@@ -5,8 +5,13 @@ Read-guarded on Animal."""
 import frappe
 from frappe.utils import add_months, flt, get_first_day, today
 
+from upande_livestock.serverscripts.common.animal import RETIRED_STATUSES
 from upande_livestock.serverscripts.common.envelope import guard_read
-from upande_livestock.serverscripts.dashboard._shared import _OPEN_CASE_STATUS, _active_animal_count, _herd_labels
+from upande_livestock.serverscripts.dashboard._shared import (
+	_OPEN_CASE_STATUS,
+	_active_animal_count,
+	_herd_labels,
+)
 
 
 @frappe.whitelist()
@@ -57,10 +62,20 @@ def get_reports() -> dict:
 		)
 
 		herds = _herd_labels()
+		# COUNTED THE SAME WAY THE HERD RECORD AND THE FEED RUN COUNT. A disposal
+		# sets the animal's status and leaves `current_herd` alone on purpose, so
+		# a plain COUNT(*) here reported sold and dead animals as still standing
+		# in their old herd — 112 bullying heifers against the herd screen's 94,
+		# and a "Not In Count" holding pen showing 57 head that are not on the
+		# farm at all. `common/animal.live_herd_count` is the one rule; this is
+		# the same filter in SQL because it wants every herd in one query.
 		herd_rows = frappe.db.sql(
 			"""SELECT current_herd AS h, COUNT(*) AS c FROM `tabAnimal`
 			   WHERE IFNULL(current_herd, '') != ''
+			     AND docstatus != 2
+			     AND IFNULL(status, '') NOT IN %(retired)s
 			   GROUP BY current_herd ORDER BY c DESC LIMIT 8""",
+			{"retired": tuple(RETIRED_STATUSES)},
 			as_dict=True,
 		)
 		herd_cmp = [{"name": herds.get(r.h, r.h), "animals": int(r.c)} for r in herd_rows]
