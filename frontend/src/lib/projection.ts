@@ -83,7 +83,7 @@ export interface FeedForecast {
   days: number;
   dates: string[];
   items: ForecastItem[];
-  events: { on: string; what: ForecastChange[] }[];
+  events: { on: string; overdue: boolean; what: ForecastChange[] }[];
   herds: Record<string, number[]>;
   basis: string;
 }

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { PackageSearch, TrendingDown } from "lucide-react";
 import { RunOutChart, RUN_OUT_CHART_HEIGHT } from "@/components/feeding/RunOutChart";
+import { HerdFlowChart, HERD_FLOW_HEIGHT } from "@/components/feeding/HerdFlowChart";
 import { ChartSkeleton, RowsSkeleton } from "@/components/Loading";
 import { Figure, FigureRow } from "@/components/Figure";
 import { Notice } from "@/components/feeding/Notice";
@@ -22,6 +23,7 @@ import {
   urgencyOf,
   urgencyWords,
   type FeedForecast,
+  type ForecastChange,
   type FeedProjection,
   type ProjectedItem,
 } from "@/lib/projection";
@@ -119,41 +121,26 @@ export function ProjectionBody() {
         </Notice>
       )}
 
-      {!!ahead?.events.length && (
-        <Card>
-          <CardHeaderRow>
-            <CardHeading>
-              <CardTitle>What changes between now and then</CardTitle>
-              <CardDescription>
-                {ahead.basis}. Every one of these is a move the farm's own rules
-                already know about — nothing here is a guess about a service that
-                has not happened.
-              </CardDescription>
-            </CardHeading>
-          </CardHeaderRow>
-          <CardContent className="pt-0">
-            <ul className="flex flex-col gap-0.5">
-              {ahead.events.slice(0, 12).map((e) => (
-                <li
-                  key={e.on}
-                  className="flex flex-wrap items-baseline justify-between gap-x-4 border-t border-[var(--sd-line)] px-1 py-2 text-[12.5px] first:border-t-0"
-                >
-                  <span className="text-[var(--sd-muted)]">
-                    {e.what
-                      .map((w) =>
-                        w.kind === "birth"
-                          ? `${w.heads === 0.5 ? "a calf" : `${w.heads} calves`} into ${w.to_herd}`
-                          : `${w.heads} from ${w.from_herd} to ${w.to_herd}`,
-                      )
-                      .join(", ")}
-                  </span>
-                  <span className="tabular-nums text-[var(--sd-quiet)]">{e.on}</span>
-                </li>
-              ))}
-            </ul>
-          </CardContent>
-        </Card>
-      )}
+      <Card>
+        <CardHeaderRow>
+          <CardHeading>
+            <CardTitle>Where the animals will be</CardTitle>
+            <CardDescription>
+              {ahead?.basis ?? "today's herds, moved forward by the farm's own rules"}.
+              Only the herds that change are drawn — a pen that sits at twelve for two
+              months is a flat line saying nothing.
+            </CardDescription>
+          </CardHeading>
+        </CardHeaderRow>
+        <CardContent className="flex flex-col gap-4 pt-0">
+          {ahead ? (
+            <HerdFlowChart herds={ahead.herds} dates={ahead.dates} />
+          ) : (
+            <ChartSkeleton height={HERD_FLOW_HEIGHT} />
+          )}
+          {!!ahead?.events.length && <MovesAhead events={ahead.events} />}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeaderRow>
@@ -227,6 +214,63 @@ export function ProjectionBody() {
         </CardContent>
       </Card>
     </>
+  );
+}
+
+/**
+ * The moves behind the lines, one row per route rather than per animal.
+ *
+ * Eleven calves leaving the same pen on the same morning is ONE fact about the
+ * farm; as eleven identical rows it buries the two that matter. The animals are
+ * interchangeable here — the forecast counts heads, it does not name them.
+ */
+function MovesAhead({
+  events,
+}: {
+  events: { on: string; overdue: boolean; what: ForecastChange[] }[];
+}) {
+  const [all, setAll] = useState(false);
+  const shown = all ? events : events.slice(0, 5);
+  return (
+    <div className="rounded-[var(--sd-radius-lg)] bg-[var(--sd-bg-soft)] px-4 py-3 shadow-[var(--sd-shadow-inset)]">
+      <p className="mb-1.5 text-[11px] font-medium uppercase tracking-[0.14em] text-[var(--sd-quiet)]">
+        What moves, and when
+      </p>
+      <ul className="flex flex-col gap-0.5">
+        {shown.map((e) => (
+          <li
+            key={e.on}
+            className="flex flex-wrap items-baseline justify-between gap-x-4 py-1 text-[12.5px]"
+          >
+            <span className="text-[var(--sd-muted)]">
+              {e.what
+                .map((w) =>
+                  w.kind === "birth"
+                    ? `${w.heads < 1 ? "a calf" : `${w.heads} calves`} born into ${w.to_herd}`
+                    : `${w.heads} ${w.from_herd} → ${w.to_herd}`,
+                )
+                .join(" · ")}
+            </span>
+            <span className="shrink-0 tabular-nums text-[var(--sd-quiet)]">
+              {e.on}
+              {/* Everything already late lands on the first day: a move that
+                  should have happened last week cannot be scheduled into the
+                  past. Said, so it does not read as a stampede. */}
+              {e.overdue ? " · already due" : ""}
+            </span>
+          </li>
+        ))}
+      </ul>
+      {events.length > 5 && (
+        <button
+          type="button"
+          onClick={() => setAll(!all)}
+          className="mt-1.5 text-[11.5px] font-medium text-[var(--sd-muted)] transition-colors hover:text-[var(--sd-ink)]"
+        >
+          {all ? "Show fewer" : `All ${events.length} days`}
+        </button>
+      )}
+    </div>
   );
 }
 

@@ -220,11 +220,23 @@ def feed_forecast(payload=None):
 				per_item.setdefault(item, [0.0] * len(dates))
 				per_item[item][index] += qty
 			if by_day.get(day):
+				# ONE LINE PER ROUTE, NOT PER ANIMAL. Eleven calves leaving the
+				# same pen on the same morning is one fact about the farm; as
+				# eleven identical rows it is a wall that hides the two rows
+				# that matter. The animals are interchangeable here — the
+				# forecast counts heads, it does not name them.
+				routes = {}
+				for kind, frm, to, n in by_day[day]:
+					routes[(kind, frm, to)] = routes.get((kind, frm, to), 0.0) + n
 				events.append({
 					"on": day,
+					# Everything overdue lands on the first day, because a move
+					# that should have happened last week cannot be scheduled
+					# into the past. Said, so it does not read as a stampede.
+					"overdue": index == 0,
 					"what": [
-						{"kind": k, "from_herd": f, "to_herd": t, "heads": n}
-						for k, f, t, n in by_day[day]
+						{"kind": k, "from_herd": f, "to_herd": t, "heads": round(n, 2)}
+						for (k, f, t), n in sorted(routes.items(), key=lambda kv: -kv[1])
 					],
 				})
 

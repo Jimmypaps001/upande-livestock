@@ -64,7 +64,13 @@ const forecast = {
   days: 30,
   dates: projection.dates,
   basis: "today's herds, moved forward by the farm's own rules",
-  herds: {},
+  herds: {
+    // 0-2 drains as its calves age out; 2-4 fills from it. The two lines are
+    // the story the twenty-eight-row list was hiding.
+    "0-2": Array.from({ length: 31 }, (_, i) => Math.max(0, 13 - i)),
+    "2-4": Array.from({ length: 31 }, (_, i) => 10 + Math.min(i, 13)),
+    BULLS: Array.from({ length: 31 }, () => 12),
+  },
   items: items.map((i) => ({
     item_code: i.item_code,
     item_name: i.item_name,
@@ -81,6 +87,7 @@ const forecast = {
   events: [
     {
       on: "2026-09-20",
+      overdue: false,
       what: [{ kind: "move", from_herd: "0-2", to_herd: "2-4", heads: 3 }],
     },
   ],
@@ -138,20 +145,50 @@ describe("the feed projection page", () => {
 
   it("draws a chart even when a feed has fallen to nothing", async () => {
     // A zero-stock series is a divide-by-zero waiting to happen in the scaling.
+    // Two charts on the page now, so the feed one is named rather than assumed.
     draw();
-    await waitFor(() => expect(screen.getByRole("img")).toBeTruthy());
+    await waitFor(() =>
+      expect(
+        screen
+          .getAllByRole("img")
+          .some((c) => (c.getAttribute("aria-label") || "").includes("Feed stock remaining")),
+      ).toBe(true),
+    );
   });
 });
 
 
 describe("what changes between now and then", () => {
-  it("lists the moves the farm's own rules already know about", async () => {
-    // The whole reason the forward view exists: today's draw times thirty days
-    // assumes the calves in 0-2 are still there next month. They are not.
+  it("draws where the animals will be rather than listing every move", async () => {
+    // Twenty-three days of changes, twenty-eight of them on one morning, came
+    // out as "1 from 0-2 to 2-4" twenty-eight times: every fact present and
+    // none of them readable.
     draw();
-    await waitFor(() =>
-      expect(screen.getByText(/3 from 0-2 to 2-4/)).toBeTruthy(),
-    );
+    await waitFor(() => expect(screen.getByText("Where the animals will be")).toBeTruthy());
+    const charts = screen.getAllByRole("img");
+    expect(
+      charts.some((c) => (c.getAttribute("aria-label") || "").includes("Head count per herd")),
+    ).toBe(true);
+  });
+
+  it("leaves out a herd that does not change size", async () => {
+    // Eleven flat lines would bury the two that are doing something.
+    draw();
+    const chart = await waitFor(() => {
+      const found = screen
+        .getAllByRole("img")
+        .find((c) => (c.getAttribute("aria-label") || "").includes("Head count per herd"));
+      expect(found).toBeTruthy();
+      return found!;
+    });
+    const label = chart.getAttribute("aria-label") || "";
+    expect(label).toContain("0-2");
+    expect(label).not.toContain("BULLS");
+  });
+
+  it("still says what moves, one row per route rather than per animal", async () => {
+    draw();
+    await waitFor(() => expect(screen.getByText(/3 0-2 → 2-4/)).toBeTruthy());
   });
 
   it("says what the draw becomes, not only what it is", async () => {
