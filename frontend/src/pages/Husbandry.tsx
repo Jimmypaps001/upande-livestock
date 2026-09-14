@@ -88,17 +88,35 @@ export function Husbandry() {
   }, [takesDrugs]);
 
   const ready = !!kind && picked.length > 0 && !who.needed;
-  const totals = useMemo(
-    () =>
-      drugs
-        .filter((d) => d.item_code && Number(d.qty) > 0)
-        .map((d) => ({
-          label: options?.drug_items.find((i) => i.value === d.item_code)?.label || d.item_code,
-          each: Number(d.qty),
-          all: Number(d.qty) * picked.length,
-        })),
-    [drugs, picked.length, options],
-  );
+  // THE BASKET. Every line that will leave the store, consolidated — the same
+  // drug on two rows is one withdrawal from the store and has to be checked
+  // against the balance as one, or two rows of 60 against a stock of 100 both
+  // look affordable and the issue fails at the counter.
+  const basket = useMemo(() => {
+    const held = new Map<
+      string,
+      { item_code: string; name: string; each: number; all: number; have: number | null; uom: string }
+    >();
+    for (const d of drugs) {
+      const qty = Number(d.qty);
+      if (!d.item_code || !(qty > 0)) continue;
+      const item = options?.drug_items.find((i) => i.value === d.item_code);
+      const line = held.get(d.item_code) ?? {
+        item_code: d.item_code,
+        name: item?.item_name || d.item_code,
+        each: 0,
+        all: 0,
+        have: item?.qty ?? null,
+        uom: item?.uom || "",
+      };
+      line.each += qty;
+      line.all += qty * picked.length;
+      held.set(d.item_code, line);
+    }
+    return [...held.values()];
+  }, [drugs, picked.length, options]);
+
+  const short = basket.filter((b) => b.have != null && b.all > b.have);
 
   useSaveShortcut(() => void send(), ready && !busy);
 
@@ -123,8 +141,8 @@ export function Husbandry() {
     }
     toast(
       `${kind} recorded for ${picked.length} animal${picked.length === 1 ? "" : "s"}.` +
-        (totals.length
-          ? ` ${totals.map((t) => `${fmt(t.all)} of ${t.label}`).join(", ")} issued.`
+        (basket.length
+          ? ` ${basket.map((b) => `${fmt(b.all)} ${b.uom} ${b.name}`.trim()).join(", ")} issued.`
           : ""),
     );
     setPicked([]);
@@ -186,6 +204,10 @@ export function Husbandry() {
           {takesDrugs && (
             <div className="flex flex-col gap-2">
               <Label>What each animal got</Label>
+              <p className="-mt-1 text-[11.5px] text-[var(--sd-quiet)]">
+                Quantities are per animal. The basket underneath is what actually
+                leaves the store.
+              </p>
               {drugs.map((d, i) => (
                 <div
                   key={d.key}
@@ -248,6 +270,64 @@ export function Husbandry() {
                 <Plus className="h-3.5 w-3.5" strokeWidth={2.5} />
                 Another drug
               </button>
+            </div>
+          )}
+
+          {takesDrugs && !!basket.length && (
+            <div className="flex flex-col gap-2">
+              <Label>Coming out of the store</Label>
+              <div className="overflow-x-auto rounded-[var(--sd-radius-lg)] bg-[var(--sd-bg-soft)] shadow-[var(--sd-shadow-inset)]">
+                <table className="w-full min-w-[420px] border-collapse text-[12.5px]">
+                  <thead>
+                    <tr className="text-left text-[11px] uppercase tracking-[0.06em] text-[var(--sd-quiet)]">
+                      <th className="px-3.5 py-2 font-medium">Item</th>
+                      <th className="px-3 py-2 text-right font-medium">Each</th>
+                      <th className="px-3 py-2 text-right font-medium">Head</th>
+                      <th className="px-3 py-2 text-right font-medium">Total out</th>
+                      <th className="px-3.5 py-2 text-right font-medium">In store</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {basket.map((b) => {
+                      const enough = b.have == null || b.all <= b.have;
+                      return (
+                        <tr key={b.item_code} className="border-t border-[var(--sd-line)]">
+                          <td className="px-3.5 py-1.5 text-[var(--sd-ink)]">{b.name}</td>
+                          <td className="px-3 py-1.5 text-right tabular-nums text-[var(--sd-muted)]">
+                            {fmt(b.each)} {b.uom}
+                          </td>
+                          <td className="px-3 py-1.5 text-right tabular-nums text-[var(--sd-muted)]">
+                            {picked.length}
+                          </td>
+                          <td
+                            className={cn(
+                              "px-3 py-1.5 text-right font-medium tabular-nums",
+                              enough ? "text-[var(--sd-ink)]" : "text-[var(--sd-sev-critical)]",
+                            )}
+                          >
+                            {fmt(b.all)} {b.uom}
+                          </td>
+                          <td
+                            className={cn(
+                              "px-3.5 py-1.5 text-right tabular-nums",
+                              enough ? "text-[var(--sd-quiet)]" : "text-[var(--sd-sev-critical)]",
+                            )}
+                          >
+                            {b.have == null ? "—" : `${fmt(b.have)} ${b.uom}`}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              {!!short.length && (
+                <p className="text-[11.5px] text-[var(--sd-sev-critical)]">
+                  The store cannot cover {short.map((b) => b.name).join(", ")}. The
+                  round will be refused at the counter rather than half issued —
+                  cut the dose, cut the number of animals, or restock first.
+                </p>
+              )}
             </div>
           )}
 

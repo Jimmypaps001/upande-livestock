@@ -102,7 +102,17 @@ export function Calving() {
     };
   }, [dam]);
 
-  const animals = options?.animals ?? [];
+  // WHO MAY CALVE IS NOT EVERYONE. In calf, dried off, and near her date —
+  // worked out on the server from the farm's own gestation length and calving
+  // lead, so the window moves when Settings moves. A calving creates an animal
+  // and retires a pregnancy, which is far too much to hang on picking the wrong
+  // cow out of four hundred.
+  //
+  // The list is never empty of a cow who is genuinely calving: it is ordered by
+  // how close she is, overdue first, and a cow outside the window still appears
+  // — marked — because calves arrive early and a screen that refused to record
+  // one would send the herdsman to the desk to do it anyway.
+  const animals = options?.calving_animals ?? [];
   const chosen = animals.find((a) => a.name === dam) || null;
   const results = useMemo(() => {
     const q = term.trim().toLowerCase();
@@ -191,10 +201,32 @@ export function Calving() {
                     </span>
                     <span className="truncate text-[11.5px] text-[var(--sd-muted)]">
                       {a.herd_label || a.herd || "no herd"}
+                      {a.days_to_calving != null && (
+                        <span
+                          className={cn(
+                            "ml-2",
+                            a.days_to_calving < 0 ? "text-[var(--sd-sev-critical)]" : "",
+                          )}
+                        >
+                          {a.days_to_calving < 0
+                            ? `${-a.days_to_calving} days overdue`
+                            : `due in ${a.days_to_calving} days`}
+                        </span>
+                      )}
+                      {a.dried_off === false && (
+                        <span className="ml-2 text-[var(--sd-sev-moderate)]">not dried off</span>
+                      )}
                     </span>
                   </button>
                 </li>
               ))}
+              {!results.length && (
+                <li className="rounded-[var(--sd-radius-lg)] bg-[var(--sd-bg-soft)] px-3 py-6 text-center text-[12.5px] text-[var(--sd-muted)]">
+                  {term
+                    ? `Nobody matches “${term}”.`
+                    : "No cow is near calving. A calving is recorded against a confirmed pregnancy, so there is nothing to record against yet."}
+                </li>
+              )}
             </ul>
           </CardContent>
         </Card>

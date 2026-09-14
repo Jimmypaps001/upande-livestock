@@ -39,11 +39,29 @@ export interface AnimalChoice {
   herd: string | null;
   herd_label: string | null;
   repro: string | null;
+  /* ── only on the narrowed breeding lists ───────────────────────────────
+     The server works these out from Livestock Settings — the gestation
+     length, the dry-off window, the calving lead — so no screen has to
+     hold a second copy of the farm's own rules. */
+  /** Her expected calving date. */
+  due?: string | null;
+  /** Negative means overdue. */
+  days_to_calving?: number | null;
+  /** Inside the farm's window for this event. Never a refusal: calves come
+   *  early, and a screen that would not record one sends people to the desk. */
+  ready?: boolean;
+  /** Drying off: whether she has already been taken out of milk. */
+  dried_off?: boolean;
+  /** Heat: her last service is still pending, so this heat is its answer. */
+  repeat?: boolean;
 }
 
 export interface BreedingOptions {
   animals: AnimalChoice[];
   diagnosis_animals: AnimalChoice[];
+  /** Wider than `animals`: a served cow is not servable, but her coming back
+   *  into heat is the answer to that service. */
+  heat_animals: AnimalChoice[];
   service_types: string[];
   diagnosis_results: string[];
   sires: string[];
@@ -98,6 +116,10 @@ export interface WeightRow {
 
 export interface MovementOptions {
   animals: AnimalChoice[];
+  /** In calf, still in milk, inside the farm's dry-off window. */
+  dry_off_animals: AnimalChoice[];
+  /** In calf, dried off, near her date. */
+  calving_animals: AnimalChoice[];
   herds: { name: string; label: string }[];
   calving_outcomes: string[];
   employee: string | null;

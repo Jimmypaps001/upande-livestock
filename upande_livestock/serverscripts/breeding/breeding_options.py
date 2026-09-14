@@ -47,6 +47,11 @@ def breeding_options():
 				 if a.name in {r["animal"] for r in herd_movement.diagnosable_animals()}],
 				labels,
 			),
+			# Heat is a wider list than service on purpose: a cow served three
+			# weeks ago is NOT servable, and her coming back into heat is the
+			# farm finding out that service failed weeks before the pregnancy
+			# check would have said so.
+			"heat_animals": _heat_choices(labels),
 			"service_types": select_options("Livestock Event", "service_type") or ["A.I.", "Natural"],
 			"diagnosis_results": select_options("Livestock Event", "diagnosis_result")
 			or ["Confirmed", "Not Pregnant", "Aborted"],
@@ -57,3 +62,20 @@ def breeding_options():
 		}
 
 	return run(go, "livestock breeding_options failed")
+
+
+def _heat_choices(labels):
+	"""Cows a heat may be recorded on, with the repeats marked.
+
+	`repeat` says her last service is still pending — so this heat is the answer
+	to it, and the screen can say so rather than leaving the herdsman to work
+	out why the same cow is bulling a month after she was served.
+	"""
+	rows = herd_movement.heat_candidates()
+	by_name = {a.name: a for a in active_animals()}
+	picked = [by_name[r["animal"]] for r in rows if r["animal"] in by_name]
+	marks = {r["animal"]: r for r in rows}
+	chosen = animal_choices(picked, labels)
+	for choice in chosen:
+		choice["repeat"] = bool(marks.get(choice["name"], {}).get("repeat"))
+	return chosen

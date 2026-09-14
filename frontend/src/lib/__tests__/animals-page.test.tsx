@@ -119,6 +119,13 @@ describe("the Animals page", () => {
       (screen.getByRole("button", { name: /Compare against the herd/ }) as HTMLButtonElement)
         .disabled,
     ).toBe(true);
+    // Release only once the request has actually been made: `release` is
+    // captured inside the promise the profile call creates, so resolving before
+    // the call is made resolves nothing and the test hangs on a page that is
+    // behaving perfectly.
+    await waitFor(() =>
+      expect(call.mock.calls.some((c) => String(c[0]).includes("animal_profile"))).toBe(true),
+    );
     release(null);
     await waitFor(() => expect(screen.getAllByText(/Served/).length).toBeGreaterThan(0));
   });

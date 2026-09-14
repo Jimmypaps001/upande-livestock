@@ -22,6 +22,8 @@ why the lactation cycle is expressed as settings rather than as more rungs.
 import frappe
 from frappe.utils import add_days, date_diff, flt, getdate, today
 
+from upande_livestock.serverscripts.common.animal import RETIRED_STATUSES
+
 SETTINGS = "Livestock Settings"
 
 
@@ -655,3 +657,180 @@ def suggestions():
 			"open_cows": len(open_cows),
 		},
 	}
+
+
+# ---------------------------------------------------------------------------
+# who each breeding screen may offer
+#
+# EVERY LIST HERE IS A NARROWING, and every threshold in it comes from Livestock
+# Settings rather than from a number typed into this file. The farm moves its
+# dry-off window or its gestation length on the Settings page and these lists
+# move with it; a 60 written in here would be a second, disagreeing copy of the
+# farm's own rule, which is exactly how api/reproduction.py came to answer 8
+# animals ready where this package answered 2.
+#
+# The point of narrowing is not tidiness. An event recorded against an animal it
+# cannot biologically have happened to does not stay a bad row: a drying-off
+# moves her out of the milking herd and out of that herd's ration, a calving
+# creates a calf, a confirmed pregnancy drives the feed forecast for months. The
+# cheapest place to prevent all of that is the list the screen offers.
+# ---------------------------------------------------------------------------
+
+
+def dry_off_window_days(previous_herd=None):
+	"""How long before calving a cow is taken out of milk.
+
+	The same two streams `steamer_days_for` distinguishes: a first-time heifer
+	dries off earlier than a cow coming off the low-yield herd. Asked by the
+	herd she is standing in, because that is what the farm knows about her.
+	"""
+	s = settings()
+	if previous_herd and previous_herd == s.get("incalf_heifer_herd"):
+		return int(s.get("heifer_dry_off_before_calving_days")
+		           or s.get("steamer_days_from_heifers") or 0)
+	return int(s.get("steamer_days_from_lactation")
+	           or s.get("heifer_dry_off_before_calving_days") or 0)
+
+
+def _carrying_rows():
+	"""Carrying cows with the date they conceived, keyed by animal."""
+	return {r["animal"]: r for r in carrying_animals()}
+
+
+def dried_off_on(animal, since=None):
+	"""The day she was taken out of milk on this pregnancy, if she has been."""
+	filters = {"animal": animal, "event_type": "Drying Off", "docstatus": 1}
+	if since:
+		filters["event_date"] = [">=", str(since)]
+	row = frappe.get_all(
+		"Livestock Event", filters=filters, fields=["event_date"],
+		order_by="event_date desc", limit_page_length=1,
+	)
+	return str(row[0].event_date) if row and row[0].event_date else None
+
+
+def dry_off_candidates():
+	"""Cows to take out of milk: carrying, still milking, and near enough calving.
+
+	THREE CONDITIONS AND ALL THREE MATTER. She has to be in calf, because drying
+	off a cow who is not is throwing away a lactation for nothing. She has to be
+	in milk, because there is nothing to dry off otherwise — and the screen
+	offering a cow already standing in Steamers is what produced the duplicate
+	drying-off events on this site. And she has to be close enough to calving,
+	which is the farm's own window, not a judgement made here.
+	"""
+	milking = set(milking_herds())
+	out = []
+	for animal, row in _carrying_rows().items():
+		herd = frappe.db.get_value("Animal", animal, "current_herd")
+		if herd not in milking:
+			continue
+		if dried_off_on(animal, row.get("served")):
+			continue
+		due = expected_calving_date(conception_date(animal) or row.get("served"))
+		if not due:
+			continue
+		window = dry_off_window_days(herd)
+		days_to_calving = date_diff(getdate(due), getdate(today()))
+		out.append({
+			"animal": animal,
+			"herd": herd,
+			"due": str(due),
+			"days_to_calving": days_to_calving,
+			# She is ready when she is inside the farm's window. Cows outside it
+			# still come back, marked, because a farm drying off early has a
+			# reason and the screen should not pretend she does not exist.
+			"ready": window and days_to_calving <= window,
+			"window": window,
+		})
+	out.sort(key=lambda r: r["days_to_calving"])
+	return out
+
+
+def calving_candidates():
+	"""Cows about to calve: carrying, dried off, and near their date.
+
+	DRIED OFF IS PART OF IT, because that is the farm's sequence — a cow calves
+	out of the dry herd, and one calving straight out of the milking herd is
+	either a record entered in the wrong order or a cow nobody dried off, and
+	both are worth seeing rather than silently accepting.
+
+	The window is the gestation length plus the farm's calving alert lead, both
+	from Settings. A cow past her date is still here, and first: overdue is the
+	one state on this list that needs somebody to look at her today.
+	"""
+	lead = int(settings().get("calving_alert_lead_days") or 0)
+	out = []
+	for animal, row in _carrying_rows().items():
+		conceived = conception_date(animal) or row.get("served")
+		due = expected_calving_date(conceived)
+		if not due:
+			continue
+		days_to_calving = date_diff(getdate(due), getdate(today()))
+		dry_on = dried_off_on(animal, row.get("served"))
+		out.append({
+			"animal": animal,
+			"herd": frappe.db.get_value("Animal", animal, "current_herd"),
+			"due": str(due),
+			"days_to_calving": days_to_calving,
+			"dried_off_on": dry_on,
+			"dried_off": bool(dry_on),
+			# Ready to calve, by the farm's own lead time. Never a refusal —
+			# calves arrive early, and a screen that refused to record one would
+			# send the herdsman to the desk to do it anyway.
+			"ready": bool(dry_on) and days_to_calving <= max(lead, 0),
+		})
+	out.sort(key=lambda r: r["days_to_calving"])
+	return out
+
+
+def service_age_months():
+	"""How old a heifer must be before anybody serves her. From Settings."""
+	return int(settings().get("min_service_age_months") or 0)
+
+
+def heat_candidates():
+	"""Cows worth recording a heat on: old enough, and not already in calf.
+
+	TWO KINDS OF ANIMAL, and the second is the one the old list lost. A maiden
+	heifer of age is obviously here. So is a cow served three weeks ago whose
+	service is still pending — because her coming back into heat IS the answer
+	to that service, and it is the farm finding out the insemination failed
+	weeks before the pregnancy check would have said so. The old screen offered
+	only the servable list, which excludes her the moment she is served.
+
+	A confirmed pregnancy takes her off: a cow in calf showing standing heat is
+	a diagnosis to revisit, not a heat to record against her pregnancy.
+	"""
+	months = service_age_months()
+	carrying = set(_carrying_rows())
+	rows = frappe.db.sql(
+		"""SELECT a.name, a.tag_number, a.burn_name, a.current_herd, a.sex,
+		          a.date_of_birth, a.last_calving_date
+		   FROM `tabAnimal` a
+		   WHERE IFNULL(a.status,'') NOT IN %(retired)s
+		     AND IFNULL(a.disabled, 0) = 0
+		     AND IFNULL(a.sex, '') = 'Female'
+		   ORDER BY a.tag_number ASC
+		   LIMIT 2000""",
+		{"retired": tuple(RETIRED_STATUSES)},
+		as_dict=True,
+	)
+	out = []
+	for a in rows:
+		if a.name in carrying:
+			continue
+		if months and a.date_of_birth:
+			if date_diff(getdate(today()), getdate(a.date_of_birth)) < months * 30:
+				continue
+		elif months and not a.date_of_birth:
+			# No birthday on file. She is not excluded on a guess — an animal
+			# with no date of birth is a record to fix, not a cow to hide.
+			pass
+		out.append({
+			"animal": a.name,
+			"herd": a.current_herd,
+			# A pending service means this heat is the answer to it.
+			"repeat": has_open_service(a.name),
+		})
+	return out

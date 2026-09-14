@@ -1,8 +1,28 @@
 import { useMemo, useState } from "react";
-import { ChevronRight, Layers, Search, X } from "lucide-react";
+import { ChevronRight, Search, X } from "lucide-react";
 import { STAGES, ageFrom, type AnimalSummary } from "@/lib/animals";
 import { Input } from "@/components/ui/input";
+import { Picker } from "@/components/ui/picker";
 import { cn } from "@/lib/utils";
+
+type Grouping = "none" | "herd" | "status";
+
+/** Her standing, in the farm's words. "On the farm" covers every status that
+ *  is not a way of having left it, including the blank ones. */
+const STANDINGS = ["On the farm", "Sold", "Culled", "Died", "Disposed", "Transferred out"];
+
+function standing(a: AnimalSummary): string {
+  if (a.stage !== "retired") return STANDINGS[0];
+  const status = (a.status || "").toLowerCase();
+  if (status === "sold") return "Sold";
+  if (status === "culled") return "Culled";
+  if (status === "dead" || status === "deceased") return "Died";
+  if (status === "disposed") return "Disposed";
+  if (status.startsWith("transferred")) return "Transferred out";
+  // Retired with a status nothing here recognises. Named as what it is rather
+  // than swept into "On the farm", which would be the one wrong answer.
+  return a.status || "Left the farm";
+}
 
 /**
  * Find a cow the way you would ask for one.
@@ -17,12 +37,22 @@ import { cn } from "@/lib/utils";
  * Steamers" is a question people actually have and an empty search box that
  * answers nothing until fed is a worse front door than a list.
  *
- * AND IT GROUPS BY HERD, because that is the other way the farm holds the herd
- * in its head: four hundred cows in one alphabetical column is a list you
- * search, never a list you read. Grouped, it is the farm — nine sheds with
- * counts on them, each opening to who is standing in it. Searching collapses
- * the grouping back to a flat list of matches, since a search already knows
- * what it is looking for.
+ * AND IT GROUPS, because a flat alphabetical column of four hundred cows is a
+ * list you search and never a list you read. Two groupings, because the farm
+ * asks two different questions of the same list:
+ *
+ *   * BY HERD is the farm as it stands this morning — nine sheds with counts on
+ *     them, each opening to who is in it. "Who is in 0-2" is a question with an
+ *     answer, not a search term.
+ *   * BY STANDING separates who is still here from who was sold, culled or
+ *     died. Departed animals are in this list on purpose — an animal that has
+ *     left is exactly the one somebody looks up six months later — but mixed in
+ *     alphabetically they are indistinguishable from the herd, and "which ones
+ *     were sold" had no answer at all.
+ *
+ * Typing collapses either grouping back to a flat list of matches: a search
+ * already knows what it is looking for, and folding three matches into three
+ * herds hides them behind a click each.
  */
 export function AnimalSearch({
   animals,
@@ -34,7 +64,7 @@ export function AnimalSearch({
   onSelect: (a: AnimalSummary) => void;
 }) {
   const [term, setTerm] = useState("");
-  const [byHerd, setByHerd] = useState(false);
+  const [grouping, setGrouping] = useState<Grouping>("none");
   const [shut, setShut] = useState<Record<string, boolean>>({});
 
   const results = useMemo(() => {
@@ -49,16 +79,24 @@ export function AnimalSearch({
   // looking for, and folding three matches into three herds hides them behind
   // a click each.
   const grouped = useMemo(() => {
-    if (!byHerd || term.trim()) return null;
-    const sheds = new Map<string, AnimalSummary[]>();
+    if (grouping === "none" || term.trim()) return null;
+    const pens = new Map<string, AnimalSummary[]>();
     for (const a of results) {
-      const herd = a.herd || "No herd";
-      const held = sheds.get(herd);
+      const key = grouping === "herd" ? a.herd || "No herd" : standing(a);
+      const held = pens.get(key);
       if (held) held.push(a);
-      else sheds.set(herd, [a]);
+      else pens.set(key, [a]);
     }
-    return [...sheds.entries()].sort((a, b) => a[0].localeCompare(b[0]));
-  }, [byHerd, term, results]);
+    const order = [...pens.entries()];
+    if (grouping === "status") {
+      // On the farm first, then the ways she can have left it. Alphabetical
+      // would open the list on "Culled", which is not the farm.
+      return order.sort(
+        (a, b) => STANDINGS.indexOf(a[0]) - STANDINGS.indexOf(b[0]) || a[0].localeCompare(b[0]),
+      );
+    }
+    return order.sort((a, b) => a[0].localeCompare(b[0]));
+  }, [grouping, term, results]);
 
   return (
     <div className="flex min-h-0 flex-col gap-3">
@@ -89,20 +127,23 @@ export function AnimalSearch({
             ? `${animals.length} on the farm`
             : `${results.length} of ${animals.length}`}
         </p>
-        <button
-          type="button"
-          onClick={() => setByHerd((on) => !on)}
-          aria-pressed={byHerd}
-          className={cn(
-            "inline-flex items-center gap-1.5 rounded-[var(--sd-radius-pill)] px-2.5 py-1 text-[11.5px] transition-colors",
-            byHerd
-              ? "bg-[var(--sd-bg-soft)] text-[var(--sd-ink)]"
-              : "text-[var(--sd-muted)] hover:bg-[var(--sd-bg-soft)]",
-          )}
-        >
-          <Layers className="h-3.5 w-3.5" strokeWidth={2} />
-          By herd
-        </button>
+        <span className="flex items-center gap-1.5">
+          <label htmlFor="animal-grouping" className="text-[11px] text-[var(--sd-quiet)]">
+            Group
+          </label>
+          <Picker
+            id="animal-grouping"
+            value={grouping}
+            onChange={(next) => setGrouping(next as Grouping)}
+            options={[
+              { value: "none", label: "Flat list" },
+              { value: "herd", label: "By herd" },
+              { value: "status", label: "By standing" },
+            ]}
+            label="Group the list"
+            className="h-8 w-[132px] text-[11.5px]"
+          />
+        </span>
       </div>
 
       {grouped && (

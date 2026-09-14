@@ -18,11 +18,22 @@ import {
 /**
  * The breeding calendar, one screen per thing that happens to a cow.
  *
- * Each is the same scaffold with a different animal list, and the list is the
- * point: the server decides who may be served (past the post-calving wait, on
- * the right rung of the ladder) and who may be diagnosed (an open service to
- * answer). A "Confirmed" invented for a cow nobody served goes on to drive
- * calving, herd moves and milk, so the narrowing is not cosmetic.
+ * Each is the same scaffold with a DIFFERENT ANIMAL LIST, and the list is the
+ * whole point. The server decides who may be served (past the post-calving
+ * wait, on the right rung of the ladder), who may be diagnosed (an open service
+ * to answer), who may be dried off (in calf, in milk, near her date), who may
+ * lose a pregnancy (carrying one), and who is worth recording a heat on (old
+ * enough, not in calf — including the served cow whose heat means the service
+ * failed).
+ *
+ * THE NARROWING IS NOT COSMETIC. A "Confirmed" invented for a cow nobody served
+ * drives calving, herd moves and months of feed. A drying off recorded against
+ * a cow who is not carrying takes her out of milk and out of her herd's ration.
+ * The cheapest place to prevent any of it is the list the screen offers.
+ *
+ * And every threshold behind those lists is read from Livestock Settings, never
+ * written down here — the farm moves its dry-off window on the Settings page
+ * and these screens move with it.
  */
 
 export function Service() {
@@ -134,18 +145,21 @@ export function DryingOff() {
   return (
     <Page>
       <PageHeading eyebrow="Upande Livestock · Breeding" title="Drying off">
-        Taking a cow out of milk before she calves. She moves to the herd that
-        steams her up, and any drying-off treatment goes out of the store with
-        her.
+        Taking a cow out of milk before she calves. Only cows the farm believes
+        are in calf and still milking are offered — drying off a cow who is not
+        carrying throws away a lactation for nothing.
       </PageHeading>
       <RecordEvent<MovementOptions>
         eyebrow="Breeding"
         title="a drying off"
-        blurb="Cows in milk."
+        blurb="In calf, still in milk, and near enough her date."
         pickLabel="Which cow"
-        emptyPick="No animals on this site."
+        // THE WINDOW IS THE FARM'S, from Livestock Settings — the dry days a
+        // heifer gets arriving at Steamers, and the ones a cow gets coming off
+        // the low-yield herd. Nothing about it is decided in this file.
+        emptyPick="No cow is due to be dried off. Either none is confirmed in calf, or none is close enough to calving yet."
         load={load}
-        animalsOf={(o) => o.animals}
+        animalsOf={(o) => o.dry_off_animals}
         fieldsOf={(o): FieldSpec[] => [
           { name: "event_date", label: "Dried off on", kind: "date" },
           { name: "new_herd", label: "Moving to", kind: "select",
@@ -173,11 +187,17 @@ export function Heat() {
       <RecordEvent<BreedingOptions>
         eyebrow="Breeding"
         title="a heat"
-        blurb="Cows the farm may serve."
+        blurb="Old enough to serve, and not already in calf."
         pickLabel="Seen bulling"
-        emptyPick="No cow is in the servable list."
+        // WIDER THAN THE SERVICE LIST, deliberately. A cow served three weeks
+        // ago is not servable — but her coming back into heat IS the answer to
+        // that service, and it is the farm finding out the insemination failed
+        // weeks before the pregnancy check would have said so. The old screen
+        // offered the servable list, which excludes her the moment she is
+        // served, and so lost every repeat.
+        emptyPick="No cow is old enough to serve, or they are all in calf."
         load={load}
-        animalsOf={(o) => o.animals}
+        animalsOf={(o) => o.heat_animals}
         fieldsOf={(): FieldSpec[] => [
           { name: "event_date", label: "Seen on", kind: "date" },
           { name: "remarks", label: "Notes", kind: "notes",
