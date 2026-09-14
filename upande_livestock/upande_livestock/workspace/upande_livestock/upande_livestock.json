@@ -1,12 +1,20 @@
 {
  "app": "upande_livestock",
  "charts": [],
- "content": "[{\"id\": \"uldOverview1\", \"type\": \"custom_block\", \"data\": {\"custom_block_name\": \"Livestock Dashboard\", \"col\": 12}}]",
+ "content": "[{\"id\": \"ulNav00001\", \"type\": \"custom_block\", \"data\": {\"custom_block_name\": \"Livestock Navigation\", \"col\": 12}}, {\"id\": \"ulDash0001\", \"type\": \"custom_block\", \"data\": {\"custom_block_name\": \"Livestock Dashboard\", \"col\": 12}}, {\"id\": \"ulRatHdr01\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Rations</b></span>\", \"col\": 12}}, {\"id\": \"ulRations1\", \"type\": \"custom_block\", \"data\": {\"custom_block_name\": \"Livestock Rations\", \"col\": 12}}]",
  "creation": "2026-07-17 00:00:00.000000",
  "custom_blocks": [
   {
+   "custom_block_name": "Livestock Navigation",
+   "label": "Livestock Navigation"
+  },
+  {
    "custom_block_name": "Livestock Dashboard",
    "label": "Livestock Dashboard"
+  },
+  {
+   "custom_block_name": "Livestock Rations",
+   "label": "Livestock Rations"
   }
  ],
  "docstatus": 0,
@@ -29,27 +37,38 @@
  "sequence_id": 50.0,
  "shortcuts": [
   {
-   "color": "Green",
+   "color": "Blue",
    "doc_view": "List",
    "label": "Animals",
    "link_to": "Animal",
-   "stats_filter": "[]",
-   "type": "DocType"
-  },
-  {
-   "color": "Green",
-   "doc_view": "List",
-   "label": "Herds",
-   "link_to": "Herds",
-   "stats_filter": "[]",
    "type": "DocType"
   },
   {
    "color": "Blue",
    "doc_view": "List",
-   "label": "Milk Recording",
+   "label": "Herds",
+   "link_to": "Herds",
+   "type": "DocType"
+  },
+  {
+   "color": "Blue",
+   "doc_view": "List",
+   "label": "Events",
+   "link_to": "Livestock Event",
+   "type": "DocType"
+  },
+  {
+   "color": "Cyan",
+   "doc_view": "List",
+   "label": "Milk Recordings",
    "link_to": "Milk Recording",
-   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Green",
+   "doc_view": "List",
+   "label": "Rations",
+   "link_to": "BOM",
    "type": "DocType"
   },
   {
@@ -57,15 +76,20 @@
    "doc_view": "List",
    "label": "Health Cases",
    "link_to": "Livestock Health Case",
-   "stats_filter": "[]",
+   "type": "DocType"
+  },
+  {
+   "color": "Red",
+   "doc_view": "List",
+   "label": "Disposals",
+   "link_to": "Livestock Disposal",
    "type": "DocType"
   },
   {
    "color": "Grey",
    "doc_view": "List",
-   "label": "Livestock Events",
-   "link_to": "Livestock Event",
-   "stats_filter": "[]",
+   "label": "Settings",
+   "link_to": "Livestock Settings",
    "type": "DocType"
   }
  ],
