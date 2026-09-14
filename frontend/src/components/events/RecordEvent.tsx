@@ -15,8 +15,10 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Picker } from "@/components/ui/picker";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/Toast";
+import { useSaveShortcut } from "@/lib/use-save-shortcut";
 import { isError, type Envelope } from "@/lib/frappe";
 import type { AnimalChoice } from "@/lib/events";
 import { cn, todayISO } from "@/lib/utils";
@@ -155,6 +157,11 @@ export function RecordEvent<O>({
   // user, which for an administrator or a shared login is nobody. Asked for
   // here rather than discovered on submit.
   const needsOperator = !!operatorOf && !operator.trim();
+
+  useSaveShortcut(
+    () => void send(),
+    !!picked && !busy && !missing.length && !needsOperator,
+  );
 
   async function send() {
     if (!picked) return;
@@ -318,19 +325,15 @@ function Field({
     <div className={cn("flex flex-col gap-1.5", spec.kind === "notes" && "sm:col-span-2")}>
       <Label htmlFor={id}>{spec.label}</Label>
       {spec.kind === "select" ? (
-        <select
+        <Picker
           id={id}
           value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-        >
-          <option value="">—</option>
-          {spec.options!.map((o) => (
-            <option key={o} value={o}>
-              {o}
-            </option>
-          ))}
-        </select>
+          onChange={onChange}
+          options={spec.options!}
+          label={spec.label}
+          clearable={!spec.required}
+          placeholder="—"
+        />
       ) : spec.kind === "date" ? (
         <DatePicker id={id} value={value} max={todayISO()} onChange={onChange} />
       ) : spec.kind === "notes" ? (

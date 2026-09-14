@@ -7,6 +7,7 @@ import { DatePicker } from "@/components/DatePicker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Picker } from "@/components/ui/picker";
 import { Textarea } from "@/components/ui/textarea";
 import { isError } from "@/lib/frappe";
 import {
@@ -177,18 +178,13 @@ export function RaiseCase({
         {flow === "Mortality" && (
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="cull-cause">Cause of death</Label>
-            <select
+            <Picker
               id="cull-cause"
               value={cause}
-              onChange={(e) => setCause(e.target.value)}
-              className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-            >
-              {DEATH_CAUSES.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
+              onChange={setCause}
+              options={[...DEATH_CAUSES]}
+              label="Cause of death"
+            />
           </div>
         )}
 

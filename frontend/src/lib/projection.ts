@@ -9,6 +9,7 @@
 import { call, type Envelope } from "@/lib/frappe";
 
 const PROJECTION = "upande_livestock.serverscripts.feeding.feed_projection.feed_projection";
+const FORECAST = "upande_livestock.serverscripts.feeding.feed_forecast.feed_forecast";
 
 export interface HerdDraw {
   herd: string;
@@ -51,6 +52,44 @@ export interface FeedProjection {
 
 export function getFeedProjection(days = 30): Promise<Envelope<FeedProjection>> {
   return call<FeedProjection>(PROJECTION, { payload: { days } });
+}
+
+export interface ForecastChange {
+  kind: "move" | "birth";
+  from_herd: string | null;
+  to_herd: string;
+  heads: number;
+}
+
+export interface ForecastItem {
+  item_code: string;
+  item_name: string;
+  uom: string;
+  on_hand: number;
+  /** Drawn today, at today's head counts. */
+  per_day: number;
+  /** Drawn on the last day of the window, once the herds have moved. */
+  per_day_at_horizon: number;
+  /** The difference between those two — what a flat projection misses. */
+  drift: number;
+  needed_total: number;
+  runs_out_on: string | null;
+  series: number[];
+  remaining: number[];
+}
+
+export interface FeedForecast {
+  start: string;
+  days: number;
+  dates: string[];
+  items: ForecastItem[];
+  events: { on: string; what: ForecastChange[] }[];
+  herds: Record<string, number[]>;
+  basis: string;
+}
+
+export function getFeedForecast(days = 60): Promise<Envelope<FeedForecast>> {
+  return call<FeedForecast>(FORECAST, { payload: { days } });
 }
 
 /**

@@ -28,7 +28,7 @@ const breeding = {
   service_types: ["A.I.", "Natural"],
   diagnosis_results: ["Confirmed", "Not Pregnant"],
   sires: ["BULL-1"],
-  semen_items: [{ item_code: "SEMEN-1" }],
+  semen_items: [{ value: "SEMEN-1", label: "Semen Straw · 1640 Nos in store" }],
   default_semen_item: "SEMEN-1",
   service_wait_days: 60,
   employee: "HR-EMP-001" as string | null,
@@ -46,6 +46,19 @@ vi.mock("@/lib/frappe", async () => {
 });
 
 const { Service, Diagnosis } = await import("@/pages/Breeding");
+
+/**
+ * Choose from a `Picker`.
+ *
+ * The screens use Radix's Select now rather than the browser's own control, so
+ * a value is chosen by opening the list and clicking a row — which is what a
+ * person does, and what `fireEvent.change` on a native select never was.
+ */
+async function choose(label: string, option: string) {
+  fireEvent.click(screen.getByLabelText(label));
+  const row = await screen.findByRole("option", { name: option });
+  fireEvent.click(row);
+}
 
 const draw = (Page: () => React.ReactElement) =>
   render(
@@ -92,7 +105,7 @@ describe("the record-an-event scaffold", () => {
     draw(Service);
     await waitFor(() => expect(screen.getByText("APIJA (A039/26)")).toBeTruthy());
     fireEvent.click(screen.getByText("APIJA (A039/26)"));
-    fireEvent.change(await screen.findByLabelText("How"), { target: { value: "A.I." } });
+    await choose("How", "A.I.");
     // The fixture's options carry an Employee, so nothing is asked for here.
     const button = screen.getByRole("button", { name: /Record the service/ });
     await waitFor(() => expect((button as HTMLButtonElement).disabled).toBe(false));
@@ -112,7 +125,7 @@ describe("the record-an-event scaffold", () => {
     await waitFor(() => expect(screen.getByText("APIJA (A039/26)")).toBeTruthy());
     fireEvent.click(screen.getByText("APIJA (A039/26)"));
     await screen.findByLabelText("Who is recording this");
-    fireEvent.change(screen.getByLabelText("How"), { target: { value: "A.I." } });
+    await choose("How", "A.I.");
     expect(
       (screen.getByRole("button", { name: /Record the service/ }) as HTMLButtonElement)
         .disabled,

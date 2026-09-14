@@ -57,9 +57,43 @@ const projection = {
   running_out: items,
 };
 
+/** What the forward view answers: the same feeds, but with the herds moved on. */
+const forecast = {
+  ok: true,
+  start: "2026-09-14",
+  days: 30,
+  dates: projection.dates,
+  basis: "today's herds, moved forward by the farm's own rules",
+  herds: {},
+  items: items.map((i) => ({
+    item_code: i.item_code,
+    item_name: i.item_name,
+    uom: i.uom,
+    on_hand: i.on_hand,
+    per_day: i.per_day,
+    per_day_at_horizon: i.per_day * 0.8,
+    drift: -i.per_day * 0.2,
+    needed_total: i.per_day * 30,
+    runs_out_on: i.runs_out_on,
+    series: i.series,
+    remaining: i.series,
+  })),
+  events: [
+    {
+      on: "2026-09-20",
+      what: [{ kind: "move", from_herd: "0-2", to_herd: "2-4", heads: 3 }],
+    },
+  ],
+};
+
 vi.mock("@/lib/frappe", async () => {
   const actual = await vi.importActual<typeof import("@/lib/frappe")>("@/lib/frappe");
-  return { ...actual, call: vi.fn(async () => projection) };
+  return {
+    ...actual,
+    call: vi.fn(async (method?: string) =>
+      String(method || "").includes("feed_forecast") ? forecast : projection,
+    ),
+  };
 });
 
 const { ProjectionBody } = await import("@/pages/Projection");
@@ -106,5 +140,22 @@ describe("the feed projection page", () => {
     // A zero-stock series is a divide-by-zero waiting to happen in the scaling.
     draw();
     await waitFor(() => expect(screen.getByRole("img")).toBeTruthy());
+  });
+});
+
+
+describe("what changes between now and then", () => {
+  it("lists the moves the farm's own rules already know about", async () => {
+    // The whole reason the forward view exists: today's draw times thirty days
+    // assumes the calves in 0-2 are still there next month. They are not.
+    draw();
+    await waitFor(() =>
+      expect(screen.getByText(/3 from 0-2 to 2-4/)).toBeTruthy(),
+    );
+  });
+
+  it("says what the draw becomes, not only what it is", async () => {
+    draw();
+    await waitFor(() => expect(screen.getByText(/Draw in 30 days/)).toBeTruthy());
   });
 });

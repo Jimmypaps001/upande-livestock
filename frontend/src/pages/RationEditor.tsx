@@ -10,8 +10,10 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Picker } from "@/components/ui/picker";
 import { RowsSkeleton } from "@/components/Loading";
 import { useToast } from "@/components/Toast";
+import { useSaveShortcut } from "@/lib/use-save-shortcut";
 import { isError } from "@/lib/frappe";
 import {
   describeChange, getHerdRations, setHerdRation,
@@ -101,6 +103,8 @@ export function RationEditor() {
 
   const labelOf = (code: string) => feeds.find((f) => f.value === code)?.label || code;
   const uomOf = (code: string) => feeds.find((f) => f.value === code)?.uom || "";
+
+  useSaveShortcut(() => void save(), !!chosen && dirty && !busy && rows.length > 0);
 
   async function save() {
     if (!chosen) return;
@@ -241,23 +245,18 @@ export function RationEditor() {
                     >
                       <div className="flex min-w-[220px] flex-1 flex-col gap-1.5">
                         <Label htmlFor={`r-item-${r.key}`}>Feed</Label>
-                        <select
+                        <Picker
                           id={`r-item-${r.key}`}
                           value={r.item_code}
-                          onChange={(e) =>
+                          onChange={(next) =>
                             setRows((s) =>
-                              s.map((x, j) => (j === i ? { ...x, item_code: e.target.value } : x)),
+                              s.map((x, j) => (j === i ? { ...x, item_code: next } : x)),
                             )
                           }
-                          className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-                        >
-                          <option value="">—</option>
-                          {feeds.map((f) => (
-                            <option key={f.value} value={f.value}>
-                              {f.label}
-                            </option>
-                          ))}
-                        </select>
+                          options={feeds.map((f) => ({ value: f.value, label: f.label }))}
+                          label="Feed"
+                          placeholder="Choose a feed…"
+                        />
                       </div>
                       <div className="flex flex-col gap-1.5">
                         <Label htmlFor={`r-qty-${r.key}`}>Amount</Label>

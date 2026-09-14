@@ -207,9 +207,8 @@ describe("moving animals nothing says are due", () => {
     openTab(/Move anyone/);
     fireEvent.click(await screen.findByLabelText("Move APIJA (A039/26)"));
     fireEvent.click(screen.getByLabelText("Move SITA (A101/23)"));
-    fireEvent.change(screen.getByLabelText("Herd they are moving to"), {
-      target: { value: "STEAMERS" },
-    });
+    fireEvent.click(screen.getByLabelText("Herd they are moving to"));
+    fireEvent.click(await screen.findByRole("option", { name: "STEAMERS" }));
     await waitFor(() => expect(screen.getByText(/already in STEAMERS/)).toBeTruthy());
     fireEvent.click(screen.getByRole("button", { name: /Move 1/ }));
     await waitFor(() => {

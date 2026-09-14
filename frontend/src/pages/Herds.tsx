@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Picker } from "@/components/ui/picker";
 import { useToast } from "@/components/Toast";
 import { isError } from "@/lib/frappe";
 import { asSummaries, getCullBoard, type FarmAnimal } from "@/lib/culling";
@@ -318,18 +319,14 @@ function BuyIn({
 
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="b-herd">Into which herd</Label>
-            <select
+            <Picker
               id="b-herd"
               value={herd}
-              onChange={(e) => setHerd(e.target.value)}
-              className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-            >
-              {herds.map((h) => (
-                <option key={h} value={h}>
-                  {h}
-                </option>
-              ))}
-            </select>
+              onChange={setHerd}
+              options={herds}
+              label="Into which herd"
+              placeholder="Choose a herd…"
+            />
           </div>
 
           <div className="flex flex-col gap-1.5">

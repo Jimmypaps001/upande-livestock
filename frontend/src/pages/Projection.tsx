@@ -17,9 +17,11 @@ import {
 import { isError } from "@/lib/frappe";
 import {
   URGENCY_TONE,
+  getFeedForecast,
   getFeedProjection,
   urgencyOf,
   urgencyWords,
+  type FeedForecast,
   type FeedProjection,
   type ProjectedItem,
 } from "@/lib/projection";
@@ -42,6 +44,7 @@ const HORIZONS = [14, 30, 60, 90];
  */
 export function ProjectionBody() {
   const [data, setData] = useState<FeedProjection | null>(null);
+  const [ahead, setAhead] = useState<FeedForecast | null>(null);
   const [days, setDays] = useState(30);
   const [loading, setLoading] = useState(true);
   const [failure, setFailure] = useState<string | null>(null);
@@ -49,14 +52,18 @@ export function ProjectionBody() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const r = await getFeedProjection(days);
+    const [flat, forward] = await Promise.all([
+      getFeedProjection(days),
+      getFeedForecast(days),
+    ]);
     setLoading(false);
-    if (isError(r)) {
-      setFailure(r.error);
+    if (isError(flat)) {
+      setFailure(flat.error);
       return;
     }
     setFailure(null);
-    setData(r);
+    setData(flat);
+    setAhead(isError(forward) ? null : forward);
   }, [days]);
 
   useEffect(() => {
@@ -80,6 +87,22 @@ export function ProjectionBody() {
           value={String(soon.length - gone.length)}
           hint="inside ten days"
         />
+        {/* The number the flat view cannot give: what the draw BECOMES once the
+            herds have moved. The difference is the whole argument for the
+            forward view sitting beside the current one. */}
+        <Figure
+          loading={!ahead}
+          label={`Draw in ${days} days`}
+          value={ahead ? fmt(ahead.items.reduce((t, i) => t + i.per_day_at_horizon, 0)) : "—"}
+          unit="kg"
+          hint={
+            ahead
+              ? `${ahead.items.reduce((t, i) => t + i.drift, 0) >= 0 ? "+" : ""}${fmt(
+                  ahead.items.reduce((t, i) => t + i.drift, 0),
+                )} on today, as the herds move`
+              : ""
+          }
+        />
         <Figure
           loading={!data} label="Next to go"
           value={next ? next.item_name : "—"}
@@ -94,6 +117,42 @@ export function ProjectionBody() {
           Either the stock is not on the system or the ration is asking for something the
           farm does not have.
         </Notice>
+      )}
+
+      {!!ahead?.events.length && (
+        <Card>
+          <CardHeaderRow>
+            <CardHeading>
+              <CardTitle>What changes between now and then</CardTitle>
+              <CardDescription>
+                {ahead.basis}. Every one of these is a move the farm's own rules
+                already know about — nothing here is a guess about a service that
+                has not happened.
+              </CardDescription>
+            </CardHeading>
+          </CardHeaderRow>
+          <CardContent className="pt-0">
+            <ul className="flex flex-col gap-0.5">
+              {ahead.events.slice(0, 12).map((e) => (
+                <li
+                  key={e.on}
+                  className="flex flex-wrap items-baseline justify-between gap-x-4 border-t border-[var(--sd-line)] px-1 py-2 text-[12.5px] first:border-t-0"
+                >
+                  <span className="text-[var(--sd-muted)]">
+                    {e.what
+                      .map((w) =>
+                        w.kind === "birth"
+                          ? `${w.heads === 0.5 ? "a calf" : `${w.heads} calves`} into ${w.to_herd}`
+                          : `${w.heads} from ${w.from_herd} to ${w.to_herd}`,
+                      )
+                      .join(", ")}
+                  </span>
+                  <span className="tabular-nums text-[var(--sd-quiet)]">{e.on}</span>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
       )}
 
       <Card>

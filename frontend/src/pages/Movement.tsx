@@ -14,6 +14,7 @@ import { CheckCircle } from "@/components/ui/check-circle";
 import { OperatorField } from "@/components/events/OperatorField";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Picker } from "@/components/ui/picker";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/Toast";
@@ -301,19 +302,14 @@ function MoveAnyone({
           </CardDescription>
         </CardHeading>
         <CardTools>
-          <select
+          <Picker
             value={herd}
-            onChange={(e) => setHerd(e.target.value)}
-            aria-label="Herd they are moving to"
-            className="h-9 rounded-md border border-input bg-background px-3 text-sm"
-          >
-            <option value="">Moving to…</option>
-            {herds.map((h) => (
-              <option key={h} value={h}>
-                {h}
-              </option>
-            ))}
-          </select>
+            onChange={setHerd}
+            options={herds}
+            label="Herd they are moving to"
+            placeholder="Moving to…"
+            className="w-[190px]"
+          />
           <Button
             size="sm"
             disabled={busy || !herd || !chosen.length}

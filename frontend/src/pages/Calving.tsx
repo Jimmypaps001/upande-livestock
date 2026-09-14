@@ -10,8 +10,10 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Picker } from "@/components/ui/picker";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/Toast";
+import { useSaveShortcut } from "@/lib/use-save-shortcut";
 import { isError } from "@/lib/frappe";
 import {
   getCalvingDestinations,
@@ -109,6 +111,8 @@ export function Calving() {
       [a.name, a.label, a.herd_label || ""].some((f) => f.toLowerCase().includes(q)),
     );
   }, [animals, term]);
+
+  useSaveShortcut(() => void send(), !!dam && !busy && !who.needed);
 
   async function send() {
     if (!dam) return;
@@ -249,21 +253,20 @@ export function Calving() {
                       >
                         <div className="flex flex-col gap-1.5">
                           <Label htmlFor={`c-sex-${c.key}`}>Sex</Label>
-                          <select
+                          <Picker
                             id={`c-sex-${c.key}`}
                             value={c.sex}
-                            onChange={(e) =>
+                            onChange={(next) =>
                               setCalves((s) =>
                                 s.map((x, j) =>
-                                  j === i ? { ...x, sex: e.target.value as "Female" | "Male" } : x,
+                                  j === i ? { ...x, sex: next as "Female" | "Male" } : x,
                                 ),
                               )
                             }
-                            className="h-9 rounded-md border border-input bg-background px-3 text-sm"
-                          >
-                            <option>Female</option>
-                            <option>Male</option>
-                          </select>
+                            options={["Female", "Male"]}
+                            label={`Calf ${i + 1} sex`}
+                            className="w-[130px]"
+                          />
                         </div>
                         <div className="flex flex-col gap-1.5">
                           <Label htmlFor={`c-name-${c.key}`}>Name</Label>

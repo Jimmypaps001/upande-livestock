@@ -10,8 +10,10 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Picker } from "@/components/ui/picker";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/Toast";
+import { useSaveShortcut } from "@/lib/use-save-shortcut";
 import { isError } from "@/lib/frappe";
 import { addCaseTreatment, getOpenCases, type OpenCasesView } from "@/lib/events";
 import { cn, todayISO } from "@/lib/utils";
@@ -64,6 +66,8 @@ export function Treatment() {
   const cases = data?.cases ?? [];
   const chosen = useMemo(() => cases.find((c) => c.value === picked) || null, [cases, picked]);
   const named = drug || drugText.trim();
+
+  useSaveShortcut(() => void send(), !!picked && !!named && !busy);
 
   async function send() {
     if (!picked || !named) return;
@@ -166,19 +170,18 @@ export function Treatment() {
                   </div>
                   <div className="flex flex-col gap-1.5">
                     <Label htmlFor="t-drug">Drug from the store</Label>
-                    <select
+                    <Picker
                       id="t-drug"
                       value={drug}
-                      onChange={(e) => setDrug(e.target.value)}
-                      className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-                    >
-                      <option value="">—</option>
-                      {(data?.drug_items ?? []).map((i) => (
-                        <option key={i.value} value={i.value}>
-                          {i.label}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={setDrug}
+                      options={(data?.drug_items ?? []).map((i) => ({
+                        value: i.value,
+                        label: i.label,
+                      }))}
+                      label="Drug from the store"
+                      placeholder="—"
+                      clearable
+                    />
                   </div>
                   {!drug && (
                     <div className="flex flex-col gap-1.5">
@@ -207,17 +210,15 @@ export function Treatment() {
                   {!!data?.routes?.length && (
                     <div className="flex flex-col gap-1.5">
                       <Label htmlFor="t-route">Route</Label>
-                      <select
+                      <Picker
                         id="t-route"
                         value={route}
-                        onChange={(e) => setRoute(e.target.value)}
-                        className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-                      >
-                        <option value="">—</option>
-                        {data.routes.map((r) => (
-                          <option key={r} value={r}>{r}</option>
-                        ))}
-                      </select>
+                        onChange={setRoute}
+                        options={data.routes}
+                        label="Route"
+                        placeholder="—"
+                        clearable
+                      />
                     </div>
                   )}
                   <div className="flex flex-col gap-1.5">
