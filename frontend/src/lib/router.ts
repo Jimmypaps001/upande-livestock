@@ -21,6 +21,7 @@ export const VIEWS = [
   "stock",
   "rations",
   "projection",
+  "procurement",
   "milking",
   "movement",
   "drying-off",

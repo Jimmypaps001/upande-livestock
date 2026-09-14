@@ -69,35 +69,72 @@ silage a week.
 One implementation, shared: `build_feed_rations` (formulations from a sheet)
 and `set_herd_ration` (typed on a screen) are the same act.
 
-## 3. Substitution when a feed is short — TO BUILD
+## 3. Mix and feed in one action — ALREADY TRUE
+
+`manufacture_herd_feed` manufactures the TMR and issues the whole batch to the
+herd in the same call, and the Feeding page already calls it. A TMR is mixed
+and fed, never stored, so manufacturing without issuing would leave feed on the
+books that had already gone in the trough. Nothing to build; checked before
+writing a second path.
+
+## 4. The concentrate warning — BUILT
+
+`alerts/_concentrate.py`. Cover counted in days, not kilograms — "412 kg of
+calves meal" is six weeks for the calves and two days for the milkers. Two
+kinds, because "mix a batch" and "you cannot fix this by mixing, it has to be
+bought" need different answers. Threshold is a setting, seven days by default.
+
+The first alert on this system that is not about an animal, which cost an
+`item` field on Livestock Alert, a dedup key that follows the subject, and an
+audience (store keeper and manager — not the attendant, who cannot act on it).
+
+## 5. Projections — BUILT
+
+`feeding/feed_projection.py` and the Feed Projection page. Stock against daily
+draw, per item, with the date each runs out and a chart of stock falling away.
+
+Draw is counted TWO WAYS and both are real: hay leaves on the ration, wheat
+bran leaves as 280 kg of every tonne of calves meal. Count only one and the
+farm never runs out of the other. Everything is in the units the STORE holds —
+hay projects at 0.105 bales a head, not 1.5 kilograms.
+
+It does not predict the future herd, and says so on the page. Head counts move;
+modelling that would be a forecast of a forecast.
+
+## 6. Procurement — BUILT
+
+`feeding/feed_procurement.py` (what to buy) and `create_feed_request.py` (one
+draft Material Request). The rule that matters: **you do not buy what you mix.**
+A concentrate with a recipe of its own is made here, so a shortage of it is
+answered by a Work Order — what needs buying is the raw materials, which the
+projection already counts. `_engine` already drew that line; this reads it
+rather than inventing a second rule that could disagree.
+
+How much is a target in DAYS, not kilograms: "enough to reach the end of the
+month" survives a herd change. Quantities are editable and lines can be
+dropped — a store keeper who knows the supplier sells in half-tonne lots is
+right and the arithmetic is not. The request is left in DRAFT.
+
+## 7. Substitution when a feed is short — TO BUILD
 
 The machinery is there (`_availability` knows what is short and from when;
 `_tuned_bom` makes a corrected recipe real). What is missing is the judgement:
 **what substitutes for what, and who says so.** That is the farm's call and not
 something to infer from an item group. Needs answering before it is built.
 
-## 4. Mix and feed as one action, and the concentrate warning — TO BUILD
+## 8. Buying animals in — TO BUILD
 
-`manufacture_feed` and `issue_feed` are two calls today. The engine already
-treats a TMR as mixed-and-fed rather than stored, so joining them is small.
-`concentrate_plan` already computes the demand; nothing watches the number.
-
-## 5. Projections — TO BUILD
-
-Stock against projected daily draw per item, and the date each runs out. The
-arithmetic is easy; making the prediction honest when head counts and rations
-both move is the work.
-
-## 6. Procurement, and buying animals in — TO BUILD
-
-A consolidated Material Request off the projection. Buying in mirrors culling
-in reverse: an Animal, an Asset, a herd, a purchase.
+Mirrors culling in reverse: an Animal, an Asset, a herd, a purchase.
 
 ## Tests
 
 | File | Tests | What it pins |
 |---|---|---|
 | `test_herd_rations.py` | 17 | a herd split off existing animals; a ration that supersedes rather than edits |
+| `test_concentrate_alerts.py` | 10 | days of cover, and "low" versus "cannot be mixed" |
+| `test_feed_projection.py` | 17 | draw counted both ways; the date, not the quantity |
+| `test_feed_procurement.py` | 19 | you do not buy what you mix; one draft request |
+| frontend `projection*`, `procurement-page` | 14 | the pages render, and order what was kept |
 
 ## Open questions for the farm
 
@@ -106,3 +143,6 @@ in reverse: an Animal, an Asset, a herd, a purchase.
    revision — a change, or a line dropped when the recipe was edited?
 3. Substitution rules: what may stand in for what.
 4. BULLS still has no ration. Naming the product is the farm's call.
+5. Sorghum Silage (Bargrazer) is drawn at 572 kg a day across five rations and
+   the site holds none of it. Either the pit is not on the system or the
+   September formulations ask for something the farm does not have.

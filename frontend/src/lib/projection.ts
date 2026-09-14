@@ -86,3 +86,57 @@ export function urgencyWords(item: ProjectedItem): string {
   if (d < 2) return "gone tomorrow";
   return `${Math.floor(d)} days left`;
 }
+
+/* ------------------------------------------------------------------ buying */
+
+const PROCUREMENT = "upande_livestock.serverscripts.feeding.feed_procurement.feed_procurement";
+const REQUEST = "upande_livestock.serverscripts.feeding.create_feed_request.create_feed_request";
+
+export interface BuyLine {
+  item_code: string;
+  item_name: string;
+  uom: string;
+  on_hand: number;
+  per_day: number;
+  days_cover: number | null;
+  runs_out_on: string | null;
+  target_days: number;
+  order_qty: number;
+  /** "Raw material" or "Bought in". Never a concentrate the farm mixes. */
+  source: string;
+}
+
+export interface OpenRequest {
+  name: string;
+  transaction_date: string;
+  status: string;
+  line_count: number;
+  total_qty: number;
+}
+
+export interface Procurement {
+  target_days: number;
+  items: BuyLine[];
+  warehouse: string | null;
+  basis: string;
+  open_requests: OpenRequest[];
+}
+
+export function getProcurement(targetDays = 28): Promise<Envelope<Procurement>> {
+  return call<Procurement>(PROCUREMENT, { payload: { target_days: targetDays } });
+}
+
+export function createFeedRequest(args: {
+  items: { item_code: string; qty: number }[];
+  target_days?: number;
+  warehouse?: string;
+  schedule_date?: string;
+}) {
+  return call<{
+    name: string;
+    warehouse: string;
+    schedule_date: string;
+    lines: number;
+    farm: string | null;
+  }>(REQUEST, { payload: args });
+}

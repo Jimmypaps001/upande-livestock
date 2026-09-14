@@ -19,6 +19,7 @@ import {
   PanelLeftOpen,
   Scale,
   Scissors,
+  ShoppingCart,
   SlidersHorizontal,
   Stethoscope,
   Sun,
@@ -110,6 +111,12 @@ const NAV: NavSection[] = [
         icon: TrendingDown,
         hint: "The day each feed runs out, at today's herds and rations",
       },
+      {
+        view: "procurement",
+        label: "Procurement",
+        icon: ShoppingCart,
+        hint: "What to buy to keep the herds fed, in one request",
+      },
     ],
   },
   {
@@ -162,6 +169,7 @@ export const BUILT_VIEWS: ReadonlySet<View> = new Set<View>([
   "stock",
   "rations",
   "projection",
+  "procurement",
   "culling",
   "settings",
   "notifications",
