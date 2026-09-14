@@ -1,5 +1,6 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { ToastProvider } from "@/components/Toast";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
 /**
@@ -63,7 +64,9 @@ const { Culling } = await import("@/pages/Culling");
 function draw() {
   return render(
     <TooltipProvider>
+      <ToastProvider>
       <Culling />
+    </ToastProvider>
     </TooltipProvider>,
   );
 }

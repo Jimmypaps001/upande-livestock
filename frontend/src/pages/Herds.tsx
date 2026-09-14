@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useToast } from "@/components/Toast";
 import { isError } from "@/lib/frappe";
 import { asSummaries, getCullBoard, type FarmAnimal } from "@/lib/culling";
 import { buyInAnimal, createHerd } from "@/lib/herds";
@@ -42,8 +43,8 @@ export function Herds() {
   const [roster, setRoster] = useState<FarmAnimal[]>([]);
   const [herds, setHerds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
-  const [note, setNote] = useState<string | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
+  const toast = useToast();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -71,7 +72,6 @@ export function Herds() {
       </PageHeading>
 
       {failure && <Notice tone="error">{failure}</Notice>}
-      {note && <Notice tone="ok">{note}</Notice>}
 
       <FigureRow>
         <Figure label="Animals on the farm" value={String(roster.length)} hint="active" />
@@ -85,7 +85,7 @@ export function Herds() {
           loading={loading}
           onReload={load}
           onDone={(m) => {
-            setNote(m);
+            toast(m);
             void load();
           }}
         />
@@ -93,7 +93,7 @@ export function Herds() {
           who={who}
           herds={herds}
           onDone={(m) => {
-            setNote(m);
+            toast(m);
             void load();
           }}
         />

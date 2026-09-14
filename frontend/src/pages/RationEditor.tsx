@@ -11,6 +11,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RowsSkeleton } from "@/components/Loading";
+import { useToast } from "@/components/Toast";
 import { isError } from "@/lib/frappe";
 import {
   describeChange, getHerdRations, setHerdRation,
@@ -49,11 +50,11 @@ export function RationEditor() {
   const [data, setData] = useState<HerdRations | null>(null);
   const [loading, setLoading] = useState(true);
   const [failure, setFailure] = useState<string | null>(null);
-  const [note, setNote] = useState<string | null>(null);
   const [changes, setChanges] = useState<RationDifference[] | null>(null);
   const [picked, setPicked] = useState<string | null>(null);
   const [rows, setRows] = useState<EditRow[]>([]);
   const [busy, setBusy] = useState(false);
+  const toast = useToast();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -113,15 +114,16 @@ export function RationEditor() {
     });
     setBusy(false);
     if (isError(r)) {
-      setNote(r.error);
+      toast(r.error, "error");
       setChanges(null);
       return;
     }
     setChanges(r.differences);
-    setNote(
+    toast(
       r.changed
         ? `${chosen.herd} now eats ${fmt(r.per_head_kg)} kg a head — ${fmt(r.day_kg)} kg a day. Recipe ${r.bom}${r.superseded ? `, superseding ${r.superseded}` : ""}.`
         : `Nothing changed — ${chosen.herd} already eats exactly this.`,
+      r.changed ? "ok" : "info",
     );
     void load();
   }
@@ -135,7 +137,6 @@ export function RationEditor() {
       </PageHeading>
 
       {failure && <Notice tone="error">{failure}</Notice>}
-      {note && <Notice tone={changes ? "ok" : "info"}>{note}</Notice>}
       {!!changes?.length && (
         <Notice tone="info">
           {changes.map((c) => describeChange(c)).join("\n")}

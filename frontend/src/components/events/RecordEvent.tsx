@@ -16,6 +16,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/components/Toast";
 import { isError, type Envelope } from "@/lib/frappe";
 import type { AnimalChoice } from "@/lib/events";
 import { cn, todayISO } from "@/lib/utils";
@@ -96,12 +97,12 @@ export function RecordEvent<O>({
   const [options, setOptions] = useState<O | null>(null);
   const [loading, setLoading] = useState(true);
   const [failure, setFailure] = useState<string | null>(null);
-  const [note, setNote] = useState<string | null>(null);
   const [term, setTerm] = useState("");
   const [picked, setPicked] = useState<string | null>(null);
   const [values, setValues] = useState<Record<string, string>>({});
   const [operator, setOperator] = useState("");
   const [busy, setBusy] = useState(false);
+  const toast = useToast();
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -171,10 +172,10 @@ export function RecordEvent<O>({
     const r = await submit(payload);
     setBusy(false);
     if (isError(r)) {
-      setNote(r.error);
+      toast(r.error, "error");
       return;
     }
-    setNote(said(r, picked));
+    toast(said(r, picked));
     setPicked(null);
     void refresh();
   }
@@ -253,7 +254,6 @@ export function RecordEvent<O>({
         </CardHeaderRow>
         <CardContent className="flex flex-col gap-4 pt-0">
           {failure && <Notice tone="error">{failure}</Notice>}
-          {note && <Notice tone={note.includes(" ") && !failure ? "ok" : "info"}>{note}</Notice>}
 
           {!chosen ? (
             <p className="text-[13px] text-[var(--sd-muted)]">{blurb}</p>

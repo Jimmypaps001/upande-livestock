@@ -20,6 +20,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { RowsSkeleton } from "@/components/Loading";
+import { useToast } from "@/components/Toast";
 import { isError } from "@/lib/frappe";
 import {
   approveCull,
@@ -56,9 +57,9 @@ export function Culling() {
   const [board, setBoard] = useState<CullBoard | null>(null);
   const [loading, setLoading] = useState(true);
   const [failure, setFailure] = useState<string | null>(null);
-  const [note, setNote] = useState<string | null>(null);
   const [active, setActive] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const toast = useToast();
   const [notes, setNotes] = useState("");
   const [price, setPrice] = useState("");
   const [buyer, setBuyer] = useState("");
@@ -96,10 +97,10 @@ export function Culling() {
     const r = (await fn()) as { error?: string };
     setBusy(false);
     if (isError(r)) {
-      setNote(r.error);
+      toast(r.error, "error");
       return;
     }
-    setNote(said);
+    toast(said);
     void load();
   }
 
@@ -112,7 +113,6 @@ export function Culling() {
       </PageHeading>
 
       {failure && <Notice tone="error">{failure}</Notice>}
-      {note && <Notice tone="info">{note}</Notice>}
 
       <FigureRow>
         <Figure loading={!board} label="With the vet" value={String(board?.counts.awaiting_vet ?? 0)} hint="awaiting a health verdict" />
@@ -234,7 +234,7 @@ export function Culling() {
                 who={who}
                 animals={roster}
                 onRaised={(m) => {
-                  setNote(m);
+                  toast(m);
                   void load();
                 }}
               />

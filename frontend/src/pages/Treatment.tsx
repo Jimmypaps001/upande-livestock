@@ -11,6 +11,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/components/Toast";
 import { isError } from "@/lib/frappe";
 import { addCaseTreatment, getOpenCases, type OpenCasesView } from "@/lib/events";
 import { cn, todayISO } from "@/lib/utils";
@@ -32,7 +33,6 @@ export function Treatment() {
   const [data, setData] = useState<OpenCasesView | null>(null);
   const [loading, setLoading] = useState(true);
   const [failure, setFailure] = useState<string | null>(null);
-  const [note, setNote] = useState<string | null>(null);
   const [picked, setPicked] = useState<string | null>(null);
   const [when, setWhen] = useState(todayISO());
   const [drug, setDrug] = useState("");
@@ -43,6 +43,7 @@ export function Treatment() {
   const [withdrawal, setWithdrawal] = useState("");
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
+  const toast = useToast();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -84,10 +85,10 @@ export function Treatment() {
     });
     setBusy(false);
     if (isError(r)) {
-      setNote(r.error);
+      toast(r.error, "error");
       return;
     }
-    setNote(`Treatment added to ${picked}.`);
+    toast(`Treatment added to ${picked}.`);
     setDosage("");
     setNotes("");
     void load();
@@ -101,7 +102,6 @@ export function Treatment() {
       </PageHeading>
 
       {failure && <Notice tone="error">{failure}</Notice>}
-      {note && <Notice tone="info">{note}</Notice>}
 
       <div className="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,340px)_minmax(0,1fr)]">
         <Card>

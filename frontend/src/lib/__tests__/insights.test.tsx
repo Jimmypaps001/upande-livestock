@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { ToastProvider } from "@/components/Toast";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
 /**
@@ -49,7 +50,9 @@ const { Events, Production, Reports, HealthOverview } = await import("@/pages/In
 const draw = (Page: () => React.ReactElement) =>
   render(
     <TooltipProvider>
+      <ToastProvider>
       <Page />
+    </ToastProvider>
     </TooltipProvider>,
   );
 

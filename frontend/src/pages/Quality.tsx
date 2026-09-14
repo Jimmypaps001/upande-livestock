@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useToast } from "@/components/Toast";
 import { isError } from "@/lib/frappe";
 import {
   getQualityOptions,
@@ -48,7 +49,7 @@ export function Quality() {
   const [protein, setProtein] = useState("");
   const [testedOn, setTestedOn] = useState(todayISO());
   const [saving, setSaving] = useState(false);
-  const [note, setNote] = useState<string | null>(null);
+  const toast = useToast();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -86,10 +87,10 @@ export function Quality() {
     });
     setSaving(false);
     if (isError(r)) {
-      setNote(r.error);
+      toast(r.error, "error");
       return;
     }
-    setNote(
+    toast(
       r.over_ceiling
         ? `Filed against ${r.name}. The cell count is above the farm's ceiling — worth a look at the herd.`
         : `Filed against ${r.name}.`,
@@ -287,7 +288,6 @@ export function Quality() {
                       You may read these but not file them.
                     </span>
                   )}
-                  {note && <span className="text-[12.5px] text-[var(--sd-muted)]">{note}</span>}
                 </div>
               </>
             )}

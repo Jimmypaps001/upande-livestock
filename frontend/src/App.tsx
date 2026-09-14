@@ -2,6 +2,7 @@ import { lazy, Suspense } from "react";
 import { AppSidebar } from "@/components/AppSidebar";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { ToastProvider } from "@/components/Toast";
 import { Stub } from "@/pages/Stub";
 import { useRoute, type View } from "@/lib/router";
 
@@ -147,6 +148,7 @@ export function App() {
     // tooltip to say what it does, and a per-card provider would restart the
     // shared open/close delay each time the pointer crossed a card boundary.
     <TooltipProvider delayDuration={200}>
+      <ToastProvider>
       <SidebarProvider>
         <AppSidebar view={view} onNavigate={navigate} />
       {/* min-w-0 so a wide table inside the workspace scrolls in its own box
@@ -163,6 +165,7 @@ export function App() {
           </Suspense>
         </SidebarInset>
       </SidebarProvider>
+      </ToastProvider>
     </TooltipProvider>
   );
 }

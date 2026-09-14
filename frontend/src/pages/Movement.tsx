@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/components/Toast";
 import { isError } from "@/lib/frappe";
 import {
   getMovementOptions, getMovementSuggestions, moveAnimals,
@@ -44,11 +45,11 @@ export function Movement() {
   const [options, setOptions] = useState<MovementOptions | null>(null);
   const [loading, setLoading] = useState(true);
   const [failure, setFailure] = useState<string | null>(null);
-  const [note, setNote] = useState<string | null>(null);
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [when, setWhen] = useState(todayISO());
   const [remarks, setRemarks] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
+  const toast = useToast();
   const who = useOperator(options?.employee);
 
   const load = useCallback(async () => {
@@ -102,7 +103,7 @@ export function Movement() {
   async function moveThese(herd: string, chosen: string[], key: string) {
     if (!chosen.length) return;
     if (needsOperator) {
-      setNote(
+      toast(
         "A movement has to say who made it, and your login has no Employee linked. " +
           "Put one in the box above, or link an Employee to your user.",
       );
@@ -118,10 +119,10 @@ export function Movement() {
     });
     setBusy(null);
     if (isError(r)) {
-      setNote(r.error);
+      toast(r.error, "error");
       return;
     }
-    setNote(
+    toast(
       `${r.count} animal${r.count === 1 ? "" : "s"} moved into ${r.herd}, which now holds ${r.heads}.`,
     );
     setPicked((s) => {
@@ -181,8 +182,7 @@ export function Movement() {
         <RefreshButton onClick={load} loading={loading} label="who is due" />
       </div>
 
-      {note && <Notice tone="info">{note}</Notice>}
-
+      
       <Tabs defaultValue="due">
         <TabsList>
           <TabsTrigger value="due">Due to move</TabsTrigger>

@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { ToastProvider } from "@/components/Toast";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
 /**
@@ -77,7 +78,9 @@ function openTab(name: RegExp) {
 const draw = () =>
   render(
     <TooltipProvider>
+      <ToastProvider>
       <Movement />
+    </ToastProvider>
     </TooltipProvider>,
   );
 

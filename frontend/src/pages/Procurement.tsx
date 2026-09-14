@@ -18,6 +18,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RowsSkeleton } from "@/components/Loading";
+import { useToast } from "@/components/Toast";
 import { isError } from "@/lib/frappe";
 import {
   createFeedRequest,
@@ -53,11 +54,11 @@ export function Procurement() {
   const [target, setTarget] = useState(28);
   const [loading, setLoading] = useState(true);
   const [failure, setFailure] = useState<string | null>(null);
-  const [note, setNote] = useState<string | null>(null);
   const [qty, setQty] = useState<Record<string, string>>({});
   const [skip, setSkip] = useState<Set<string>>(new Set());
   const [wanted, setWanted] = useState(addDays(todayISO(), 7));
   const [busy, setBusy] = useState(false);
+  const toast = useToast();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -96,10 +97,10 @@ export function Procurement() {
     });
     setBusy(false);
     if (isError(r)) {
-      setNote(r.error);
+      toast(r.error, "error");
       return;
     }
-    setNote(
+    toast(
       `${r.name} is drafted — ${r.lines} line${r.lines === 1 ? "" : "s"} into ${r.warehouse}, wanted by ${r.schedule_date}. It is not submitted; open it in the desk to send it.`,
     );
     void load();
@@ -114,7 +115,6 @@ export function Procurement() {
       </PageHeading>
 
       {failure && <Notice tone="error">{failure}</Notice>}
-      {note && <Notice tone="ok">{note}</Notice>}
 
       <FigureRow>
         <Figure loading={!data} label="Short of" value={String(items.length)} hint={`to reach ${target} days`} />

@@ -11,6 +11,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/components/Toast";
 import { isError } from "@/lib/frappe";
 import {
   getCalvingDestinations,
@@ -57,13 +58,13 @@ export function Calving() {
   const [options, setOptions] = useState<MovementOptions | null>(null);
   const [loading, setLoading] = useState(true);
   const [failure, setFailure] = useState<string | null>(null);
-  const [note, setNote] = useState<string | null>(null);
   const [dam, setDam] = useState<string | null>(null);
   const [when, setWhen] = useState(todayISO());
   const [remarks, setRemarks] = useState("");
   const [calves, setCalves] = useState<CalfRow[]>([blankCalf()]);
   const [where, setWhere] = useState<CalvingDestinations | null>(null);
   const [busy, setBusy] = useState(false);
+  const toast = useToast();
   const [term, setTerm] = useState("");
   const who = useOperator(options?.employee);
 
@@ -127,11 +128,11 @@ export function Calving() {
     });
     setBusy(false);
     if (isError(r)) {
-      setNote(r.error);
+      toast(r.error, "error");
       return;
     }
     const born = (r.calves || []).map((c) => c.animal).filter(Boolean);
-    setNote(
+    toast(
       born.length
         ? `${dam} calved — ${born.join(", ")} ${born.length === 1 ? "is" : "are"} on the farm.`
         : `${dam} calved — ${r.name}.`,
@@ -150,7 +151,6 @@ export function Calving() {
       </PageHeading>
 
       {failure && <Notice tone="error">{failure}</Notice>}
-      {note && <Notice tone="info">{note}</Notice>}
 
       <div className="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,320px)_minmax(0,1fr)]">
         <Card>

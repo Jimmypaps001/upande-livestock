@@ -1,6 +1,7 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { Figure, FigureRow } from "@/components/Figure";
+import { ToastProvider } from "@/components/Toast";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ChartSkeleton } from "@/components/Loading";
 import { MILK_CHART_HEIGHT } from "@/components/dashboard/MilkChart";
@@ -71,8 +72,10 @@ describe("the dashboard", () => {
   it("offers milk and feed as two tabs of one question", async () => {
     render(
       <TooltipProvider>
+      <ToastProvider>
         <Dashboard />
-      </TooltipProvider>,
+      </ToastProvider>
+    </TooltipProvider>,
     );
     await waitFor(() => expect(screen.getByRole("tab", { name: /Milk production/ })).toBeTruthy());
     expect(screen.getByRole("tab", { name: /Feed projection/ })).toBeTruthy();

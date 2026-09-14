@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { ToastProvider } from "@/components/Toast";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
 /**
@@ -68,7 +69,9 @@ const { Procurement } = await import("@/pages/Procurement");
 function draw() {
   return render(
     <TooltipProvider>
+      <ToastProvider>
       <Procurement />
+    </ToastProvider>
     </TooltipProvider>,
   );
 }
