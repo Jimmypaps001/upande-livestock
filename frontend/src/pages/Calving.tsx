@@ -343,7 +343,7 @@ export function Calving() {
                     />
                   </div>
 
-                  {who.needed && (
+                  {who.mustAsk && (
                     <OperatorField operator={who.operator} onChange={who.setOperator} />
                   )}
                   <Button onClick={send} disabled={busy || who.needed}>

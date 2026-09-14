@@ -34,6 +34,17 @@ const animals = [
 
 const call = vi.fn(async (method?: string) => {
   const m = method || "";
+  if (m.includes("employee_options")) {
+    // No Employee linked to this login, so the screens ask — and the answer
+    // has to be CHOSEN from the staff list, not typed.
+    return {
+      ok: true,
+      mine: null,
+      query: "",
+      more: false,
+      employees: [{ value: "HR-EMP-1", label: "JOSIAH KIPTOO", detail: "HR-EMP-1 · Herdsman" }],
+    };
+  }
   if (m.endsWith("create_herd")) {
     return { ok: true, herd: "Lactating group 4", heads: 1, moved: [], emptied_from: ["Lactating group 1"], ration: null };
   }
@@ -61,6 +72,14 @@ function draw() {
     </ToastProvider>
     </TooltipProvider>,
   );
+}
+
+/** Choose an operator from the searchable staff list. */
+async function pickOperator(which = 0) {
+  const fields = await screen.findAllByLabelText("Who is recording this");
+  fireEvent.focus(fields[which]);
+  const row = await screen.findByText("JOSIAH KIPTOO");
+  fireEvent.click(row);
 }
 
 describe("the herds page", () => {
@@ -92,11 +111,10 @@ describe("the herds page", () => {
   it("announces a bought animal by the farm's number, not the seller's tag", async () => {
     draw();
     await waitFor(() => expect(screen.getByText("APIJA")).toBeTruthy());
-    // No Employee is linked to this login, so the page asks who is doing it —
-    // the server refuses an event that does not say.
-    fireEvent.change(screen.getAllByLabelText("Who is recording this")[1], {
-      target: { value: "HR-EMP-1" },
-    });
+    // No Employee is linked to this login, so the page asks who is doing it.
+    // Chosen from the list rather than typed: half-typed text is not a person,
+    // and the old box let it reach the server as one.
+    await pickOperator(1);
     fireEvent.change(screen.getByLabelText(/Their tag for her/), {
       target: { value: "KD-441" },
     });
@@ -106,15 +124,28 @@ describe("the herds page", () => {
   });
 
   it("says plainly when an animal is not put on the books", async () => {
-    call.mockImplementationOnce(async () => ({
-      ok: true, animals, cases: [], flagged: [], recent: [], open_claims: [], counts: {},
-    }));
-    call.mockImplementationOnce(async () => ({
-      ok: true, animal: "A058/26", name: "ZAWADI", herd: "INCALF HEIFERS",
-      heads: 12, asset: null, purchase_value: 0,
-    }));
+    // Keyed on the method, not on call order: the operator lookup is a call
+    // too, and a `mockImplementationOnce` chain silently handed it somebody
+    // else's answer.
+    call.mockImplementation(async (method?: string) => {
+      const m = method || "";
+      if (m.includes("employee_options")) {
+        return {
+          ok: true, mine: null, query: "", more: false,
+          employees: [{ value: "HR-EMP-1", label: "JOSIAH KIPTOO", detail: "HR-EMP-1" }],
+        };
+      }
+      if (m.includes("buy_in_animal")) {
+        return {
+          ok: true, animal: "A058/26", name: "ZAWADI", herd: "INCALF HEIFERS",
+          heads: 12, asset: null as string | null, purchase_value: 0,
+        };
+      }
+      return { ok: true, animals, cases: [], flagged: [], recent: [], open_claims: [], counts: {} };
+    });
     draw();
     await waitFor(() => expect(screen.getByText("APIJA")).toBeTruthy());
+    await pickOperator(1);
     fireEvent.click(screen.getByRole("button", { name: /Bring her onto the farm/ }));
     await waitFor(() => expect(screen.getByText(/not capitalised/)).toBeTruthy());
   });

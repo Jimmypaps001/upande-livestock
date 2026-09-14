@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Picker } from "@/components/ui/picker";
 import { Textarea } from "@/components/ui/textarea";
 import { isError } from "@/lib/frappe";
+import { useOperator } from "@/lib/operator";
 import {
   DEATH_CAUSES,
   FLOWS,
@@ -40,7 +41,7 @@ export function RaiseCase({
   animals: AnimalSummary[];
   onRaised: (message: string) => void;
   /** Recording a death moves her out of her herd, which needs an operator. */
-  who: { operator: string; setOperator: (v: string) => void; needed: boolean; value?: string };
+  who: ReturnType<typeof useOperator>;
 }) {
   const [animal, setAnimal] = useState<string | null>(null);
   const [flow, setFlow] = useState<Flow>("Sale");
@@ -232,7 +233,7 @@ export function RaiseCase({
       </div>
 
       {failure && <Notice tone="error">{failure}</Notice>}
-      {flow === "Mortality" && who.needed && (
+      {flow === "Mortality" && who.mustAsk && (
         <OperatorField operator={who.operator} onChange={who.setOperator} />
       )}
 

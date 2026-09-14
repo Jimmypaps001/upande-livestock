@@ -211,7 +211,7 @@ function SplitHerd({
 
         {failure && <Notice tone="error">{failure}</Notice>}
 
-        {who.needed && <OperatorField operator={who.operator} onChange={who.setOperator} />}
+        {who.mustAsk && <OperatorField operator={who.operator} onChange={who.setOperator} />}
         <Button onClick={submit} disabled={busy || !name.trim() || who.needed}>
           <Split className="mr-2 h-4 w-4" strokeWidth={1.75} />
           {busy
@@ -376,7 +376,7 @@ function BuyIn({
 
         {failure && <Notice tone="error">{failure}</Notice>}
 
-        {who.needed && <OperatorField operator={who.operator} onChange={who.setOperator} />}
+        {who.mustAsk && <OperatorField operator={who.operator} onChange={who.setOperator} />}
         <Button onClick={submit} disabled={busy || !herd || who.needed}>
           <PackagePlus className="mr-2 h-4 w-4" strokeWidth={1.75} />
           {busy ? "Bringing her in…" : "Bring her onto the farm"}

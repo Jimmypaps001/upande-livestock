@@ -177,7 +177,7 @@ export function Movement() {
             placeholder="Coming into milk."
           />
         </div>
-        {needsOperator && (
+        {who.mustAsk && (
           <OperatorField operator={who.operator} onChange={who.setOperator} />
         )}
         <RefreshButton onClick={load} loading={loading} label="who is due" />

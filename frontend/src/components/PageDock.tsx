@@ -31,6 +31,16 @@ export function PageDock({
   /** Controls to carry along — a refresh, a filter the page still needs. */
   children?: React.ReactNode;
 }) {
+  // The eyebrow reads "Upande Livestock · Animals", and beside a title that
+  // already says "Animals" the pill came out "Animals  UPANDE LIVESTOCK ·
+  // ANIMALS" — the page name three times in one pill. Only the part that adds
+  // something is kept: the section, and only when it is not the title again.
+  const section = (() => {
+    const tail = eyebrow.split("·").pop()?.trim() ?? "";
+    if (!tail || tail.toLowerCase() === title.toLowerCase()) return "";
+    return tail;
+  })();
+
   const opacity = dockFade(progress);
   const shown = opacity > 0.02;
 
@@ -67,9 +77,11 @@ export function PageDock({
           <span className="truncate text-[14px] font-semibold tracking-[-0.01em] text-[var(--sd-ink)]">
             {title}
           </span>
-          <span className="hidden truncate text-[11px] uppercase tracking-[0.14em] text-[var(--sd-quiet)] sm:inline">
-            {eyebrow}
-          </span>
+          {section && (
+            <span className="hidden truncate text-[11px] uppercase tracking-[0.14em] text-[var(--sd-quiet)] sm:inline">
+              {section}
+            </span>
+          )}
         </span>
         {children && <span className="flex shrink-0 items-center gap-2">{children}</span>}
       </div>

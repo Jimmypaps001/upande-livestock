@@ -17,9 +17,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Picker } from "@/components/ui/picker";
 import { Textarea } from "@/components/ui/textarea";
+import { OperatorField } from "@/components/events/OperatorField";
 import { useToast } from "@/components/Toast";
 import { useSaveShortcut } from "@/lib/use-save-shortcut";
 import { isError, type Envelope } from "@/lib/frappe";
+import { useOperator } from "@/lib/operator";
 import type { AnimalChoice } from "@/lib/events";
 import { cn, todayISO } from "@/lib/utils";
 
@@ -102,9 +104,10 @@ export function RecordEvent<O>({
   const [term, setTerm] = useState("");
   const [picked, setPicked] = useState<string | null>(null);
   const [values, setValues] = useState<Record<string, string>>({});
-  const [operator, setOperator] = useState("");
+
   const [busy, setBusy] = useState(false);
   const toast = useToast();
+  const who = useOperator(options && operatorOf ? operatorOf(options) : undefined);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -116,7 +119,7 @@ export function RecordEvent<O>({
     }
     setFailure(null);
     setOptions(r);
-    if (operatorOf) setOperator(operatorOf(r) || "");
+
   }, [load, operatorOf]);
 
   useEffect(() => {
@@ -156,7 +159,7 @@ export function RecordEvent<O>({
   // and the options endpoint answers with the Employee linked to the signed-in
   // user, which for an administrator or a shared login is nobody. Asked for
   // here rather than discovered on submit.
-  const needsOperator = !!operatorOf && !operator.trim();
+  const needsOperator = !!operatorOf && who.needed;
 
   useSaveShortcut(
     () => void send(),
@@ -167,7 +170,7 @@ export function RecordEvent<O>({
     if (!picked) return;
     setBusy(true);
     const payload: Record<string, unknown> = { animal: picked };
-    if (operator.trim()) payload.operator = operator.trim();
+    if (who.value) payload.operator = who.value;
     for (const f of fields) {
       const v = values[f.name];
       if (v === undefined || v === "") {
@@ -277,20 +280,8 @@ export function RecordEvent<O>({
                   />
                 ))}
               </div>
-              {needsOperator && (
-                <div className="flex flex-col gap-1.5">
-                  <Label htmlFor="f-operator">Who is recording this</Label>
-                  <Input
-                    id="f-operator"
-                    value={operator}
-                    onChange={(e) => setOperator(e.target.value)}
-                    placeholder="HR-EMP-00042"
-                  />
-                  <span className="text-[11px] text-[var(--sd-quiet)]">
-                    Your login has no Employee linked, and an event has to say who
-                    made it. Link one to your user and this stops asking.
-                  </span>
-                </div>
+              {!!operatorOf && who.mustAsk && (
+                <OperatorField operator={who.operator} onChange={who.setOperator} />
               )}
               <div className="flex flex-wrap items-center gap-3">
                 <Button onClick={send} disabled={busy || !!missing.length || needsOperator}>

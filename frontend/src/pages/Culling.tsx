@@ -485,7 +485,7 @@ function CaseChain({
             Posting is the step that cannot be undone by editing a record. She leaves her
             herd, her status becomes final, and the asset is sold or written off.
           </Notice>
-          {who.needed && <OperatorField operator={who.operator} onChange={who.setOperator} />}
+          {who.mustAsk && <OperatorField operator={who.operator} onChange={who.setOperator} />}
           <div className="flex flex-wrap gap-2">
             <Button
               disabled={busy || who.needed}

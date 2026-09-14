@@ -1,24 +1,30 @@
 import { useCallback, useEffect, useState } from "react";
 
+import { isError } from "@/lib/frappe";
+import { searchEmployees } from "@/lib/people";
+
 /**
  * Who is recording this.
  *
  * EVERY LIVESTOCK EVENT HAS TO SAY WHO MADE IT — the server refuses one that
- * does not, by name: "Operator(technician) is mandatory for a hand-entered
- * Livestock Event". The options endpoints answer with the Employee linked to
- * the signed-in user, which on this farm is usually nobody: the yard runs off
- * one tablet on a shared login, and Administrator has no Employee at all.
+ * does not, by name. The options endpoints answer with the Employee linked to
+ * the signed-in user, which on this farm is often nobody: the yard runs off one
+ * tablet on a shared login, and Administrator has no Employee at all.
  *
- * Asked ONCE and remembered, rather than on every page. A herdsman who has told
- * the app who he is should not be asked again when he walks from the movement
- * screen to the calving screen, and a page that asked every time would be a
- * page people learn to click past.
+ * WHETHER TO ASK IS NOT THE SAME QUESTION AS WHAT THE ANSWER IS, and conflating
+ * them is a bug I shipped: `needed` was `!operator`, so the field asking for an
+ * operator unmounted the moment somebody typed the first letter into it. The
+ * two are separate now — `mustAsk` is settled once, when the server says
+ * whether it knows who you are, and never changes because of what is in the
+ * box.
  *
- * Kept in `localStorage` deliberately: it is a convenience for this device, not
- * a claim about identity. The server still checks what the *session* may do —
- * this only fills in a field the operator would otherwise type forty times a
- * day, and a wrong value shows up on the event as somebody else's name rather
- * than granting anybody anything.
+ * Asked ONCE and remembered, rather than on every page: a herdsman who has told
+ * the app who he is should not be asked again walking from the movement screen
+ * to the calving screen. Kept in `localStorage` deliberately — it is a
+ * convenience for this device, not a claim about identity. The server still
+ * checks what the SESSION may do; this only fills in a field somebody would
+ * otherwise type forty times a day, and a wrong value shows up on the event as
+ * the wrong name rather than granting anybody anything.
  */
 const KEY = "upande.livestock.operator";
 
@@ -34,12 +40,38 @@ function remembered(): string {
 
 export function useOperator(fromServer?: string | null) {
   const [operator, set] = useState<string>(() => remembered());
+  // Null until the server has answered; the screens must not decide whether to
+  // ask before they know.
+  const [linked, setLinked] = useState<string | null>(fromServer ?? null);
+  const [asked, setAsked] = useState(false);
 
-  // The Employee the server resolved wins over anything remembered here: it is
-  // the one answer that came from a login rather than from a box.
   useEffect(() => {
-    if (fromServer) set(fromServer);
+    if (fromServer) {
+      setLinked(fromServer);
+      set(fromServer);
+      setAsked(true);
+    }
   }, [fromServer]);
+
+  // A page that gets no employee from its own options endpoint still has to
+  // know whether the signed-in user has one, so it asks the one endpoint that
+  // can say. Without this, every page on a properly linked login would still
+  // put a picker in front of somebody the app could already identify.
+  useEffect(() => {
+    if (fromServer || asked) return;
+    let live = true;
+    void searchEmployees("").then((r) => {
+      if (!live || isError(r)) return;
+      setAsked(true);
+      if (r.mine) {
+        setLinked(r.mine);
+        set((current) => current || r.mine!);
+      }
+    });
+    return () => {
+      live = false;
+    };
+  }, [fromServer, asked]);
 
   const setOperator = useCallback((next: string) => {
     set(next);
@@ -53,7 +85,9 @@ export function useOperator(fromServer?: string | null) {
   return {
     operator,
     setOperator,
-    /** Whether the screen has to ask. */
+    /** Show the picker: the signed-in user has no Employee of their own. */
+    mustAsk: asked && !linked,
+    /** Block the save: we still have nobody to name. */
     needed: !operator.trim(),
     /** What to send. Undefined rather than "" so the server's own fallback
      *  still applies for a user who does have an Employee. */
