@@ -1,21 +1,29 @@
 # Copyright (c) 2026, Upande and contributors
 # For license information, please see license.txt
 
-"""Build the six herd rations from the August 2026 formulations.
+"""Build the herd rations from the September 2026 formulations.
 
-ONE UNIT PER HEAD. The BOM produces exactly 1 `Livestock Meal` of a herd's
-ration, and its ingredient quantities are the per-head amounts. Manufacturing
-for fifty cows is then a Work Order for 50 units, and every raw material scales
-by fifty on its own. The old shape put the per-head kilograms in BOM.quantity,
-which read as "this recipe makes 14.85 kg" when it meant "this is one cow's
-day" — true but confusing, and it made the finished TMR look like bulk stock
-rather than a count of meals.
+THE BOM PRODUCES ONE ANIMAL'S RATION, STATED IN KILOGRAMS. `BOM.quantity` is
+what one head eats in a day and the ingredient lines are the per-head amounts,
+so the two sum to the same number. Manufacturing for fifty cows is a Work Order
+for fifty times that, and every raw material scales with it.
 
-The ration items already hold stock — 64 tonnes of Lactating Group 1 alone — so
-their stock UOM cannot be changed to Livestock Meal without writing that off.
-Instead each gets a UOM conversion: one meal weighs what one animal's ration
-weighs. The Work Order is then counted in meals and the ledger still moves in
-kilograms, which is what the store actually holds.
+An earlier build tried to count the output in `Livestock Meal` — quantity 1,
+one unit per head, with a UOM conversion carrying the weight — because "makes
+14.85 kg" reads oddly for what is one cow's day. IT CANNOT WORK, and it failed
+silently. ERPNext's `BOM.validate_main_item` assigns
+
+    self.uom = frappe.db.get_value("Item", self.item, "stock_uom")
+
+unconditionally, on every save. The `Livestock Meal` written here was discarded
+every time and the BOM came back in Kilogram — so `quantity = 1` stopped
+meaning "one ration" and started meaning "one kilogram". Every herd BOM on this
+site said it produced 1 kg of TMR while consuming eighteen to forty kilograms
+of feed per head. The ration items hold stock (64 tonnes of Lactating Group 1
+alone), so changing their stock UOM instead is not open either.
+
+The lesson is in the shape of the fix: a BOM's unit is the item's unit, and the
+only number the BOM controls is how much of it one run makes.
 
 NOTHING IS CREATED FROM THE SPREADSHEET. Every ingredient resolves to an item
 that already exists on the site, by explicit code. A name that does not resolve
@@ -32,8 +40,6 @@ imported and the call dies with a bare NameError naming the app.
 
 import frappe
 from frappe.utils import flt
-
-MEAL_UOM = "Livestock Meal"
 
 # Every quantity in the formulation sheet is stated in kilograms, including hay,
 # which this site stocks in bales. Saying so explicitly on each BOM line lets
@@ -55,13 +61,17 @@ ITEM = {
 	"milk_replacer": "4040010095",
 	"hay": "4040010034",
 	"silage": "4040010082",          # see SILAGE below
+	"sorghum": "4040010091",         # Sorghum Silage (Bargrazer) - farm produced
 }
 
-# The sheet prices sorghum and maize silage separately (7.20 and 10.00), but the
-# site carries one farm-produced silage item. Both lines therefore resolve to it
-# and are summed. Splitting them needs two items and two stock streams, which is
-# a decision about how the pits are managed, not something to infer here.
-SILAGE_NOTE = "sorghum and maize silage are one item on this site and are summed"
+# THE PITS ARE NOW MANAGED SEPARATELY. The August build merged sorghum and maize
+# silage onto one farm-produced item and noted that splitting them "needs two
+# items and two stock streams, which is a decision about how the pits are
+# managed, not something to infer here". The farm has since made that decision:
+# the September formulations carry Sorghum Silage (Bargrazer) as its own line
+# against its own item, in five of the seven rations. So they are no longer
+# summed, and a ration that draws on both draws on both stocks.
+SILAGE_NOTE = "sorghum silage is its own item and its own stock stream since September"
 
 # The concentrates. Four already exist with their own BOMs; the lactating one
 # does not — see UNRESOLVED at the end of run().
@@ -79,22 +89,39 @@ CONCENTRATE = {
 }
 
 # (ration item, herd it feeds, [(item key, per-head qty)])
+#
+# The September 2026 revision, read off the farm's live BOMs rather than retyped
+# from the sheet. Two things changed against August: sorghum silage joins five
+# of the rations as its own line, and the mineral (High Phosphorous "Maziwa")
+# appears on the lactating rations, which it did not before.
+#
+# NOTE FOR THE FARM — the 0-2 ration lost its milk replacer in this revision.
+# August carried 0.75 kg per head; September is hay and calves meal only. That
+# is either a change in how the youngest calves are fed or a line dropped by
+# accident when the recipe was edited, and it is not a script's place to put it
+# back. Flagged in the run output every time.
 RATIONS = [
 	("Lactating Group 1", "Lactating group 1", [
-		("silage", 10.0), ("silage", 25.0), ("hay", 2.0), ("new_concentrate", 9.0)]),
+		("new_concentrate", 11.0), ("silage", 23.0), ("maziwa", 0.15),
+		("hay", 1.5), ("sorghum", 5.0)]),
 	("Lactating Group 2", "LACTATION GROUP 2", [
-		("silage", 10.0), ("silage", 25.0), ("hay", 2.0), ("new_concentrate", 6.0)]),
+		("new_concentrate", 9.0), ("silage", 20.0), ("maziwa", 0.15),
+		("hay", 2.0), ("sorghum", 5.0)]),
+	# The third lactating group had no ration on this site at all, which is why
+	# its herd sat with an empty BOM while the other two were fed.
+	("Lactating Group 3", "Lactation Group 3 TEST HERD", [
+		("new_concentrate", 8.0), ("silage", 20.0), ("maziwa", 0.13), ("hay", 1.5)]),
 	# "Weaners/Yearlings" is this herd's TMR — the earlier note that no ration
 	# item existed was wrong, and followed from the same confusion that had it
 	# serving as the bullying heifers' concentrate.
 	("Weaners/Yearlings", "4-12 MONTHS (WEANERS)", [
-		("silage", 7.0), ("hay", 2.0), ("weaner_meal", 3.0)]),
+		("weaner_meal", 3.0), ("hay", 2.0), ("silage", 7.0), ("sorghum", 1.0)]),
 	("Bullying Heifers", "12 MONTHS-SERVICE (BULLYING HEIFERS)", [
-		("silage", 10.0), ("hay", 4.0), ("yearling_meal", 4.0)]),
+		("silage", 10.0), ("yearling_meal", 4.0), ("hay", 4.0), ("sorghum", 1.0)]),
 	("Dry/Steamers/Incalf Heifers", "INCALF HEIFERS", [
-		("silage", 8.0), ("silage", 5.0), ("hay", 5.0), ("dry_meal", 2.0)]),
+		("dry_meal", 2.0), ("silage", 13.0), ("hay", 2.0), ("sorghum", 1.0)]),
 	("TMR Calves Meal", "0-2", [
-		("hay", 2.0), ("calf_meal", 2.0), ("milk_replacer", 0.75)]),
+		("calf_meal", 2.0), ("hay", 1.0)]),
 ]
 # Steamers shares the dry ration; mapped after the loop.
 ALSO_FEEDS = {
@@ -138,22 +165,6 @@ def ensure_recipe_conversions(apply_=False):
 		print("  + {} @ {} on {}".format(uom, factor, code))
 
 
-def ensure_uom(apply_=False):
-	"""A meal is a count, not a mass. One unit is one animal's ration for a day."""
-	if frappe.db.exists("UOM", MEAL_UOM):
-		print("  · UOM {} already exists".format(MEAL_UOM))
-		return True
-	if not apply_:
-		print("  ~ would create UOM {}".format(MEAL_UOM))
-		return True
-	doc = frappe.new_doc("UOM")
-	doc.uom_name = MEAL_UOM
-	doc.must_be_whole_number = 0   # a part-batch is legitimate
-	doc.insert(ignore_permissions=True)
-	print("  + UOM {}".format(MEAL_UOM))
-	return True
-
-
 def _resolve(key):
 	code = ITEM.get(key) or CONCENTRATE.get(key)
 	if not code:
@@ -167,7 +178,6 @@ def run(apply=False):
 	apply_ = bool(apply)
 	print("MODE:", "APPLY" if apply_ else "dry run")
 	print("\n[uom]")
-	ensure_uom(apply_)
 	ensure_recipe_conversions(apply_)
 
 	unresolved, built, skipped = [], [], []
@@ -209,10 +219,10 @@ def run(apply=False):
 			print("  · {:<30} also feeds {}".format(ration_item[:30], h))
 			if apply_:
 				# Find the BOM that was just built, by being the item's default —
-				# not by uom. This filtered on MEAL_UOM while _build_bom writes
-				# Kilogram, so it silently matched nothing and the sharing herds
-				# were left on whatever they had: STEAMERS on a 12.3 kg ration
-				# against the sheet's 20, and 2-4 on a 1000 kg concentrate recipe.
+				# not by uom. This once filtered on a UOM the BOM never kept, so
+				# it silently matched nothing and the sharing herds were left on
+				# whatever they had: STEAMERS on a 12.3 kg ration against the
+				# sheet's 20, and 2-4 on a 1000 kg concentrate recipe.
 				bom = frappe.db.get_value(
 					"BOM",
 					{"item": ration_item, "docstatus": 1, "is_default": 1, "is_active": 1},
@@ -228,6 +238,8 @@ def run(apply=False):
 		for name, why in unresolved:
 			print("   {:<32} {}".format(name[:32], why))
 	print("note: {}".format(SILAGE_NOTE))
+	print("note: the 0-2 ration no longer carries milk replacer — August had "
+	      "0.75 kg per head. Worth a word with the farm before this is trusted.")
 	print("\nHERDS WITH NO RATION — a person has to name the product:")
 	for herd, why in NO_RATION_ITEM.items():
 		if frappe.db.exists("Herds", herd):
@@ -237,34 +249,65 @@ def run(apply=False):
 	return {"built": built, "unresolved": unresolved, "skipped": skipped}
 
 
-def _meal_weight(merged):
-	"""What one animal's ration weighs, for the UOM conversion.
+def _ration_weight(merged):
+	"""What one animal's ration weighs — the BOM's output quantity.
 
-	Summed in the recipe's own units — the sheet states every line in kilograms
-	even where the item is stocked in bales, and it is the recipe the mixer works
-	to.
+	Summed in the recipe's own units: the formulation states every line in
+	kilograms even where the item is stocked in bales, and it is the recipe the
+	mixer works to. Output and lines therefore agree by construction, which is
+	the invariant the live site's own BOMs break — six of its seven rations
+	carry a quantity left over from before their lines were last edited, so
+	they issue less TMR than they consume feed.
 	"""
 	return sum(flt(q) for q in merged.values())
 
 
-def _ensure_meal_conversion(item_code, weight):
-	"""One Livestock Meal of this ration weighs `weight`.
+def _stamp_standing(bom_name, herd):
+	"""Mark a BOM as this herd's standing ration.
 
-	Without it a Work Order for 50 meals would post 50 kg rather than 50 rations.
+	The same three fields `patches/backfill_standing_ration_boms.py` writes, set
+	here at the moment the ration is built rather than waiting for a patch that
+	has already run once and will not run again. Without them a new ration is
+	invisible to `ration_history` and to every screen that asks a BOM which herd
+	it belongs to.
+
+	`custom_farm` is mended on the way past. It is mandatory on BOM now but was
+	not always, so a ration carried over from an earlier build has none — and a
+	tuned copy of it cannot save, which is how a missing value on a record
+	nobody edits surfaces as a failure somewhere else entirely.
 	"""
-	doc = frappe.get_doc("Item", item_code)
-	for row in doc.uoms or []:
-		if row.uom == MEAL_UOM:
-			if flt(row.conversion_factor) != flt(weight):
-				row.conversion_factor = weight
-				doc.flags.ignore_links = True
-				doc.save(ignore_permissions=True)
-			return
-	doc.append("uoms", {"uom": MEAL_UOM, "conversion_factor": weight})
-	# These item records carry links to masters that no longer exist. Adding a
-	# UOM row should not be where that gets discovered.
-	doc.flags.ignore_links = True
-	doc.save(ignore_permissions=True)
+	# A price list that is not on the site. Legacy rations carry
+	# `buying_price_list = "Standard Buying"` from a template; this site has no
+	# Price List records at all and costs raw materials by Valuation Rate, so
+	# the field is dead weight — until something copies the BOM, at which point
+	# the copy will not save and the failure names the price list rather than
+	# the ration. Cleared, not repointed: there is nothing to point it at.
+	price_list = frappe.db.get_value("BOM", bom_name, "buying_price_list")
+	if price_list and not frappe.db.exists("Price List", price_list):
+		frappe.db.set_value("BOM", bom_name, "buying_price_list", None, update_modified=False)
+
+	# `BOM.is_default` and `Item.default_bom` are two halves of one fact, kept in
+	# step by ERPNext's own `manage_default_bom` — which a `db.set_value` walks
+	# straight past. A ration carried over from an earlier build can therefore be
+	# the default and have the item pointing at nothing, which reads as "this
+	# herd has no recipe" everywhere except the BOM itself. Mended here.
+	if frappe.db.get_value("BOM", bom_name, "is_default"):
+		item = frappe.db.get_value("BOM", bom_name, "item")
+		if frappe.db.get_value("Item", item, "default_bom") != bom_name:
+			frappe.db.set_value("Item", item, "default_bom", bom_name, update_modified=False)
+
+	values = {
+		"custom_herd": herd,
+		"custom_is_livestock_feed": 1,
+		"custom_ration_kind": "Standing",
+	}
+	if not frappe.db.get_value("BOM", bom_name, "custom_farm"):
+		farm = _bom_farm()
+		if farm:
+			values["custom_farm"] = farm
+	for field, value in values.items():
+		if frappe.db.has_column("BOM", field):
+			frappe.db.set_value("BOM", bom_name, field, value, update_modified=False)
 
 
 def _bom_farm():
@@ -274,19 +317,62 @@ def _bom_farm():
 	return frappe.db.get_value("Warehouse", store, "custom_farm") if store else None
 
 
-def _build_bom(ration_item, herd, merged):
-	"""One BOM, one unit, per-head quantities."""
-	existing = frappe.db.get_value(
-		"BOM", {"item": ration_item, "docstatus": 1, "uom": MEAL_UOM}, "name"
-	)
-	if existing:
-		print("       (already built as {})".format(existing))
-		frappe.db.set_value("Herds", herd, "bom", existing)
-		return existing
+def _same_recipe(bom_name, merged):
+	"""Does this BOM already say exactly what the formulation says?
 
-	weight = _meal_weight(merged)
-	_ensure_meal_conversion(ration_item, weight)
-	print("       1 {} = {:g} (the ration's own weight)".format(MEAL_UOM, weight))
+	Compared line by line AND against the output, not by name or by date. A
+	recipe is its quantities.
+
+	The output is part of the comparison because this site is full of rations
+	whose lines are right and whose quantity says 1 — the wreckage of the
+	`Livestock Meal` attempt described at the top of this file. Matching on
+	lines alone would adopt one of those as "unchanged" and quietly keep the
+	bug alive.
+	"""
+	if abs(flt(frappe.db.get_value("BOM", bom_name, "quantity"))
+	       - flt(sum(merged.values()))) > 0.0005:
+		return False
+	rows = frappe.get_all("BOM Item", filters={"parent": bom_name},
+	                      fields=["item_code", "qty"])
+	if len(rows) != len(merged):
+		return False
+	for r in rows:
+		want = merged.get(r.item_code)
+		if want is None or abs(flt(r.qty) - flt(want)) > 0.0005:
+			return False
+	return True
+
+
+def _build_bom(ration_item, herd, merged):
+	"""One BOM, one unit, per-head quantities.
+
+	A CHANGED FORMULATION MAKES A NEW BOM, not an edit. A submitted BOM seals:
+	ERPNext refuses "Not allowed to change Qty after submission", and there is
+	nowhere to put the new numbers. So the recipe that matches is reused and a
+	recipe that does not is superseded — the old revision stays submitted and
+	readable, which is what every feed run already posted against it needs.
+	"""
+	# Matched on the recipe, never on the UOM: ERPNext overwrites BOM.uom with
+	# the item's stock UOM on every save, so it distinguishes nothing here.
+	for candidate in frappe.get_all(
+		"BOM", filters={"item": ration_item, "docstatus": 1},
+		pluck="name", order_by="creation desc",
+	):
+		if _same_recipe(candidate, merged):
+			print("       (unchanged — already built as {})".format(candidate))
+			frappe.db.set_value("Herds", herd, "bom", candidate)
+			if not frappe.db.get_value("BOM", candidate, "is_default"):
+				frappe.db.set_value("BOM", candidate, {"is_default": 1, "is_active": 1})
+			_stamp_standing(candidate, herd)
+			frappe.db.commit()
+			return candidate
+	superseded = frappe.db.get_value(
+		"BOM", {"item": ration_item, "docstatus": 1, "is_default": 1}, "name")
+	if superseded:
+		print("       (supersedes {})".format(superseded))
+
+	weight = _ration_weight(merged)
+	print("       one head's day = {:g} kg".format(weight))
 
 	farm = _bom_farm()
 	if not farm:
@@ -295,8 +381,9 @@ def _build_bom(ration_item, herd, merged):
 
 	bom = frappe.new_doc("BOM")
 	bom.item = ration_item
-	bom.quantity = 1                     # one meal
-	bom.uom = MEAL_UOM
+	# One run of this BOM makes one animal's ration. The lines sum to the same
+	# number, so a Work Order for the herd scales both sides together.
+	bom.quantity = weight
 	bom.custom_farm = farm
 	bom.company = frappe.db.get_single_value("Livestock Settings", "custom_default_company")
 	bom.is_active = 1
@@ -312,6 +399,7 @@ def _build_bom(ration_item, herd, merged):
 		row.uom = RECIPE_UOM
 	bom.insert(ignore_permissions=True)
 	bom.submit()
+	_stamp_standing(bom.name, herd)
 	frappe.db.set_value("Herds", herd, "bom", bom.name)
 	frappe.db.commit()
 	return bom.name

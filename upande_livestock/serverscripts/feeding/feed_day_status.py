@@ -96,12 +96,18 @@ def feed_day_status(herd):
 		else:
 			suggested = remaining / day_qty
 
-		# What one ration unit weighs, so the screen can talk in kilograms —
-		# a BOM unit is one animal's day, and its lines are the per-head kg.
-		per_head_kg = sum(
-			flt(r.qty)
-			for r in frappe.get_all("BOM Item", filters={"parent": bom.name}, fields=["qty"])
-		)
+		# A BOM UNIT IS A KILOGRAM, so these four are the same numbers as the
+		# four above them and are kept only because the screen reads them.
+		#
+		# They used to be `sum(BOM lines) * ` each quantity, which was right when
+		# a BOM produced "one meal" and its unit was a count: the day was N meals
+		# and the weight of a meal converted it. That shape was abandoned —
+		# ERPNext overwrites BOM.uom with the item's stock UOM on every save, so
+		# the meal never survived and every ration ended up stating 1 kg. The
+		# multiplication then became a multiply-by-one and stopped being visible.
+		#
+		# It came back the moment the rations carried their real weights: a herd
+		# of 29 calves owed 87 kg was told it still had 261 kg to come.
 		return {
 			"ok": True,
 			"herd": herd,
@@ -113,10 +119,10 @@ def feed_day_status(herd):
 			"remaining_today": remaining,
 			"runs_done": runs_done,
 			"suggested_portion": round(suggested, 4),
-			"per_head_kg": per_head_kg,
-			"day_kg": per_head_kg * heads,
-			"issued_kg": per_head_kg * issued,
-			"remaining_kg": per_head_kg * remaining,
+			"per_head_kg": per_head,
+			"day_kg": day_qty,
+			"issued_kg": issued,
+			"remaining_kg": remaining,
 			"complete": remaining <= 0,
 		}
 

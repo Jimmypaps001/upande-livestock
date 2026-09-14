@@ -17,14 +17,40 @@ def _a_feedable_herd():
 	return None
 
 
+def _slice(bom):
+	"""A fraction of the ration small enough to be cheap, big enough to post.
+
+	The binding line is whichever one converts worst into its stock unit. Half a
+	stock unit of it is the target: comfortably above any rounding, still a
+	fraction of a day's feed.
+	"""
+	worst = None
+	for row in bom.items:
+		factor = flt(row.conversion_factor) or 1.0
+		stock_qty = flt(row.qty) * factor
+		if stock_qty <= 0:
+			continue
+		need = 0.5 / stock_qty
+		worst = need if worst is None else max(worst, need)
+	return min(1.0, worst or 0.02)
+
+
 class TestManualFeed(IntegrationTestCase):
 	def setUp(self):
 		self.herd = _a_feedable_herd()
 		if not self.herd:
 			self.skipTest("no herd on kaitet.local can currently be fed")
 		bom = frappe.get_doc("BOM", frappe.db.get_value("Herds", self.herd, "bom"))
+		# A small slice of the real ration, so these tests move almost no stock.
+		# NOT an arbitrary fraction: hay is written in kilograms and stocked in
+		# bales at 0.07 bale/kg, so a line of 1 kg scaled by 0.02 reaches the
+		# ledger as 0.0014 of a bale, rounds to zero at the site's precision and
+		# ERPNext refuses the whole entry with "Qty in Stock UOM can not be
+		# zero". The fraction is therefore chosen against the SMALLEST line in
+		# the ration rather than fixed, so it survives a recipe being reformulated
+		# with less of something.
 		self.lines = [
-			{"item_code": r.item_code, "qty": flt(r.qty) * 0.02} for r in bom.items
+			{"item_code": r.item_code, "qty": flt(r.qty) * _slice(bom)} for r in bom.items
 		]
 		# The bench test runner is Administrator, who has no Employee linked on
 		# this site — _operator_or_throw would refuse every run below for that

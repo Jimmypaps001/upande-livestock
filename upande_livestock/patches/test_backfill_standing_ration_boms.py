@@ -16,6 +16,26 @@ FIELDS = ["custom_herd", "custom_is_livestock_feed", "custom_ration_kind"]
 BLANK = {"custom_herd": None, "custom_is_livestock_feed": 0, "custom_ration_kind": ""}
 
 
+def _slice(bom):
+	"""A fraction of the ration small enough to be cheap, big enough to post.
+
+	The binding line is whichever converts worst into its stock unit: hay is
+	written in kilograms and stocked in bales, so a small kilogram line reaches
+	the ledger as a fraction of a bale, rounds to zero at the site's precision,
+	and ERPNext refuses the whole entry with "Qty in Stock UOM can not be zero".
+	Half a stock unit of that worst line is the target. Mirrors
+	test_manual_feed._slice.
+	"""
+	worst = None
+	for row in bom.items:
+		stock_qty = flt(row.qty) * (flt(row.conversion_factor) or 1.0)
+		if stock_qty <= 0:
+			continue
+		need = 0.5 / stock_qty
+		worst = need if worst is None else max(worst, need)
+	return min(1.0, worst or 0.02)
+
+
 def _shared_boms():
 	"""bom_name -> [herds] for every standing BOM shared by 2+ herds."""
 	counts = {}
@@ -164,8 +184,25 @@ class TestBackfillStandingRationBoms(IntegrationTestCase):
 
 		item = frappe.db.get_value("BOM", bom_name, "item")
 		bom = frappe.get_doc("BOM", bom_name)
-		lines = [{"item_code": r.item_code, "qty": flt(r.qty) * 0.02} for r in bom.items]
+		# Scaled against the worst-converting line rather than by a fixed 0.02 —
+		# hay is written in kilograms and stocked in bales, so a small line
+		# reaches the ledger as a fraction of a bale, rounds to zero and ERPNext
+		# refuses the entry. See test_manual_feed._slice, which this mirrors.
+		lines = [{"item_code": r.item_code, "qty": flt(r.qty) * _slice(bom)} for r in bom.items]
 		posting_date = add_days(today(), -2)
+
+		# THE TEST'S PREMISE IS THAT ITS TWO FEEDS ARE THE ONLY HISTORY. On a
+		# site carrying real farm data that is not a given: if either herd has
+		# already been fed this ration on an earlier date, that feed decides
+		# "first" and no fixture written here can change it. Skipping says so,
+		# where asserting anyway produced a failure that moved around with the
+		# site's data rather than with the code.
+		already = _first_fed_herd(item, list(herds))
+		if already:
+			self.skipTest(
+				f"{already} has already been fed {item} on this site, so the tiebreak "
+				f"is settled by history rather than by this fixture"
+			)
 
 		first, second = herds[0], herds[1]
 		res1 = manual_feed(
