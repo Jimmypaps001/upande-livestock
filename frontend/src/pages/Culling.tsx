@@ -19,6 +19,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { RowsSkeleton } from "@/components/Loading";
 import { isError } from "@/lib/frappe";
 import {
   approveCull,
@@ -111,10 +112,10 @@ export function Culling() {
       {note && <Notice tone="info">{note}</Notice>}
 
       <FigureRow>
-        <Figure label="With the vet" value={String(board?.counts.awaiting_vet ?? 0)} hint="awaiting a health verdict" />
-        <Figure label="With the manager" value={String(board?.counts.awaiting_approval ?? 0)} hint="awaiting a signature" />
-        <Figure label="Ready to post" value={String(board?.counts.ready_to_post ?? 0)} hint="approved, not yet gone" />
-        <Figure label="Flagged" value={String(board?.counts.flagged ?? 0)} hint="marked for review, no case yet" />
+        <Figure loading={!board} label="With the vet" value={String(board?.counts.awaiting_vet ?? 0)} hint="awaiting a health verdict" />
+        <Figure loading={!board} label="With the manager" value={String(board?.counts.awaiting_approval ?? 0)} hint="awaiting a signature" />
+        <Figure loading={!board} label="Ready to post" value={String(board?.counts.ready_to_post ?? 0)} hint="approved, not yet gone" />
+        <Figure loading={!board} label="Flagged" value={String(board?.counts.flagged ?? 0)} hint="marked for review, no case yet" />
       </FigureRow>
 
       <div className="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,360px)_minmax(0,1fr)]">
@@ -129,7 +130,9 @@ export function Culling() {
             </CardTools>
           </CardHeaderRow>
           <CardContent className="pt-0">
-            {!cases.length ? (
+            {!board ? (
+              <RowsSkeleton rows={4} />
+            ) : !cases.length ? (
               <p className="text-[13px] text-[var(--sd-muted)]">
                 Nothing open. Every animal on the farm is staying on it.
               </p>

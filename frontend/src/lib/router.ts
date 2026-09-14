@@ -22,7 +22,6 @@ export const VIEWS = [
   "stock",
   "rations",
   "ration-editor",
-  "projection",
   "procurement",
   "milking",
   "movement",

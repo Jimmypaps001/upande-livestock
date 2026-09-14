@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { RowsSkeleton } from "@/components/Loading";
 import { isError } from "@/lib/frappe";
 import {
   createFeedRequest,
@@ -116,14 +117,14 @@ export function Procurement() {
       {note && <Notice tone="ok">{note}</Notice>}
 
       <FigureRow>
-        <Figure label="Short of" value={String(items.length)} hint={`to reach ${target} days`} />
-        <Figure label="On the order" value={String(chosen.length)} hint="lines you have kept" />
+        <Figure loading={!data} label="Short of" value={String(items.length)} hint={`to reach ${target} days`} />
+        <Figure loading={!data} label="On the order" value={String(chosen.length)} hint="lines you have kept" />
         <Figure
-          label="Already on order"
+          loading={!data} label="Already on order"
           value={String(data?.open_requests.length ?? 0)}
           hint="last 60 days, not yet received"
         />
-        <Figure label="Delivering to" value={data?.warehouse ? "Feed store" : "—"}
+        <Figure loading={!data} label="Delivering to" value={data?.warehouse ? "Feed store" : "—"}
                 hint={data?.warehouse ?? "no store set"} />
       </FigureRow>
 
@@ -158,7 +159,9 @@ export function Procurement() {
           </CardTools>
         </CardHeaderRow>
         <CardContent className="flex flex-col gap-4 pt-0">
-          {!items.length ? (
+          {!data ? (
+            <RowsSkeleton rows={5} />
+          ) : !items.length ? (
             <p className="text-[13px] text-[var(--sd-muted)]">
               Nothing is short of {target} days of cover. Nothing to buy.
             </p>

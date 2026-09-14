@@ -3,7 +3,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
 /**
- * The projection page, actually rendered.
+ * The feed projection, actually rendered.
+ *
+ * It is a tab on the Dashboard now rather than a page of its own — milk and
+ * feed are the same question asked from two ends — so this renders the body
+ * without the page shell, which is exactly how the Dashboard hosts it.
  *
  * What this catches that a type check cannot: a chart that throws on a feed
  * with no stock, and a page that reports a feed nobody draws as an emergency.
@@ -57,12 +61,12 @@ vi.mock("@/lib/frappe", async () => {
   return { ...actual, call: vi.fn(async () => projection) };
 });
 
-const { Projection } = await import("@/pages/Projection");
+const { ProjectionBody } = await import("@/pages/Projection");
 
 function draw() {
   return render(
     <TooltipProvider>
-      <Projection />
+      <ProjectionBody />
     </TooltipProvider>,
   );
 }

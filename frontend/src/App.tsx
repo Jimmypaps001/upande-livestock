@@ -38,9 +38,6 @@ const Milking = lazy(() =>
 const Culling = lazy(() =>
   import("@/pages/Culling").then((m) => ({ default: m.Culling })),
 );
-const Projection = lazy(() =>
-  import("@/pages/Projection").then((m) => ({ default: m.Projection })),
-);
 const Procurement = lazy(() =>
   import("@/pages/Procurement").then((m) => ({ default: m.Procurement })),
 );
@@ -86,7 +83,6 @@ const TITLES: Record<View, string> = {
   stock: "Feed in Store",
   rations: "Rations",
   "ration-editor": "Ration Editor",
-  projection: "Feed Projection",
   procurement: "Procurement",
   milking: "Milking",
   quality: "Quality",
@@ -121,7 +117,6 @@ const PAGES: Partial<Record<View, React.ComponentType>> = {
   milking: Milking,
   quality: Quality,
   culling: Culling,
-  projection: Projection,
   procurement: Procurement,
   herds: Herds,
   service: Service,

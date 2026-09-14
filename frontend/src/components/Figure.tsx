@@ -18,13 +18,35 @@ export function Figure({
   value,
   unit,
   hint,
+  loading,
 }: {
   label: string;
   value: string;
   unit?: string;
   hint?: string;
+  /** Draw the figure's own box with a bar where the number will be.
+   *
+   *  The skeleton lives INSIDE this component rather than beside it, because
+   *  that is the only way the box is the same box. A separate skeleton laid out
+   *  to match is a second set of paddings and font sizes to keep in step, and
+   *  the first time one of them changes the page jumps as the data lands —
+   *  which is the whole thing a skeleton exists to prevent. */
+  loading?: boolean;
 }) {
   const empty = value === EMPTY || value === "";
+  if (loading) {
+    return (
+      <div className="flex min-w-0 flex-col gap-1.5 px-5 py-4">
+        <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-[var(--sd-quiet)]">
+          {label}
+        </span>
+        {/* The value line is 26px with leading-none, so the bar is 26px tall
+            and the row cannot change height when the number arrives. */}
+        <span className="block h-[26px] w-[4.5ch] animate-pulse rounded bg-[var(--sd-bg-soft)]" />
+        <span className="block h-4 w-[7ch] animate-pulse rounded bg-[var(--sd-bg-soft)]" />
+      </div>
+    );
+  }
   return (
     <div className="flex min-w-0 flex-col gap-1.5 px-5 py-4">
       <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-[var(--sd-quiet)]">

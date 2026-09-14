@@ -112,12 +112,6 @@ const NAV: NavSection[] = [
         hint: "Change what a herd is fed — it becomes the next mix",
       },
       {
-        view: "projection",
-        label: "Feed Projection",
-        icon: TrendingDown,
-        hint: "The day each feed runs out, at today's herds and rations",
-      },
-      {
         view: "procurement",
         label: "Procurement",
         icon: ShoppingCart,
@@ -177,7 +171,6 @@ export const BUILT_VIEWS: ReadonlySet<View> = new Set<View>([
   "stock",
   "rations",
   "ration-editor",
-  "projection",
   "procurement",
   "herds",
   "service",

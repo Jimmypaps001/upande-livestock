@@ -21,7 +21,9 @@ import { fmt } from "@/lib/utils";
  */
 
 const PAD = { top: 16, right: 20, bottom: 52, left: 72 };
-const HEIGHT = 320;
+/** Exported so the loading skeleton is the same height as the chart. A
+ *  placeholder that guesses is a page that jumps when the data lands. */
+export const MILK_CHART_HEIGHT = 320;
 
 /** A tick ceiling a person would choose: 1, 2 or 5 times a power of ten. */
 export function niceCeil(v: number): number {
@@ -77,7 +79,7 @@ export function MilkChart({ points }: { points: DayPoint[] }) {
   const [ref, width] = useWidth();
 
   const plotW = Math.max(1, width - PAD.left - PAD.right);
-  const plotH = HEIGHT - PAD.top - PAD.bottom;
+  const plotH = MILK_CHART_HEIGHT - PAD.top - PAD.bottom;
   const max = niceCeil(Math.max(...points.map((p) => p.net_kg), 0) * 1.05);
   const n = points.length;
 
@@ -102,8 +104,8 @@ export function MilkChart({ points }: { points: DayPoint[] }) {
       ) : (
         <svg
           width={width}
-          height={HEIGHT}
-          viewBox={`0 0 ${width} ${HEIGHT}`}
+          height={MILK_CHART_HEIGHT}
+          viewBox={`0 0 ${width} ${MILK_CHART_HEIGHT}`}
           role="img"
           aria-label={`Net milk in kilograms per day, ${points[0].date} to ${
             points[n - 1].date
@@ -184,7 +186,7 @@ export function MilkChart({ points }: { points: DayPoint[] }) {
           {/* Axis titles — the units are stated, not implied. */}
           <text
             x={PAD.left + plotW / 2}
-            y={HEIGHT - 8}
+            y={MILK_CHART_HEIGHT - 8}
             textAnchor="middle"
             className="fill-[var(--sd-muted)] text-[11px] font-medium"
           >

@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { PackageSearch, TrendingDown } from "lucide-react";
-import { RunOutChart } from "@/components/feeding/RunOutChart";
+import { RunOutChart, RUN_OUT_CHART_HEIGHT } from "@/components/feeding/RunOutChart";
+import { ChartSkeleton, RowsSkeleton } from "@/components/Loading";
 import { Figure, FigureRow } from "@/components/Figure";
 import { Notice } from "@/components/feeding/Notice";
-import { Page, PageHeading } from "@/components/PageShell";
 import { RefreshButton } from "@/components/RefreshButton";
 import {
   Card,
@@ -40,7 +40,7 @@ const HORIZONS = [14, 30, 60, 90];
  * forecast. This one is arithmetic on today, which is something a person
  * standing in the store can check.
  */
-export function Projection() {
+export function ProjectionBody() {
   const [data, setData] = useState<FeedProjection | null>(null);
   const [days, setDays] = useState(30);
   const [loading, setLoading] = useState(true);
@@ -69,24 +69,19 @@ export function Projection() {
   const next = items.find((i) => i.days_cover !== null && i.days_cover > 0);
 
   return (
-    <Page>
-      <PageHeading eyebrow="Upande Livestock · Feeding" title="Feed projection">
-        What the store holds, what the herds draw a day, and the date each feed
-        runs out. Nothing here moves stock — it is arithmetic on today.
-      </PageHeading>
-
+    <>
       {failure && <Notice tone="error">{failure}</Notice>}
 
       <FigureRow>
-        <Figure label="Feeds drawn" value={String(items.length)} hint="across every herd" />
-        <Figure label="Already out" value={String(gone.length)} hint="nothing on hand" />
+        <Figure loading={!data} label="Feeds drawn" value={String(items.length)} hint="across every herd" />
+        <Figure loading={!data} label="Already out" value={String(gone.length)} hint="nothing on hand" />
         <Figure
-          label="Running low"
+          loading={!data} label="Running low"
           value={String(soon.length - gone.length)}
           hint="inside ten days"
         />
         <Figure
-          label="Next to go"
+          loading={!data} label="Next to go"
           value={next ? next.item_name : "—"}
           hint={next?.runs_out_on ? `on ${next.runs_out_on}` : ""}
         />
@@ -135,7 +130,7 @@ export function Projection() {
           {data ? (
             <RunOutChart items={items} dates={data.dates} />
           ) : (
-            <p className="text-[13px] text-[var(--sd-muted)]">Working it out…</p>
+            <ChartSkeleton height={RUN_OUT_CHART_HEIGHT} />
           )}
         </CardContent>
       </Card>
@@ -150,7 +145,9 @@ export function Projection() {
           </CardHeading>
         </CardHeaderRow>
         <CardContent className="pt-0">
-          {!items.length ? (
+          {!data ? (
+            <RowsSkeleton rows={6} />
+          ) : !items.length ? (
             <p className="text-[13px] text-[var(--sd-muted)]">
               No herd on the farm has a ration, so nothing is being drawn.
             </p>
@@ -170,7 +167,7 @@ export function Projection() {
           )}
         </CardContent>
       </Card>
-    </Page>
+    </>
   );
 }
 

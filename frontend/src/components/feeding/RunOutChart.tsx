@@ -17,7 +17,9 @@ import { fmt } from "@/lib/utils";
  */
 
 const PAD = { top: 16, right: 132, bottom: 44, left: 44 };
-const HEIGHT = 300;
+/** Exported so the loading skeleton is the same height as the chart. A
+ *  placeholder that guesses is a page that jumps when the data lands. */
+export const RUN_OUT_CHART_HEIGHT = 300;
 
 function shortDate(iso: string): string {
   const [, m, d] = iso.split("-");
@@ -54,7 +56,7 @@ export function RunOutChart({
 }) {
   const [ref, width] = useWidth();
   const plotW = Math.max(1, width - PAD.left - PAD.right);
-  const plotH = HEIGHT - PAD.top - PAD.bottom;
+  const plotH = RUN_OUT_CHART_HEIGHT - PAD.top - PAD.bottom;
   const n = dates.length;
 
   const x = (i: number) => PAD.left + (n <= 1 ? plotW / 2 : (i / (n - 1)) * plotW);
@@ -74,8 +76,8 @@ export function RunOutChart({
     <div ref={ref} className="w-full overflow-x-auto">
       <svg
         width={width}
-        height={HEIGHT}
-        viewBox={`0 0 ${width} ${HEIGHT}`}
+        height={RUN_OUT_CHART_HEIGHT}
+        viewBox={`0 0 ${width} ${RUN_OUT_CHART_HEIGHT}`}
         role="img"
         aria-label={`Feed stock remaining over ${n - 1} days, as a share of what is on hand today. ${drawn
           .map((it) => `${it.item_name}: ${it.runs_out_on ? `runs out ${it.runs_out_on}` : "no run-out date"}`)
@@ -131,7 +133,7 @@ export function RunOutChart({
             {shortDate(dates[i])}
           </text>
         ))}
-        <text x={PAD.left + plotW / 2} y={HEIGHT - 6} textAnchor="middle"
+        <text x={PAD.left + plotW / 2} y={RUN_OUT_CHART_HEIGHT - 6} textAnchor="middle"
               className="fill-[var(--sd-muted)] text-[11px] font-medium">
           Share of today's stock remaining
         </text>

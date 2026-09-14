@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { RowsSkeleton } from "@/components/Loading";
 import { isError } from "@/lib/frappe";
 import {
   describeChange, getHerdRations, setHerdRation,
@@ -142,13 +143,13 @@ export function RationEditor() {
       )}
 
       <FigureRow>
-        <Figure label="Herds fed" value={String(herds.filter((h) => h.bom).length)}
+        <Figure loading={!data} label="Herds fed" value={String(herds.filter((h) => h.bom).length)}
                 hint={`of ${herds.length}`} />
-        <Figure label="Without a ration" value={String(herds.filter((h) => !h.bom).length)}
+        <Figure loading={!data} label="Without a ration" value={String(herds.filter((h) => !h.bom).length)}
                 hint="nothing is mixed for them" />
-        <Figure label="Feeds in use" value={String(feeds.length)} hint="named in a recipe" />
+        <Figure loading={!data} label="Feeds in use" value={String(feeds.length)} hint="named in a recipe" />
         <Figure
-          label="Whole farm"
+          loading={!data} label="Whole farm"
           value={fmt(herds.reduce((s, h) => s + h.day_kg, 0))}
           unit="kg"
           hint="a day, at today's head counts"
@@ -167,6 +168,7 @@ export function RationEditor() {
             </CardTools>
           </CardHeaderRow>
           <CardContent className="pt-0">
+            {!data && <RowsSkeleton rows={8} />}
             <ul className="flex flex-col gap-1">
               {herds.map((h) => (
                 <li key={h.herd}>

@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import { MilkChart } from "@/components/dashboard/MilkChart";
+import { MilkChart, MILK_CHART_HEIGHT } from "@/components/dashboard/MilkChart";
+import { ChartSkeleton } from "@/components/Loading";
+import { ProjectionBody } from "@/pages/Projection";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Figure, FigureRow } from "@/components/Figure";
 import { Notice } from "@/components/feeding/Notice";
 import { Page, PageHeading } from "@/components/PageShell";
@@ -99,6 +102,16 @@ export function Dashboard() {
 
       {failure && <Notice tone="error">{failure}</Notice>}
 
+      {/* Milk and feed are the same question asked from two ends — what the
+          herd produced, and what it will take to keep producing it — so they
+          are two tabs of one dashboard rather than two entries in a sidebar. */}
+      <Tabs defaultValue="milk">
+        <TabsList>
+          <TabsTrigger value="milk">Milk production</TabsTrigger>
+          <TabsTrigger value="feed">Feed projection</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="milk" className="flex flex-col gap-5 pt-5">
       <Card>
         <CardHeaderRow>
           <CardHeading>
@@ -138,28 +151,32 @@ export function Dashboard() {
           </CardTools>
         </CardHeaderRow>
         <CardContent className="flex flex-col gap-5">
-          <MilkChart points={points} />
+          {loading && !points.length ? (
+            <ChartSkeleton height={MILK_CHART_HEIGHT} />
+          ) : (
+            <MilkChart points={points} />
+          )}
           <FigureRow>
             <Figure
-              label="In this window"
+              loading={loading && !data} label="In this window"
               value={fmt(windowTotal)}
               unit="kg"
               hint={`${points.length} day${points.length === 1 ? "" : "s"} recorded`}
             />
             <Figure
-              label="Last recorded day"
+              loading={loading && !data} label="Last recorded day"
               value={latest ? fmt(latest.net_kg) : "—"}
               unit="kg"
               hint={latest ? latest.date : undefined}
             />
             <Figure
-              label="Best day"
+              loading={loading && !data} label="Best day"
               value={best ? fmt(best.net_kg) : "—"}
               unit="kg"
               hint={best ? best.date : undefined}
             />
             <Figure
-              label="Per cow, last day"
+              loading={loading && !data} label="Per cow, last day"
               value={latestPerCow == null ? "—" : fmt(latestPerCow)}
               unit="kg"
               hint={latest && latest.cows ? `${latest.cows} cows milked` : undefined}
@@ -178,25 +195,31 @@ export function Dashboard() {
         </CardHeader>
         <CardContent className="flex flex-col gap-5">
           <FigureRow>
-            <Figure label="Net milk" value={fmt(summary.net_kg)} unit="kg" />
-            <Figure label="Discarded" value={fmt(summary.discarded_kg)} unit="kg" />
-            <Figure label="Revenue" value={fmt(summary.revenue)} unit="KES" />
+            <Figure loading={loading && !data} label="Net milk" value={fmt(summary.net_kg)} unit="kg" />
+            <Figure loading={loading && !data} label="Discarded" value={fmt(summary.discarded_kg)} unit="kg" />
+            <Figure loading={loading && !data} label="Revenue" value={fmt(summary.revenue)} unit="KES" />
             <Figure
-              label="Recordings"
+              loading={loading && !data} label="Recordings"
               value={String(summary.records ?? 0)}
               hint="milking sessions filed"
             />
           </FigureRow>
           <FigureRow>
-            <Figure label="Average protein" value={fmt(summary.avg_protein)} unit="%" />
+            <Figure loading={loading && !data} label="Average protein" value={fmt(summary.avg_protein)} unit="%" />
             <Figure
-              label="Average bulk SCC"
+              loading={loading && !data} label="Average bulk SCC"
               value={fmt(summary.avg_scc)}
               unit="×1000 cells/ml"
             />
           </FigureRow>
         </CardContent>
       </Card>
+        </TabsContent>
+
+        <TabsContent value="feed" className="flex flex-col gap-5 pt-5">
+          <ProjectionBody />
+        </TabsContent>
+      </Tabs>
     </Page>
   );
 }
