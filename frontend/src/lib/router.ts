@@ -11,6 +11,7 @@ import { useCallback, useEffect, useState } from "react";
 export const VIEWS = [
   "dashboard",
   "animals",
+  "herds",
   "quality",
   "events",
   "health",

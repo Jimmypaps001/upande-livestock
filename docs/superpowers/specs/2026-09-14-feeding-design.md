@@ -122,9 +122,26 @@ The machinery is there (`_availability` knows what is short and from when;
 **what substitutes for what, and who says so.** That is the farm's call and not
 something to infer from an item group. Needs answering before it is built.
 
-## 8. Buying animals in — TO BUILD
+## 8. Buying animals in — BUILT
 
-Mirrors culling in reverse: an Animal, an Asset, a herd, a purchase.
+`herds/buy_in_animal.py` and the Herds page, which also gives `create_herd` the
+screen it was missing.
+
+THE FARM'S REGISTER DECIDES HER NAME. She gets the next free number in the
+farm's own series, exactly as a calf born here would, because that is the
+identity every screen and the book on the wall uses. The seller's tag is kept
+as a note — a dispute about which animal was sold is settled by their number,
+not ours.
+
+She arrives by a Movement, so her timeline opens with the day she came and
+where she went. Capitalised only if she was paid for: an Asset worth nothing
+makes the balance sheet longer and says less, and a gift is a real way for an
+animal to arrive. `origin` follows the money — Purchased, or Transferred In.
+
+The Animal itself is created in `common/animal.py` beside `create_calf`, not in
+the endpoint. `test_only_one_place_creates_a_calf_animal` caught the first
+version doing it locally, and it was right to: two paths for creating an Animal
+is the regression that test was written after.
 
 ## Tests
 
@@ -134,7 +151,8 @@ Mirrors culling in reverse: an Animal, an Asset, a herd, a purchase.
 | `test_concentrate_alerts.py` | 10 | days of cover, and "low" versus "cannot be mixed" |
 | `test_feed_projection.py` | 17 | draw counted both ways; the date, not the quantity |
 | `test_feed_procurement.py` | 19 | you do not buy what you mix; one draft request |
-| frontend `projection*`, `procurement-page` | 14 | the pages render, and order what was kept |
+| `test_buy_in.py` | 14 | the farm's register names her, not the seller |
+| frontend `projection*`, `procurement-page`, `herds-page` | 19 | the pages render, and order what was kept |
 
 ## Open questions for the farm
 

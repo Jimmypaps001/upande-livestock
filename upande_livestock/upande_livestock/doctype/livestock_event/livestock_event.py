@@ -43,9 +43,18 @@ def warn_on_calving_mismatch(calving_name):
 	"""
 	if not calving_name:
 		return
-	expected, recorded = frappe.db.get_value(
+	row = frappe.db.get_value(
 		"Livestock Event", calving_name, ["custom_no_of_calves", "births_recorded"]
 	)
+	if not row:
+		# The calving this Birth points at is gone. `frappe.db.get_value` answers
+		# None for a missing record, and unpacking that raised TypeError — from
+		# `on_cancel`, so a Birth whose calving had been deleted could not even
+		# be cancelled, and the failure named an unpacking error rather than the
+		# missing document. A count against a calving nobody can read has no
+		# answer, and warning about it helps nobody; say nothing.
+		return
+	expected, recorded = row
 	expected = expected or 0
 	recorded = recorded or 0
 	if expected and recorded and expected != recorded:

@@ -158,6 +158,50 @@ def create_calf(dam, tag_number, sex, event_date, birth_weight=None, burn_name=N
 	return calf.name
 
 
+def create_bought_animal(tag, sex, arrived, burn_name=None, breed=None,
+                         date_of_birth=None, seller_tag=None, origin="Purchased"):
+	"""Insert an Animal that arrived bought rather than born.
+
+	HERE RATHER THAN IN THE ENDPOINT, beside `create_calf`, because Animal
+	creation is the thing this module exists to be the only place for — see
+	test_livestock_event.test_only_one_place_creates_a_calf_animal, which was
+	written after two paths for creating a calf drifted apart. A bought animal
+	is not a calf, but it is an Animal, and the next person to need a third way
+	in should find all of them in one file.
+
+	NO HERD IS SET. A calf is born into one, which is why `create_calf` places
+	her; a bought animal arrives, and arriving is a Movement — that is what
+	gives her a first line in her own history saying where she came from. The
+	caller moves her.
+
+	`origin` is what separates the two on every report that asks where the
+	farm's animals came from — and separates a purchase from a gift, which the
+	field's own vocabulary already distinguishes ("Transferred In"). An animal
+	nobody paid for is not a purchase however she arrived.
+	"""
+	if sex not in ("Female", "Male"):
+		frappe.throw(_("An animal is Female or Male."))
+	if frappe.db.exists("Animal", tag):
+		frappe.throw(_("Animal {0} already exists.").format(tag))
+
+	doc = frappe.new_doc("Animal")
+	doc.tag_number = tag
+	doc.burn_name = burn_name or tag
+	doc.sex = sex
+	doc.status = "Active"
+	doc.date_of_birth = date_of_birth or None
+	doc.acquisition_date = arrived
+	doc.breed = breed or None
+	doc.origin = origin
+	doc.company = frappe.db.get_single_value("Livestock Settings", "custom_default_company")
+	if seller_tag and doc.meta.has_field("book_number"):
+		# Her tag at the farm she came from. Kept because a dispute about which
+		# animal was sold is settled by the seller's number, not by ours.
+		doc.book_number = seller_tag
+	doc.insert(ignore_permissions=True)
+	return doc.name
+
+
 STATUS_BY_DISPOSAL_TYPE = {
 	"Sold": "Sold",
 	# A gift leaves the farm with no sale behind it. "Transferred Out" is the
