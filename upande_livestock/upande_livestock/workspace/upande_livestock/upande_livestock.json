@@ -1,20 +1,12 @@
 {
  "app": "upande_livestock",
  "charts": [],
- "content": "[{\"id\": \"ulNav00001\", \"type\": \"custom_block\", \"data\": {\"custom_block_name\": \"Livestock Navigation\", \"col\": 12}}, {\"id\": \"ulDash0001\", \"type\": \"custom_block\", \"data\": {\"custom_block_name\": \"Livestock Dashboard\", \"col\": 12}}, {\"id\": \"ulRatHdr01\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\"><b>Rations</b></span>\", \"col\": 12}}, {\"id\": \"ulRations1\", \"type\": \"custom_block\", \"data\": {\"custom_block_name\": \"Livestock Rations\", \"col\": 12}}]",
+ "content": "[{\"id\": \"ulNav00001\", \"type\": \"custom_block\", \"data\": {\"custom_block_name\": \"Livestock Navigation\", \"col\": 12}}]",
  "creation": "2026-07-17 00:00:00.000000",
  "custom_blocks": [
   {
    "custom_block_name": "Livestock Navigation",
    "label": "Livestock Navigation"
-  },
-  {
-   "custom_block_name": "Livestock Dashboard",
-   "label": "Livestock Dashboard"
-  },
-  {
-   "custom_block_name": "Livestock Rations",
-   "label": "Livestock Rations"
   }
  ],
  "docstatus": 0,

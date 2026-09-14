@@ -49,7 +49,8 @@ upande_livestock.patches.backfill_standing_ration_boms
 # alongside SCP's "Chemical Mixing"; _engine._run_manufacture then asks
 # common/stock.stock_entry_type_for() which of the two a run is.
 upande_livestock.patches.create_feed_mixing_stock_entry_types
-# Three sidebar entries for one app, and the React screens made two of them a
-# duplicate of a UI that lives elsewhere. Frappe never removes a Workspace it
-# has stopped shipping, so the fixture files going away is not enough.
-upande_livestock.patches.retire_split_livestock_workspaces
+# Three sidebar entries for one app, and desk blocks duplicating screens the
+# React app now has. One workspace, one block of links. Frappe never removes a
+# Workspace or a Custom HTML Block it has stopped shipping, so the fixture
+# files going away is not enough.
+upande_livestock.patches.retire_livestock_desk_blocks

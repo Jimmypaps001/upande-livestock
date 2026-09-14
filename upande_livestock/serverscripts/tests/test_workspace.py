@@ -44,16 +44,28 @@ class TestTheDeskHasOneWayIn(IntegrationTestCase):
 		]
 		self.assertIn(NAV, blocks)
 
-	def test_the_desk_ration_editor_is_still_reachable(self):
-		"""It was asked for on the desk as well as in the app, and folding three
-		workspaces into one is not a reason to lose it."""
+	def test_the_links_are_the_only_thing_on_it(self):
+		"""The desk blocks duplicated screens the app now has, so they are gone
+		and the workspace is a way through to the app and nothing else."""
 		content = json.loads(frappe.db.get_value("Workspace", WORKSPACE, "content") or "[]")
 		blocks = [
 			b.get("data", {}).get("custom_block_name")
 			for b in content
 			if b.get("type") == "custom_block"
 		]
-		self.assertIn("Livestock Rations", blocks)
+		self.assertEqual(blocks, [NAV], f"something else has landed on the workspace: {blocks}")
+
+	def test_this_app_ships_one_block_and_it_is_the_links(self):
+		"""`Livestock Dashboard` and `Livestock Operations` may still exist on a
+		site — upande_scp ships its own older copies of both, which is why they
+		cannot simply be deleted here — but this app no longer ships either, and
+		nothing points at them."""
+		import json as _json
+
+		path = frappe.get_app_path("upande_livestock", "fixtures", "custom_html_block.json")
+		with open(path) as f:
+			shipped = [b["name"] for b in _json.load(f)]
+		self.assertEqual(shipped, [NAV])
 
 	def test_the_tiles_are_a_way_in_not_a_directory(self):
 		html = frappe.db.get_value("Custom HTML Block", NAV, "html") or ""
