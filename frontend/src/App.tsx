@@ -53,7 +53,9 @@ const Abortion = lazy(() => import("@/pages/Breeding").then((m) => ({ default: m
 const DryingOff = lazy(() => import("@/pages/Breeding").then((m) => ({ default: m.DryingOff })));
 const Heat = lazy(() => import("@/pages/Breeding").then((m) => ({ default: m.Heat })));
 const CheckUp = lazy(() => import("@/pages/Health").then((m) => ({ default: m.CheckUp })));
-const HealthCase = lazy(() => import("@/pages/Health").then((m) => ({ default: m.HealthCase })));
+const HealthCases = lazy(() =>
+  import("@/pages/HealthCases").then((m) => ({ default: m.HealthCases })),
+);
 const Weight = lazy(() => import("@/pages/Weights").then((m) => ({ default: m.Weights })));
 const Husbandry = lazy(() => import("@/pages/Husbandry").then((m) => ({ default: m.Husbandry })));
 const Movement = lazy(() => import("@/pages/Movement").then((m) => ({ default: m.Movement })));
@@ -67,8 +69,8 @@ const Treatment = lazy(() => import("@/pages/Treatment").then((m) => ({ default:
 const Events = lazy(() => import("@/pages/Insights").then((m) => ({ default: m.Events })));
 const Production = lazy(() => import("@/pages/Insights").then((m) => ({ default: m.Production })));
 const Reports = lazy(() => import("@/pages/Insights").then((m) => ({ default: m.Reports })));
-const HealthOverview = lazy(() =>
-  import("@/pages/Insights").then((m) => ({ default: m.HealthOverview })),
+const HealthDashboard = lazy(() =>
+  import("@/pages/HealthDashboard").then((m) => ({ default: m.HealthDashboard })),
 );
 
 const TITLES: Record<View, string> = {
@@ -98,7 +100,7 @@ const TITLES: Record<View, string> = {
   weight: "Weight",
   "check-up": "Check Up",
   treatment: "Treatment",
-  "health-case": "Health Case",
+  "health-case": "Health Files",
   culling: "Culling",
   settings: "Settings",
   notifications: "Notifications",
@@ -126,7 +128,7 @@ const PAGES: Partial<Record<View, React.ComponentType>> = {
   "drying-off": DryingOff,
   heat: Heat,
   "check-up": CheckUp,
-  "health-case": HealthCase,
+  "health-case": HealthCases,
   weight: Weight,
   husbandry: Husbandry,
   movement: Movement,
@@ -135,7 +137,7 @@ const PAGES: Partial<Record<View, React.ComponentType>> = {
   events: Events,
   production: Production,
   reports: Reports,
-  health: HealthOverview,
+  health: HealthDashboard,
   "ration-editor": RationEditor,
 };
 

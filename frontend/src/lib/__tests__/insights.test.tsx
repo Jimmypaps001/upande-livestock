@@ -32,7 +32,6 @@ const payloads: Record<string, unknown> = {
       { name: "Lactating group 1", animals: 69 },
     ],
   },
-  open_health_cases: { ok: true, cases: [], drug_items: [] },
 };
 
 const call = vi.fn(async (method?: string) => {
@@ -45,7 +44,7 @@ vi.mock("@/lib/frappe", async () => {
   return { ...actual, call };
 });
 
-const { Events, Production, Reports, HealthOverview } = await import("@/pages/Insights");
+const { Events, Production, Reports } = await import("@/pages/Insights");
 
 const draw = (Page: () => React.ReactElement) =>
   render(
@@ -99,8 +98,6 @@ describe("the read-only screens", () => {
     );
   });
 
-  it("says every case is closed rather than showing a blank list", async () => {
-    draw(HealthOverview);
-    await waitFor(() => expect(screen.getByText(/Every case has been closed/)).toBeTruthy());
-  });
+  // The health screens moved out of this module: the tab is a dashboard now and
+  // the files are their own register. Their tests live in health-files.test.tsx.
 });

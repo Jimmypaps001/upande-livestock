@@ -73,9 +73,13 @@ export interface RecordEventProps<O> {
   /** The date field's name, if this screen has one. */
   dateField?: string;
   submitLabel: string;
-  submit: (payload: Record<string, unknown>) => Promise<Envelope<{ name: string }>>;
+  // Whatever else the endpoint answers rides along: a check-up that escalates
+  // reports the file it opened, and the screen has to be able to say so.
+  submit: (
+    payload: Record<string, unknown>,
+  ) => Promise<Envelope<{ name: string } & Record<string, unknown>>>;
   /** What to say after a successful submit. */
-  said: (result: { name: string }, animal: string) => string;
+  said: (result: { name: string } & Record<string, unknown>, animal: string) => string;
   /** Anything extra to show once an animal is chosen — a preview, a warning. */
   aside?: (animal: AnimalChoice, options: O) => React.ReactNode;
   /** Who the server thinks is recording this, from the options endpoint. */

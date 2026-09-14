@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Loader2, ShieldAlert } from "lucide-react";
 import { BackdatingSetting } from "@/components/settings/BackdatingSetting";
-import { ChildTableView } from "@/components/settings/ChildTableView";
+import { ChildTableEditor } from "@/components/settings/ChildTableEditor";
 import { SettingField } from "@/components/settings/SettingField";
 import { AmberNotice, Notice } from "@/components/feeding/Notice";
 import { Page, PageHeading } from "@/components/PageShell";
@@ -174,6 +174,7 @@ export function Settings() {
                     draft={draft}
                     onEdit={edit}
                     readOnly={readOnly}
+                    onTableSaved={load}
                   />
                 ))}
               </div>
@@ -245,12 +246,16 @@ function SectionCard({
   draft,
   onEdit,
   readOnly,
+  onTableSaved,
 }: {
   section: SettingsSection;
   doc: LivestockSettingsDoc;
   draft: Record<string, SettingsValue>;
   onEdit: (fieldname: string, next: SettingsValue) => void;
   readOnly: boolean;
+  /** A list saves on its own, so the page re-reads rather than holding a copy
+   *  that the next scalar save would write back over. */
+  onTableSaved: () => void;
 }) {
   const tables = doc.tables.filter((t) => section.tables.includes(t.fieldname));
   const visible = section.fields.filter((f) => isVisible(f, doc.values, draft));
@@ -302,7 +307,12 @@ function SectionCard({
         {tables.length > 0 && ordinary.length > 0 && <Separator />}
 
         {tables.map((table) => (
-          <ChildTableView key={table.fieldname} table={table} />
+          <ChildTableEditor
+            key={table.fieldname}
+            table={table}
+            canWrite={!readOnly}
+            onSaved={onTableSaved}
+          />
         ))}
       </CardContent>
     </Card>

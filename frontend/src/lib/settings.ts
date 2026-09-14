@@ -59,13 +59,20 @@ export type SettingsTab = {
   sections: SettingsSection[];
 };
 
+export type SettingsTableRow = Record<string, unknown> & {
+  /** The child row's own name. Present on rows the server sent; absent on a row
+   *  added here, which is how the writer tells an edit from an insert. */
+  name?: string;
+  idx?: number;
+};
+
 export type SettingsTable = {
   fieldname: string;
   label: string;
   description: string | null;
   doctype: string;
   columns: SettingsField[];
-  rows: Array<Record<string, unknown>>;
+  rows: SettingsTableRow[];
 };
 
 export type LivestockSettingsDoc = {
@@ -91,6 +98,8 @@ export type SaveResult = {
 const READ = "upande_livestock.serverscripts.settings.livestock_settings.livestock_settings";
 const SAVE =
   "upande_livestock.serverscripts.settings.save_livestock_settings.save_livestock_settings";
+const SAVE_TABLE =
+  "upande_livestock.serverscripts.settings.save_livestock_settings_table.save_livestock_settings_table";
 
 export function livestockSettings(): Promise<Envelope<LivestockSettingsDoc>> {
   return call(READ);
@@ -100,6 +109,26 @@ export function saveLivestockSettings(
   changes: Record<string, SettingsValue>,
 ): Promise<Envelope<SaveResult>> {
   return call(SAVE, { payload: changes });
+}
+
+export type SaveTableResult = {
+  ok: boolean;
+  fieldname: string;
+  added: number;
+  removed: number;
+  rows: SettingsTableRow[];
+};
+
+/**
+ * Save a whole list. Adding, removing and reordering are one edit to the person
+ * doing it, and three calls racing on one table is how a farm ends up with a
+ * feed store listed twice and its feed counted twice with it.
+ */
+export function saveSettingsTable(
+  fieldname: string,
+  rows: SettingsTableRow[],
+): Promise<Envelope<SaveTableResult>> {
+  return call(SAVE_TABLE, { payload: { fieldname, rows } });
 }
 
 /* ── The rules the screen must not break ───────────────────────────────── */

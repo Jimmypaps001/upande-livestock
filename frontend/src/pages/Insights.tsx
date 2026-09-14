@@ -331,60 +331,6 @@ export function Reports() {
   );
 }
 
-export function HealthOverview() {
-  const load = useCallback(() => getOpenCases(), []);
-  const { data, loading, failure, refresh } = useView<OpenCasesView>(load);
-  const cases = data?.cases ?? [];
-
-  return (
-    <Page>
-      <PageHeading eyebrow="Upande Livestock · Health" title="Health">
-        What is still being treated. A case stays here until somebody closes it,
-        which is the point of it being a case rather than a note.
-      </PageHeading>
-
-      {failure && <Notice tone="error">{failure}</Notice>}
-
-      <FigureRow>
-        <Figure label="Open cases" value={String(cases.length)} hint="still being treated" />
-        <Figure label="Drugs in store" value={String((data?.drug_items ?? []).length)}
-                hint="available to treat with" />
-      </FigureRow>
-
-      <Card>
-        <CardHeaderRow>
-          <CardHeading>
-            <CardTitle>Open cases</CardTitle>
-            <CardDescription>Add a dose to one on the Treatment screen.</CardDescription>
-          </CardHeading>
-          <CardTools>
-            <RefreshButton onClick={refresh} loading={loading} label="the cases" />
-          </CardTools>
-        </CardHeaderRow>
-        <CardContent className="pt-0">
-          {!cases.length ? (
-            <p className="text-[13px] text-[var(--sd-muted)]">
-              Nothing is open. Every case has been closed.
-            </p>
-          ) : (
-            <ul className="flex flex-col gap-1">
-              {cases.map((c) => (
-                <li
-                  key={c.value}
-                  className="flex flex-wrap items-baseline justify-between gap-x-4 border-t border-[var(--sd-line)] px-1 py-2.5 text-[12.5px] first:border-t-0"
-                >
-                  <span className="text-[var(--sd-ink)]">{c.label}</span>
-                  <span className="tabular-nums text-[var(--sd-quiet)]">{c.value}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </CardContent>
-      </Card>
-    </Page>
-  );
-}
-
 function Line({ icon, label, value }: { icon: React.ReactNode; label: string; value: number }) {
   return (
     <div className="flex items-baseline justify-between gap-4 border-t border-[var(--sd-line)] px-1 py-2 text-[12.5px] first:border-t-0">

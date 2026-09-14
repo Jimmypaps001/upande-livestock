@@ -55,7 +55,21 @@ export function CheckUp() {
         operatorOf={(o) => o.employee}
         submitLabel="Record the check up"
         submit={createCheckUp}
-        said={(r, a) => `${a} seen — ${r.name}.`}
+        // A CHECK-UP IS WHERE A FILE COMES FROM, so the answer says whether one
+        // was opened. Escalating used to be a word in a dropdown and nothing
+        // else happened; now the file exists and the herdsman is told its name.
+        said={(r, a) => {
+          if (r.case_opened) {
+            return `${a} seen — ${r.name}. A health file is open for her: ${r.case}.`;
+          }
+          if (r.case) {
+            return `${a} seen — ${r.name}. Added to her open file ${r.case}.`;
+          }
+          if (r.suggest_case) {
+            return `${a} seen — ${r.name}. She was treated but has no file open; open one on the Treatment screen if this is more than a one-off.`;
+          }
+          return `${a} seen — ${r.name}.`;
+        }}
       />
     </Page>
   );
