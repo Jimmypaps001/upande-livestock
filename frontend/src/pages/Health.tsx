@@ -3,7 +3,6 @@ import { Page, PageHeading } from "@/components/PageShell";
 import { RecordEvent, type FieldSpec } from "@/components/events/RecordEvent";
 import {
   createCheckUp,
-  createHealthCase,
   getHealthOptions,
   type HealthOptions,
 } from "@/lib/events";
@@ -70,45 +69,6 @@ export function CheckUp() {
           }
           return `${a} seen — ${r.name}.`;
         }}
-      />
-    </Page>
-  );
-}
-
-export function HealthCase() {
-  const load = useCallback(() => getHealthOptions(), []);
-  return (
-    <Page>
-      <PageHeading eyebrow="Upande Livestock · Health" title="Health case">
-        Something followed over time rather than settled in one visit.
-        Treatments are added to the case as they happen, so the whole course is
-        one record.
-      </PageHeading>
-      <RecordEvent<HealthOptions>
-        eyebrow="Health"
-        title="a case"
-        blurb="Any animal on the farm."
-        pickLabel="Which animal"
-        emptyPick="No animals on this site."
-        load={load}
-        animalsOf={(o) => o.animals}
-        fieldsOf={(o): FieldSpec[] => [
-          { name: "event_date", label: "Opened on", kind: "date" },
-          { name: "presenting_symptoms", label: "What is wrong", kind: "text",
-            placeholder: "Swollen left hind quarter, hard", required: true },
-          { name: "provisional_diagnosis", label: "Provisionally", kind: "select",
-            options: o.diseases },
-          { name: "severity", label: "How bad", kind: "select", options: o.severities },
-          { name: "case_status", label: "Status", kind: "select", options: o.case_statuses },
-          { name: "vet_name", label: "Vet, if called", kind: "text",
-            hint: "Leaving this blank records that none was." },
-          { name: "body_systems", label: "Affecting", kind: "text",
-            placeholder: "Udder" },
-        ]}
-        operatorOf={(o) => o.employee}
-        submitLabel="Open the case"
-        submit={createHealthCase}
-        said={(r, a) => `Case open for ${a} — ${r.name}. Add treatments to it as they happen.`}
       />
     </Page>
   );

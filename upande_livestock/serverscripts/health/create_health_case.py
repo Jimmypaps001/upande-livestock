@@ -8,6 +8,7 @@ from upande_livestock.serverscripts.common import backdate
 from upande_livestock.serverscripts.common.company import company_or_throw
 from upande_livestock.serverscripts.common.employee import current_employee
 from upande_livestock.serverscripts.common.envelope import as_dict, guard, run
+from upande_livestock.serverscripts.common.health_case import open_case_for
 
 
 @frappe.whitelist()
@@ -17,6 +18,17 @@ def create_health_case(payload):
 	LivestockHealthCase.on_submit() calls sync_event_for(self, "Health Case"), so
 	the timeline event is the doctype's job. Treatments are added on the case
 	itself afterwards — this endpoint opens the case, it does not close it.
+
+	IT WILL NOT QUIETLY OPEN A SECOND ONE. A cow can genuinely have two illnesses
+	at once — a bad quarter and a lame foot are two files — but on this site the
+	same cow carries three open files for what is plainly one bout, because
+	nothing ever checked and the screens made opening one the easy move. So a
+	second file has to be asked for in as many words (`open_new`), which leaves
+	the real case possible and the accidental one impossible.
+
+	The app's own door is `treat_animal`: a file is opened because somebody is
+	treating her, and everything given goes in it. This endpoint remains for the
+	handset and for a farm recording a case it is not treating yet.
 	"""
 
 	def go():
@@ -26,6 +38,15 @@ def create_health_case(payload):
 			frappe.throw(_("Select an animal."))
 		if not d.get("presenting_symptoms"):
 			frappe.throw(_("Describe the presenting symptoms."))
+		standing = open_case_for(d["animal"])
+		if standing and not d.get("open_new"):
+			frappe.throw(
+				_("{0} already has a file open since {1} — {2}. Add this to that file, "
+				  "or say open_new if it is genuinely something else.").format(
+					d["animal"], standing["opened_date"],
+					standing.get("presenting_symptoms") or standing["case_status"],
+				)
+			)
 		doc = frappe.new_doc("Livestock Health Case")
 		doc.animal = d.get("animal")
 		doc.company = company_or_throw(d.get("company"))

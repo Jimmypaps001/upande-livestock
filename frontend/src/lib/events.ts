@@ -130,8 +130,10 @@ export const createHeatEvent = (p: Payload) =>
   post<{ name: string }>(`${NS}.breeding.create_heat_event.create_heat_event`, p);
 export const createCheckUp = (p: Payload) =>
   post<{ name: string }>(`${NS}.health.create_check_up.create_check_up`, p);
-export const createHealthCase = (p: Payload) =>
-  post<{ name: string }>(`${NS}.health.create_health_case.create_health_case`, p);
+// createHealthCase is deliberately not wired to a screen. A file is opened
+// because somebody is treating her (lib/health.ts: treatAnimal) or because a
+// check-up escalated — never as a form of its own, which is how this site ended
+// up with a cow carrying three open files for one bout.
 export const addCaseTreatment = (p: Payload) =>
   post<{ name: string }>(`${NS}.health.add_case_treatment.add_case_treatment`, p);
 export const createHusbandryEvent = (p: Payload) =>
