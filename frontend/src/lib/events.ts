@@ -203,3 +203,35 @@ export const getProductionView = () =>
 export const getReportsView = () => call<ReportsView>(`${NS}.dashboard.get_reports.get_reports`, {});
 export const getOpenCases = () =>
   call<OpenCasesView>(`${NS}.health.open_health_cases.open_health_cases`, {});
+
+/* ------------------------------------------------- moving more than one cow */
+
+export interface MoveSuggestion {
+  animal: string;
+  label: string;
+  from_herd: string;
+  to_herd: string;
+  days_in_herd: number;
+  days_expected: number;
+  overdue: boolean;
+  days_over: number;
+  /** Why she is due, in the farm's own terms — "124 days in calf", or the
+   *  growth ladder's own wording. */
+  reason?: string;
+  days_to_calving?: number | null;
+}
+
+export interface MovementSuggestions {
+  growth: MoveSuggestion[];
+  lactation: MoveSuggestion[];
+  counts: Record<string, number>;
+}
+
+export const getMovementSuggestions = () =>
+  call<MovementSuggestions>(`${NS}.movement.movement_suggestions.movement_suggestions`, {});
+
+export const moveAnimals = (p: Payload) =>
+  post<{ count: number; herd: string; emptied_from: string[]; heads: number }>(
+    `${NS}.movement.move_animals.move_animals`,
+    p,
+  );

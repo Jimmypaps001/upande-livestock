@@ -25,6 +25,13 @@ from frappe.utils import add_days, date_diff, flt, getdate, today
 SETTINGS = "Livestock Settings"
 
 
+#: How far past the farm's own number counts as LATE rather than merely due.
+#: The calf ladder carries a `max_days_in_herd` for this; the lactation
+#: settings have one number each, so the grace is stated here instead of being
+#: invented differently at each call site.
+LACTATION_GRACE_DAYS = 7
+
+
 def settings():
 	return frappe.get_cached_doc(SETTINGS)
 
@@ -475,18 +482,144 @@ def open_cow_warnings():
 	return out
 
 
+def conception_date(animal):
+	"""The service her confirmed pregnancy answers, or None if she is not carrying.
+
+	The SERVICE date, not the date of the diagnosis: a cow scanned at 45 days
+	conceived 45 days before somebody looked at her, and counting from the scan
+	would keep her in the high-yield herd six weeks past the farm's own rule.
+	"""
+	row = frappe.db.sql(
+		"""SELECT s.service_date
+		   FROM `tabLivestock Event` s
+		   WHERE s.animal = %s AND s.event_type = 'Service' AND s.docstatus = 1
+		     AND s.pregnancy_confirmation_status = 'Confirmed'
+		     AND NOT EXISTS (
+		         SELECT 1 FROM `tabLivestock Event` c
+		         WHERE c.animal = s.animal AND c.event_type = 'Calving'
+		           AND c.docstatus = 1 AND c.event_date >= s.service_date)
+		   ORDER BY s.service_date DESC LIMIT 1""",
+		(animal,),
+	)
+	return getdate(row[0][0]) if row and row[0][0] else None
+
+
+def lactation_move_due(animal):
+	"""Is this cow due out of the herd she is milking in?
+
+	THE LACTATING HERDS ARE NOT ON A CLOCK THE WAY THE CALF PENS ARE. A weaner
+	leaves her pen because she has been in it long enough; a high yielder leaves
+	because she is four months in calf and her yield is falling away, and those
+	are not the same question. The farm's rule is written from CONCEPTION —
+	`high_yield_days_from_conception` — so a cow served late stays where she is
+	and a cow that caught early steps down early, which is the whole point.
+
+	A cow who is not carrying is not due anywhere on this rule. She may be
+	overdue on another (see `open_too_long`, which is about a cow who has failed
+	to conceive at all) but she is not late for a move she has no reason to
+	make.
+	"""
+	herd = frappe.db.get_value("Animal", animal, "current_herd")
+	if not herd:
+		return None
+	s = settings()
+	high, low = s.get("high_yield_herd"), s.get("low_yield_herd")
+	steamers, incalf = s.get("steamer_herd"), s.get("incalf_heifer_herd")
+
+	if herd not in (high, low, incalf) or not herd:
+		return None
+
+	conceived = conception_date(animal)
+	if not conceived:
+		return None
+	days = date_diff(today(), conceived)
+	calving = expected_calving_date(conceived)
+	to_calving = date_diff(getdate(calving), today()) if calving else None
+
+	if herd == high and low:
+		limit = int(s.get("high_yield_days_from_conception") or 0)
+		return _lactation_row(animal, herd, low, days, limit, to_calving,
+		                      f"{days} days in calf") if limit else None
+
+	if herd == low and steamers:
+		# Two months in the low-yield herd, which the farm states as its own
+		# number rather than as a second offset from conception — so it is read
+		# as one, from the day she arrived.
+		in_herd = days_in_current_herd(animal)
+		limit = int(s.get("low_yield_days") or 0)
+		if not limit or in_herd is None:
+			return None
+		return _lactation_row(animal, herd, steamers, in_herd, limit, to_calving,
+		                      f"{in_herd} days in the low-yield herd")
+
+	if herd == incalf and steamers:
+		# A heifer is due out when calving is close, not when she has waited
+		# long enough — she arrived already carrying.
+		lead = int(s.get("steamer_days_from_heifers") or 0)
+		if not lead or to_calving is None:
+			return None
+		return _lactation_row(
+			animal, herd, steamers, lead - to_calving, 0, to_calving,
+			f"{to_calving} days to calving", due=to_calving <= lead)
+	return None
+
+
+def _lactation_row(animal, herd, nxt, progress, limit, to_calving, reason, due=None):
+	over = max(0, progress - limit) if limit else max(0, progress)
+	return {
+		"animal": animal,
+		"herd": herd,
+		"next_herd": nxt,
+		"days_in_herd": progress,
+		"days_expected": limit,
+		"due": bool(due) if due is not None else bool(limit and progress >= limit),
+		# A week past the farm's own number is late, not merely due. The calf
+		# ladder has a `max_days_in_herd` for this; the lactation settings have
+		# no second number, so the grace is stated here rather than invented per
+		# call site.
+		"overdue": (over > LACTATION_GRACE_DAYS) if (due is None or due) else False,
+		"days_over": over,
+		"days_to_calving": to_calving,
+		"reason": reason,
+	}
+
+
+def lactation_suggestions():
+	"""Every milking or in-calf animal whose move is due, soonest first."""
+	s = settings()
+	out = []
+	for herd in [h for h in (s.get("high_yield_herd"), s.get("low_yield_herd"),
+	                         s.get("incalf_heifer_herd")) if h]:
+		for a in _animals_in(herd):
+			row = lactation_move_due(a.name)
+			if not row or not row["due"]:
+				continue
+			row["label"] = _label(a)
+			row["from_herd"] = row.pop("herd")
+			row["to_herd"] = row.pop("next_herd")
+			out.append(row)
+	out.sort(key=lambda r: (-r["days_over"], r["from_herd"]))
+	return out
+
+
 def suggestions():
 	"""Everything the farm should look at, in one call."""
 	growth = growth_suggestions()
 	bulls = bull_cull_warnings()
 	open_cows = open_cow_warnings()
+	lactation = lactation_suggestions()
 	return {
-		"growth": growth,
+		# One list for the movement screen: a herdsman moving animals does not
+		# care whether the rule behind a row counted days in a pen or days in
+		# calf, only that she is due out.
+		"growth": growth + lactation,
+		"lactation": lactation,
 		"bulls": bulls,
 		"open_cows": open_cows,
 		"counts": {
-			"growth": len(growth),
-			"growth_overdue": sum(1 for r in growth if r["overdue"]),
+			"growth": len(growth) + len(lactation),
+			"growth_overdue": sum(1 for r in growth + lactation if r["overdue"]),
+			"lactation": len(lactation),
 			"bulls": len(bulls),
 			"bulls_overdue": sum(1 for r in bulls if r["overdue"]),
 			"open_cows": len(open_cows),

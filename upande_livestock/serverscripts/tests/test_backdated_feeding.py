@@ -1,9 +1,9 @@
 from unittest import mock
 
 import frappe
+from erpnext.stock.utils import get_combine_datetime, get_stock_balance
 from frappe.tests import IntegrationTestCase
 from frappe.utils import add_days, flt, now_datetime, to_timedelta, today
-from erpnext.stock.utils import get_combine_datetime, get_stock_balance
 
 from upande_livestock.serverscripts.feeding import _engine, feed_day_status
 
@@ -278,6 +278,23 @@ class TestSameDayBackdatedStagger(IntegrationTestCase):
 		)
 
 	def test_a_second_backdated_run_sees_the_first_runs_consumption(self):
+		# What the SECOND run's slot reads BEFORE the first run has posted. Taken
+		# now rather than derived from a midnight balance: `manufacture_herd_feed`
+		# writes real Stock Entries and commits them, so every previous run of
+		# this test left a pair at 06:00 on whatever `today() - 3` was that day.
+		# Three days later that day comes round again and midnight is eight
+		# kilograms adrift of where the first run actually starts — the test was
+		# failing on its own leftovers. A before-and-after at one instant does not
+		# care what the day already held.
+		_bom, lines = _engine.resolve_requirement(
+			frappe.db.get_value("Herds", self.herd, "bom"), 1
+		)
+		watched_item = lines[0]["item_code"]
+		watched_wh = lines[0]["source_warehouse"]
+		before_first = flt(
+			get_stock_balance(watched_item, watched_wh, self.day, self.expected_second_time)
+		)
+
 		first = _engine.manufacture_herd_feed(
 			self.herd, employee=self.employee, portion=0.05, posting_date=self.day
 		)
@@ -287,20 +304,17 @@ class TestSameDayBackdatedStagger(IntegrationTestCase):
 		self.assertEqual(first_time, to_timedelta(self.expected_first_time))
 
 		transfer = frappe.get_doc("Stock Entry", first["transfer_stock_entry"])
-		row = transfer.items[0]
-		consumed_item, consumed_wh, consumed_qty = row.item_code, row.s_warehouse, flt(row.qty)
-
-		# The balance before ANY of today's test writes touched this day —
-		# this is exactly what the original bug's check kept reading no
-		# matter how many runs had already gone out that day.
-		start_of_day = flt(get_stock_balance(consumed_item, consumed_wh, self.day, "00:00:00"))
+		consumed_qty = flt(
+			next(r.qty for r in transfer.items if r.item_code == watched_item)
+		)
 
 		# What the SECOND run's availability check must read: its own, later
-		# instant, by which the first run's transfer has already posted.
+		# instant, by which the first run's transfer has already posted. The
+		# whole bug was that it read a balance the first run had not touched.
 		seen_by_second_check = flt(
-			get_stock_balance(consumed_item, consumed_wh, self.day, self.expected_second_time)
+			get_stock_balance(watched_item, watched_wh, self.day, self.expected_second_time)
 		)
-		self.assertAlmostEqual(seen_by_second_check, start_of_day - consumed_qty, places=4)
+		self.assertAlmostEqual(seen_by_second_check, before_first - consumed_qty, places=4)
 
 		second = _engine.manufacture_herd_feed(
 			self.herd, employee=self.employee, portion=0.05, posting_date=self.day
