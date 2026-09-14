@@ -89,6 +89,12 @@ TIMING_DEFAULTS = {
 	"steamer_days_from_heifers": 90,
 	"steamer_days_from_lactation": 60,
 	"max_open_days": 200,
+	# Health files. Both are lines the farm draws about its own record-keeping
+	# rather than about an animal's biology, and 0 on either legitimately means
+	# "do not tell me" — so both are in ZERO_MEANS_DISABLED, which is what keeps
+	# them out of ZERO_IS_INVALID while still being seeded like everything else.
+	"health_case_concern_days": 21,
+	"health_case_stale_days": 7,
 }
 
 # Float counterparts of TIMING_DEFAULTS: seeded the same way (see

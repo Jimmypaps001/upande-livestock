@@ -253,8 +253,48 @@ def describe(df) -> dict:
 	}
 
 
+def table_docfield(fieldname):
+	"""The child-table field by name, or a throw naming what there is.
+
+	A writer that trusted the caller's fieldname could point a delete at any
+	child table on the site, so the name is resolved against the doctype's own
+	tables rather than used.
+	"""
+	for df in table_docfields():
+		if df.fieldname == fieldname:
+			return df
+	frappe.throw(
+		_("{0} is not one of the lists on {1}.").format(fieldname or _("Nothing"), DOCTYPE)
+	)
+
+
+def table_columns(df):
+	"""The editable columns of one child table."""
+	return [
+		cdf
+		for cdf in frappe.get_meta(df.options).fields
+		if cdf.fieldtype not in LAYOUT_FIELDTYPES
+		and cdf.fieldtype not in DISPLAY_FIELDTYPES
+		and cdf.fieldtype not in TABLE_FIELDTYPES
+	]
+
+
+def table_rows(df):
+	"""One child table's rows as the page reads them, newest layout order."""
+	doc = frappe.get_single(DOCTYPE)
+	columns = table_columns(df)
+	return [
+		{
+			"name": row.name,
+			"idx": row.idx,
+			**{c.fieldname: row.get(c.fieldname) for c in columns},
+		}
+		for row in doc.get(df.fieldname) or []
+	]
+
+
 def tables() -> list:
-	"""The three child tables, with their rows, for display only.
+	"""The three child tables, with their rows.
 
 	Read from the loaded Single rather than a `get_all` on the child doctype:
 	child tables are not queryable on their own without naming the parent, and
@@ -271,9 +311,11 @@ def tables() -> list:
 			and cdf.fieldtype not in DISPLAY_FIELDTYPES
 			and cdf.fieldtype not in TABLE_FIELDTYPES
 		]
-		rows = []
-		for row in doc.get(df.fieldname) or []:
-			rows.append({"idx": row.idx, **{c["fieldname"]: row.get(c["fieldname"]) for c in columns}})
+		rows = [
+			{"name": row.name, "idx": row.idx,
+			 **{c["fieldname"]: row.get(c["fieldname"]) for c in columns}}
+			for row in doc.get(df.fieldname) or []
+		]
 		out.append(
 			{
 				"fieldname": df.fieldname,

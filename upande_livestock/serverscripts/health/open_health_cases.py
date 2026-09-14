@@ -7,19 +7,27 @@ import frappe
 from upande_livestock.serverscripts.common.choices import select_options
 from upande_livestock.serverscripts.common.employee import current_employee
 from upande_livestock.serverscripts.common.envelope import guard_read, run
+from upande_livestock.serverscripts.common.health_case import TREATING_STATUSES
 from upande_livestock.serverscripts.common.stock_items import stock_items
 from upande_livestock.serverscripts.common import stock as livestock_stock
 
 
 @frappe.whitelist()
 def open_health_cases():
-	"""Cases still being treated, for the treatment form's case picker."""
+	"""Cases still being treated, for the treatment form's case picker.
+
+	OPEN IS A LIST, NOT A NEGATION. This filtered on `case_status != "Closed"`
+	and `case_status` has no value called "Closed" — the six it has are Open,
+	Under Treatment, Recovered, Chronic, Died and Culled. So the picker offered
+	every case the farm had ever recorded, including the ones for cows that had
+	died, and a treatment could be written into a file shut eighteen months ago.
+	"""
 
 	def go():
 		guard_read("Livestock Health Case")
 		rows = frappe.get_all(
 			"Livestock Health Case",
-			filters={"docstatus": 1, "case_status": ["!=", "Closed"]},
+			filters={"docstatus": 1, "case_status": ["in", list(TREATING_STATUSES)]},
 			fields=["name", "animal", "animal_name", "case_status", "opened_date", "provisional_diagnosis"],
 			order_by="opened_date desc",
 			limit_page_length=200,

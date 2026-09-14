@@ -8,8 +8,15 @@ from frappe.utils import cint
 
 from upande_livestock.serverscripts.common.timings import TIMING_DEFAULTS
 
-# 0 is a legitimate configuration for these two: "no waiting period".
-ZERO_MEANS_DISABLED = {"post_calving_min_service_days", "post_abortion_min_service_days"}
+# 0 is a legitimate configuration for these: "no waiting period" for the first
+# two, and "do not tell me about it" for the two health-file lines, which are
+# about how long the farm will let a file sit rather than about an animal.
+ZERO_MEANS_DISABLED = {
+	"post_calving_min_service_days",
+	"post_abortion_min_service_days",
+	"health_case_concern_days",
+	"health_case_stale_days",
+}
 
 # Every other timing: 0 cannot mean anything real (a 0-day gestation period,
 # a 0-day diagnosis window, etc. is not a configuration choice, it is a

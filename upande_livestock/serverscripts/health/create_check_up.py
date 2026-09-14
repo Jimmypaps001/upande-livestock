@@ -10,6 +10,15 @@ from upande_livestock.serverscripts.husbandry._shared import _clean_drug_rows
 from upande_livestock.serverscripts.common.envelope import as_dict, guard, run
 from upande_livestock.serverscripts.common import backdate
 from upande_livestock.serverscripts.common import stock as livestock_stock
+from upande_livestock.serverscripts.common.health_case import open_case_for, open_file
+
+
+#: The action that means "this is a case now". A value on the doctype since it
+#: was written, and until now acted on nowhere.
+ESCALATED = "Escalated to Case"
+
+#: Something was given at the crush. Not an escalation — the screen asks.
+TREATED_ON_SPOT = "Treated on Spot"
 
 
 @frappe.whitelist()
@@ -18,6 +27,18 @@ def create_check_up(payload):
 
 	LivestockDiagnosis.on_submit() calls sync_event_for(self, "Check Up"), so the
 	animal's timeline event is created by the doctype — not here.
+
+	A CHECK-UP IS WHERE A FILE COMES FROM. `action_taken` has had "Escalated to
+	Case" on it since the doctype was written and nothing ever acted on it: the
+	check said escalate, and then a person had to remember to go and open a case
+	by hand on another screen, which is the step that does not happen. An
+	escalation opens the file here, unless she already has one open — in which
+	case this morning belongs in the file she has, and opening a second would
+	split one illness across two.
+
+	"Treated on Spot" is not an escalation and does not open anything. It
+	answers `suggest_case` instead, so the screen can ask: a cow dosed at the
+	crush may be a one-off, and only the person who looked at her knows.
 	"""
 
 	def go():
@@ -55,12 +76,39 @@ def create_check_up(payload):
 		doc.insert()
 		doc.submit()
 		doc.reload()
+
+		standing = open_case_for(doc.animal)
+		case, opened = None, False
+		if doc.action_taken == ESCALATED:
+			if standing:
+				case = standing["name"]
+			else:
+				case = open_file({
+					"animal": doc.animal,
+					"company": doc.company,
+					"opened_date": doc.diagnosis_date,
+					"opened_by": doc.operator,
+					"presenting_symptoms": doc.reason_for_check or doc.action_notes
+					                       or _("Escalated from a check-up."),
+					"provisional_diagnosis": doc.suggested_disease,
+					"severity": d.get("severity"),
+				}, opened_from=_("a check-up")).name
+				opened = True
+
 		return {
 			"ok": True,
 			"name": doc.name,
 			"action_taken": doc.action_taken,
 			"stock_entry": doc.stock_entry or "",
 			"drugs_issued": len(doc.drug_issues or []),
+			# The file this check-up belongs to, if it belongs to one.
+			"case": case,
+			"case_opened": opened,
+			"open_case": standing["name"] if standing else None,
+			# Whether the screen should ask about opening one. Asked, never
+			# assumed: a dose at the crush may be a one-off, and only the person
+			# who looked at her knows.
+			"suggest_case": bool(doc.action_taken == TREATED_ON_SPOT and not standing),
 		}
 
 	return run(go, "livestock create_check_up failed")

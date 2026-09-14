@@ -130,7 +130,8 @@
    "in_standard_filter": 1,
    "label": "Case Status",
    "options": "Open\nUnder Treatment\nRecovered\nChronic\nDied\nCulled",
-   "reqd": 1
+   "reqd": 1,
+   "allow_on_submit": 1
   },
   {
    "fieldname": "tab_diagnosis",
@@ -173,7 +174,8 @@
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Confirmed Diagnosis",
-   "options": "Livestock Disease"
+   "options": "Livestock Disease",
+   "allow_on_submit": 1
   },
   {
    "default": "Moderate",
@@ -182,7 +184,8 @@
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Severity",
-   "options": "Mild\nModerate\nSevere\nCritical"
+   "options": "Mild\nModerate\nSevere\nCritical",
+   "allow_on_submit": 1
   },
   {
    "fieldname": "sb_vet",
@@ -193,19 +196,22 @@
    "default": "0",
    "fieldname": "vet_called",
    "fieldtype": "Check",
-   "label": "Vet Called"
+   "label": "Vet Called",
+   "allow_on_submit": 1
   },
   {
    "depends_on": "eval:doc.vet_called == 1",
    "fieldname": "vet_name",
    "fieldtype": "Data",
-   "label": "Vet Name"
+   "label": "Vet Name",
+   "allow_on_submit": 1
   },
   {
    "depends_on": "eval:doc.vet_called == 1",
    "fieldname": "vet_visit_date",
    "fieldtype": "Date",
-   "label": "Vet Visit Date"
+   "label": "Vet Visit Date",
+   "allow_on_submit": 1
   },
   {
    "fieldname": "cb_vet",
@@ -216,14 +222,16 @@
    "description": "Bacterial culture, blood test, faecal egg count etc.",
    "fieldname": "lab_test_done",
    "fieldtype": "Check",
-   "label": "Lab Test Done"
+   "label": "Lab Test Done",
+   "allow_on_submit": 1
   },
   {
    "depends_on": "eval:doc.lab_test_done == 1",
    "description": "Pathogen identified, sensitivity, parameters etc.",
    "fieldname": "lab_results",
    "fieldtype": "Long Text",
-   "label": "Lab Results"
+   "label": "Lab Results",
+   "allow_on_submit": 1
   },
   {
    "fieldname": "tab_treatment",
@@ -291,20 +299,23 @@
    "depends_on": "eval:['Recovered','Chronic','Died','Culled'].includes(doc.case_status)",
    "fieldname": "closed_date",
    "fieldtype": "Date",
-   "label": "Date Closed"
+   "label": "Date Closed",
+   "allow_on_submit": 1
   },
   {
    "depends_on": "eval:['Recovered','Chronic','Died','Culled'].includes(doc.case_status)",
    "fieldname": "outcome_notes",
    "fieldtype": "Text",
-   "label": "Outcome Notes"
+   "label": "Outcome Notes",
+   "allow_on_submit": 1
   },
   {
    "depends_on": "eval:doc.opened_date && doc.closed_date",
    "fieldname": "duration_days",
    "fieldtype": "Int",
    "label": "Case Duration (days)",
-   "read_only": 1
+   "read_only": 1,
+   "allow_on_submit": 1
   },
   {
    "fieldname": "cb_outcome",
@@ -315,7 +326,8 @@
    "fieldname": "milk_safe_date",
    "fieldtype": "Date",
    "label": "Milk Safe From Date",
-   "read_only": 1
+   "read_only": 1,
+   "allow_on_submit": 1
   },
   {
    "depends_on": "eval:['Died','Culled'].includes(doc.case_status)",
@@ -324,7 +336,8 @@
    "fieldtype": "Link",
    "label": "Linked Livestock Disposal",
    "options": "Livestock Disposal",
-   "read_only": 1
+   "read_only": 1,
+   "allow_on_submit": 1
   },
   {
    "fieldname": "sb_prodloss",
@@ -335,7 +348,8 @@
    "description": "Total milk discarded due to this case (kg)",
    "fieldname": "production_loss_kg",
    "fieldtype": "Float",
-   "label": "Milk Discarded (kg)"
+   "label": "Milk Discarded (kg)",
+   "allow_on_submit": 1
   },
   {
    "fieldname": "cb_prodloss",
@@ -346,7 +360,8 @@
    "fieldname": "production_loss_value",
    "fieldtype": "Currency",
    "label": "Production Loss Value (KES)",
-   "read_only": 1
+   "read_only": 1,
+   "allow_on_submit": 1
   },
   {
    "fieldname": "sb_flags",
@@ -359,7 +374,8 @@
    "fieldname": "is_zoonotic",
    "fieldtype": "Check",
    "label": "Zoonotic Risk",
-   "read_only": 1
+   "read_only": 1,
+   "allow_on_submit": 1
   },
   {
    "default": "0",
@@ -367,7 +383,8 @@
    "fieldname": "is_notifiable",
    "fieldtype": "Check",
    "label": "Notifiable to Authorities",
-   "read_only": 1
+   "read_only": 1,
+   "allow_on_submit": 1
   },
   {
    "fieldname": "cb_flags",
@@ -378,7 +395,8 @@
    "description": "Reference number from Veterinary Officer or DOAS",
    "fieldname": "notification_reference",
    "fieldtype": "Data",
-   "label": "Notification Reference"
+   "label": "Notification Reference",
+   "allow_on_submit": 1
   },
   {
    "fieldname": "sb_amend",

@@ -99,7 +99,12 @@
   "cb_milk_quality",
   "custom_quality_required_in_lab",
   "custom_quality_scc_ceiling",
-  "custom_concentrate_cover_days"
+  "custom_concentrate_cover_days",
+  "tab_health",
+  "sb_health_cases",
+  "health_case_concern_days",
+  "cb_health_cases",
+  "health_case_stale_days"
  ],
  "fields": [
   {
@@ -382,7 +387,7 @@
    "label": "Bought-in Concentrates"
   },
   {
-   "description": "Concentrates the farm buys ready-packed. A concentrate that is mixed on the farm is recognised by its BOM and does not belong here \u2014 list only the ones that arrive already made, so the feeding programme flags them as concentrate rather than plain raw material.",
+   "description": "Concentrates the farm buys ready-packed. A concentrate that is mixed on the farm is recognised by its BOM and does not belong here — list only the ones that arrive already made, so the feeding programme flags them as concentrate rather than plain raw material.",
    "fieldname": "bought_in_concentrates",
    "fieldtype": "Table",
    "label": "Bought-in Concentrates",
@@ -444,7 +449,7 @@
    "description": "Which herd a newborn enters. A calf's sex decides this and nothing else does.",
    "fieldname": "sb_calf_intake",
    "fieldtype": "Section Break",
-   "label": "A \u00b7 Calf Intake"
+   "label": "A · Calf Intake"
   },
   {
    "description": "Normally the first rung of the growth ladder below.",
@@ -500,7 +505,7 @@
    "description": "The herds a heifer climbs before she is old enough to serve, in order. The first row is where female calves land; the last should be marked 'exits on service'.",
    "fieldname": "sb_growth_ladder",
    "fieldtype": "Section Break",
-   "label": "B \u00b7 Growth Ladder"
+   "label": "B · Growth Ladder"
   },
   {
    "fieldname": "growth_ladder",
@@ -512,7 +517,7 @@
    "description": "Where a served heifer waits out her first pregnancy. She gives no milk yet, which is why this herd is separate from the lactation groups.",
    "fieldname": "sb_first_pregnancy",
    "fieldtype": "Section Break",
-   "label": "C \u00b7 First Pregnancy"
+   "label": "C · First Pregnancy"
   },
   {
    "description": "Entered on a CONFIRMED pregnancy, never on the service alone.",
@@ -543,7 +548,7 @@
    "description": "After her first calving a cow never returns to the growth ladder. She cycles between these herds for the rest of her productive life.",
    "fieldname": "sb_lactation",
    "fieldtype": "Section Break",
-   "label": "D \u00b7 Lactation Cycle"
+   "label": "D · Lactation Cycle"
   },
   {
    "fieldname": "high_yield_herd",
@@ -584,16 +589,16 @@
   },
   {
    "default": "60",
-   "description": "2 months. Fixed \u2014 it does not vary with yield or anything else.",
+   "description": "2 months. Fixed — it does not vary with yield or anything else.",
    "fieldname": "low_yield_days",
    "fieldtype": "Int",
    "label": "Days in Low Yield Herd"
   },
   {
-   "description": "Two streams meet here, and how long an animal stays depends on which one it came from \u2014 so the duration belongs to the route, not to the herd.",
+   "description": "Two streams meet here, and how long an animal stays depends on which one it came from — so the duration belongs to the route, not to the herd.",
    "fieldname": "sb_steamers",
    "fieldtype": "Section Break",
-   "label": "Steamers \u00b7 the dry herd"
+   "label": "Steamers · the dry herd"
   },
   {
    "fieldname": "steamer_herd",
@@ -606,7 +611,7 @@
    "description": "A first-time heifer arrives with 3 months to calving.",
    "fieldname": "steamer_days_from_heifers",
    "fieldtype": "Int",
-   "label": "Dry Days \u00b7 arriving from Incalf Heifers"
+   "label": "Dry Days · arriving from Incalf Heifers"
   },
   {
    "fieldname": "cb_steamers",
@@ -617,7 +622,7 @@
    "description": "A cow arrives with 2 months to calving.",
    "fieldname": "steamer_days_from_lactation",
    "fieldtype": "Int",
-   "label": "Dry Days \u00b7 arriving from Low Yield"
+   "label": "Dry Days · arriving from Low Yield"
   },
   {
    "fieldname": "sb_backdating",
@@ -646,7 +651,7 @@
   },
   {
    "depends_on": "eval:doc.custom_milk_quality_capture=='At milking'",
-   "description": "Refuse a milking recorded from the desk with no lab figures. The handset is never blocked \u2014 it flags the recording as awaiting quality instead.",
+   "description": "Refuse a milking recorded from the desk with no lab figures. The handset is never blocked — it flags the recording as awaiting quality instead.",
    "fieldname": "custom_quality_required_at_milking",
    "fieldtype": "Check",
    "label": "Quality Required At Milking"
@@ -667,14 +672,43 @@
    "description": "Above this a reading is called out on the Quality page. 0 turns the check off.",
    "fieldname": "custom_quality_scc_ceiling",
    "fieldtype": "Float",
-   "label": "Bulk Tank SCC Ceiling (\u00d7 1000)"
+   "label": "Bulk Tank SCC Ceiling (× 1000)"
   },
   {
    "default": "7",
-   "description": "Warn when a concentrate has fewer days of cover than this. 7 suits a farm that mixes weekly \u2014 below a week, the next mix cannot wait for the next mixing day. 0 turns the check off.",
+   "description": "Warn when a concentrate has fewer days of cover than this. 7 suits a farm that mixes weekly — below a week, the next mix cannot wait for the next mixing day. 0 turns the check off.",
    "fieldname": "custom_concentrate_cover_days",
    "fieldtype": "Float",
    "label": "Concentrate Cover Warning (days)"
+  },
+  {
+   "fieldname": "tab_health",
+   "fieldtype": "Tab Break",
+   "label": "Health"
+  },
+  {
+   "fieldname": "sb_health_cases",
+   "fieldtype": "Section Break",
+   "label": "Health Cases",
+   "description": "A case is a file, and a file left open is a cow nobody has closed the book on."
+  },
+  {
+   "fieldname": "health_case_concern_days",
+   "fieldtype": "Int",
+   "label": "Concern After (days open)",
+   "default": "21",
+   "description": "How long a health case may stay open before the farm wants to know about it. A cow three weeks under treatment is either not recovering or her file was never closed, and both are worth seeing. 0 turns the check off."
+  },
+  {
+   "fieldname": "cb_health_cases",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "health_case_stale_days",
+   "fieldtype": "Int",
+   "label": "Untouched For (days)",
+   "default": "7",
+   "description": "An open case with no treatment recorded for this long is stale — nobody has written anything down, whatever is or is not happening in the shed. 0 turns the check off."
   }
  ],
  "grid_page_length": 50,
