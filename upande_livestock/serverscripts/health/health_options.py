@@ -4,7 +4,13 @@ Read-guarded on Livestock Health Case."""
 
 import frappe
 
-from upande_livestock.serverscripts.common.choices import active_animals, animal_choices, herd_label_map, select_options
+from upande_livestock.serverscripts.common import herd_movement
+from upande_livestock.serverscripts.common.choices import (
+	active_animals,
+	animal_choices,
+	herd_label_map,
+	select_options,
+)
 from upande_livestock.serverscripts.common.company import default_company
 from upande_livestock.serverscripts.common.employee import current_employee
 from upande_livestock.serverscripts.common.envelope import guard_read, run
@@ -18,6 +24,14 @@ def health_options():
 		return {
 			"ok": True,
 			"animals": animal_choices(active_animals(), labels),
+			# An abortion can only happen to a cow who was carrying. Offering
+			# the whole herd invites a loss recorded against one who never was
+			# — and there is then nothing for it to close.
+			"carrying": animal_choices(
+				[a for a in active_animals()
+				 if a.name in {r["animal"] for r in herd_movement.carrying_animals()}],
+				labels,
+			),
 			"diseases": [
 				r.name
 				for r in frappe.get_all(

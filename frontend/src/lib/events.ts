@@ -55,6 +55,9 @@ export interface BreedingOptions {
 
 export interface HealthOptions {
   animals: AnimalChoice[];
+  /** Cows the farm believes are in calf — the only ones an abortion can
+   *  happen to. */
+  carrying: AnimalChoice[];
   diseases: string[];
   abortion_causes: string[];
   appearances: string[];
@@ -70,15 +73,27 @@ export interface HusbandryOptions {
   animals: AnimalChoice[];
   /** The routine jobs this farm records. Server-supplied, because a farm that
    *  adds "Dipping" should see it without a frontend release. */
-  event_types?: string[];
+  event_types: string[];
+  /** Which of them take something out of the drug store. */
+  drug_consuming_types: string[];
+  drug_items: StockChoice[];
+  drug_warehouse: string | null;
+  herds: { name: string; label: string; heads: number }[];
   employee: string | null;
-  [key: string]: unknown;
 }
 
 export interface WeightOptions {
   animals: AnimalChoice[];
   methods: string[];
+  herds?: { name: string; label?: string; heads?: number }[];
   employee: string | null;
+}
+
+export interface WeightRow {
+  animal: string;
+  weight_kg?: number;
+  heart_girth_cm?: number;
+  bcs?: number;
 }
 
 export interface MovementOptions {
@@ -233,5 +248,11 @@ export const getMovementSuggestions = () =>
 export const moveAnimals = (p: Payload) =>
   post<{ count: number; herd: string; emptied_from: string[]; heads: number }>(
     `${NS}.movement.move_animals.move_animals`,
+    p,
+  );
+
+export const recordWeights = (p: Payload) =>
+  post<{ count: number; recorded: { animal: string }[]; skipped: { animal: string; why: string }[]; failed: { animal: string; why: string }[] }>(
+    `${NS}.weights.record_weights.record_weights`,
     p,
   );

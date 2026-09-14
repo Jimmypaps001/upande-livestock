@@ -24,6 +24,20 @@ def herd_label_map():
 	return {h.name: (h.herd_name or h.name) for h in frappe.get_all("Herds", fields=["name", "herd_name"])}
 
 
+def herd_choices():
+	"""Every herd, for a screen that lets you pick one instead of ticking ninety.
+
+	The head count rides along because a herd with no animals in it is worth
+	saying so rather than letting somebody pick it and find nothing ticked.
+	"""
+	return [
+		{"name": h.name, "label": h.herd_name or h.name, "heads": int(h.number_of_animals or 0)}
+		for h in frappe.get_all(
+			"Herds", fields=["name", "herd_name", "number_of_animals"], order_by="herd_name asc"
+		)
+	]
+
+
 def animal_label(row):
 	return row.get("tag_number") or row.get("burn_name") or row.get("name")
 

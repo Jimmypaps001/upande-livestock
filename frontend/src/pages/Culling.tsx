@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Flag, Stethoscope } from "lucide-react";
+import { Flag, Search, Stethoscope } from "lucide-react";
 import { CaseBadge } from "@/components/culling/CaseBadge";
+import { CullSuggestions } from "@/components/culling/CullSuggestions";
 import { RaiseCase } from "@/components/culling/RaiseCase";
 import { Figure, FigureRow } from "@/components/Figure";
 import { Notice } from "@/components/feeding/Notice";
@@ -20,6 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { RowsSkeleton } from "@/components/Loading";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/Toast";
 import { isError } from "@/lib/frappe";
 import {
@@ -59,6 +61,9 @@ export function Culling() {
   const [failure, setFailure] = useState<string | null>(null);
   const [active, setActive] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [tab, setTab] = useState("queue");
+  const [preselect, setPreselect] = useState<string | null>(null);
+  const [term, setTerm] = useState("");
   const toast = useToast();
   const [notes, setNotes] = useState("");
   const [price, setPrice] = useState("");
@@ -75,16 +80,32 @@ export function Culling() {
     }
     setFailure(null);
     setBoard(r);
-    setActive((current) => (current && r.cases.some((c) => c.name === current) ? current : r.cases[0]?.name ?? null));
+    setActive((current) =>
+      current && r.cases.some((c) => c.name === current) ? current : r.cases[0]?.name ?? null,
+    );
   }, []);
 
   useEffect(() => {
     void load();
   }, [load]);
 
-  const cases = board?.cases ?? [];
+  const all = board?.cases ?? [];
+  // A QUEUE YOU SCROLL PAST IS A QUEUE NOBODY READS. Every open case on one
+  // unbroken list meant the gate waiting on you was somewhere below the fold,
+  // under thirty that are not; the list is filtered and its own scroller now,
+  // so the page itself never grows past a screen.
+  const cases = useMemo(() => {
+    const q = term.trim().toLowerCase();
+    if (!q) return all;
+    return all.filter((c) =>
+      [c.animal_name || c.animal, c.flow, c.status, c.herd || "", c.waiting_on || ""]
+        .some((f) => String(f).toLowerCase().includes(q)),
+    );
+  }, [all, term]);
   const roster = useMemo(() => asSummaries(board?.animals ?? []), [board?.animals]);
-  const chosen = useMemo(() => cases.find((c) => c.name === active) ?? null, [cases, active]);
+  // Off the full list, not the filtered one: typing in the search box must not
+  // blank the case a person is part way through deciding.
+  const chosen = useMemo(() => all.find((c) => c.name === active) ?? null, [all, active]);
 
   useEffect(() => {
     setNotes("");
@@ -121,111 +142,156 @@ export function Culling() {
         <Figure loading={!board} label="Flagged" value={String(board?.counts.flagged ?? 0)} hint="marked for review, no case yet" />
       </FigureRow>
 
-      <div className="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,360px)_minmax(0,1fr)]">
-        <Card>
-          <CardHeaderRow>
-            <CardHeading>
-              <CardTitle>Open cases</CardTitle>
-              <CardDescription>Whose turn it is, newest first.</CardDescription>
-            </CardHeading>
-            <CardTools>
-              <RefreshButton onClick={load} loading={loading} label="the queue" />
-            </CardTools>
-          </CardHeaderRow>
-          <CardContent className="pt-0">
-            {!board ? (
-              <RowsSkeleton rows={4} />
-            ) : !cases.length ? (
-              <p className="text-[13px] text-[var(--sd-muted)]">
-                Nothing open. Every animal on the farm is staying on it.
-              </p>
-            ) : (
-              <ul className="flex flex-col gap-1.5">
-                {cases.map((c) => (
-                  <li key={c.name}>
-                    <button
-                      type="button"
-                      onClick={() => setActive(c.name)}
-                      className={cn(
-                        "flex w-full items-start gap-3 rounded-[var(--sd-radius-lg)] px-3 py-2.5 text-left transition-all",
-                        c.name === active ? "bg-[var(--sd-bg-soft)]" : "hover:bg-[var(--sd-bg-soft)]",
-                      )}
-                    >
-                      <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                        <span className="truncate text-[13px] font-medium text-[var(--sd-ink)]">
-                          {c.animal_name || c.animal}
-                        </span>
-                        <span className="text-[11.5px] text-[var(--sd-muted)]">
-                          {c.flow} · {c.herd || "no herd"} · {c.disposal_date}
-                        </span>
-                      </span>
-                      <CaseBadge status={c.status} waitingOn={c.waiting_on} />
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
+      {/* FOUR JOBS, FOUR TABS. One column held the queue, the suggestions, the
+          raise form and everything that had already left, so opening a case
+          meant scrolling past every case already open — and the four ways an
+          animal leaves, which is the decision the page exists for, were the
+          part furthest down. */}
+      <Tabs value={tab} onValueChange={setTab}>
+        <TabsList>
+          <TabsTrigger value="queue">
+            Queue{all.length ? ` (${all.length})` : ""}
+          </TabsTrigger>
+          <TabsTrigger value="suggested">Worth a look</TabsTrigger>
+          <TabsTrigger value="raise">Open a case</TabsTrigger>
+          <TabsTrigger value="gone">Left the farm</TabsTrigger>
+        </TabsList>
 
-            {!!board?.flagged.length && (
-              <div className="mt-5 border-t border-[var(--sd-line)] pt-4">
-                <p className="mb-2 flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.14em] text-[var(--sd-quiet)]">
-                  <Flag className="h-3.5 w-3.5" strokeWidth={2} />
-                  Marked for review
-                </p>
-                <ul className="flex flex-col gap-2">
-                  {board.flagged.map((f) => (
-                    <li key={f.name} className="px-3 text-[12px] leading-snug text-[var(--sd-muted)]">
-                      <span className="font-medium text-[var(--sd-ink)]">{f.burn_name || f.name}</span>
-                      {f.reason ? ` — ${f.reason}` : ""}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        <TabsContent value="queue" className="pt-5">
+          <div className="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,360px)_minmax(0,1fr)]">
+            <Card className="lg:sticky lg:top-6 lg:self-start">
+              <CardHeaderRow>
+                <CardHeading>
+                  <CardTitle>Open cases</CardTitle>
+                  <CardDescription>Whose turn it is, newest first.</CardDescription>
+                </CardHeading>
+                <CardTools>
+                  <RefreshButton onClick={load} loading={loading} label="the queue" />
+                </CardTools>
+              </CardHeaderRow>
+              <CardContent className="flex flex-col gap-3 pt-0">
+                {all.length > 6 && (
+                  <div className="relative">
+                    <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--sd-quiet)]" />
+                    <Input
+                      value={term}
+                      onChange={(e) => setTerm(e.target.value)}
+                      placeholder="Animal, flow, or who it is with"
+                      aria-label="Filter the queue"
+                      className="pl-8"
+                    />
+                  </div>
+                )}
 
-        <div className="flex min-w-0 flex-col gap-5">
-          <Card>
-            <CardHeaderRow>
-              <CardHeading>
-                <CardTitle>{chosen ? chosen.animal_name || chosen.animal : "Nothing selected"}</CardTitle>
-                <CardDescription>
-                  {chosen
-                    ? `${chosen.flow} · opened ${chosen.disposal_date} · with ${chosen.waiting_on}`
-                    : "Pick a case on the left, or open a new one below."}
-                </CardDescription>
-              </CardHeading>
-            </CardHeaderRow>
-            <CardContent className="flex flex-col gap-4 pt-0">
-              {!chosen ? (
-                <p className="text-[13px] text-[var(--sd-muted)]">
-                  A case records the argument for letting an animal go, and carries it
-                  past the people who have to agree.
-                </p>
-              ) : (
-                <CaseChain
-                  c={chosen}
-                  busy={busy}
-                  notes={notes}
-                  setNotes={setNotes}
-                  price={price}
-                  setPrice={setPrice}
-                  buyer={buyer}
-                  setBuyer={setBuyer}
-                  act={act}
-                  who={who}
-                />
-              )}
-            </CardContent>
-          </Card>
+                {!board ? (
+                  <RowsSkeleton rows={4} />
+                ) : !all.length ? (
+                  <p className="text-[13px] text-[var(--sd-muted)]">
+                    Nothing open. Every animal on the farm is staying on it.
+                  </p>
+                ) : !cases.length ? (
+                  <p className="text-[13px] text-[var(--sd-muted)]">
+                    No case matches that.
+                  </p>
+                ) : (
+                  <ul className="flex max-h-[min(58vh,480px)] flex-col gap-1.5 overflow-y-auto pr-1">
+                    {cases.map((c) => (
+                      <li key={c.name}>
+                        <button
+                          type="button"
+                          onClick={() => setActive(c.name)}
+                          className={cn(
+                            "flex w-full items-start gap-3 rounded-[var(--sd-radius-lg)] px-3 py-2.5 text-left transition-all",
+                            c.name === active ? "bg-[var(--sd-bg-soft)]" : "hover:bg-[var(--sd-bg-soft)]",
+                          )}
+                        >
+                          <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                            <span className="truncate text-[13px] font-medium text-[var(--sd-ink)]">
+                              {c.animal_name || c.animal}
+                            </span>
+                            <span className="text-[11.5px] text-[var(--sd-muted)]">
+                              {c.flow} · {c.herd || "no herd"} · {c.disposal_date}
+                            </span>
+                          </span>
+                          <CaseBadge status={c.status} waitingOn={c.waiting_on} />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
 
+                {!!board?.flagged.length && (
+                  <div className="border-t border-[var(--sd-line)] pt-4">
+                    <p className="mb-2 flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.14em] text-[var(--sd-quiet)]">
+                      <Flag className="h-3.5 w-3.5" strokeWidth={2} />
+                      Marked for review
+                    </p>
+                    <ul className="flex max-h-[180px] flex-col gap-2 overflow-y-auto">
+                      {board.flagged.map((f) => (
+                        <li key={f.name} className="px-3 text-[12px] leading-snug text-[var(--sd-muted)]">
+                          <span className="font-medium text-[var(--sd-ink)]">{f.burn_name || f.name}</span>
+                          {f.reason ? ` — ${f.reason}` : ""}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeaderRow>
+                <CardHeading>
+                  <CardTitle>{chosen ? chosen.animal_name || chosen.animal : "Nothing selected"}</CardTitle>
+                  <CardDescription>
+                    {chosen
+                      ? `${chosen.flow} · opened ${chosen.disposal_date} · with ${chosen.waiting_on}`
+                      : "Pick a case on the left, or open a new one under Open a case."}
+                  </CardDescription>
+                </CardHeading>
+              </CardHeaderRow>
+              <CardContent className="flex flex-col gap-4 pt-0">
+                {!chosen ? (
+                  <p className="text-[13px] text-[var(--sd-muted)]">
+                    A case records the argument for letting an animal go, and carries it
+                    past the people who have to agree.
+                  </p>
+                ) : (
+                  <CaseChain
+                    c={chosen}
+                    busy={busy}
+                    notes={notes}
+                    setNotes={setNotes}
+                    price={price}
+                    setPrice={setPrice}
+                    buyer={buyer}
+                    setBuyer={setBuyer}
+                    act={act}
+                    who={who}
+                  />
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="suggested" className="pt-5">
+          <CullSuggestions
+            onPick={(animal) => {
+              setPreselect(animal);
+              setTab("raise");
+            }}
+          />
+        </TabsContent>
+
+        <TabsContent value="raise" className="flex flex-col gap-5 pt-5">
           <Card>
             <CardHeaderRow>
               <CardHeading>
                 <CardTitle>Open a case</CardTitle>
                 <CardDescription>
-                  The farm's figures for her are shown before the flow is chosen.
+                  Any animal on the farm, by any of the four routes. Her figures are
+                  shown before the route is chosen.
                 </CardDescription>
               </CardHeading>
             </CardHeaderRow>
@@ -233,8 +299,11 @@ export function Culling() {
               <RaiseCase
                 who={who}
                 animals={roster}
+                preselect={preselect}
                 onRaised={(m) => {
                   toast(m);
+                  setPreselect(null);
+                  setTab("queue");
                   void load();
                 }}
               />
@@ -297,18 +366,24 @@ export function Culling() {
               </CardContent>
             </Card>
           )}
+        </TabsContent>
 
-          {!!board?.recent.length && (
-            <Card>
-              <CardHeaderRow>
-                <CardHeading>
-                  <CardTitle>Recently left</CardTitle>
-                  <CardDescription>What the farm has to show for it.</CardDescription>
-                </CardHeading>
-              </CardHeaderRow>
-              <CardContent className="pt-0">
-                <ul className="flex flex-col gap-1">
-                  {board.recent.slice(0, 12).map((r) => (
+        <TabsContent value="gone" className="pt-5">
+          <Card>
+            <CardHeaderRow>
+              <CardHeading>
+                <CardTitle>Recently left</CardTitle>
+                <CardDescription>What the farm has to show for it.</CardDescription>
+              </CardHeading>
+            </CardHeaderRow>
+            <CardContent className="pt-0">
+              {!board?.recent.length ? (
+                <p className="text-[13px] text-[var(--sd-muted)]">
+                  Nothing has left the farm through here yet.
+                </p>
+              ) : (
+                <ul className="flex max-h-[min(60vh,560px)] flex-col gap-1 overflow-y-auto">
+                  {board.recent.map((r) => (
                     <li
                       key={r.name}
                       className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-0.5 px-1 py-1.5 text-[12.5px]"
@@ -325,11 +400,11 @@ export function Culling() {
                     </li>
                   ))}
                 </ul>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-      </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </Page>
   );
 }

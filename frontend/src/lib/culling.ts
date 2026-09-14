@@ -19,6 +19,7 @@ const REJECT = `${NS}.reject_cull.reject_cull`;
 const POST = `${NS}.post_cull.post_cull`;
 const MORTALITY = `${NS}.record_mortality.record_mortality`;
 const SETTLE = `${NS}.settle_insurance_claim.settle_insurance_claim`;
+const CANDIDATES = `${NS}.cull_candidates.cull_candidates`;
 
 export type Flow = "Sale" | "Disposal" | "Mortality" | "Gift";
 export type ReviewStatus =
@@ -287,3 +288,57 @@ export function asSummaries(animals: FarmAnimal[]): AnimalSummary[] {
     photo: a.image,
   }));
 }
+
+/** Why one cow is on the suggested list, and what it is worth in the ranking. */
+export interface CullReason {
+  key: "abortions" | "not_holding" | "open" | "sick" | "interval" | "produce";
+  label: string;
+  detail: string;
+  weight: number;
+}
+
+/** Her figure beside the herd's. Higher is worse on every measure here. */
+export interface CullBar {
+  label: string;
+  hers: number;
+  herd: number;
+  unit: string;
+  worse: boolean;
+}
+
+export interface CullYear {
+  year: number;
+  calvings: number;
+  abortions: number;
+  services: number;
+  sick_days: number;
+}
+
+export interface CullCandidate {
+  animal: string;
+  name: string;
+  herd: string | null;
+  status: string;
+  age_days: number | null;
+  score: number;
+  reasons: CullReason[];
+  bars: CullBar[];
+  years: CullYear[];
+}
+
+export interface CullCandidates {
+  candidates: CullCandidate[];
+  considered: number;
+  flagged_count: number;
+  herd: {
+    calving_interval: number | null;
+    open_days: number | null;
+    sick_days: number | null;
+  };
+  /** False on this farm — Milk Recording is per herd, so "low produce" cannot
+   *  mean litres and the screen says so rather than implying otherwise. */
+  per_animal_milk: boolean;
+}
+
+export const getCullCandidates = (limit?: number) =>
+  call<CullCandidates>(CANDIDATES, { payload: { limit } });

@@ -325,6 +325,36 @@ def diagnosable_animals():
 	return rows
 
 
+def carrying_animals():
+	"""Cows the farm believes are in calf, newest confirmation first.
+
+	A CONFIRMED pregnancy with no calving or abortion since. An abortion can
+	only happen to an animal that was carrying one — offering the whole herd
+	invites a loss recorded against a cow who was never pregnant, and there is
+	then nothing for it to close and nothing that reads as a mistake afterwards.
+
+	The same query drives the feed forecast's calving schedule, so a cow who is
+	on this list is a cow the farm is buying feed for a calf for.
+	"""
+	return frappe.db.sql(
+		"""SELECT s.animal, MAX(s.service_date) AS served, MAX(s.name) AS service
+		   FROM `tabLivestock Event` s JOIN `tabAnimal` a ON a.name = s.animal
+		   WHERE s.event_type = 'Service' AND s.docstatus = 1
+		     AND s.pregnancy_confirmation_status = 'Confirmed'
+		     AND IFNULL(a.disabled, 0) = 0
+		     AND IFNULL(a.status, '') NOT IN ('Dead','Deceased','Sold','Culled','Disposed')
+		     AND NOT EXISTS (
+		         SELECT 1 FROM `tabLivestock Event` c
+		         WHERE c.animal = s.animal AND c.docstatus = 1
+		           AND c.event_type IN ('Calving', 'Abortion')
+		           AND c.event_date >= s.service_date)
+		   GROUP BY s.animal
+		   ORDER BY served DESC
+		   LIMIT 2000""",
+		as_dict=True,
+	)
+
+
 def open_days(animal):
 	"""Days since calving without a confirmed pregnancy, or None if not open."""
 	row = frappe.db.get_value(

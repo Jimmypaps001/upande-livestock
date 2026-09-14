@@ -54,8 +54,8 @@ const DryingOff = lazy(() => import("@/pages/Breeding").then((m) => ({ default: 
 const Heat = lazy(() => import("@/pages/Breeding").then((m) => ({ default: m.Heat })));
 const CheckUp = lazy(() => import("@/pages/Health").then((m) => ({ default: m.CheckUp })));
 const HealthCase = lazy(() => import("@/pages/Health").then((m) => ({ default: m.HealthCase })));
-const Weight = lazy(() => import("@/pages/Health").then((m) => ({ default: m.Weight })));
-const Husbandry = lazy(() => import("@/pages/Health").then((m) => ({ default: m.Husbandry })));
+const Weight = lazy(() => import("@/pages/Weights").then((m) => ({ default: m.Weights })));
+const Husbandry = lazy(() => import("@/pages/Husbandry").then((m) => ({ default: m.Husbandry })));
 const Movement = lazy(() => import("@/pages/Movement").then((m) => ({ default: m.Movement })));
 const RationEditor = lazy(() =>
   import("@/pages/RationEditor").then((m) => ({ default: m.RationEditor })),

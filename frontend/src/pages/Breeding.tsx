@@ -105,11 +105,15 @@ export function Abortion() {
       <RecordEvent<HealthOptions>
         eyebrow="Breeding"
         title="an abortion"
-        blurb="Any animal on the farm."
+        blurb="Cows the farm believes are in calf."
         pickLabel="Which cow"
-        emptyPick="No animals on this site."
+        // ONLY WHO CAN ACTUALLY LOSE ONE. An abortion is recorded against the
+        // pregnancy it ends; offering the whole herd invited a record against a
+        // cow with nothing to end, which the server refuses after the herdsman
+        // has already filled the form in.
+        emptyPick="No cow is carrying. An abortion is recorded against a confirmed pregnancy, so there is nothing to record against yet."
         load={load}
-        animalsOf={(o) => o.animals}
+        animalsOf={(o) => o.carrying}
         fieldsOf={(o): FieldSpec[] => [
           { name: "event_date", label: "When", kind: "date" },
           { name: "abortion_cause", label: "Cause", kind: "select", options: o.abortion_causes },

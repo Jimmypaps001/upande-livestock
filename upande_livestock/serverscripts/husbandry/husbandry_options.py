@@ -4,7 +4,7 @@ Read-guarded on Livestock Event."""
 
 import frappe
 
-from upande_livestock.serverscripts.common.choices import active_animals, animal_choices, herd_label_map
+from upande_livestock.serverscripts.common.choices import active_animals, animal_choices, herd_choices, herd_label_map
 from upande_livestock.serverscripts.common.employee import current_employee
 from upande_livestock.serverscripts.common.envelope import guard_read, run
 from upande_livestock.serverscripts.common.stock_items import stock_items
@@ -24,12 +24,7 @@ def husbandry_options():
 			"drug_consuming_types": list(DRUG_CONSUMING_TYPES),
 			"drug_items": stock_items("drug", livestock_stock.drug_warehouse()),
 			"drug_warehouse": livestock_stock.drug_warehouse(),
-			"herds": [
-				{"name": h.name, "label": h.herd_name or h.name, "heads": int(h.number_of_animals or 0)}
-				for h in frappe.get_all(
-					"Herds", fields=["name", "herd_name", "number_of_animals"], order_by="herd_name asc"
-				)
-			],
+			"herds": herd_choices(),
 			"warehouses": [
 				w.name
 				for w in frappe.get_all(

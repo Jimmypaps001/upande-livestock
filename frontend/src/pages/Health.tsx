@@ -4,14 +4,8 @@ import { RecordEvent, type FieldSpec } from "@/components/events/RecordEvent";
 import {
   createCheckUp,
   createHealthCase,
-  createHusbandryEvent,
-  createWeightRecord,
   getHealthOptions,
-  getHusbandryOptions,
-  getWeightOptions,
   type HealthOptions,
-  type HusbandryOptions,
-  type WeightOptions,
 } from "@/lib/events";
 
 /**
@@ -101,78 +95,6 @@ export function HealthCase() {
         submitLabel="Open the case"
         submit={createHealthCase}
         said={(r, a) => `Case open for ${a} — ${r.name}. Add treatments to it as they happen.`}
-      />
-    </Page>
-  );
-}
-
-export function Weight() {
-  const load = useCallback(() => getWeightOptions(), []);
-  return (
-    <Page>
-      <PageHeading eyebrow="Upande Livestock · Health" title="Weight">
-        What an animal weighs, and how it was arrived at — a scale and a girth
-        tape are not the same number and the record says which.
-      </PageHeading>
-      <RecordEvent<WeightOptions>
-        eyebrow="Health"
-        title="a weight"
-        blurb="Any animal on the farm."
-        pickLabel="Which animal"
-        emptyPick="No animals on this site."
-        load={load}
-        animalsOf={(o) => o.animals}
-        fieldsOf={(o): FieldSpec[] => [
-          { name: "event_date", label: "Weighed on", kind: "date" },
-          { name: "method", label: "How", kind: "select", options: o.methods, required: true },
-          { name: "weight_kg", label: "Weight (kg)", kind: "number", step: "0.1" },
-          { name: "heart_girth_cm", label: "Heart girth (cm)", kind: "number", step: "0.1",
-            hint: "The weight is worked out from this if none is given." },
-          { name: "bcs", label: "Body condition", kind: "number", step: "0.25" },
-          { name: "remarks", label: "Notes", kind: "notes" },
-        ]}
-        operatorOf={(o) => o.employee}
-        submitLabel="Record the weight"
-        submit={createWeightRecord}
-        said={(r, a) => `${a} weighed — ${r.name}.`}
-      />
-    </Page>
-  );
-}
-
-export function Husbandry() {
-  const load = useCallback(() => getHusbandryOptions(), []);
-  return (
-    <Page>
-      <PageHeading eyebrow="Upande Livestock · Health" title="Husbandry">
-        The routine jobs — dosing, dipping, trimming, dehorning. Anything that
-        uses a drug takes it out of the store as it is recorded.
-      </PageHeading>
-      <RecordEvent<HusbandryOptions>
-        eyebrow="Health"
-        title="a husbandry job"
-        blurb="Any animal on the farm."
-        pickLabel="Which animal"
-        emptyPick="No animals on this site."
-        load={load}
-        animalsOf={(o) => o.animals}
-        fieldsOf={(o): FieldSpec[] => [
-          { name: "event_date", label: "Done on", kind: "date" },
-          {
-            name: "event_type",
-            label: "What was done",
-            kind: "select",
-            options: (o.event_types as string[]) || [
-              "Vaccination", "Deworming", "Hoof Trimming", "Dehorning",
-            ],
-            required: true,
-          },
-          { name: "remarks", label: "Notes", kind: "notes" },
-        ]}
-        operatorOf={(o) => o.employee}
-        submitLabel="Record it"
-        submit={createHusbandryEvent}
-        said={(r, a) => `Recorded for ${a} — ${r.name}.`}
       />
     </Page>
   );

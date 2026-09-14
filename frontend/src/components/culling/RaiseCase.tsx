@@ -37,13 +37,18 @@ export function RaiseCase({
   animals,
   onRaised,
   who,
+  preselect,
 }: {
   animals: AnimalSummary[];
   onRaised: (message: string) => void;
   /** Recording a death moves her out of her herd, which needs an operator. */
   who: ReturnType<typeof useOperator>;
+  /** A cow arrived at from the suggestions, already chosen. The flow, the
+   *  reason and the terms are still a person's to fill in — being suggested
+   *  is not being condemned. */
+  preselect?: string | null;
 }) {
-  const [animal, setAnimal] = useState<string | null>(null);
+  const [animal, setAnimal] = useState<string | null>(preselect ?? null);
   const [flow, setFlow] = useState<Flow>("Sale");
   const [reason, setReason] = useState("");
   const [cause, setCause] = useState<string>(DEATH_CAUSES[0]);
@@ -54,6 +59,10 @@ export function RaiseCase({
   const [evidence, setEvidence] = useState<Evidence | null>(null);
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (preselect) setAnimal(preselect);
+  }, [preselect]);
 
   useEffect(() => {
     let live = true;
