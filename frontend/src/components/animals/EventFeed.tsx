@@ -103,3 +103,21 @@ export function EventFeed({ milestones }: { milestones: Milestone[] }) {
     </div>
   );
 }
+
+
+export function EventFeedSkeleton({ rows = 6 }: { rows?: number }) {
+  const widths = ["78%", "56%", "70%", "48%", "66%", "60%"];
+  return (
+    <div className="flex flex-col gap-3" aria-hidden>
+      {Array.from({ length: rows }, (_, i) => (
+        <div key={i} className="flex items-center gap-3">
+          <div className="h-8 w-8 shrink-0 animate-pulse rounded-full bg-[var(--sd-bg-soft)]" />
+          <div
+            className="h-[13px] animate-pulse rounded bg-[var(--sd-bg-soft)]"
+            style={{ width: widths[i % widths.length] }}
+          />
+        </div>
+      ))}
+    </div>
+  );
+}

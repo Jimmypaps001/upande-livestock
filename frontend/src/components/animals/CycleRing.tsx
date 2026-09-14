@@ -175,3 +175,19 @@ export function CycleRing({ cycle }: { cycle: CycleState }) {
     </div>
   );
 }
+
+
+export function CycleRingSkeleton() {
+  // The ring is h-[220px] w-[220px] and the notes sit beside it; the box
+  // below is that box, so the wheel lands where the placeholder was.
+  return (
+    <div className="flex flex-wrap items-center gap-6" aria-hidden>
+      <div className="h-[220px] w-[220px] shrink-0 animate-pulse rounded bg-[var(--sd-bg-soft)] !rounded-full" />
+      <div className="flex min-w-0 flex-1 flex-col gap-2">
+        {[0, 1, 2, 3].map((i) => (
+          <div key={i} className="h-[13px] animate-pulse rounded bg-[var(--sd-bg-soft)]" style={{ width: `${60 + i * 8}%` }} />
+        ))}
+      </div>
+    </div>
+  );
+}

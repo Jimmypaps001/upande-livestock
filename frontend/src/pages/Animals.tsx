@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
 import { BarChart3, CalendarClock, ChevronLeft, ShieldAlert } from "lucide-react";
 import { CompareDialog } from "@/components/animals/CompareDialog";
-import { AnimalPortrait } from "@/components/animals/AnimalPortrait";
+import { AnimalPortrait, AnimalPortraitSkeleton } from "@/components/animals/AnimalPortrait";
 import { AnimalSearch } from "@/components/animals/AnimalSearch";
-import { CycleRing } from "@/components/animals/CycleRing";
-import { EventFeed } from "@/components/animals/EventFeed";
-import { KpiRadar } from "@/components/animals/KpiRadar";
-import { LifeTimeline } from "@/components/animals/LifeTimeline";
+import { CycleRing, CycleRingSkeleton } from "@/components/animals/CycleRing";
+import { EventFeed, EventFeedSkeleton } from "@/components/animals/EventFeed";
+import { KpiRadar, KpiRadarSkeleton } from "@/components/animals/KpiRadar";
+import { LifeTimeline, LifeTimelineSkeleton } from "@/components/animals/LifeTimeline";
 import { Figure, FigureRow } from "@/components/Figure";
 import { Notice } from "@/components/feeding/Notice";
 import { Page, PageHeading } from "@/components/PageShell";
@@ -129,7 +129,7 @@ export function Animals() {
         </aside>
 
         {/* ── the record ─────────────────────────────────────────────── */}
-        {profile ? (
+        {selected ? (
           <div className="flex min-w-0 flex-col gap-5">
             <button
               type="button"
@@ -152,7 +152,7 @@ export function Animals() {
                         each stage actually takes.
                       </CardDescription>
                     </CardHeading>
-                    {profile.cycle.nextOn && (
+                    {profile?.cycle.nextOn && (
                       <span className="inline-flex shrink-0 items-center gap-2 rounded-[var(--sd-radius-pill)] bg-[var(--sd-bg-soft)] px-3 py-1.5 text-[12px] text-[var(--sd-muted)]">
                         <CalendarClock className="h-3.5 w-3.5 text-[var(--sd-quiet)]" />
                         {profile.cycle.nextUp}
@@ -163,42 +163,50 @@ export function Animals() {
                     )}
                   </CardHeaderRow>
                   <CardContent className="pt-0">
-                    <CycleRing cycle={profile.cycle} />
+                    {profile ? <CycleRing cycle={profile.cycle} /> : <CycleRingSkeleton />}
                   </CardContent>
                 </Card>
 
                 <button
                   type="button"
                   onClick={() => setComparing(true)}
-                  className="group w-full rounded-[var(--sd-radius-lg)] text-left transition-shadow hover:shadow-[var(--sd-shadow-2)]"
-                  aria-label={`Compare ${profile.name} against the herd`}
+                  // Her figures are what a comparison compares; until they have
+                  // arrived there is nothing to open, and a button that opens
+                  // nothing is worse than one that is plainly not ready yet.
+                  disabled={!profile}
+                  className="group w-full rounded-[var(--sd-radius-lg)] text-left transition-shadow enabled:hover:shadow-[var(--sd-shadow-2)]"
+                  aria-label={`Compare ${selected.name} against the herd`}
                 >
                 <FigureRow>
                   <Figure
+                    loading={!profile}
                     label="Calvings"
-                    value={String(profile.kpis.parity)}
-                    hint={profile.lastCalving ? `last ${profile.lastCalving}` : "none yet"}
+                    value={String(profile?.kpis.parity ?? "—")}
+                    hint={profile?.lastCalving ? `last ${profile.lastCalving}` : "none yet"}
                   />
                   <Figure
+                    loading={!profile}
                     label="Carried to term"
                     value={
-                      profile.kpis.conceptions
+                      profile?.kpis.conceptions
                         ? `${profile.kpis.conceptions - profile.kpis.abortions}/${profile.kpis.conceptions}`
                         : "—"
                     }
-                    hint={`${profile.kpis.abortions} ${profile.kpis.abortions === 1 ? "abortion" : "abortions"}`}
+                    hint={`${profile?.kpis.abortions ?? 0} ${profile?.kpis.abortions === 1 ? "abortion" : "abortions"}`}
                   />
                   <Figure
+                    loading={!profile}
                     label="Conception rate"
-                    value={profile.kpis.conceptionRate == null ? "—" : String(profile.kpis.conceptionRate)}
-                    unit={profile.kpis.conceptionRate == null ? undefined : "%"}
-                    hint={`${profile.kpis.services} ${profile.kpis.services === 1 ? "service" : "services"}`}
+                    value={profile?.kpis.conceptionRate == null ? "—" : String(profile.kpis.conceptionRate)}
+                    unit={profile?.kpis.conceptionRate == null ? undefined : "%"}
+                    hint={`${profile?.kpis.services ?? 0} ${profile?.kpis.services === 1 ? "service" : "services"}`}
                   />
                   <Figure
+                    loading={!profile}
                     label="Days in milk"
-                    value={profile.cycle.daysInMilk == null ? "—" : String(profile.cycle.daysInMilk)}
+                    value={profile?.cycle.daysInMilk == null ? "—" : String(profile.cycle.daysInMilk)}
                     hint={
-                      profile.kpis.lactationYield
+                      profile?.kpis.lactationYield
                         ? `${profile.kpis.lactationYield.toLocaleString()} kg this lactation`
                         : undefined
                     }
@@ -207,11 +215,16 @@ export function Animals() {
                 </button>
 
                 <div className="-mt-2 flex flex-wrap items-center gap-3">
-                  <Button variant="outline" size="sm" onClick={() => setComparing(true)}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={!profile}
+                    onClick={() => setComparing(true)}
+                  >
                     <BarChart3 className="mr-1.5 h-3.5 w-3.5" />
                     Compare against the herd
                   </Button>
-                  {culled[profile.id] && (
+                  {culled[selected.id] && (
                     <span className="inline-flex items-center gap-1.5 text-[12.5px] text-[var(--sd-sev-critical)]">
                       <ShieldAlert className="h-3.5 w-3.5" />
                       Marked for cull review
@@ -224,17 +237,21 @@ export function Animals() {
                     <CardHeading>
                       <CardTitle>Her life so far</CardTitle>
                       <CardDescription>
-                        {ageFrom(profile.bornOn)} on one line, to scale. The band underneath
+                        {ageFrom(selected.bornOn)} on one line, to scale. The band underneath
                         is the herd she was standing in.
                       </CardDescription>
                     </CardHeading>
                   </CardHeaderRow>
                   <CardContent className="pt-0">
-                    <LifeTimeline
-                      bornOn={profile.bornOn}
-                      milestones={profile.milestones}
-                      spells={profile.spells}
-                    />
+                    {profile ? (
+                      <LifeTimeline
+                        bornOn={profile.bornOn}
+                        milestones={profile.milestones}
+                        spells={profile.spells}
+                      />
+                    ) : (
+                      <LifeTimelineSkeleton />
+                    )}
                   </CardContent>
                 </Card>
 
@@ -248,14 +265,22 @@ export function Animals() {
                     </CardHeading>
                   </CardHeaderRow>
                   <CardContent className="pt-0">
-                    <EventFeed milestones={profile.milestones} />
+                    {profile ? (
+                      <EventFeed milestones={profile.milestones} />
+                    ) : (
+                      <EventFeedSkeleton />
+                    )}
                   </CardContent>
                 </Card>
               </div>
 
               {/* who she is — identity does not scroll */}
               <div className="flex min-w-0 flex-col gap-5 lg:sticky lg:top-6 lg:self-start">
-                <AnimalPortrait animal={profile} />
+                {profile ? (
+                  <AnimalPortrait animal={profile} />
+                ) : (
+                  <AnimalPortraitSkeleton />
+                )}
                 <Card>
                   <CardHeaderRow className="pb-0">
                     <CardHeading>
@@ -264,7 +289,7 @@ export function Animals() {
                     </CardHeading>
                   </CardHeaderRow>
                   <CardContent>
-                    <KpiRadar kpis={profile.kpis} />
+                    {profile ? <KpiRadar kpis={profile.kpis} /> : <KpiRadarSkeleton />}
                   </CardContent>
                 </Card>
               </div>

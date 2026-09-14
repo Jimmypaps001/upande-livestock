@@ -92,6 +92,34 @@ describe("the Animals page", () => {
     expect(screen.queryByText(/The animals, dates and figures below are/)).toBeNull();
   });
 
+  it("draws her record the moment she is picked, not when her figures land", async () => {
+    // The page used to gate the whole record on the profile, so choosing a cow
+    // blanked everything until the second request came back. Each section
+    // stands in for itself instead.
+    let release: (v: unknown) => void = () => {};
+    call.mockImplementation(async (method?: string) => {
+      const m = method || "";
+      if (m.includes("animal_profile")) {
+        await new Promise((r) => { release = r; });
+        return profile;
+      }
+      if (m.includes("animal_list")) return list;
+      return { ok: true };
+    });
+    draw();
+    // Her name and her age are on the list row, so they are there at once —
+    // and the sections she is waiting on are drawn as their own shapes.
+    await waitFor(() => expect(screen.getByText("Where she is in the cycle")).toBeTruthy());
+    expect(screen.getByText("Her life so far")).toBeTruthy();
+    expect(screen.getByText("Everything recorded")).toBeTruthy();
+    expect(
+      (screen.getByRole("button", { name: /Compare against the herd/ }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(true);
+    release(null);
+    await waitFor(() => expect(screen.getAllByText(/Served/).length).toBeGreaterThan(0));
+  });
+
   it("says so when the herd cannot be loaded", async () => {
     call.mockImplementationOnce(async () => ({ error: "You are not permitted to read Animal." }));
     draw();

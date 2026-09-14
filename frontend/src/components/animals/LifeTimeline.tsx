@@ -208,3 +208,14 @@ export function LifeTimeline({
     </div>
   );
 }
+
+
+export function LifeTimelineSkeleton() {
+  // The 76px track and the 52px band underneath it, both from the real one.
+  return (
+    <div className="flex flex-col gap-3" aria-hidden>
+      <div className="h-[76px] w-full animate-pulse rounded bg-[var(--sd-bg-soft)]" />
+      <div className="h-[52px] w-full animate-pulse rounded bg-[var(--sd-bg-soft)]" />
+    </div>
+  );
+}

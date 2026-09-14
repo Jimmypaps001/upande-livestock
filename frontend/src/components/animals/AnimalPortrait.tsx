@@ -87,3 +87,15 @@ function Fact({ label, value }: { label: string; value: string }) {
     </div>
   );
 }
+
+
+export function AnimalPortraitSkeleton() {
+  // The portrait is aspect-[4/5] of the rail's width; matching the aspect
+  // rather than a pixel height keeps it right at every breakpoint.
+  return (
+    <div
+      className="aspect-[4/5] w-full animate-pulse rounded bg-[var(--sd-bg-soft)] !rounded-[var(--sd-radius-card)]"
+      aria-hidden
+    />
+  );
+}

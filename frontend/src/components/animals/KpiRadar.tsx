@@ -177,3 +177,9 @@ export function KpiRadar({ kpis }: { kpis: AnimalKpis }) {
     </div>
   );
 }
+
+
+export function KpiRadarSkeleton() {
+  // h-[200px] w-full, the radar's own class.
+  return <div className="h-[200px] w-full animate-pulse rounded bg-[var(--sd-bg-soft)]" aria-hidden />;
+}
