@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Activity, HeartPulse, Milk } from "lucide-react";
 import { Figure, FigureRow } from "@/components/Figure";
 import { Notice } from "@/components/feeding/Notice";
+import { STICKY_HEAD, ScrollTable } from "@/components/ScrollTable";
 import { Page, PageHeading } from "@/components/PageShell";
 import { RefreshButton } from "@/components/RefreshButton";
 import {
@@ -126,9 +127,9 @@ export function Events() {
           {!rows.length ? (
             <p className="text-[13px] text-[var(--sd-muted)]">Nothing matches.</p>
           ) : (
-            <div className="overflow-x-auto">
+            <ScrollTable tall>
               <table className="w-full min-w-[560px] text-[12.5px]">
-                <thead>
+                <thead className={STICKY_HEAD}>
                   <tr className="text-left text-[10.5px] uppercase tracking-[0.12em] text-[var(--sd-quiet)]">
                     <th className="py-2 pr-3 font-medium">When</th>
                     <th className="py-2 pr-3 font-medium">What</th>
@@ -155,7 +156,7 @@ export function Events() {
                   ))}
                 </tbody>
               </table>
-            </div>
+            </ScrollTable>
           )}
         </CardContent>
       </Card>
@@ -203,9 +204,9 @@ export function Production() {
               No milking has been recorded yet.
             </p>
           ) : (
-            <div className="overflow-x-auto">
+            <ScrollTable tall>
               <table className="w-full min-w-[640px] text-[12.5px]">
-                <thead>
+                <thead className={STICKY_HEAD}>
                   <tr className="text-left text-[10.5px] uppercase tracking-[0.12em] text-[var(--sd-quiet)]">
                     <th className="py-2 pr-3 font-medium">Date</th>
                     <th className="py-2 pr-3 font-medium">Herd</th>
@@ -240,7 +241,7 @@ export function Production() {
                   ))}
                 </tbody>
               </table>
-            </div>
+            </ScrollTable>
           )}
         </CardContent>
       </Card>

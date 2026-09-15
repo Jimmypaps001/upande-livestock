@@ -251,7 +251,9 @@ export function HealthCases() {
                 ) : !rows.length ? (
                   <p className="text-[13px] text-[var(--sd-muted)]">{empty}</p>
                 ) : (
-                  <ul className="flex flex-col gap-1">
+                  // A register is a list you scroll THROUGH, not a page you
+                  // scroll past. Up to two hundred files come back.
+                  <ul className="flex max-h-[min(64vh,600px)] flex-col gap-1 overflow-y-auto">
                     {rows.map((c) => (
                       <Row key={c.name} c={c} onOpen={() => setOpen(c.name)} />
                     ))}

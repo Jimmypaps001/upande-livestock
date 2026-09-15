@@ -3,6 +3,7 @@ import { AlertTriangle, FlaskConical } from "lucide-react";
 import { DatePicker } from "@/components/DatePicker";
 import { Figure, FigureRow } from "@/components/Figure";
 import { Notice } from "@/components/feeding/Notice";
+import { STICKY_HEAD, ScrollTable } from "@/components/ScrollTable";
 import { Page, PageHeading } from "@/components/PageShell";
 import { RefreshButton } from "@/components/RefreshButton";
 import { Button } from "@/components/ui/button";
@@ -306,9 +307,9 @@ export function Quality() {
           {!recent.length ? (
             <p className="text-[13px] text-[var(--sd-muted)]">Nothing filed yet.</p>
           ) : (
-            <div className="overflow-x-auto">
+            <ScrollTable>
               <table className="w-full min-w-[560px] border-collapse text-[13px]">
-                <thead>
+                <thead className={STICKY_HEAD}>
                   <tr className="border-b border-[var(--sd-line)] text-left text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--sd-quiet)]">
                     <th className="py-2 pr-3">Herd</th>
                     <th className="py-2 pr-3">Milked</th>
@@ -348,7 +349,7 @@ export function Quality() {
                   ))}
                 </tbody>
               </table>
-            </div>
+            </ScrollTable>
           )}
         </CardContent>
       </Card>

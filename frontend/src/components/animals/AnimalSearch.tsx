@@ -7,6 +7,18 @@ import { cn } from "@/lib/utils";
 
 type Grouping = "none" | "herd" | "status";
 
+/**
+ * A cap of its own, so this is safe wherever it is dropped.
+ *
+ * The list has always had `overflow-y-auto` and always relied on the CALLER to
+ * bound its height — which three screens in a row forgot, each time producing
+ * the same report: an endless column of cows with the buttons that do the work
+ * pushed below the fold. A parent that does bound it (the Animals page, the
+ * Treatment picker) still wins, because flex shrinking takes the smaller of the
+ * two; a parent that forgets now gets a list rather than a page.
+ */
+const CAP = "max-h-[min(56vh,520px)]";
+
 /** Her standing, in the farm's words. "On the farm" covers every status that
  *  is not a way of having left it, including the blank ones. */
 const STANDINGS = ["On the farm", "Sold", "Culled", "Died", "Disposed", "Transferred out"];
@@ -147,7 +159,7 @@ export function AnimalSearch({
       </div>
 
       {grouped && (
-        <ul className="flex min-h-0 flex-col gap-1 overflow-y-auto">
+        <ul className={cn("flex min-h-0 flex-col gap-1 overflow-y-auto", CAP)}>
           {grouped.map(([herd, members]) => (
             <li key={herd} className="flex flex-col">
               <button
@@ -182,7 +194,7 @@ export function AnimalSearch({
       )}
 
       {!grouped && (
-      <ul className="flex min-h-0 flex-col gap-1.5 overflow-y-auto">
+      <ul className={cn("flex min-h-0 flex-col gap-1.5 overflow-y-auto", CAP)}>
         {results.map((a) => {
           const active = a.id === selectedId;
           return (

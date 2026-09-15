@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Scale } from "lucide-react";
 import { DatePicker } from "@/components/DatePicker";
 import { Notice } from "@/components/feeding/Notice";
+import { STICKY_HEAD, ScrollTable } from "@/components/ScrollTable";
 import { OperatorField } from "@/components/events/OperatorField";
 import { Page, PageHeading } from "@/components/PageShell";
 import { RefreshButton } from "@/components/RefreshButton";
@@ -187,9 +188,11 @@ export function Weights() {
           {picked.length > 0 && (
             <div className="flex flex-col gap-1.5">
               <Label>The numbers</Label>
-              <div className="overflow-x-auto rounded-[var(--sd-radius-lg)] bg-[var(--sd-bg-soft)] shadow-[var(--sd-shadow-inset)]">
+              {/* Ninety-four animals through a crush is ninety-four rows, and
+                  the button that records them is underneath. */}
+              <ScrollTable className="rounded-[var(--sd-radius-lg)] bg-[var(--sd-bg-soft)] shadow-[var(--sd-shadow-inset)]">
                 <table className="w-full min-w-[460px] border-collapse text-[13px]">
-                  <thead>
+                  <thead className={STICKY_HEAD}>
                     <tr className="text-left text-[11px] uppercase tracking-[0.06em] text-[var(--sd-quiet)]">
                       <th className="px-3.5 py-2 font-medium">Animal</th>
                       <th className="px-3 py-2 text-right font-medium">Weight (kg)</th>
@@ -252,7 +255,7 @@ export function Weights() {
                     })}
                   </tbody>
                 </table>
-              </div>
+              </ScrollTable>
             </div>
           )}
 

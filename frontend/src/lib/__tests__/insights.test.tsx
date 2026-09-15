@@ -58,6 +58,17 @@ const draw = (Page: () => React.ReactElement) =>
 describe("the read-only screens", () => {
   beforeEach(() => call.mockClear());
 
+  it("keeps the event log inside its own scroller", async () => {
+    // Every event the farm has recorded, written as a table with nothing to
+    // bound it, was a page you scrolled for a minute to get past.
+    draw(Events);
+    await waitFor(() => expect(screen.getByText("Lactating group 1 → STEAMERS")).toBeTruthy());
+    const box = document.querySelector("div[class*='max-h-'][class*='overflow-auto']");
+    expect(box).toBeTruthy();
+    // And the column names stay put while the rows move under them.
+    expect(document.querySelector("thead[class*='sticky']")).toBeTruthy();
+  });
+
   it("shows a move as where it came from and where it went", async () => {
     draw(Events);
     await waitFor(() => expect(screen.getByText("Lactating group 1 → STEAMERS")).toBeTruthy());

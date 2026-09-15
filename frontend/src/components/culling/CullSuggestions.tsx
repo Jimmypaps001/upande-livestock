@@ -92,7 +92,7 @@ export function CullSuggestions({
             to hold, or spending long enough under treatment to be worth raising.
           </p>
         ) : (
-          <ul className="flex flex-col gap-1.5">
+          <ul className="flex max-h-[min(66vh,640px)] flex-col gap-1.5 overflow-y-auto">
             {data.candidates.map((c) => (
               <li key={c.animal}>
                 <button
