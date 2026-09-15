@@ -162,6 +162,16 @@ describe("the register", () => {
 });
 
 describe("treating an animal", () => {
+  it("keeps the long animal list inside its own scroller", async () => {
+    // Unbounded, it pushed the drug rows and the record button below the fold
+    // and left the page scrolling past four hundred cows to reach them.
+    draw(Treatment);
+    await waitFor(() => expect(screen.getByText("Which animal")).toBeTruthy());
+    const card = screen.getByText("Which animal").closest("div[class*='max-h-']");
+    expect(card).toBeTruthy();
+    expect((card as HTMLElement).className).toContain("overflow-hidden");
+  });
+
   it("shows the file she already has instead of asking which case", async () => {
     draw(Treatment);
     await waitFor(() => expect(screen.getAllByText("A001/16").length).toBeGreaterThan(0));

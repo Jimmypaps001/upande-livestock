@@ -143,6 +143,7 @@ export function Treatment() {
     [options],
   );
 
+  const picked = roster.find((a) => a.id === animal) || null;
   const usable = doses.filter((d) => d.drug && Number(d.qty) > 0);
   const needComplaint = fresh && !complaint.trim();
   const ready = !!animal && usable.length > 0 && !needComplaint && !who.needed && !asking;
@@ -208,7 +209,13 @@ export function Treatment() {
       {failure && <Notice tone="error">{failure}</Notice>}
 
       <div className="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,320px)_minmax(0,1fr)]">
-        <Card className="lg:sticky lg:top-6 lg:self-start">
+        {/* THE LIST SCROLLS INSIDE ITSELF. Four hundred animals in an
+            unbounded column pushed the drug rows and the button that records
+            the treatment far below the fold, and left the page scrolling past
+            a wall of cows to reach them. `overflow-hidden` on the card is what
+            makes the cap real: without it the list simply overflows and the
+            page scrolls again. */}
+        <Card className="flex max-h-[min(72vh,640px)] min-h-0 flex-col overflow-hidden lg:sticky lg:top-6 lg:max-h-[calc(100vh-3rem)] lg:self-start">
           <CardHeaderRow>
             <CardHeading>
               <CardTitle>Which animal</CardTitle>
@@ -218,7 +225,7 @@ export function Treatment() {
               <RefreshButton onClick={load} loading={loading} label="the list" />
             </CardTools>
           </CardHeaderRow>
-          <CardContent className="pt-0">
+          <CardContent className="flex min-h-0 flex-col pt-0">
             <AnimalSearch
               animals={roster}
               selectedId={animal}
@@ -231,7 +238,12 @@ export function Treatment() {
           <Card>
             <CardHeaderRow>
               <CardHeading>
-                <CardTitle>{animal ? `Her file` : "Pick an animal"}</CardTitle>
+                {/* Named here, not only as a highlighted row: in a list this
+                    long the highlight is scrolled out of sight by the time you
+                    reach the drugs. */}
+                <CardTitle>
+                  {picked ? `${picked.name}'s file` : "Pick an animal"}
+                </CardTitle>
                 <CardDescription>
                   {!animal
                     ? "Nothing is written down until you say what she was given."
