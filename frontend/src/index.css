@@ -89,19 +89,20 @@ html { font-size: 85%; }
   /* ── Chart palette ──────────────────────────────────────────────────────
      GREYSCALE FIRST, COLOUR ONLY WHERE IT MEANS SOMETHING.
 
-     These were saturated screen primaries — a cyan milk line, a pink herd, a
-     violet one beside it — so a dashboard read as a set of highlighter pens
-     and the eye went to whichever series happened to be brightest rather than
-     to whichever mattered. Nothing on a farm is cyan.
+     TWO PALETTES, AND WHICH ONE A CHART USES IS A QUESTION ABOUT ITS DATA.
 
-     So the SERIES ramp is ink through to a pale warm grey: one quantity of one
-     kind, drawn in one material, where position and area carry the comparison
-     and colour carries nothing because there is nothing for it to carry. A
-     milk line is the darkest thing on its chart because it is the subject.
+     The ramp is for one quantity of one kind: milk day after day, head counts
+     across herds, a ranked bar chart. There the series differ only in WHICH
+     they are, not in what they mean, so hue was carrying nothing — and a cyan
+     line beside a pink one made the brighter of the two look like the more
+     important. Ink through to pale warm grey instead, where position and area
+     carry the comparison and the subject is simply the darkest thing on the
+     chart.
 
-     The named colours remain for the few places a hue is the fact itself —
-     green recovered, amber worth watching, red lost — and they are muted to
-     sit beside ink without shouting over it. */
+     The named colours are for charts where the hue IS the fact: a cow's life
+     banded by the herds she stood in, her figures against the herd's, green
+     recovered against red lost. Those want telling apart at a glance and a
+     grey ramp would make them harder to read, not calmer. */
 
   /* The ramp. Use in order; each step is a step down in emphasis. */
   --sd-series-1: #0a0a0a;
@@ -111,13 +112,13 @@ html { font-size: 85%; }
   --sd-series-5: #cbc7be;
   --sd-series-6: #e4e0d7;
 
-  --sd-data-cyan: #4a7f9c;
-  --sd-data-pink: #b07f96;
-  --sd-data-purple: #7b7098;
-  --sd-data-red: #b2534e;
-  --sd-data-green: #5a8a5f;
-  --sd-data-amber: #c08f45;
-  --sd-data-indigo: #56618f;
+  --sd-data-cyan: #2ba6e0;
+  --sd-data-pink: #e66baa;
+  --sd-data-purple: #8466c7;
+  --sd-data-red: #e63946;
+  --sd-data-green: #5bb45d;
+  --sd-data-amber: #e9a23b;
+  --sd-data-indigo: #3d54b0;
 
   /* Severity — mirrors the reference Scouting Severity Scale */
   --sd-sev-critical: #c4302b; /* --sev-high */

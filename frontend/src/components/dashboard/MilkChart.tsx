@@ -134,6 +134,11 @@ export function MilkChart({ points }: { points: DayPoint[] }) {
             </g>
           ))}
 
+          {/* Ink, not a hue. One quantity — litres, day after day — so colour
+              had nothing to distinguish and a cyan line just made the chart
+              louder than the number it was drawing. The charts that keep their
+              colours are the ones where the hue IS the fact: the herds a cow
+              has stood in, her figures against the herd's. */}
           <path d={area} fill="var(--sd-series-1)" opacity={0.07} />
           <path
             d={line}
