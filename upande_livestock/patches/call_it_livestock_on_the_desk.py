@@ -1,7 +1,7 @@
 # Copyright (c) 2026, Upande and contributors
 # For license information, please see license.txt
 
-"""Drop the "Upande" from what the desk calls this app.
+"""Drop the "Upande" from what the desk calls this app, and a dead link with it.
 
 The farm is already inside Upande's ERP by the time it sees a sidebar, so the
 prefix says nothing and costs the width of a word on every screen. The desk
@@ -48,5 +48,16 @@ def execute():
 	# been touched on the desk.
 	if frappe.db.exists("Workspace", OLD):
 		frappe.db.set_value("Workspace", OLD, "title", NEW, update_modified=False)
+
+	# And the sidebar's dead Operations link. `retire_livestock_desk_blocks`
+	# folded three workspaces into one and deleted Livestock Operations, but the
+	# sidebar item pointing AT it was left behind — a row in a child table the
+	# workspace patch never looked at. It has been a link to nothing ever since.
+	for name in frappe.get_all(
+		"Workspace Sidebar Item",
+		filters={"link_type": "Workspace", "link_to": "Livestock Operations"},
+		pluck="name",
+	):
+		frappe.db.delete("Workspace Sidebar Item", name)
 
 	frappe.clear_cache()
