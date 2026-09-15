@@ -19,6 +19,9 @@ import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import add_days, today
 
+from upande_livestock.serverscripts.breeding.create_drying_off_event import (
+	create_drying_off_event,
+)
 from upande_livestock.serverscripts.common import herd_movement as hm
 from upande_livestock.serverscripts.tests.test_operations import (
 	_make_cow,
@@ -107,6 +110,81 @@ class TestDryingOffIsForCowsInCalfAndInMilk(IntegrationTestCase):
 		frappe.clear_document_cache("Livestock Settings", "Livestock Settings")
 		after = next(r for r in hm.dry_off_candidates() if r["animal"] == self.animal)
 		self.assertNotEqual(before["window"], after["window"])
+
+
+class TestTheFarmSaysWhereDryCowsGo(IntegrationTestCase):
+	"""A suggestion, warned about when it is not taken, and never refused."""
+
+	def setUp(self):
+		self.milking = hm.milking_herds()
+		if not self.milking:
+			self.skipTest("this farm has no milking herd configured")
+		self.animal = "DRYOFF-WHERE-1"
+		_tidy(self.animal)
+		_make_cow(self.animal, herd=self.milking[-1])
+		self.addCleanup(_tidy, self.animal)
+		self.who = _employee()
+
+	def _restore(self, value):
+		frappe.db.set_single_value("Livestock Settings", "drying_off_herd", value)
+		frappe.clear_document_cache("Livestock Settings", "Livestock Settings")
+
+	def _set(self, herd):
+		before = frappe.db.get_single_value("Livestock Settings", "drying_off_herd")
+		self.addCleanup(self._restore, before)
+		self._restore(herd)
+
+	def test_the_setting_decides_when_nobody_names_a_herd(self):
+		self._set(self.milking[0])
+		got = create_drying_off_event({
+			"animal": self.animal, "operator": self.who, "event_date": today(),
+		})
+		self.assertTrue(got.get("ok"), got.get("error"))
+		self.assertEqual(got["new_herd"], self.milking[0])
+		self.assertIsNone(got["note"])
+
+	def test_it_falls_back_to_the_steamer_herd(self):
+		"""A farm that configured only Steamers should not have to discover a
+		new field before the screen works."""
+		self._set(None)
+		steamers = frappe.db.get_single_value("Livestock Settings", "steamer_herd")
+		if not steamers:
+			self.skipTest("this farm has no steamer herd configured")
+		self.assertEqual(hm.dry_off_destination()["herd"], steamers)
+
+	def test_a_different_herd_is_accepted(self):
+		"""A cow goes to a different pen for reasons this app does not know.
+		Refusing would send the herdsman to the desk to do it anyway."""
+		self._set(self.milking[0])
+		got = create_drying_off_event({
+			"animal": self.animal, "operator": self.who, "event_date": today(),
+			"new_herd": self.milking[-1],
+		})
+		self.assertTrue(got.get("ok"), got.get("error"))
+		self.assertEqual(got["new_herd"], self.milking[-1])
+
+	def test_and_the_deviation_is_written_on_the_event(self):
+		"""A month later the question is why she went to the wrong pen, and a
+		toast is long gone."""
+		self._set(self.milking[0])
+		got = create_drying_off_event({
+			"animal": self.animal, "operator": self.who, "event_date": today(),
+			"new_herd": self.milking[-1],
+		})
+		self.assertIn(self.milking[0], got["note"])
+		self.assertIn(
+			self.milking[0],
+			frappe.db.get_value("Livestock Event", got["name"], "remarks") or "",
+		)
+
+	def test_nothing_is_said_when_the_farm_has_set_nothing(self):
+		self._set(None)
+		frappe.db.set_single_value("Livestock Settings", "steamer_herd", None)
+		self.addCleanup(
+			frappe.clear_document_cache, "Livestock Settings", "Livestock Settings"
+		)
+		frappe.clear_document_cache("Livestock Settings", "Livestock Settings")
+		self.assertIsNone(hm.dry_off_destination_note(self.milking[-1]))
 
 
 class TestCalvingIsForCowsInCalfAndDriedOff(IntegrationTestCase):

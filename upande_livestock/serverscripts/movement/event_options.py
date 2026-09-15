@@ -49,6 +49,9 @@ def event_options():
 			"dry_off_animals": narrowed(herd_movement.dry_off_candidates()),
 			# Cows in calf, dried off, and near their date.
 			"calving_animals": narrowed(herd_movement.calving_candidates()),
+			# Where the farm says a dried-off cow goes. The screen offers it and
+			# warns about anything else rather than refusing it.
+			"dry_off_herd": herd_movement.dry_off_destination()["herd"],
 			"herds": [{"name": n, "label": l} for n, l in sorted(labels.items(), key=lambda x: x[1])],
 			"calving_outcomes": select_options("Livestock Event", "custom_calving_outcome")
 			or ["Live Birth", "Still Birth"],

@@ -50,6 +50,12 @@ export interface FieldSpec {
   options?: string[];
   placeholder?: string;
   hint?: string;
+  /** What the field starts at. A select whose farm-configured answer is on the
+   *  options endpoint should not make anybody choose it again. */
+  value?: string;
+  /** Said when the value is not `value`. The farm has a setting; a different
+   *  answer is worth a word, not a refusal — so this warns and nothing else. */
+  warnIfChanged?: string;
   required?: boolean;
   /** Sent even when blank — for a date the server keys its guards on. */
   always?: boolean;
@@ -140,7 +146,8 @@ export function RecordEvent<O>({
     if (!options) return;
     const seed: Record<string, string> = {};
     for (const f of fieldsOf(options)) {
-      if (f.kind === "date") seed[f.name] = todayISO();
+      if (f.value) seed[f.name] = f.value;
+      else if (f.kind === "date") seed[f.name] = todayISO();
       else if (f.kind === "select" && f.options?.length === 1) seed[f.name] = f.options[0];
     }
     setValues(seed);
@@ -350,6 +357,11 @@ function Field({
         />
       )}
       {spec.hint && <span className="text-[11px] text-[var(--sd-quiet)]">{spec.hint}</span>}
+      {/* The farm's own answer is the one that was offered; anything else is
+          allowed and said out loud. Amber, not red: this is not a refusal. */}
+      {spec.warnIfChanged && spec.value && value && value !== spec.value && (
+        <span className="text-[11px] text-[var(--sd-sev-high)]">{spec.warnIfChanged}</span>
+      )}
     </div>
   );
 }

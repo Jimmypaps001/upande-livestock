@@ -20,6 +20,7 @@ why the lactation cycle is expressed as settings rather than as more rungs.
 """
 
 import frappe
+from frappe import _
 from frappe.utils import add_days, date_diff, flt, getdate, today
 
 from upande_livestock.serverscripts.common.animal import RETIRED_STATUSES
@@ -726,6 +727,44 @@ def dried_off_on(animal, since=None):
 		order_by="event_date desc", limit_page_length=1,
 	)
 	return str(row[0].event_date) if row and row[0].event_date else None
+
+
+def dry_off_destination():
+	"""Where the farm says a cow goes when she is dried off, and why.
+
+	A SUGGESTION, NEVER A RULE. A farm moves a cow somewhere else for reasons
+	this app does not know — a quarter it wants watched, a pen nearer the
+	parlour, a gate that is broken this week. So the destination is offered,
+	a different choice is warned about, and nothing is refused.
+
+	Falls back to the Steamer Herd, which is where dry cows went before this
+	setting existed. A farm that has configured only Steamers should not have to
+	discover a new field before the screen works.
+	"""
+	s = settings()
+	chosen = s.get("drying_off_herd")
+	if chosen:
+		return {"herd": chosen, "from": "drying_off_herd"}
+	steamers = s.get("steamer_herd")
+	if steamers:
+		return {"herd": steamers, "from": "steamer_herd"}
+	return {"herd": None, "from": None}
+
+
+def dry_off_destination_note(chosen):
+	"""What to say about a destination that is not the one the farm set.
+
+	None when there is nothing worth saying: no setting, or the two agree. The
+	wording names both herds, because "this is not where she should go" without
+	saying where is a warning nobody can act on.
+	"""
+	suggested = dry_off_destination()["herd"]
+	if not suggested or not chosen or chosen == suggested:
+		return None
+	return _(
+		"{0} is where this farm dries cows off to. She is being moved to {1} "
+		"instead — recorded as it stands."
+	).format(suggested, chosen)
 
 
 def dry_off_candidates():

@@ -131,6 +131,9 @@ export interface MovementOptions {
   dry_off_animals: AnimalChoice[];
   /** In calf, dried off, near her date. */
   calving_animals: AnimalChoice[];
+  /** Where this farm dries cows off to (Settings). A suggestion: a different
+   *  herd is warned about and then accepted. */
+  dry_off_herd: string | null;
   herds: { name: string; label: string }[];
   calving_outcomes: string[];
   employee: string | null;

@@ -87,6 +87,7 @@
   "low_yield_herd",
   "low_yield_days",
   "sb_steamers",
+  "drying_off_herd",
   "steamer_herd",
   "steamer_days_from_heifers",
   "cb_steamers",
@@ -599,6 +600,13 @@
    "fieldname": "sb_steamers",
    "fieldtype": "Section Break",
    "label": "Steamers · the dry herd"
+  },
+  {
+   "fieldname": "drying_off_herd",
+   "fieldtype": "Link",
+   "label": "Drying Off Herd",
+   "options": "Herds",
+   "description": "Where a cow goes when she is dried off. Offered as the destination on the drying-off screen, and a different choice is warned about rather than refused — a farm moves a cow somewhere else for reasons the app does not know. Left empty, the Steamer Herd below is used."
   },
   {
    "fieldname": "steamer_herd",
