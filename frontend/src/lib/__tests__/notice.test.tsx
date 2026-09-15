@@ -13,13 +13,18 @@ import { Notice, plainText } from "@/components/feeding/Notice";
 describe("the server's message, as a person reads it", () => {
   it("turns the app's own calving refusal into something legible", () => {
     const real =
-      "<b>❌ No Active Pregnancy Found!</b><br><br>This animal has no confirmed " +
+      '<b><img src="/assets/upande_livestock/icons/warning.svg" width="15" />' +
+      "No active pregnancy to calve from</b><br><br>This animal has no confirmed " +
       "pregnancy to calve from.<br><br><b>Action Required:</b><br>1. Ensure a " +
       "service has been recorded<br>2. Pregnancy must be confirmed via diagnosis";
     const out = plainText(real) as string;
     expect(out).not.toContain("<b>");
     expect(out).not.toContain("<br>");
-    expect(out).toContain("No Active Pregnancy Found!");
+    expect(out).toContain("No active pregnancy to calve from");
+    // The icon in front of the heading is markup like any other: stripped,
+    // never rendered, and never left in as a tag a herdsman has to read past.
+    expect(out).not.toContain("<img");
+    expect(out).not.toContain("assets/upande_livestock");
     expect(out).toContain("1. Ensure a service has been recorded");
     // The breaks it meant survive as breaks.
     expect(out.split("\n").length).toBeGreaterThan(3);

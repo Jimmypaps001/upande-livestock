@@ -1376,8 +1376,8 @@ class TestLivestockEventAbortion(IntegrationTestCase):
 		custom_related_pregnancy, so the Confirmed Service it should have
 		closed out was never marked Failed/Aborted and never got a linked
 		Calving either — meaning Service Rule 2's NOT EXISTS check kept
-		matching that same Confirmed pregnancy forever, throwing "Animal is
-		Already Pregnant!" on every subsequent Service for that cow, with no
+		matching that same Confirmed pregnancy forever, refusing every
+		subsequent Service for that cow as already pregnant, with no
 		way to recover short of editing a submitted document. Proves the fix:
 		once the Abortion auto-links and fails the Service, a later Service
 		for the same animal must succeed.
@@ -1397,7 +1397,7 @@ class TestLivestockEventAbortion(IntegrationTestCase):
 				"operator": self.operator,
 			}
 		)
-		service.insert()  # must not throw "Animal is Already Pregnant!"
+		service.insert()  # must not throw "she is already pregnant"
 		self.addCleanup(_delete_and_commit, "Livestock Event", service.name)
 		self.assertTrue(service.name)
 

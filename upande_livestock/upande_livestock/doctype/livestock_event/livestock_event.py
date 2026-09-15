@@ -24,7 +24,15 @@ from upande_livestock.serverscripts.common import stock as livestock_stock
 
 from upande_livestock.serverscripts.common.animal import create_calf
 from upande_livestock.serverscripts.common.guards import check_guards
+from upande_livestock.serverscripts.common.notice import heading
 from upande_livestock.serverscripts.common.timings import get_timing
+
+# The headings the reminders this controller raises carry. An icon here because
+# a ToDo in a list of forty is SCANNED; the refusals below are read, and get
+# words. See serverscripts/common/notice.py.
+CHECK_DUE = heading("search", "Pregnancy check due")
+CALVING_SOON = heading("calendar", "Calving expected soon")
+READY_TO_BREED = heading("repeat", "Ready for re-breeding")
 
 
 def warn_on_calving_mismatch(calving_name):
@@ -261,7 +269,7 @@ class LivestockEvent(Document):
 					todo = frappe.get_doc(
 						{
 							"doctype": "ToDo",
-							"description": f"""<b>🔍 Pregnancy Check Due</b><br>
+							"description": f"""{CHECK_DUE}<br>
                             Animal: {self.animal}<br>
                             Service Date: {frappe.utils.formatdate(self.service_date)}<br>
                             Check Due: {frappe.utils.formatdate(self.pregnancy_check_due_date)}<br>
@@ -328,7 +336,7 @@ class LivestockEvent(Document):
 							todo = frappe.get_doc(
 								{
 									"doctype": "ToDo",
-									"description": f"""<b>🐄 Calving Expected Soon</b><br>
+									"description": f"""{CALVING_SOON}<br>
                                     Animal: {self.animal}<br>
                                     Expected Date: {frappe.utils.formatdate(service.expected_calving_date)}<br>
                                     Service: {self.related_service}<br><br>
@@ -391,7 +399,7 @@ class LivestockEvent(Document):
 					todo = frappe.get_doc(
 						{
 							"doctype": "ToDo",
-							"description": f"""<b>🔄 Ready for Re-breeding</b><br>
+							"description": f"""{READY_TO_BREED}<br>
                             Animal: {self.animal}<br>
                             Calved: {frappe.utils.formatdate(self.event_date)}<br>
                             Ready from: {frappe.utils.formatdate(self.ready_for_service_date)}<br><br>
@@ -616,7 +624,7 @@ class LivestockEvent(Document):
 				last_service = pending_services[0]
 				days_since = frappe.utils.date_diff(self.service_date, last_service.service_date)
 
-				frappe.throw(f"""<b>⚠️ Cannot record new service!</b><br><br>
+				frappe.throw(f"""<b>Cannot record a new service</b><br><br>
                     This animal has a pending service from <b>{frappe.utils.formatdate(last_service.service_date)}</b> ({days_since} days ago).<br>
                     <b>Action Required:</b> Complete pregnancy diagnosis for service <b>{last_service.name}</b> first.<br><br>
                     <i>Tip: Go to Livestock Events → Find service → Record pregnancy diagnosis</i>""")
@@ -653,7 +661,7 @@ class LivestockEvent(Document):
 					else 0
 				)
 
-				frappe.throw(f"""<b>🤰 Animal is Already Pregnant!</b><br><br>
+				frappe.throw(f"""<b>She is already pregnant</b><br><br>
                     Service Date: <b>{frappe.utils.formatdate(pregnancy.service_date)}</b><br>
                     Expected Calving: <b>{frappe.utils.formatdate(expected_calving) if expected_calving else 'Not set'}</b><br>
                     Days Until Calving: <b>{days_until}</b> days<br><br>
@@ -681,7 +689,7 @@ class LivestockEvent(Document):
 				optimal_days = get_timing("post_calving_optimal_service_days")
 
 				if days_since_calving < minimum_days:
-					frappe.throw(f"""<b>⚠️ Too Early for Service!</b><br><br>
+					frappe.throw(f"""<b>Too early to serve her</b><br><br>
                         Last Calving: <b>{frappe.utils.formatdate(calving.event_date)}</b> ({days_since_calving} days ago)<br>
                         Minimum Waiting Period: <b>{minimum_days} days</b><br>
                         Shortfall: <b>{minimum_days - days_since_calving} days</b><br><br>
@@ -689,7 +697,7 @@ class LivestockEvent(Document):
                         <b>Recommendation:</b> Wait at least {minimum_days} days post-calving.""")
 				elif days_since_calving < optimal_days:
 					frappe.msgprint(
-						f"""<b>⚠️ Early Service Warning</b><br><br>
+						f"""<b>Early service</b><br><br>
                         Days since calving: <b>{days_since_calving}</b><br>
                         Optimal waiting period: <b>{optimal_days} days</b><br><br>
                         <i>Note: Service is allowed but conception rates improve after {optimal_days} days.</i>""",
@@ -760,7 +768,7 @@ class LivestockEvent(Document):
 						indicator="blue",
 					)
 				else:
-					frappe.throw("""<b>❌ No Related Service Found!</b><br><br>
+					frappe.throw("""<b>No service to diagnose</b><br><br>
                         This animal has no pending service to diagnose.<br><br>
                         <b>Action Required:</b><br>
                         1. Ensure a service event has been recorded<br>
@@ -775,7 +783,7 @@ class LivestockEvent(Document):
 				frappe.throw(f"""Related service {self.related_service} has no service date!""")
 
 			if frappe.utils.getdate(self.diagnosis_date) < frappe.utils.getdate(service.service_date):
-				frappe.throw(f"""<b>⚠️ Invalid Diagnosis Date!</b><br><br>
+				frappe.throw(f"""<b>That diagnosis date cannot be right</b><br><br>
                     Diagnosis Date: <b>{frappe.utils.formatdate(self.diagnosis_date)}</b><br>
                     Service Date: <b>{frappe.utils.formatdate(service.service_date)}</b><br><br>
                     Diagnosis cannot be before service date!""")
@@ -785,7 +793,7 @@ class LivestockEvent(Document):
 			# Check timing appropriateness
 			if days_since_service < get_timing("diagnosis_earliest_days"):
 				frappe.msgprint(
-					f"""<b>⚠️ Very Early Diagnosis</b><br><br>
+					f"""<b>Very early diagnosis</b><br><br>
                     Days since service: <b>{days_since_service}</b><br>
                     Recommended minimum: <b>{get_timing("diagnosis_earliest_days")} days</b><br><br>
                     <i>Note: Pregnancy detection accuracy is lower before 21 days.</i>""",
@@ -794,7 +802,7 @@ class LivestockEvent(Document):
 				)
 			elif days_since_service > get_timing("diagnosis_latest_days"):
 				frappe.msgprint(
-					f"""<b>⚠️ Very Late Diagnosis</b><br><br>
+					f"""<b>Very late diagnosis</b><br><br>
                     Days since service: <b>{days_since_service}</b><br>
                     Recommended maximum: <b>{get_timing("diagnosis_latest_days")} days</b><br><br>
                     <i>Note: This diagnosis is overdue.</i>""",
@@ -843,7 +851,7 @@ class LivestockEvent(Document):
 						indicator="blue",
 					)
 				else:
-					frappe.throw("""<b>❌ No Active Pregnancy Found!</b><br><br>
+					frappe.throw("""<b>No active pregnancy to calve from</b><br><br>
                         This animal has no confirmed pregnancy to calve from.<br><br>
                         <b>Action Required:</b><br>
                         1. Ensure a service has been recorded<br>
@@ -858,7 +866,7 @@ class LivestockEvent(Document):
 
 				if gestation_days < get_timing("gestation_short_warning_days"):
 					frappe.msgprint(
-						f"""<b>⚠️ Short Gestation Period!</b><br><br>
+						f"""<b>Short gestation</b><br><br>
                         Gestation Length: <b>{gestation_days} days</b><br>
                         Normal Range: <b>270-290 days</b><br><br>
                         <i>Note: This may indicate premature birth or abortion.</i>""",
@@ -867,7 +875,7 @@ class LivestockEvent(Document):
 					)
 				elif gestation_days > get_timing("gestation_long_warning_days"):
 					frappe.msgprint(
-						f"""<b>⚠️ Long Gestation Period!</b><br><br>
+						f"""<b>Long gestation</b><br><br>
                         Gestation Length: <b>{gestation_days} days</b><br>
                         Normal Range: <b>270-290 days</b><br><br>
                         <i>Note: Verify the dates are correct.</i>""",
@@ -1116,7 +1124,7 @@ class LivestockEvent(Document):
 
 				if not closed:
 					frappe.throw(
-						f"🐄 {self.animal} is already pregnant.\n\n"
+						f"{self.animal} is already pregnant.\n\n"
 						"The cow must calve before a new pregnancy can be recorded."
 					)
 

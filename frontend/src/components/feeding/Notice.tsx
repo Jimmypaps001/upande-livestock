@@ -14,9 +14,13 @@ import { cn } from "@/lib/utils";
  * SOME OF THOSE MESSAGES CARRY MARKUP. Frappe's own `frappe.throw` takes HTML,
  * and the app uses it: refusing a calving with no confirmed pregnancy answers
  * with <b> headings and <br> line breaks laying out three numbered steps. Left
- * alone, a herdsman reads "<b>❌ No Active Pregnancy Found!</b><br><br>" — the
- * instruction is there and unreadable. So the tags are turned back into the
+ * alone, a herdsman reads "<b>No active pregnancy to calve from</b><br><br>" —
+ * the instruction is there and unreadable. So the tags are turned back into the
  * line breaks they meant and then dropped.
+ *
+ * The icon those headings used to carry was an emoji and is now a real one, so
+ * a message can also arrive with an <img> in front of it. It goes the same way
+ * as the <b>: stripped, because this is text.
  *
  * TURNED INTO TEXT, NOT RENDERED AS HTML. These strings pass through a server
  * but some of them carry things a person typed — an animal name, a note on a

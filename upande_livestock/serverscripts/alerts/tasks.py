@@ -16,6 +16,16 @@ import frappe
 
 from upande_livestock.serverscripts.alerts import raise_alerts as herd_alerts
 from upande_livestock.serverscripts.common import herd_movement, notifications
+from upande_livestock.serverscripts.common.notice import heading
+
+# The headings these alerts carry. Built once here rather than inline, so the
+# icon a kind of notice wears is decided in one place — and so a heading that
+# has to change changes for every alert of that kind at once.
+OVERDUE_CHECK = heading("clock", "Overdue: pregnancy check required")
+CALVING_SOON = heading("calendar", "Calving expected soon")
+READY_TO_BREED = heading("check", "Ready for re-breeding")
+HEAT_TODAY = heading("heat", "Heat expected today")
+REPEAT_BREEDER = heading("repeat", "Repeat breeder")
 
 #: Days after a service by which a diagnosis should have been recorded, when
 #: Livestock Settings has no `pregnancy_check_days_after_service`. Sixty is the
@@ -120,7 +130,7 @@ def check_overdue_pregnancy_diagnoses():
 		todo = frappe.get_doc(
 			{
 				"doctype": "ToDo",
-				"description": f"""<b>🚨 OVERDUE: Pregnancy Check Required</b><br><br>
+				"description": f"""{OVERDUE_CHECK}<br><br>
                 Animal: <b>{service.animal}</b> ({service.asset_name or ''})<br>
                 Herd: <b>{service.custom_current_herd or 'Not assigned'}</b><br>
                 Service Date: <b>{frappe.utils.formatdate(service.service_date)}</b><br>
@@ -190,7 +200,7 @@ def check_overdue_pregnancy_diagnoses():
 		todo = frappe.get_doc(
 			{
 				"doctype": "ToDo",
-				"description": f"""<b>🐄 Calving Expected Soon!</b><br><br>
+				"description": f"""{CALVING_SOON}<br><br>
                 Animal: <b>{calving.animal}</b> ({calving.asset_name or ''})<br>
                 Herd: <b>{calving.custom_current_herd or 'Not assigned'}</b><br>
                 Expected Date: <b>{frappe.utils.formatdate(calving.expected_calving)}</b><br>
@@ -247,7 +257,7 @@ def check_overdue_pregnancy_diagnoses():
 		todo = frappe.get_doc(
 			{
 				"doctype": "ToDo",
-				"description": f"""<b>✅ Animal Ready for Re-breeding!</b><br><br>
+				"description": f"""{READY_TO_BREED}<br><br>
                 Animal: <b>{animal.animal}</b> ({animal.asset_name or ''})<br>
                 Herd: <b>{animal.custom_current_herd or 'Not assigned'}</b><br>
                 Last Calving: <b>{frappe.utils.formatdate(animal.calving_date)}</b><br>
@@ -300,7 +310,7 @@ def check_overdue_pregnancy_diagnoses():
 		todo = frappe.get_doc(
 			{
 				"doctype": "ToDo",
-				"description": f"""<b>🔥 Expected Heat Today!</b><br><br>
+				"description": f"""{HEAT_TODAY}<br><br>
                 Animal: <b>{heat.animal}</b> ({heat.asset_name or ''})<br>
                 Herd: <b>{heat.custom_current_herd or 'Not assigned'}</b><br>
                 Last Service: <b>{frappe.utils.formatdate(heat.service_date)}</b><br>
@@ -361,7 +371,7 @@ def check_overdue_pregnancy_diagnoses():
 		todo = frappe.get_doc(
 			{
 				"doctype": "ToDo",
-				"description": f"""<b>⚠️ Problem Animal: Repeat Breeder</b><br><br>
+				"description": f"""{REPEAT_BREEDER}<br><br>
                 Animal: <b>{animal.animal}</b> ({animal.asset_name or ''})<br>
                 Total Services: <b>{animal.service_count}</b><br>
                 Successful Pregnancies: <b>0</b><br>
