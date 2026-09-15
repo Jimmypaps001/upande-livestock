@@ -69,3 +69,42 @@ class ResetsLivestockTimings:
 	def setUp(self):
 		self.addCleanup(reset_livestock_timings)
 		super().setUp()
+
+
+def set_setting(case, field, value):
+	"""Change ONE farm setting for the length of a test, and put it back.
+
+	The companion to `reset_livestock_timings` for every field that dict cannot
+	cover. `ALL_TIMING_DEFAULTS` knows the true default of each Int and Float,
+	so those can be wiped and reseeded — but a Link has no such default. The
+	Steamer Herd is whatever this farm called its dry pen, and nothing can
+	reconstruct it after the fact.
+
+	That gap is not hypothetical. A test that set `steamer_herd` to None and
+	registered a cleanup which cleared the document cache — but never restored
+	the VALUE — wiped it off this site, and every drying-off suggestion answered
+	None until somebody noticed and put it back by hand. The module docstring
+	above describes that exact failure for the timing fields; this closes the
+	same hole for the rest.
+
+	Two rules, both learned from that:
+
+	* **Capture, never assume.** Restoring to the documented default would
+	  quietly overwrite a farm that had deliberately configured something else.
+	* **Register the restore BEFORE the write**, so a write that throws still
+	  leaves the farm as it found it.
+
+	The restore commits, because `set_single_value` alone lives inside the test
+	transaction and a later commit elsewhere would make the change durable while
+	the rollback took only the restore with it.
+	"""
+	before = frappe.db.get_single_value("Livestock Settings", field)
+
+	def restore():
+		frappe.db.set_single_value("Livestock Settings", field, before)
+		frappe.db.commit()
+		frappe.clear_cache(doctype="Livestock Settings")
+
+	case.addCleanup(restore)
+	frappe.db.set_single_value("Livestock Settings", field, value)
+	frappe.clear_cache(doctype="Livestock Settings")

@@ -23,6 +23,7 @@ from upande_livestock.serverscripts.breeding.create_drying_off_event import (
 	create_drying_off_event,
 )
 from upande_livestock.serverscripts.common import herd_movement as hm
+from upande_livestock.serverscripts.tests.timings_utils import set_setting
 from upande_livestock.serverscripts.tests.test_operations import (
 	_make_cow,
 	_purge,
@@ -103,11 +104,7 @@ class TestDryingOffIsForCowsInCalfAndInMilk(IntegrationTestCase):
 		"""Move the setting and the readiness flag moves with it."""
 		_confirm(self.animal, add_days(today(), -120))
 		before = next(r for r in hm.dry_off_candidates() if r["animal"] == self.animal)
-		frappe.db.set_single_value("Livestock Settings", "steamer_days_from_lactation", 1)
-		self.addCleanup(
-			frappe.db.set_single_value, "Livestock Settings", "steamer_days_from_lactation", 60
-		)
-		frappe.clear_document_cache("Livestock Settings", "Livestock Settings")
+		set_setting(self, "steamer_days_from_lactation", 1)
 		after = next(r for r in hm.dry_off_candidates() if r["animal"] == self.animal)
 		self.assertNotEqual(before["window"], after["window"])
 
@@ -125,17 +122,8 @@ class TestTheFarmSaysWhereDryCowsGo(IntegrationTestCase):
 		self.addCleanup(_tidy, self.animal)
 		self.who = _employee()
 
-	def _restore(self, value):
-		frappe.db.set_single_value("Livestock Settings", "drying_off_herd", value)
-		frappe.clear_document_cache("Livestock Settings", "Livestock Settings")
-
-	def _set(self, herd):
-		before = frappe.db.get_single_value("Livestock Settings", "drying_off_herd")
-		self.addCleanup(self._restore, before)
-		self._restore(herd)
-
 	def test_the_setting_decides_when_nobody_names_a_herd(self):
-		self._set(self.milking[0])
+		set_setting(self, "drying_off_herd", self.milking[0])
 		got = create_drying_off_event({
 			"animal": self.animal, "operator": self.who, "event_date": today(),
 		})
@@ -146,7 +134,7 @@ class TestTheFarmSaysWhereDryCowsGo(IntegrationTestCase):
 	def test_it_falls_back_to_the_steamer_herd(self):
 		"""A farm that configured only Steamers should not have to discover a
 		new field before the screen works."""
-		self._set(None)
+		set_setting(self, "drying_off_herd", None)
 		steamers = frappe.db.get_single_value("Livestock Settings", "steamer_herd")
 		if not steamers:
 			self.skipTest("this farm has no steamer herd configured")
@@ -155,7 +143,7 @@ class TestTheFarmSaysWhereDryCowsGo(IntegrationTestCase):
 	def test_a_different_herd_is_accepted(self):
 		"""A cow goes to a different pen for reasons this app does not know.
 		Refusing would send the herdsman to the desk to do it anyway."""
-		self._set(self.milking[0])
+		set_setting(self, "drying_off_herd", self.milking[0])
 		got = create_drying_off_event({
 			"animal": self.animal, "operator": self.who, "event_date": today(),
 			"new_herd": self.milking[-1],
@@ -166,7 +154,7 @@ class TestTheFarmSaysWhereDryCowsGo(IntegrationTestCase):
 	def test_and_the_deviation_is_written_on_the_event(self):
 		"""A month later the question is why she went to the wrong pen, and a
 		toast is long gone."""
-		self._set(self.milking[0])
+		set_setting(self, "drying_off_herd", self.milking[0])
 		got = create_drying_off_event({
 			"animal": self.animal, "operator": self.who, "event_date": today(),
 			"new_herd": self.milking[-1],
@@ -178,12 +166,8 @@ class TestTheFarmSaysWhereDryCowsGo(IntegrationTestCase):
 		)
 
 	def test_nothing_is_said_when_the_farm_has_set_nothing(self):
-		self._set(None)
-		frappe.db.set_single_value("Livestock Settings", "steamer_herd", None)
-		self.addCleanup(
-			frappe.clear_document_cache, "Livestock Settings", "Livestock Settings"
-		)
-		frappe.clear_document_cache("Livestock Settings", "Livestock Settings")
+		set_setting(self, "drying_off_herd", None)
+		set_setting(self, "steamer_herd", None)
 		self.assertIsNone(hm.dry_off_destination_note(self.milking[-1]))
 
 
@@ -275,9 +259,5 @@ class TestHeatIsWiderThanServiceOnPurpose(IntegrationTestCase):
 		_make_cow(young, months_old=10)
 		self.addCleanup(_tidy, young)
 		self.assertNotIn(young, _names(hm.heat_candidates()))
-		frappe.db.set_single_value("Livestock Settings", "min_service_age_months", 6)
-		self.addCleanup(
-			frappe.db.set_single_value, "Livestock Settings", "min_service_age_months", 15
-		)
-		frappe.clear_document_cache("Livestock Settings", "Livestock Settings")
+		set_setting(self, "min_service_age_months", 6)
 		self.assertIn(young, _names(hm.heat_candidates()))

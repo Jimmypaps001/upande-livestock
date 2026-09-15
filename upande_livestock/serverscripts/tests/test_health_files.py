@@ -26,6 +26,7 @@ from upande_livestock.serverscripts.health.create_health_case import create_heal
 from upande_livestock.serverscripts.health.health_case_file import health_case_file
 from upande_livestock.serverscripts.health.open_health_cases import open_health_cases
 from upande_livestock.serverscripts.health.treat_animal import treat_animal
+from upande_livestock.serverscripts.tests.timings_utils import set_setting
 from upande_livestock.serverscripts.tests.test_operations import (
 	_make_cow,
 	_purge,
@@ -315,13 +316,10 @@ class TestTheFarmDrawsItsOwnLines(IntegrationTestCase):
 		self.assertIsNone(concern(case, None))
 
 	def test_zero_means_do_not_tell_me(self):
-		frappe.db.set_single_value("Livestock Settings", "health_case_concern_days", 0)
-		frappe.db.set_single_value("Livestock Settings", "health_case_stale_days", 0)
-		self.addCleanup(
-			frappe.db.set_single_value, "Livestock Settings", "health_case_concern_days", 21
-		)
-		self.addCleanup(
-			frappe.db.set_single_value, "Livestock Settings", "health_case_stale_days", 7
-		)
+		# Through set_setting, which captures what the farm had rather than
+		# restoring to the documented default — a farm that configured 30 would
+		# otherwise come back from this test set to 21.
+		set_setting(self, "health_case_concern_days", 0)
+		set_setting(self, "health_case_stale_days", 0)
 		case = {"case_status": "Open", "opened_date": add_days(today(), -400)}
 		self.assertIsNone(concern(case, add_days(today(), -300)))
