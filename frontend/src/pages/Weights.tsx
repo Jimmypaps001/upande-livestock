@@ -19,7 +19,38 @@ import { isError } from "@/lib/frappe";
 import { getWeightOptions, recordWeights, type WeightOptions, type WeightRow } from "@/lib/events";
 import { useOperator } from "@/lib/operator";
 import { useSaveShortcut } from "@/lib/use-save-shortcut";
-import { todayISO } from "@/lib/utils";
+import { cn, fmt, todayISO } from "@/lib/utils";
+
+/**
+ * Three ways a farm actually weighs, and only one of them was a row per animal.
+ *
+ *   each      — a cow on the scale and a number against her name.
+ *   platform  — a pen walks on together and the platform reads one figure.
+ *               Nobody runs twelve calves through singly; the honest per-head
+ *               number is the total over the head count.
+ *   alike     — six heifers that plainly match. One is weighed and the figure
+ *               stands for all six.
+ *
+ * The last two are ESTIMATES. A per-head share is not a measurement of any one
+ * calf, and a figure copied across six is a judgement about five of them — so
+ * the server writes what it did into every record's remarks, and a copied
+ * figure is filed under Visual Estimate rather than under the scale.
+ */
+type Mode = "each" | "platform" | "alike";
+
+const MODES: { mode: Mode; title: string; blurb: string }[] = [
+  { mode: "each", title: "One at a time", blurb: "A number against each animal's name." },
+  {
+    mode: "platform",
+    title: "A pen on the platform",
+    blurb: "One total for the group, divided by head.",
+  },
+  {
+    mode: "alike",
+    title: "One weight for animals of a size",
+    blurb: "Weigh or eye one; it stands for the rest.",
+  },
+];
 
 interface Entry {
   weight_kg: string;
@@ -53,6 +84,9 @@ export function Weights() {
   const toast = useToast();
   const who = useOperator(options?.employee);
 
+  const [mode, setMode] = useState<Mode>("each");
+  const [groupTotal, setGroupTotal] = useState("");
+  const [groupEach, setGroupEach] = useState("");
   const [when, setWhen] = useState(todayISO());
   const [method, setMethod] = useState("");
   const [picked, setPicked] = useState<string[]>([]);
@@ -81,11 +115,12 @@ export function Weights() {
     [options],
   );
 
-  const written = picked.filter((id) => {
-    const e = entries[id] ?? EMPTY;
-    return Number(e.weight_kg) > 0 || Number(e.heart_girth_cm) > 0;
-  });
-  const ready = !!method && written.length > 0 && !who.needed;
+  const written = picked.filter((id) => Number((entries[id] ?? EMPTY).weight_kg) > 0);
+  const groupFigure = mode === "platform" ? Number(groupTotal) : Number(groupEach);
+  const ready =
+    !!method &&
+    !who.needed &&
+    (mode === "each" ? written.length > 0 : picked.length > 0 && groupFigure > 0);
 
   useSaveShortcut(() => void send(), ready && !busy);
 
@@ -109,7 +144,16 @@ export function Weights() {
       event_date: when,
       method,
       measured_by: who.value,
-      weights,
+      weights: mode === "each" ? weights : [],
+      group:
+        mode === "each"
+          ? undefined
+          : {
+              animals: picked,
+              ...(mode === "platform"
+                ? { total_weight_kg: Number(groupTotal) }
+                : { weight_kg: Number(groupEach) }),
+            },
     });
     setBusy(false);
     if (isError(r)) {
@@ -177,6 +221,32 @@ export function Weights() {
             {who.mustAsk && <OperatorField operator={who.operator} onChange={who.setOperator} />}
           </div>
 
+          <div className="flex flex-col gap-2">
+            <Label>How they were weighed</Label>
+            <div className="grid gap-2 sm:grid-cols-3">
+              {MODES.map((m) => (
+                <button
+                  key={m.mode}
+                  type="button"
+                  onClick={() => setMode(m.mode)}
+                  className={cn(
+                    "rounded-[var(--sd-radius-lg)] px-3.5 py-3 text-left transition-all",
+                    m.mode === mode
+                      ? "bg-[var(--sd-bg-soft)] shadow-[var(--sd-shadow-1)]"
+                      : "hover:bg-[var(--sd-bg-soft)]",
+                  )}
+                >
+                  <span className="block text-[13px] font-medium text-[var(--sd-ink)]">
+                    {m.title}
+                  </span>
+                  <span className="mt-0.5 block text-[11.5px] leading-snug text-[var(--sd-muted)]">
+                    {m.blurb}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+
           <TargetPicker
             animals={options?.animals ?? []}
             herds={options?.herds ?? []}
@@ -185,7 +255,41 @@ export function Weights() {
             label="Who went through"
           />
 
-          {picked.length > 0 && (
+          {mode !== "each" && picked.length > 0 && (
+            <div className="flex flex-wrap items-end gap-4">
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="w-group">
+                  {mode === "platform" ? "Total on the platform (kg)" : "Weight each (kg)"}
+                </Label>
+                <Input
+                  id="w-group"
+                  type="number"
+                  min={0}
+                  step="0.1"
+                  value={mode === "platform" ? groupTotal : groupEach}
+                  onChange={(e) =>
+                    mode === "platform"
+                      ? setGroupTotal(e.target.value)
+                      : setGroupEach(e.target.value)
+                  }
+                  className="w-36 text-right tabular-nums"
+                />
+              </div>
+              <p className="pb-2 text-[12px] text-[var(--sd-muted)]">
+                {mode === "platform"
+                  ? groupFigure > 0
+                    ? `${fmt(groupFigure)} kg over ${picked.length} head — ${fmt(
+                        groupFigure / picked.length,
+                      )} kg each.`
+                    : `Divided by the ${picked.length} animals on the platform.`
+                  : groupFigure > 0
+                    ? `${fmt(groupFigure)} kg recorded against all ${picked.length}, as an estimate.`
+                    : `The figure will stand for all ${picked.length}.`}
+              </p>
+            </div>
+          )}
+
+          {mode === "each" && picked.length > 0 && (
             <div className="flex flex-col gap-1.5">
               <Label>The numbers</Label>
               {/* Ninety-four animals through a crush is ninety-four rows, and
@@ -262,9 +366,13 @@ export function Weights() {
           <div className="flex flex-wrap items-center gap-3">
             <Button onClick={send} disabled={!ready || busy}>
               <Scale className="mr-2 h-4 w-4" strokeWidth={1.75} />
-              {busy ? "Recording…" : `Record ${written.length || "…"} weight${written.length === 1 ? "" : "s"}`}
+              {busy
+                ? "Recording…"
+                : mode === "each"
+                  ? `Record ${written.length || "…"} weight${written.length === 1 ? "" : "s"}`
+                  : `Record ${picked.length || "…"} weight${picked.length === 1 ? "" : "s"}`}
             </Button>
-            {picked.length > 0 && written.length < picked.length && (
+            {mode === "each" && picked.length > 0 && written.length < picked.length && (
               <span className="text-[11.5px] text-[var(--sd-muted)]">
                 {picked.length - written.length} left blank — they will be skipped.
               </span>

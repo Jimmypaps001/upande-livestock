@@ -107,6 +107,17 @@ export interface WeightOptions {
   employee: string | null;
 }
 
+/** A whole group weighed at once: either a platform total to divide by head, or
+ *  one figure taken as standing for every animal of that size. */
+export interface WeightGroup {
+  animals: string[];
+  /** The platform read this for all of them together. */
+  total_weight_kg?: number;
+  /** This weight stands for each of them. */
+  weight_kg?: number;
+  remarks?: string;
+}
+
 export interface WeightRow {
   animal: string;
   weight_kg?: number;

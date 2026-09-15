@@ -134,11 +134,11 @@ export function MilkChart({ points }: { points: DayPoint[] }) {
             </g>
           ))}
 
-          <path d={area} fill="var(--sd-data-cyan)" opacity={0.12} />
+          <path d={area} fill="var(--sd-series-1)" opacity={0.07} />
           <path
             d={line}
             fill="none"
-            stroke="var(--sd-data-cyan)"
+            stroke="var(--sd-series-1)"
             strokeWidth={2}
             strokeLinejoin="round"
             strokeLinecap="round"
@@ -151,7 +151,7 @@ export function MilkChart({ points }: { points: DayPoint[] }) {
               cy={y(p.net_kg)}
               r={n > 60 ? 1.5 : 3}
               fill="var(--sd-card)"
-              stroke="var(--sd-data-cyan)"
+              stroke="var(--sd-series-1)"
               strokeWidth={2}
             >
               <title>

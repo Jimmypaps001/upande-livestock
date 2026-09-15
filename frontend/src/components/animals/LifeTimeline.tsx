@@ -37,12 +37,12 @@ const KIND_LABEL: Record<MilestoneKind, string> = {
 /** A quiet, repeatable colour per herd, keyed off the name so a herd keeps its
  *  band colour from one animal's timeline to the next. */
 const BAND_TONES = [
-  "var(--sd-data-indigo)",
-  "var(--sd-data-cyan)",
-  "var(--sd-data-green)",
-  "var(--sd-data-amber)",
-  "var(--sd-data-purple)",
-  "var(--sd-data-pink)",
+  "var(--sd-series-1)",
+  "var(--sd-series-2)",
+  "var(--sd-series-3)",
+  "var(--sd-series-4)",
+  "var(--sd-series-5)",
+  "var(--sd-series-6)",
 ];
 function bandTone(herd: string): string {
   let h = 0;

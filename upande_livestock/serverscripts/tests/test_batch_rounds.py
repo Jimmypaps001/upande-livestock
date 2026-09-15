@@ -138,6 +138,80 @@ class TestAWeighingIsAMorningNotAMoment(IntegrationTestCase):
 		self.assertIn("at least one", self._run([]).get("error", ""))
 
 
+class TestAPenIsWeighedTogether(IntegrationTestCase):
+	"""Two ways a farm weighs that are not a row per animal."""
+
+	def setUp(self):
+		self.cows = ["WEIGH-PEN-1", "WEIGH-PEN-2", "WEIGH-PEN-3", "WEIGH-PEN-4"]
+		for tag in self.cows:
+			_tidy(tag)
+			_make_cow(tag, herd="Lactating group 1")
+			self.addCleanup(_tidy, tag)
+		self.who = _employee()
+
+	def _run(self, group, **kw):
+		return record_weights({
+			"measured_by": self.who, "method": "Platform Scale",
+			"event_date": today(), "group": group, **kw,
+		})
+
+	def test_a_platform_total_is_divided_by_head(self):
+		"""Nobody runs twelve calves through the crush singly."""
+		got = self._run({"animals": self.cows, "total_weight_kg": 1000})
+		self.assertTrue(got.get("ok"), got.get("error"))
+		self.assertEqual(got["count"], 4)
+		for tag in self.cows:
+			self.assertEqual(
+				frappe.db.get_value("Livestock Weight Record", {"animal": tag}, "weight_kg"), 250
+			)
+
+	def test_the_share_says_on_the_record_that_it_is_a_share(self):
+		"""A per-head figure is not a measurement of any particular calf, and a
+		year later nobody can tell unless the record says so."""
+		self._run({"animals": self.cows, "total_weight_kg": 1000})
+		remarks = frappe.db.get_value(
+			"Livestock Weight Record", {"animal": self.cows[0]}, "remarks"
+		)
+		self.assertIn("1000", remarks)
+		self.assertIn("4 head", remarks)
+
+	def test_one_weight_can_stand_for_animals_of_a_size(self):
+		got = self._run({"animals": self.cows[:2], "weight_kg": 310})
+		self.assertEqual(got["count"], 2)
+		for tag in self.cows[:2]:
+			self.assertEqual(
+				frappe.db.get_value("Livestock Weight Record", {"animal": tag}, "weight_kg"), 310
+			)
+
+	def test_a_copied_figure_is_filed_as_an_estimate(self):
+		"""It is a judgement about every animal but the one that was weighed, so
+		it is not recorded under the scale that weighed her."""
+		self._run({"animals": self.cows[:2], "weight_kg": 310})
+		self.assertEqual(
+			frappe.db.get_value("Livestock Weight Record", {"animal": self.cows[0]}, "method"),
+			"Visual Estimate",
+		)
+
+	def test_a_platform_reading_keeps_the_method_it_was_read_on(self):
+		"""Apportioning a real reading does not make the reading an eyeball."""
+		self._run({"animals": self.cows, "total_weight_kg": 1000})
+		self.assertEqual(
+			frappe.db.get_value("Livestock Weight Record", {"animal": self.cows[0]}, "method"),
+			"Platform Scale",
+		)
+
+	def test_a_total_and_a_per_head_figure_together_are_refused(self):
+		"""They are two different weighings, and guessing which was meant would
+		put a number on every animal in the pen."""
+		got = self._run({"animals": self.cows, "total_weight_kg": 900, "weight_kg": 300})
+		self.assertIn("not both", got.get("error", ""))
+
+	def test_a_group_with_no_figure_at_all_is_refused(self):
+		self.assertIn(
+			"weight this group", self._run({"animals": self.cows}).get("error", "")
+		)
+
+
 class TestADrugRoundIsAHerdThroughACrush(IntegrationTestCase):
 	def setUp(self):
 		self.herd = "Lactating group 1"

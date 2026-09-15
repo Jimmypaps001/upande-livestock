@@ -39,7 +39,7 @@ const LABEL_PAD = 46;
  *  compares four cows at once — they compare a shortlist. */
 const MAX = 3;
 
-const LINES = ["var(--sd-ink)", "var(--sd-data-cyan)", "var(--sd-data-amber)"];
+const LINES = ["var(--sd-ink)", "var(--sd-series-3)", "var(--sd-data-amber)"];
 
 function point(i: number, count: number, radius: number) {
   const a = ((i / count) * 2 * Math.PI) - Math.PI / 2;

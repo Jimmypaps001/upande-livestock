@@ -358,7 +358,7 @@ function Ranked({
           </span>
           <span className="h-1.5 overflow-hidden rounded-full bg-[var(--sd-bg-soft)]">
             <span
-              className="block h-full rounded-full bg-[var(--sd-data-cyan)]"
+              className="block h-full rounded-full bg-[var(--sd-series-2)]"
               style={{ width: `${Math.max(3, (r.value / top) * 100)}%` }}
             />
           </span>

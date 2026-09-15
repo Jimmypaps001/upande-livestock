@@ -5,10 +5,16 @@
 
 import frappe
 from frappe import _
+from frappe.utils import flt
 
 #: One name reused for every row. Each is opened, and either kept by the next
 #: row opening over it or rolled back to at once, so they never nest.
 SAVEPOINT = "livestock_weight_row"
+
+#: What one weight standing for several animals is recorded as. An option the
+#: doctype already offers, so the record stays valid and a report can tell an
+#: eyeballed figure from a scale reading.
+ESTIMATE_METHOD = "Visual Estimate"
 
 from upande_livestock.serverscripts.common.envelope import as_dict, guard, run
 from upande_livestock.serverscripts.weights.create_weight_record import record_one
@@ -43,7 +49,7 @@ def record_weights(payload):
 	def go():
 		guard("Livestock Weight Record")
 		d = as_dict(payload)
-		rows = [r for r in (d.get("weights") or []) if r.get("animal")]
+		rows = _rows(d)
 		if not rows:
 			frappe.throw(_("Weigh at least one animal."))
 
@@ -71,6 +77,10 @@ def record_weights(payload):
 			try:
 				result = record_one({
 					**shared,
+					# A row may name its own method: a weight copied across six
+					# lookalike heifers is an estimate whatever the scale under
+					# the one that was measured said.
+					**({"method": row["method"]} if row.get("method") else {}),
 					"animal": animal,
 					"weight_kg": row.get("weight_kg"),
 					"heart_girth_cm": row.get("heart_girth_cm"),
@@ -93,3 +103,67 @@ def record_weights(payload):
 		}
 
 	return run(go, "livestock record_weights failed")
+
+
+def _rows(d):
+	"""The per-animal rows, however the weighing was actually done.
+
+	THREE WAYS A FARM WEIGHS, and only one of them was a row per animal:
+
+	* **One at a time.** A cow on the scale, a number against her name. `weights`
+	  carries it, and always did.
+	* **A pen on a platform.** Twelve calves walk on together and the platform
+	  reads one figure. Nobody is going to run them through singly, and the
+	  honest per-head number is the total divided by the head count — so the
+	  farm records the total and this does the division.
+	* **One weight, several animals.** Six heifers that plainly match: one is
+	  weighed, or eyed against a tape, and the figure stands for all six.
+
+	The last two are ESTIMATES AND ARE RECORDED AS SUCH. A per-head share of a
+	platform reading is not a measurement of any particular calf, and a figure
+	copied across six heifers is a judgement about five of them. Each record says
+	so in its remarks, so that a year later nobody reads a shared number as a
+	cow that was individually weighed.
+	"""
+	rows = [dict(r) for r in (d.get("weights") or []) if r.get("animal")]
+
+	group = d.get("group") or {}
+	animals = [a for a in (group.get("animals") or []) if a]
+	if not animals:
+		return rows
+
+	total = flt(group.get("total_weight_kg"))
+	each = flt(group.get("weight_kg"))
+	if total > 0 and each > 0:
+		frappe.throw(
+			_("Give the platform total or the weight each animal carries, not both — "
+			  "they are two different weighings.")
+		)
+	if total <= 0 and each <= 0:
+		frappe.throw(_("Give the weight this group was recorded at."))
+
+	estimated = False
+	if total > 0:
+		share = total / len(animals)
+		note = _("Platform total {0} kg over {1} head — {2} kg each.").format(
+			flt(total), len(animals), round(share, 1)
+		)
+	else:
+		share = each
+		note = _("One weight taken as standing for {0} animals of a size.").format(len(animals))
+		# Not a measurement of these animals, and the record says which it is.
+		estimated = True
+
+	shared_remarks = (group.get("remarks") or "").strip()
+	for animal in animals:
+		rows.append({
+			"animal": animal,
+			"weight_kg": round(share, 2),
+			"remarks": f"{shared_remarks} {note}".strip() if shared_remarks else note,
+			# A platform reading IS a measurement; its per-head share is an
+			# apportionment of one, and the remark says so. A figure copied
+			# across lookalikes is not a measurement of them at all, so it is
+			# recorded under the method that admits it.
+			**({"method": ESTIMATE_METHOD} if estimated else {}),
+		})
+	return rows

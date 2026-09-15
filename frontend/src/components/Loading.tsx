@@ -61,3 +61,60 @@ export function TextSkeleton({ width = "12ch" }: { width?: string }) {
     />
   );
 }
+
+/**
+ * A whole page, before its code has arrived.
+ *
+ * The route fallback used to be the word "Loading" on an empty surface, so
+ * every first visit to a screen flashed a blank and then reflowed into a
+ * layout. This is the silhouette the pages share — a heading, a row of
+ * figures, a card — so the arrival is the same shape filling in rather than a
+ * different thing replacing it.
+ *
+ * Deliberately NOT a spinner. A spinner says "wait"; a skeleton says what is
+ * coming, and on a rural line the difference is whether the operator thinks
+ * the app has hung.
+ */
+export function PageSkeleton() {
+  return (
+    <div
+      className="flex flex-col gap-5 px-4 py-4 md:px-6 md:py-6"
+      aria-busy="true"
+      aria-label="Loading the page"
+    >
+      <div className="flex flex-col gap-2">
+        <Bar className="h-3 w-24" />
+        <Bar className="h-6 w-56" />
+        <Bar className="h-3 w-[min(38rem,80%)]" />
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {[0, 1, 2, 3].map((i) => (
+          <div
+            key={i}
+            className="flex flex-col gap-2 rounded-[var(--sd-radius-lg)] bg-[var(--sd-card)] px-4 py-3.5 shadow-[var(--sd-shadow-1)]"
+          >
+            <Bar className="h-2.5 w-20" />
+            <Bar className="h-5 w-16" />
+            <Bar className="h-2.5 w-24" />
+          </div>
+        ))}
+      </div>
+
+      <div className="flex flex-col gap-3 rounded-[var(--sd-radius-lg)] bg-[var(--sd-card)] px-4 py-4 shadow-[var(--sd-shadow-1)]">
+        <Bar className="h-4 w-40" />
+        <Bar className="h-2.5 w-[min(30rem,70%)]" />
+        <RowsSkeleton rows={4} />
+      </div>
+    </div>
+  );
+}
+
+/** One shimmering placeholder. */
+function Bar({ className }: { className?: string }) {
+  return (
+    <span
+      className={cn("block animate-pulse rounded-[var(--sd-radius-sm)] bg-[var(--sd-bg-soft)]", className)}
+    />
+  );
+}

@@ -54,3 +54,10 @@ upande_livestock.patches.create_feed_mixing_stock_entry_types
 # Workspace or a Custom HTML Block it has stopped shipping, so the fixture
 # files going away is not enough.
 upande_livestock.patches.retire_livestock_desk_blocks
+
+# The code that writes a pregnancy check onto the service it answers lived in
+# before_insert, which runs before the auto-link that finds that service — so it
+# never ran. Thirty-four confirmed diagnoses, not one service marked Confirmed,
+# and a farm that reads as having no pregnant cows because carrying_animals()
+# asks the service.
+upande_livestock.patches.settle_services_their_diagnoses_answered

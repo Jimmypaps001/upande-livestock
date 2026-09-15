@@ -33,7 +33,7 @@ import { cn } from "@/lib/utils";
  * has to act on must not vanish while they are reading it.
  */
 
-export type ToastTone = "ok" | "error" | "info";
+export type ToastTone = "ok" | "warn" | "error" | "info";
 
 interface Toast {
   id: number;
@@ -41,7 +41,28 @@ interface Toast {
   text: string;
 }
 
-const LIFETIME: Record<ToastTone, number> = { ok: 5000, info: 7000, error: 0 };
+const LIFETIME: Record<ToastTone, number> = { ok: 5000, info: 7000, warn: 9000, error: 0 };
+
+/**
+ * How each tone is coloured, and what is NOT coloured: the words.
+ *
+ * A toast that set its whole message in red asked a herdsman to READ in red —
+ * the one thing red is worst for — and it shouted the same shade at a refusal
+ * and at a warning. The message stays in ink at full contrast; the tone is
+ * carried by an accent edge, a wash of the same colour at a few percent, and
+ * the icon. A green confirmation should be felt rather than announced, so its
+ * wash is the faintest of the three.
+ */
+const TONES: Record<ToastTone, { accent: string; wash: string }> = {
+  // Red, and only on the edge and the icon.
+  error: { accent: "var(--sd-sev-critical)", wash: "color-mix(in srgb, var(--sd-sev-critical) 7%, var(--sd-card))" },
+  // Amber: something worth knowing that is not a refusal.
+  warn: { accent: "var(--sd-sev-high)", wash: "color-mix(in srgb, var(--sd-sev-high) 8%, var(--sd-card))" },
+  // Green, subtle — it worked, which is what was expected.
+  ok: { accent: "var(--sd-sev-moderate)", wash: "color-mix(in srgb, var(--sd-sev-moderate) 6%, var(--sd-card))" },
+  // Neutral: a statement of fact wearing no colour at all.
+  info: { accent: "var(--sd-line)", wash: "var(--sd-card)" },
+};
 
 const ToastContext = createContext<(text: string, tone?: ToastTone) => void>(() => {});
 
@@ -99,7 +120,13 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 }
 
 function ToastCard({ toast, onDismiss }: { toast: Toast; onDismiss: () => void }) {
-  const Icon = toast.tone === "error" ? AlertTriangle : toast.tone === "ok" ? CheckCircle2 : Info;
+  const Icon =
+    toast.tone === "error" || toast.tone === "warn"
+      ? AlertTriangle
+      : toast.tone === "ok"
+        ? CheckCircle2
+        : Info;
+  const tone = TONES[toast.tone];
   return (
     <div
       // `alert` is announced at once and interrupts; `status` waits for a pause.
@@ -110,12 +137,13 @@ function ToastCard({ toast, onDismiss }: { toast: Toast; onDismiss: () => void }
         "pointer-events-auto flex items-start gap-2.5 rounded-[var(--sd-radius-lg)] px-3.5 py-3",
         "text-[13px] leading-relaxed whitespace-pre-line shadow-[var(--sd-shadow-3)]",
         "animate-in slide-in-from-bottom-2 fade-in duration-200",
-        toast.tone === "error" && "bg-[var(--sd-card)] text-[var(--sd-sev-critical)]",
-        toast.tone === "ok" && "bg-[var(--sd-card)] text-[var(--sd-sev-moderate)]",
-        toast.tone === "info" && "bg-[var(--sd-card)] text-[var(--sd-ink)]",
+        // The words are ink whatever the tone. Colour marks the message; it
+        // does not set it.
+        "border-l-[3px] text-[var(--sd-ink)]",
       )}
+      style={{ background: tone.wash, borderLeftColor: tone.accent }}
     >
-      <Icon className="mt-0.5 h-4 w-4 shrink-0" />
+      <Icon className="mt-0.5 h-4 w-4 shrink-0" style={{ color: tone.accent }} />
       <span className="min-w-0 flex-1">{toast.text}</span>
       <button
         type="button"

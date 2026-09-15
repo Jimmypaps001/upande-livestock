@@ -299,7 +299,7 @@ export function Reports() {
                     {x.name}
                   </span>
                   <span
-                    className="h-2.5 rounded-full bg-[var(--sd-data-cyan)]"
+                    className="h-2.5 rounded-full bg-[var(--sd-series-2)]"
                     style={{ width: `${Math.max(4, (x.animals / biggest) * 46)}%` }}
                     aria-hidden
                   />

@@ -23,13 +23,22 @@ import { cn } from "@/lib/utils";
 export const HERD_FLOW_HEIGHT = 260;
 const PAD = { top: 14, right: 150, bottom: 40, left: 44 };
 
+/**
+ * Herds, drawn down a greyscale ramp rather than across a set of hues.
+ *
+ * Every line here is the same quantity — head count — so a colour difference
+ * was carrying nothing except "this is a different line", and six saturated
+ * hues made the brightest one look like the important one. The ramp says the
+ * same thing (these are different) and adds an order while it is at it: the
+ * herd that moves most is the darkest.
+ */
 const TONES = [
-  "var(--sd-data-cyan)",
-  "var(--sd-data-green)",
-  "var(--sd-data-amber)",
-  "var(--sd-data-purple)",
-  "var(--sd-data-pink)",
-  "var(--sd-data-indigo)",
+  "var(--sd-series-1)",
+  "var(--sd-series-2)",
+  "var(--sd-series-3)",
+  "var(--sd-series-4)",
+  "var(--sd-series-5)",
+  "var(--sd-series-6)",
 ];
 
 function shortDate(iso: string): string {

@@ -34,6 +34,13 @@ CHECK_DUE = heading("search", "Pregnancy check due")
 CALVING_SOON = heading("calendar", "Calving expected soon")
 READY_TO_BREED = heading("repeat", "Ready for re-breeding")
 
+#: What a service's own status becomes once its check comes back. Read off the
+#: doctype rather than typed: the Select's option is spelled "Successfull", and
+#: db_set does no validation — writing the correct spelling would leave the
+#: field holding a value it does not offer, which every report then misses.
+SERVICE_HELD = "Successfull"
+SERVICE_FAILED = "Failed"
+
 
 def warn_on_calving_mismatch(calving_name):
 	"""Warn, never block, when a calving's expected and recorded birth counts
@@ -292,82 +299,6 @@ class LivestockEvent(Document):
 					todo.insert(ignore_permissions=True)
 					pass
 
-		if self.event_type == "Pregnancy Diagnosis":
-			# Update the related service event
-			if self.related_service:
-				service = frappe.get_doc("Livestock Event", self.related_service)
-
-				if self.diagnosis_result == "Confirmed":
-					service.db_set("pregnancy_confirmation_status", "Confirmed", update_modified=False)
-					service.db_set("service_status", "Successful", update_modified=False)
-					service.db_set("pregnancy_confirmation_date", self.diagnosis_date, update_modified=False)
-					if service.meta.has_field("custom_status_after_test"):
-						service.db_set("custom_status_after_test", "Successful", update_modified=False)
-
-					# Update animal to pregnant
-					if animal.meta.has_field("repro_status"):
-						animal.db_set("repro_status", "Pregnant", update_modified=False)
-					if animal.meta.has_field("custom_pregnancy_status"):
-						animal.db_set("custom_pregnancy_status", "Confirmed", update_modified=False)
-					if animal.meta.has_field("expected_calving_date") and service.meta.has_field(
-						"expected_calving_date"
-					):
-						animal.db_set(
-							"expected_calving_date", service.expected_calving_date, update_modified=False
-						)
-
-					# Create calving alert
-					if service.meta.has_field("expected_calving_date") and service.expected_calving_date:
-						alert_date = frappe.utils.add_days(
-							service.expected_calving_date, -get_timing("calving_alert_lead_days")
-						)
-
-						existing_calving_todo = frappe.db.exists(
-							{
-								"doctype": "ToDo",
-								"reference_type": "Livestock Event",
-								"reference_name": self.related_service,
-								"description": ["like", "%Calving Expected%"],
-								"status": ["!=", "Cancelled"],
-							}
-						)
-
-						if not existing_calving_todo:
-							todo = frappe.get_doc(
-								{
-									"doctype": "ToDo",
-									"description": f"""{CALVING_SOON}<br>
-                                    Animal: {self.animal}<br>
-                                    Expected Date: {frappe.utils.formatdate(service.expected_calving_date)}<br>
-                                    Service: {self.related_service}<br><br>
-                                    <i>Prepare calving area and monitor closely.</i>""",
-									"reference_type": "Livestock Event",
-									"reference_name": self.related_service,
-									"priority": "High",
-									"date": alert_date,
-									"status": "Open",
-								}
-							)
-							todo.insert(ignore_permissions=True)
-							pass
-
-				elif self.diagnosis_result in ["Not Pregnant", "Aborted"]:
-					service.db_set(
-						"pregnancy_confirmation_status", self.diagnosis_result, update_modified=False
-					)
-					service.db_set("service_status", "Failed", update_modified=False)
-					if service.meta.has_field("custom_status_after_test"):
-						service.db_set("custom_status_after_test", "Failed", update_modified=False)
-
-					# Update animal to open
-					if animal.meta.has_field("repro_status"):
-						animal.db_set("repro_status", "Open", update_modified=False)
-					if animal.meta.has_field("custom_pregnancy_status"):
-						animal.db_set("custom_pregnancy_status", "Not Pregnant", update_modified=False)
-
-				# Add comment to service
-				service.add_comment("Info", text=f"""Updated by Pregnancy Diagnosis: {self.name}""")
-				pass
 
 		if self.event_type == "Calving":
 			# Update animal status
@@ -1082,6 +1013,99 @@ class LivestockEvent(Document):
 			service.db_set("custom_status_after_test", "Failed", update_modified=False)
 		service.add_comment("Info", text=f"Pregnancy lost — recorded by Abortion event {self.name}")
 
+	def settle_related_service(self):
+		"""Write a pregnancy check back onto the service that asked for it.
+
+		THIS RAN IN before_insert AND THEREFORE NEVER RAN AT ALL. The service a
+		diagnosis answers is auto-linked in validate() when the caller did not name
+		one — and validate runs AFTER before_insert, so `related_service` was still
+		empty when this block asked for it and the whole thing was skipped. On this
+		site that is thirty-four confirmed diagnoses and not one service marked
+		Confirmed, which is why the farm reads as having no pregnant cows at all:
+		`carrying_animals()` keys off the SERVICE, and so do the dry-off list, the
+		calving list and the whole feed forecast.
+
+		ON SUBMIT, NOT ON INSERT, for a second reason: a draft diagnosis is
+		somebody still typing, and a draft must not turn a cow pregnant. It also
+		means `self.name` exists, so the comment left on the service names the
+		diagnosis instead of saying None.
+		"""
+		if self.event_type != "Pregnancy Diagnosis" or not self.related_service:
+			return
+		animal = frappe.get_doc("Animal", self.animal)
+		service = frappe.get_doc("Livestock Event", self.related_service)
+
+		if self.diagnosis_result == "Confirmed":
+			service.db_set("pregnancy_confirmation_status", "Confirmed", update_modified=False)
+			service.db_set("service_status", SERVICE_HELD, update_modified=False)
+			service.db_set("pregnancy_confirmation_date", self.diagnosis_date, update_modified=False)
+			if service.meta.has_field("custom_status_after_test"):
+				service.db_set("custom_status_after_test", "Successful", update_modified=False)
+
+			# Update animal to pregnant
+			if animal.meta.has_field("repro_status"):
+				animal.db_set("repro_status", "Pregnant", update_modified=False)
+			if animal.meta.has_field("custom_pregnancy_status"):
+				animal.db_set("custom_pregnancy_status", "Confirmed", update_modified=False)
+			if animal.meta.has_field("expected_calving_date") and service.meta.has_field(
+				"expected_calving_date"
+			):
+				animal.db_set(
+					"expected_calving_date", service.expected_calving_date, update_modified=False
+				)
+
+			# Create calving alert
+			if service.meta.has_field("expected_calving_date") and service.expected_calving_date:
+				alert_date = frappe.utils.add_days(
+					service.expected_calving_date, -get_timing("calving_alert_lead_days")
+				)
+
+				existing_calving_todo = frappe.db.exists(
+					{
+						"doctype": "ToDo",
+						"reference_type": "Livestock Event",
+						"reference_name": self.related_service,
+						"description": ["like", "%Calving Expected%"],
+						"status": ["!=", "Cancelled"],
+					}
+				)
+
+				if not existing_calving_todo:
+					todo = frappe.get_doc(
+						{
+							"doctype": "ToDo",
+							"description": f"""{CALVING_SOON}<br>
+                                    Animal: {self.animal}<br>
+                                    Expected Date: {frappe.utils.formatdate(service.expected_calving_date)}<br>
+                                    Service: {self.related_service}<br><br>
+                                    <i>Prepare calving area and monitor closely.</i>""",
+							"reference_type": "Livestock Event",
+							"reference_name": self.related_service,
+							"priority": "High",
+							"date": alert_date,
+							"status": "Open",
+						}
+					)
+					todo.insert(ignore_permissions=True)
+					pass
+
+		elif self.diagnosis_result in ["Not Pregnant", "Aborted"]:
+			service.db_set(
+				"pregnancy_confirmation_status", self.diagnosis_result, update_modified=False
+			)
+			service.db_set("service_status", SERVICE_FAILED, update_modified=False)
+			if service.meta.has_field("custom_status_after_test"):
+				service.db_set("custom_status_after_test", "Failed", update_modified=False)
+
+			# Update animal to open
+			if animal.meta.has_field("repro_status"):
+				animal.db_set("repro_status", "Open", update_modified=False)
+			if animal.meta.has_field("custom_pregnancy_status"):
+				animal.db_set("custom_pregnancy_status", "Not Pregnant", update_modified=False)
+
+		# Add comment to service
+		service.add_comment("Info", text=f"""Updated by Pregnancy Diagnosis: {self.name}""")
+
 	def on_submit(self):
 		# --------------------------------------------
 		# RULE: Cow must calve before next pregnancy
@@ -1128,6 +1152,11 @@ class LivestockEvent(Document):
 						"The cow must calve before a new pregnancy can be recorded."
 					)
 
+		# After the rule above, not before it: nothing should be written onto a
+		# service until the checks that could refuse this diagnosis have passed.
+		# The rollback would undo it either way, but a hook that writes and then
+		# throws is a hook whose order nobody can reason about.
+		self.settle_related_service()
 		self.refresh_calving_birth_count()
 		self.close_pregnancy_after_abortion()
 		self.post_stock_issue()

@@ -310,7 +310,20 @@ def has_open_service(animal):
 
 
 def diagnosable_animals():
-	"""Animals with an open service, newest service first."""
+	"""Animals with an open service, newest service first.
+
+	AND NOT ALREADY CHECKED TODAY. `guards.check_once_per_day` refuses a second
+	submitted Pregnancy Diagnosis on one animal on one day, so a cow who has
+	been checked this morning is a cow the screen would offer and the server
+	would then refuse — after the herdsman has filled the form in. The list is
+	narrowed by exactly what the guard enforces rather than by a second opinion
+	about it.
+
+	A cow whose check came back Confirmed drops off on her own: her service is
+	no longer Pending. That only became true once the write-back was moved out
+	of `before_insert`, where it never ran — see
+	`patches.settle_services_their_diagnoses_answered`.
+	"""
 	rows = frappe.db.sql(
 		"""SELECT s.animal, MAX(s.service_date) AS served, MAX(s.name) AS service
 		   FROM `tabLivestock Event` s
@@ -319,9 +332,15 @@ def diagnosable_animals():
 		     AND s.pregnancy_confirmation_status = 'Pending'
 		     AND IFNULL(a.status, '') NOT IN ('Dead','Deceased','Sold','Culled','Disposed')
 		     AND IFNULL(a.disabled, 0) = 0
+		     AND NOT EXISTS (
+		       SELECT 1 FROM `tabLivestock Event` d
+		       WHERE d.animal = s.animal AND d.docstatus = 1
+		         AND d.event_type = 'Pregnancy Diagnosis'
+		         AND d.event_date = %(today)s)
 		   GROUP BY s.animal
 		   ORDER BY served DESC
 		   LIMIT 2000""",
+		{"today": today()},
 		as_dict=True,
 	)
 	return rows

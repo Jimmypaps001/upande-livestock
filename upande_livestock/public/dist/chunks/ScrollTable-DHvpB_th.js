@@ -1,1 +1,0 @@
-import{j as r,c as t}from"../livestock-CA_eQ2UL.js";function x({children:a,tall:s,className:o}){return r.jsx("div",{className:t("overflow-auto",s?"max-h-[min(68vh,620px)]":"max-h-[min(52vh,440px)]",o),children:a})}const c="sticky top-0 z-10 bg-[var(--sd-card)] shadow-[0_1px_0_0_var(--sd-line)]";export{x as S,c as a};
