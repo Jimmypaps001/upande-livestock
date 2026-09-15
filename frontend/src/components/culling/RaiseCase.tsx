@@ -127,11 +127,61 @@ export function RaiseCase({
     setGiftedTo("");
   }
 
+  const chosenAnimal = animals.find((a) => a.id === animal) || null;
+
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-1.5">
+    // TWO COLUMNS, AND THE LIST SCROLLS INSIDE ITSELF. Four hundred animals in
+    // an unbounded list pushed the flow cards, the reason box and the button
+    // that actually opens the case somewhere below the fold — so the screen
+    // read as a list you could not select from and a form with no submit. The
+    // picker is capped and scrolls in its own box, exactly as it does on the
+    // Animals page; everything you decide sits beside it, on screen at once.
+    <div className="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,300px)_minmax(0,1fr)]">
+      {/* overflow-hidden is what makes the cap real: without it the list simply
+          overflows the box and the page scrolls again, which is the bug. */}
+      <div className="flex max-h-[min(70vh,560px)] min-h-0 flex-col gap-1.5 overflow-hidden">
         <Label>Which animal</Label>
         <AnimalSearch animals={animals} selectedId={animal} onSelect={(a) => setAnimal(a.id)} />
+      </div>
+
+      <div className="flex min-w-0 flex-col gap-4">
+      {/* Who is picked, said plainly. In a list this long the highlighted row
+          is usually scrolled out of sight by the time you reach the flow. */}
+      <div
+        className={cn(
+          "flex flex-wrap items-center gap-3 rounded-[var(--sd-radius-lg)] px-3.5 py-3",
+          chosenAnimal
+            ? "bg-[var(--sd-bg-soft)] shadow-[var(--sd-shadow-inset)]"
+            : "border border-dashed border-[var(--sd-line)]",
+        )}
+      >
+        {chosenAnimal ? (
+          <>
+            <span className="flex min-w-0 flex-1 flex-col">
+              <span className="truncate text-[13px] font-medium text-[var(--sd-ink)]">
+                {chosenAnimal.name}
+                <span className="ml-2 font-normal text-[11.5px] text-[var(--sd-quiet)]">
+                  {chosenAnimal.id}
+                </span>
+              </span>
+              <span className="truncate text-[11.5px] text-[var(--sd-muted)]">
+                {chosenAnimal.herd}
+              </span>
+            </span>
+            <button
+              type="button"
+              onClick={() => setAnimal(null)}
+              className="text-[11.5px] font-medium text-[var(--sd-muted)] transition-colors hover:text-[var(--sd-ink)]"
+            >
+              Choose another
+            </button>
+          </>
+        ) : (
+          <span className="text-[12.5px] text-[var(--sd-muted)]">
+            Pick an animal from the list. Her figures appear here before you choose
+            how she leaves.
+          </span>
+        )}
       </div>
 
       {evidence && (
@@ -246,7 +296,7 @@ export function RaiseCase({
         <OperatorField operator={who.operator} onChange={who.setOperator} />
       )}
 
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <Button onClick={submit} disabled={!animal || busy || (flow === "Mortality" && who.needed)}>
           {busy
             ? "Working…"
@@ -254,11 +304,17 @@ export function RaiseCase({
               ? "Record the death"
               : `Open the case (${chosen.label.toLowerCase()})`}
         </Button>
-        {flow === "Mortality" && (
+        {!animal && (
+          <span className="text-[11.5px] text-[var(--sd-muted)]">
+            Pick an animal first — nothing is written until you do.
+          </span>
+        )}
+        {animal && flow === "Mortality" && (
           <span className="text-[11.5px] text-[var(--sd-muted)]">
             Posts at once — nobody approves a death.
           </span>
         )}
+      </div>
       </div>
     </div>
   );
