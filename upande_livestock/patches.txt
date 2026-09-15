@@ -61,3 +61,9 @@ upande_livestock.patches.retire_livestock_desk_blocks
 # and a farm that reads as having no pregnant cows because carrying_animals()
 # asks the service.
 upande_livestock.patches.settle_services_their_diagnoses_answered
+
+# The desk calls this app Livestock. Only the display text moves — the module,
+# the workspace name and the route are what other things point at. Two of the
+# three names live in site records Frappe never re-ships, so a fixture edit
+# alone leaves every migrated site on the old text.
+upande_livestock.patches.call_it_livestock_on_the_desk

@@ -1,5 +1,9 @@
 app_name = "upande_livestock"
-app_title = "Upande Livestock"
+# What the DESK calls this app. The package is still upande_livestock and the
+# React app still says Upande Livestock in its own headings — this is the name
+# on the desk sidebar, the apps screen and the navbar, where the farm is already
+# inside Upande's ERP and the prefix says nothing.
+app_title = "Livestock"
 app_publisher = "Upande"
 app_description = "Livestock management on ERPNext"
 app_email = "dev@upande.com"
@@ -13,7 +17,7 @@ add_to_apps_screen = [
 	{
 		"name": "upande_livestock",
 		"logo": "/assets/upande_livestock/images/upande_logo.png",
-		"title": "Upande Livestock",
+		"title": "Livestock",
 		"route": "/app/upande-livestock",
 	}
 ]
