@@ -30,18 +30,34 @@ NEW = "Livestock"
 
 
 def execute():
-	# The tile on the desk home. Keyed by `label`, which is also the text.
-	# `link_to` is left alone: it points at the Workspace Sidebar by NAME.
+	# The tile on the desk home. Both fields move together: `label` is the text
+	# AND the key the sidebar is looked up by, and `link_to` is what it opens.
+	# Moving one without the other is what made the icon disappear.
 	for name in frappe.get_all(
-		"Desktop Icon", filters={"label": OLD}, pluck="name"
+		"Desktop Icon",
+		filters={"link_type": "Workspace Sidebar", "link_to": OLD},
+		pluck="name",
 	):
-		frappe.db.set_value("Desktop Icon", name, "label", NEW, update_modified=False)
+		frappe.db.set_value(
+			"Desktop Icon", name, {"label": NEW, "link_to": NEW}, update_modified=False
+		)
 
-	# The sidebar header. Renaming `title` through the ORM would re-export the
-	# fixture under a new filename and leave the old one behind, so the column is
-	# written directly and the file is renamed in the repo alongside this patch.
+	# The sidebar has to be RENAMED, not merely re-titled, and that is the whole
+	# trap. The desk decides whether to draw an icon at all by looking its
+	# sidebar up in the boot map:
+	#
+	#     sidebar = bootinfo.workspace_sidebar_item.get(icon.label.lower())
+	#     permitted = bool(sidebar and sidebar["items"])
+	#
+	# and that map is keyed by the sidebar's NAME, not its title
+	# (frappe/boot.py: get_sidebar_items). Change the icon's label to "Livestock"
+	# while the sidebar is still named "Upande Livestock" and the lookup misses,
+	# `permitted` is False, and the app VANISHES from the desk entirely — which
+	# is exactly what happened before this line existed.
 	if frappe.db.exists("Workspace Sidebar", OLD):
-		frappe.db.set_value("Workspace Sidebar", OLD, "title", NEW, update_modified=False)
+		frappe.rename_doc("Workspace Sidebar", OLD, NEW, force=True)
+	if frappe.db.exists("Workspace Sidebar", NEW):
+		frappe.db.set_value("Workspace Sidebar", NEW, "title", NEW, update_modified=False)
 
 	# The workspace itself ships its title, but a site that migrated before this
 	# has the old value cached in a row the fixture will not overwrite if it has
