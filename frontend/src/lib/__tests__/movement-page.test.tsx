@@ -93,6 +93,15 @@ describe("the movement page", () => {
     expect(screen.getByText("LACTATION GROUP 2")).toBeTruthy();
   });
 
+  it("keeps each herd's due list inside its own scroller", async () => {
+    // Ninety-four heifers due into one herd is a card four screens long, and
+    // three such cards put the next herd's Move button past the horizon.
+    draw();
+    await waitFor(() => expect(screen.getByText("2-4")).toBeTruthy());
+    const lists = document.querySelectorAll("ul[class*='overflow-y-auto'][class*='max-h-']");
+    expect(lists.length).toBeGreaterThan(0);
+  });
+
   it("says why each one is due, in the rule's own terms", async () => {
     // The calf's reason counts days in a pen; the cow's counts days in calf.
     draw();

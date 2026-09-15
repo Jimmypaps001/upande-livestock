@@ -463,7 +463,12 @@ function DestinationCard({
         </CardTools>
       </CardHeaderRow>
       <CardContent className="pt-0">
-        <ul className="flex flex-col gap-0.5">
+        {/* EACH GROUP SCROLLS INSIDE ITSELF. Ninety-four heifers due into one
+            herd is a card the length of four screens, and with three such cards
+            the page becomes a wall of cows with the next herd's Move button
+            somewhere past the horizon. The buttons live in the card header, so
+            capping the list keeps every one of them on screen. */}
+        <ul className="flex max-h-[min(52vh,420px)] flex-col gap-0.5 overflow-y-auto">
           {animals.map((a) => {
             const on = picked.has(a.animal);
             return (
