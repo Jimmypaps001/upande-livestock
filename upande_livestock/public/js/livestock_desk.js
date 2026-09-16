@@ -1,4 +1,4 @@
-// Ensure the "Upande Livestock" card appears on the v16 desk grid.
+// Ensure the "Livestock" card appears on the v16 desk grid.
 //
 // The desk grid (frappe/desk/page/desktop) renders from a per-user layout that
 // pre-dates this app's Desktop Icon and filters it out, so the card never
@@ -7,9 +7,9 @@
 // livestock workspace, and inserts it into the grid — repeatedly, so it
 // survives re-renders/navigation.
 (function () {
-	var LABEL = "Upande Livestock";
+	var LABEL = "Livestock";
 	var LOGO = "/assets/upande_livestock/images/upande_logo.png";
-	var ROUTE = "/desk/upande-livestock?sidebar=Upande%20Livestock";
+	var ROUTE = "/desk/livestock?sidebar=Livestock";
 
 	function permitted() {
 		// frappe.boot.desktop_icons is built server-side by get_desktop_icons,
@@ -56,7 +56,7 @@
 			});
 
 			seed.parentElement.appendChild(clone);
-			console.log("[ULD] injected Upande Livestock card into the desk grid");
+			console.log("[ULD] injected Livestock card into the desk grid");
 		} catch (e) {
 			console.log("[ULD] inject failed:", e);
 		}

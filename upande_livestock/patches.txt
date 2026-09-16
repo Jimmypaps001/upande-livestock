@@ -3,6 +3,11 @@
 # Read docs to understand patches: https://frappeframework.com/docs/v14/user/en/database-migrations
 upande_livestock.patches.rename_livestock_doctypes
 upande_livestock.patches.preserve_event_activity_cost
+# Must run BEFORE model sync: sync_all imports workspace/livestock/livestock.json,
+# and a rename run after that import would be renaming the old workspace onto the
+# new one the import had just created. Closes the name/title split that aimed the
+# desk card at /desk/livestock, a route no workspace answered to.
+upande_livestock.patches.livestock_workspace_matches_its_name
 
 [post_model_sync]
 # Patches added in this section will be executed after doctypes are migrated
@@ -62,8 +67,10 @@ upande_livestock.patches.retire_livestock_desk_blocks
 # asks the service.
 upande_livestock.patches.settle_services_their_diagnoses_answered
 
-# The desk calls this app Livestock. Only the display text moves — the module,
-# the workspace name and the route are what other things point at. Two of the
-# three names live in site records Frappe never re-ships, so a fixture edit
-# alone leaves every migrated site on the old text.
+# The desk calls this app Livestock. Two of the three names live in site records
+# Frappe never re-ships (the Workspace Sidebar exports rather than imports, the
+# Desktop Icon is never shipped at all), so a fixture edit alone leaves every
+# migrated site on the old text. The workspace name it left behind is moved by
+# livestock_workspace_matches_its_name above; this one's Workspace branch is a
+# no-op by the time it runs on a site that gets both.
 upande_livestock.patches.call_it_livestock_on_the_desk

@@ -26,7 +26,7 @@ export function Stub({ title }: { title: string }) {
         </CardHeader>
         <CardContent>
           <a
-            href="/app/upande-livestock"
+            href="/app/livestock"
             className="text-[13px] font-medium text-[var(--sd-ink)] underline underline-offset-4"
           >
             Open the desk workspace

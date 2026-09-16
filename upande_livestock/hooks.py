@@ -18,7 +18,7 @@ add_to_apps_screen = [
 		"name": "upande_livestock",
 		"logo": "/assets/upande_livestock/images/upande_logo.png",
 		"title": "Livestock",
-		"route": "/app/upande-livestock",
+		"route": "/app/livestock",
 	}
 ]
 
@@ -50,8 +50,8 @@ on_session_creation = ["upande_livestock.serverscripts.common.heal.clear_stale_d
 # Poppins @font-face must live at document level: Custom HTML Blocks render in a
 # Shadow DOM, where in-block @font-face is ignored. See livestock_fonts.css.
 app_include_css = "/assets/upande_livestock/css/livestock_fonts.css"
-# Debug: logs whether the "Upande Livestock" desk grid card is in boot + rendered.
-app_include_js = "/assets/upande_livestock/js/livestock_desk.js?v=9"
+# Debug: logs whether the "Livestock" desk grid card is in boot + rendered.
+app_include_js = "/assets/upande_livestock/js/livestock_desk.js?v=10"
 
 # include js, css files in header of web template
 # web_include_css = "/assets/upande_livestock/css/upande_livestock.css"
@@ -164,7 +164,7 @@ fixtures = [
 		# Desktop Icon = the card on the v16 desk app grid. Without it the
 		# workspace exists and is reachable by URL but never shows on the grid.
 		"dt": "Desktop Icon",
-		"filters": [["name", "in", ["Upande Livestock"]]],
+		"filters": [["name", "in", ["Livestock"]]],
 	},
 ]
 

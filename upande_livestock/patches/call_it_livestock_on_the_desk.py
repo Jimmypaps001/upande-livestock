@@ -7,13 +7,17 @@ The farm is already inside Upande's ERP by the time it sees a sidebar, so the
 prefix says nothing and costs the width of a word on every screen. The desk
 calls it Livestock.
 
-ONLY THE DISPLAY TEXT MOVES. The package is still `upande_livestock`, the
-Workspace is still NAMED "Upande Livestock", the module is still "Upande
-Livestock", and the route is still /app/upande-livestock — because those are
-what other things point AT. Every doctype in the app is owned by that module,
-the sidebar's Home item links to the workspace by name, and the quick-link tiles
-carry the route. Renaming them would break all three to change a word on screen.
-The React app keeps its own headings; this is the desk.
+ONLY THE DISPLAY TEXT MOVES. The package is still `upande_livestock` and the
+module is still "Upande Livestock" — every doctype in the app is owned by that
+module. The React app keeps its own headings; this is the desk.
+
+CORRECTION, see `livestock_workspace_matches_its_name`: this patch also left the
+Workspace NAMED "Upande Livestock" while setting its title to "Livestock", on the
+same reasoning. That one does not hold — Frappe autonames a Workspace from its
+label and the desk grid slugs the card's href from the TITLE while the router
+resolves routes by NAME, so the split aimed the card at a route nothing answered
+to. The workspace has since been renamed to "Livestock"; the stanza below is a
+no-op on any site that gets both patches.
 
 TWO OF THE THREE ARE SITE RECORDS, which is why a fixture edit is not enough.
 The Workspace title ships in the fixture and arrives with migrate. But the
@@ -61,7 +65,9 @@ def execute():
 
 	# The workspace itself ships its title, but a site that migrated before this
 	# has the old value cached in a row the fixture will not overwrite if it has
-	# been touched on the desk.
+	# been touched on the desk. Superseded by livestock_workspace_matches_its_name,
+	# which renames the row outright — kept only for a site that ran this patch
+	# before that one existed.
 	if frappe.db.exists("Workspace", OLD):
 		frappe.db.set_value("Workspace", OLD, "title", NEW, update_modified=False)
 
