@@ -52,6 +52,8 @@ from frappe import _
 from frappe.utils import cint, flt, getdate, today
 from erpnext.manufacturing.doctype.work_order.work_order import make_stock_entry
 
+from upande_livestock.serverscripts.common import batches as livestock_batches
+
 from upande_livestock.serverscripts.common import backdate
 from upande_livestock.serverscripts.common import stock as livestock_stock
 
@@ -545,6 +547,14 @@ def _run_manufacture(
 		return stock_entry
 
 	transfer = _dated(frappe.get_doc(make_stock_entry(wo.name, "Material Transfer for Manufacture", qty)))
+	# 105 Dairy Feed items are batch tracked, so this will not submit until
+	# every outgoing row names a batch — and there is no draft here for anyone
+	# to name one on, because the mix is issued in the same call. The rule
+	# picks, using the same order the spray storesman is shown: real stock
+	# before migration filler, then first-expiry-first-out. Without it the
+	# transfer either refuses outright or takes a `-PREMIGRATION` batch, which
+	# is what all 1,394 batched feed rows before this did.
+	livestock_batches.assign_batches(transfer)
 	transfer.insert(ignore_permissions=True)
 	transfer.submit()
 
