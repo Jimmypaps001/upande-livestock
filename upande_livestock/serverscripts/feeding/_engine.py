@@ -53,6 +53,7 @@ from frappe.utils import cint, flt, getdate, today
 from erpnext.manufacturing.doctype.work_order.work_order import make_stock_entry
 
 from upande_livestock.serverscripts.common import batches as livestock_batches
+from upande_livestock.serverscripts.common import cost_center as livestock_cost_center
 
 from upande_livestock.serverscripts.common import backdate
 from upande_livestock.serverscripts.common import stock as livestock_stock
@@ -555,6 +556,11 @@ def _run_manufacture(
 	# transfer either refuses outright or takes a `-PREMIGRATION` batch, which
 	# is what all 1,394 batched feed rows before this did.
 	livestock_batches.assign_batches(transfer)
+	# Karen Roses has no default cost centre and the dairy items carry none
+	# either, so ERPNext's two-step fallback runs out and it refuses the entry
+	# with "Cost Center is mandatory for Item ...". Six of the eight feed runs
+	# that failed in the week to 2026-09-21 died there. See common/cost_center.
+	livestock_cost_center.stamp(transfer, company)
 	transfer.insert(ignore_permissions=True)
 	transfer.submit()
 
@@ -565,6 +571,9 @@ def _run_manufacture(
 	# "Manufacture", so Stock Entry's own validate resolves back to it) while
 	# the ledger gains the one word that says which mix this was.
 	manufacture.stock_entry_type = livestock_stock.stock_entry_type_for(what)
+	# Same reason as the transfer above: this entry consumes the raws, so its
+	# rows need a cost centre too.
+	livestock_cost_center.stamp(manufacture, company)
 	manufacture.insert(ignore_permissions=True)
 	manufacture.submit()
 

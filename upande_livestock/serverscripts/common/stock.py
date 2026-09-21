@@ -35,6 +35,8 @@ from frappe import _
 from frappe.utils import flt, getdate, today
 from erpnext.stock.utils import get_stock_balance
 
+from upande_livestock.serverscripts.common import cost_center as livestock_cost_center
+
 
 def drug_warehouse():
 	return frappe.db.get_single_value("Livestock Settings", "drug_warehouse")
@@ -246,6 +248,11 @@ def issue_items(rows, remarks, company=None, posting_date=None, employee=None, w
 			item.uom = r["uom"]
 
 	se.remarks = remarks
+	# Drugs hit the same wall as feed: 219 Dairy Drugs carry no buying cost
+	# centre and the company has no default, so ERPNext refuses the issue
+	# outright. See common/cost_center for why this is a setting and not a
+	# repair to 782 Item Defaults.
+	livestock_cost_center.stamp(se, company)
 	se.insert(ignore_permissions=True)
 	se.submit()
 	return se.name
