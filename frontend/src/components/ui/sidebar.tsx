@@ -10,7 +10,10 @@ import { useIsMobile } from "@/hooks/use-mobile";
 const SIDEBAR_WIDTH = "16rem";
 // Slightly wider than stock (3rem) so the collapsed icon rail still clears
 // the button hit-area once the floating card's outer padding is subtracted.
-const SIDEBAR_WIDTH_ICON = "4rem";
+// 5rem, not 4: the collapsed rail is sized around the brand mark, which
+// fills the width between the header padding exactly. Growing the mark
+// 50% without this would clip it.
+const SIDEBAR_WIDTH_ICON = "5rem";
 const SIDEBAR_COOKIE_NAME = "sidebar:state";
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
 
@@ -186,7 +189,13 @@ export const Sidebar = React.forwardRef<
         )}
         {...props}
       >
-        <div className="flex h-full min-h-0 w-full flex-col overflow-hidden rounded-[20px] border bg-sidebar text-sidebar-foreground shadow-[var(--sd-shadow-1)]">
+        {/* 1.875rem == 25.5px == half the COLLAPSED panel width (5rem rail
+            less its 0.625rem padding each side). Fixing the radius there
+            means the panel is the same capsule in both states: expanded it
+            is that capsule with a straight run between the arcs, and
+            collapsing narrows that run to zero. The shape never morphs, so
+            the transition is a pure scale on one axis. */}
+        <div className="flex h-full min-h-0 w-full flex-col overflow-hidden rounded-[1.875rem] border bg-sidebar text-sidebar-foreground shadow-[var(--sd-shadow-1)]">
           {children}
         </div>
       </div>
@@ -242,8 +251,13 @@ export const SidebarHeader = React.forwardRef<
     ref={ref}
     data-sidebar="header"
     className={cn(
-      "flex flex-col gap-2 p-3 overflow-hidden",
-      "group-data-[collapsible=icon]:p-2",
+      // 0.3rem in BOTH states, deliberately. The panel corner is an arc of
+      // radius R centred at (R, R); the mark is a circle of radius r. The
+      // gap between them is the same in every direction only when the two
+      // are concentric — when the mark's centre IS (R, R). That fixes the
+      // padding at R - r - 1px inset, and it cannot change with the state
+      // or the mark would move and the gap would stop being uniform.
+      "flex flex-col gap-2 p-[0.3rem] overflow-hidden",
       className,
     )}
     {...props}
@@ -259,8 +273,10 @@ export const SidebarFooter = React.forwardRef<
     ref={ref}
     data-sidebar="footer"
     className={cn(
-      "mt-auto flex flex-col gap-2 p-3 overflow-hidden",
-      "group-data-[collapsible=icon]:p-1",
+      // 0.8rem in both states. A 27.2px row in a 51px rail wants
+      // (51 - 27.2) / 2 = 11.9px either side, less the 1px inset, and a
+      // padding that changed with the state would move the avatar below.
+      "mt-auto flex flex-col gap-2 p-[0.8rem] overflow-hidden",
       className,
     )}
     {...props}
@@ -330,7 +346,7 @@ export const SidebarGroupLabel = React.forwardRef<
       // staying parked below an empty 32px row. CSS-driven (no React state
       // toggle) so it stays in sync with the sidebar's width transition.
       className={cn(
-        "flex h-8 shrink-0 items-center px-2 text-[0.7rem] font-medium uppercase tracking-wider text-sidebar-foreground/60 whitespace-nowrap overflow-hidden transition-[margin,opacity] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] group-data-[collapsible=icon]:-mt-8 group-data-[collapsible=icon]:opacity-0",
+        "flex h-8 shrink-0 items-center px-2 text-[0.7rem] font-medium uppercase tracking-wider text-sidebar-foreground/60 whitespace-nowrap overflow-hidden group-data-[collapsible=icon]:-mt-8 group-data-[collapsible=icon]:opacity-0",
         className,
       )}
       {...props}
@@ -359,7 +375,10 @@ export const SidebarMenu = React.forwardRef<
   <ul
     ref={ref}
     data-sidebar="menu"
-    className={cn("flex w-full min-w-0 flex-col gap-0.5", className)}
+    className={cn(
+      "flex w-full min-w-0 flex-col gap-0.5",
+      className,
+    )}
     {...props}
   />
 ));
@@ -382,7 +401,7 @@ const sidebarMenuButtonVariants = cva(
   // [&>span:last-child]:truncate keeps the label on a single line during the
   // sidebar's width animation — otherwise text wraps to two rows at narrow
   // intermediate widths and the row visibly jumps. Mirrors mona's pattern.
-  "peer/menu-button group/menu-button flex w-full items-center gap-2 overflow-hidden rounded-lg group-data-[collapsible=icon]:rounded-full p-2 text-left text-sm outline-none ring-sidebar-ring transition-[width,padding,border-radius] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground data-[active=true]:bg-sidebar-primary data-[active=true]:font-medium data-[active=true]:text-sidebar-primary-foreground data-[state=open]:hover:bg-sidebar-accent group-data-[collapsible=icon]:!size-8 group-data-[collapsible=icon]:!p-2 [&>svg]:size-4 [&>svg]:shrink-0 [&>span:last-child]:truncate [&>span:last-child]:min-w-0",
+  "peer/menu-button group/menu-button flex w-full items-center gap-2 overflow-hidden rounded-lg group-data-[collapsible=icon]:rounded-full p-2 text-left text-sm outline-none ring-sidebar-ring transition-[width,padding] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground data-[active=true]:bg-sidebar-primary data-[active=true]:font-medium data-[active=true]:text-sidebar-primary-foreground data-[state=open]:hover:bg-sidebar-accent group-data-[collapsible=icon]:!size-8 group-data-[collapsible=icon]:!p-2 [&>svg]:size-4 [&>svg]:shrink-0 [&>span:last-child]:truncate [&>span:last-child]:min-w-0",
   {
     variants: {
       size: {
