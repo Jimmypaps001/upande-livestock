@@ -55,6 +55,7 @@ export function RationEditor() {
   const [changes, setChanges] = useState<RationDifference[] | null>(null);
   const [picked, setPicked] = useState<string | null>(null);
   const [rows, setRows] = useState<EditRow[]>([]);
+  const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
   const toast = useToast();
 
@@ -83,11 +84,15 @@ export function RationEditor() {
   useEffect(() => {
     if (!chosen) {
       setRows([]);
+      setName("");
       return;
     }
     setRows(
       chosen.lines.map((l) => ({ key: nextKey++, item_code: l.item_code, qty: String(l.qty) })),
     );
+    // Seeded with what the ration is called, blank for a herd that has none —
+    // which is the field that lets that herd be given its first one at all.
+    setName(chosen.ration_name || chosen.ration_item || "");
     setChanges(null);
   }, [chosen?.herd, chosen?.bom]);
 
@@ -101,6 +106,10 @@ export function RationEditor() {
         return !was || was.item_code !== r.item_code || Math.abs(was.qty - Number(r.qty)) > 0.0005;
       }));
 
+  // The one line of a TMR the farm mixes itself. Read off the choices rather
+  // than the saved line, so picking a different feed lights up straight away.
+  const isConcentrate = (code: string) =>
+    !!feeds.find((f) => f.value === code)?.is_concentrate;
   const labelOf = (code: string) => feeds.find((f) => f.value === code)?.label || code;
   const uomOf = (code: string) => feeds.find((f) => f.value === code)?.uom || "";
 
@@ -111,7 +120,7 @@ export function RationEditor() {
     setBusy(true);
     const r = await setHerdRation({
       herd: chosen.herd,
-      ration_item: chosen.ration_item || undefined,
+      ration_item: name.trim() || chosen.ration_item || undefined,
       lines: rows
         .filter((x) => x.item_code && Number(x.qty) > 0)
         .map((x) => ({ item_code: x.item_code, qty: Number(x.qty) })),
@@ -211,12 +220,12 @@ export function RationEditor() {
         <Card>
           <CardHeaderRow>
             <CardHeading>
-              <CardTitle>{chosen ? chosen.herd : "Nothing selected"}</CardTitle>
+              <CardTitle>{chosen ? `${chosen.herd} · TMR` : "Nothing selected"}</CardTitle>
               <CardDescription>
                 {chosen
                   ? chosen.bom
-                    ? `${chosen.ration_name} · recipe ${chosen.bom}`
-                    : "This herd has no ration yet."
+                    ? `Total mixed ration · recipe ${chosen.bom}`
+                    : "This herd has no TMR yet. Name one below and it is created."
                   : "Pick a herd on the left."}
               </CardDescription>
             </CardHeading>
@@ -236,15 +245,42 @@ export function RationEditor() {
                   </Notice>
                 )}
 
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="r-name">TMR name</Label>
+                  <Input
+                    id="r-name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="e.g. Lactating Group 1"
+                  />
+                  <p className="text-[12px] text-[var(--sd-muted)]">
+                    {chosen.bom
+                      ? "Renaming makes a new ration; the herd is moved onto it."
+                      : "Naming this ration creates it and gives it to the herd."}
+                  </p>
+                </div>
+
                 <div className="flex flex-col gap-2">
                   <Label>What goes in, per head, per day</Label>
                   {rows.map((r, i) => (
                     <div
                       key={r.key}
-                      className="flex flex-wrap items-end gap-3 rounded-[var(--sd-radius-lg)] bg-[var(--sd-bg-soft)] px-3.5 py-3 shadow-[var(--sd-shadow-inset)]"
+                      className={
+                        "flex flex-wrap items-end gap-3 rounded-[var(--sd-radius-lg)] px-3.5 py-3 shadow-[var(--sd-shadow-inset)] " +
+                        (isConcentrate(r.item_code)
+                          ? "bg-[var(--sd-accent-soft,#eef4ff)] ring-1 ring-[var(--sd-accent,#3b82f6)]/30"
+                          : "bg-[var(--sd-bg-soft)]")
+                      }
                     >
                       <div className="flex min-w-[220px] flex-1 flex-col gap-1.5">
-                        <Label htmlFor={`r-item-${r.key}`}>Feed</Label>
+                        <Label htmlFor={`r-item-${r.key}`}>
+                          Feed
+                          {isConcentrate(r.item_code) ? (
+                            <span className="ml-2 text-[11px] font-medium text-[var(--sd-accent,#3b82f6)]">
+                              concentrate
+                            </span>
+                          ) : null}
+                        </Label>
                         <Picker
                           id={`r-item-${r.key}`}
                           value={r.item_code}

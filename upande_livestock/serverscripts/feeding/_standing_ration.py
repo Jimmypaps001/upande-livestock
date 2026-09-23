@@ -139,6 +139,48 @@ def _build(item, lines, herd, farm, template=None):
 	return doc.name
 
 
+def _create_feed_item(name):
+	"""Make the Item a new ration or concentrate is a recipe for.
+
+	`BOM.item` is `reqd=1`: ERPNext cannot store a recipe that is not a recipe
+	FOR something. So "just name the ration" has to mint a product, and it is
+	minted here rather than asked for — choosing the output of a recipe you are
+	in the middle of writing is not a decision to put in front of a farm.
+
+	It lands in the configured feed item group, which is what makes it visible
+	to the Stock page and the feeding engine afterwards. Stocked, in kilograms,
+	because a ration is manufactured into a store and issued from it by weight.
+	"""
+	from upande_livestock.serverscripts.feeding.feed_in_store import feed_item_group
+
+	doc = frappe.get_doc(
+		{
+			"doctype": "Item",
+			"item_code": name,
+			"item_name": name,
+			"item_group": feed_item_group(),
+			"stock_uom": "Kilogram",
+			"is_stock_item": 1,
+		}
+	)
+	doc.insert(ignore_permissions=True)
+	return doc.name
+
+
+def feed_item_for(name):
+	"""The Item this name refers to, creating it the first time.
+
+	Reused when it already exists, so editing a ration does not mint a second
+	product every time it is saved.
+	"""
+	name = (name or "").strip()
+	if not name:
+		return None
+	if frappe.db.exists("Item", name):
+		return name
+	return _create_feed_item(name)
+
+
 def set_standing_ration(herd, lines, ration_item=None, farm=None):
 	"""Make `lines` the herd's standing ration. Returns what changed.
 
@@ -153,14 +195,18 @@ def set_standing_ration(herd, lines, ration_item=None, farm=None):
 		frappe.throw(_("A ration needs at least one ingredient."))
 
 	previous = frappe.db.get_value("Herds", herd, "bom")
-	item = ration_item or (frappe.db.get_value("BOM", previous, "item") if previous else None)
+	# A name creates the product the first time it is used; an existing one is
+	# reused. Only a herd with no ration AND no name given has no answer, and
+	# that still refuses rather than inventing "Herd-3-ration" and putting a
+	# product nobody asked for into the feed catalogue.
+	item = feed_item_for(ration_item) or (
+		frappe.db.get_value("BOM", previous, "item") if previous else None
+	)
 	if not item:
 		frappe.throw(
-			_("Say which product this herd's ration is. A ration is a recipe FOR "
-			  "something, and naming a new feed product is the farm's call.")
+			_("Name this herd's ration. A ration is a recipe FOR something, and "
+			  "naming a new feed product is the farm's call.")
 		)
-	if not frappe.db.exists("Item", item):
-		frappe.throw(_("{0} is not an item on this site.").format(item))
 
 	quantity = per_head_kg(lines)
 	if quantity <= 0:

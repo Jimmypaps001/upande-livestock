@@ -125,6 +125,10 @@ export interface FeedChoice {
   label: string;
   uom: string;
   on_hand: number;
+  /** A mix the farm makes itself rather than a raw ingredient — the one line
+   *  of a TMR the concentrate page can do anything about. Decided by the feed
+   *  run's own definition, so the editor and the run cannot disagree. */
+  is_concentrate: boolean;
 }
 
 export interface HerdRations {
