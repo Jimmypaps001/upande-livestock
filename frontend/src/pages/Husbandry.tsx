@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Picker } from "@/components/ui/picker";
 import { Textarea } from "@/components/ui/textarea";
 import { isError } from "@/lib/frappe";
+import { drugRowsForIssue } from "@/lib/drug-lines";
 import { createHusbandryEvent, getHusbandryOptions, type HusbandryOptions } from "@/lib/events";
 import { useOperator } from "@/lib/operator";
 import { useSaveShortcut } from "@/lib/use-save-shortcut";
@@ -129,10 +130,12 @@ export function Husbandry() {
       event_date: when,
       operator: who.value,
       remarks: remarks.trim() || undefined,
+      // Still sent, as the fallback for a drug the picker could not place.
       source_warehouse: options?.drug_warehouse || undefined,
-      drugs: drugs
-        .filter((d) => d.item_code && Number(d.qty) > 0)
-        .map((d) => ({ item_code: d.item_code, qty: Number(d.qty) })),
+      // Each line is drawn from the store that actually holds that drug —
+      // see lib/drug-lines. One warehouse for the whole round meant issuing
+      // off a shelf the picker had never claimed the stock was on.
+      drugs: drugRowsForIssue(drugs, options?.drug_items ?? []),
     });
     setBusy(false);
     if (isError(r)) {

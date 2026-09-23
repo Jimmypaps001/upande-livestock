@@ -92,7 +92,7 @@ def get_bootstrap_bundle(version=None):
 			),
 			# The N+1 this bundle exists to remove: every issuable item with its
 			# on-hand quantity, for the store the issue will actually draw from.
-			"drugs": stock_items("drug", drug_wh),
+			"drugs": stock_items("drug"),
 			"semen": stock_items("semen", semen_wh),
 			"options": {
 				"service_types": select_options("Livestock Event", "service_type"),

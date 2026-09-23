@@ -46,7 +46,7 @@ def open_health_cases():
 				}
 				for r in rows
 			],
-			"drug_items": stock_items("drug", livestock_stock.drug_warehouse()),
+			"drug_items": stock_items("drug"),
 			"routes": select_options("Livestock Health Treatment", "route"),
 			"employee": current_employee(),
 		}

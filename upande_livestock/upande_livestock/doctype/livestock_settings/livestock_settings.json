@@ -55,6 +55,9 @@
   "bought_in_concentrates",
   "sb_husbandry_stock",
   "drug_warehouse",
+  "custom_drug_item_group",
+  "custom_semen_item_group",
+  "custom_drug_warehouses",
   "semen_warehouse",
   "cb_husbandry_stock",
   "semen_item",
@@ -406,6 +409,27 @@
    "fieldtype": "Link",
    "label": "Drug Store",
    "options": "Warehouse"
+  },
+  {
+   "description": "The item group this farm keeps its veterinary drugs in. The picker offers stock from this group and nothing else. Left blank it uses \u201cDRUGS\u201d, which is what this group's older sites call it \u2014 on a site that calls it something else, say so here or the picker comes back empty.",
+   "fieldname": "custom_drug_item_group",
+   "fieldtype": "Link",
+   "label": "Drug Item Group",
+   "options": "Item Group"
+  },
+  {
+   "description": "The item group semen straws are in. Left blank it uses \u201cDAIRY\u201d.",
+   "fieldname": "custom_semen_item_group",
+   "fieldtype": "Link",
+   "label": "Semen Item Group",
+   "options": "Item Group"
+  },
+  {
+   "description": "Every store the drug and semen pickers look in, in the order they are searched \u2014 the same idea as the feed source warehouses above. A farm's drugs sit across the stores it actually uses; one store named alone offers stock the issue cannot find. The single Drug Warehouse above is searched last.",
+   "fieldname": "custom_drug_warehouses",
+   "fieldtype": "Table",
+   "label": "Drug Stores Searched",
+   "options": "Livestock Drug Warehouse"
   },
   {
    "description": "Warehouse the semen straws are issued from. Falls back to the Drug Store when unset.",
