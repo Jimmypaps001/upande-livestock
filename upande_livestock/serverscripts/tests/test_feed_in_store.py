@@ -1,9 +1,11 @@
 import unittest
+from unittest.mock import patch
 
 import frappe
 from frappe.tests import IntegrationTestCase
 
 from upande_livestock.serverscripts.feeding import _engine
+from upande_livestock.serverscripts.feeding import feed_in_store as feed_in_store_mod
 from upande_livestock.serverscripts.feeding.feed_in_store import feed_in_store
 
 LACTATING_CONCENTRATE = "4040010086"
@@ -171,3 +173,46 @@ class TestFeedInStore(IntegrationTestCase):
 		finally:
 			frappe.set_user("Administrator")
 		self.assertTrue(res.get("error"))
+
+
+class TestTheFeedItemGroupIsTheFarmsToName(unittest.TestCase):
+	"""The last hard-coded item group, and the same bug the drug picker had.
+
+	`FEED_ITEM_GROUP = "DAIRY"` is what kaitet.local calls its feed catalogue
+	(738 items). The live site has **no items at all** in `DAIRY`; its feed is
+	in `Dairy Feed` (109) and `Dairy Others` (409). So this page shows an empty
+	store on the site that matters, and looks like a farm with no feed rather
+	than a page asking the wrong question.
+	"""
+
+	def test_the_group_comes_from_the_setting(self):
+		with patch.object(frappe.db, "get_single_value", return_value="Dairy Feed"):
+			self.assertEqual(feed_in_store_mod.feed_item_group(), "Dairy Feed")
+
+	def test_an_unset_setting_keeps_the_old_constant(self):
+		with patch.object(frappe.db, "get_single_value", return_value=None):
+			self.assertEqual(feed_in_store_mod.feed_item_group(), "DAIRY")
+
+	def test_the_setting_exists_and_points_at_item_group(self):
+		f = frappe.get_meta("Livestock Settings").get_field("custom_feed_item_group")
+		self.assertIsNotNone(f, "Livestock Settings has no custom_feed_item_group")
+		self.assertEqual(f.fieldtype, "Link")
+		self.assertEqual(f.options, "Item Group")
+
+	def test_the_page_asks_for_the_configured_group(self):
+		"""Not the constant — a page that reads the setting and then queries
+		DAIRY anyway is the bug with an extra step."""
+		seen = {}
+		real = frappe.db.sql
+
+		def spy(query, values=None, **kwargs):
+			if values and "tabBin" in str(query):
+				seen["group"] = values[-1]
+				return []
+			return real(query, values, **kwargs)
+
+		with patch.object(feed_in_store_mod, "feed_item_group", return_value="Dairy Feed"), patch.object(
+			frappe.db, "sql", side_effect=spy
+		):
+			feed_in_store()
+		self.assertEqual(seen.get("group"), "Dairy Feed")

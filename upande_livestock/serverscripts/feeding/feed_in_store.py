@@ -14,7 +14,25 @@ from upande_livestock.serverscripts.feeding import _engine
 # raw milk can still turn up with a balance in a feed warehouse — the store is
 # a physical place, not a rule — so this filter is what keeps those off a
 # screen meant to answer "what feed do we hold".
-FEED_ITEM_GROUP = "DAIRY"
+#: What the older sites in this group call it. Kept as the default so a site
+#: that never fills the setting in behaves exactly as it did before.
+DEFAULT_FEED_ITEM_GROUP = "DAIRY"
+
+
+def feed_item_group():
+	"""The item group this farm keeps its feed in.
+
+	Was a constant, and that constant is live's emptiest group: `DAIRY` has no
+	items there at all, while the feed sits in `Dairy Feed` (109) and `Dairy
+	Others` (409). This page showed an empty store on the site that matters and
+	looked like a farm with no feed rather than a page asking the wrong
+	question. The drug and semen pickers had the same bug and the same fix.
+	"""
+	try:
+		configured = frappe.db.get_single_value("Livestock Settings", "custom_feed_item_group")
+	except Exception:
+		configured = None
+	return configured or DEFAULT_FEED_ITEM_GROUP
 
 
 def _ration_roles():
@@ -82,7 +100,7 @@ def feed_in_store(warehouse=None):
 				      AND IFNULL(i.disabled, 0) = 0
 				      AND i.item_group = %s
 				    """,
-				[*warehouses, FEED_ITEM_GROUP],
+				[*warehouses, feed_item_group()],
 				as_dict=True,
 			)
 
