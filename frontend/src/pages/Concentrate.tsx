@@ -1,238 +1,314 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Loader2 } from "lucide-react";
-import { PlanTable } from "@/components/concentrate/PlanTable";
 import { Figure, FigureRow } from "@/components/Figure";
-import { Notice, Pill } from "@/components/feeding/Notice";
+import { Notice } from "@/components/feeding/Notice";
 import { Page, PageHeading } from "@/components/PageShell";
+import { Picker } from "@/components/ui/picker";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { isError } from "@/lib/frappe";
-import {
-  concentratePlan,
-  manufactureConcentrate,
-  type ConcentrateWeeklyPlan,
-  type ConcentrateWeeklyRow,
-} from "@/lib/feeding";
+import { concentrates, manufactureConcentrate, setConcentrate, type Concentrate } from "@/lib/feeding";
+import { getHerdRations, type FeedChoice } from "@/lib/herds";
 import { fmt, num } from "@/lib/utils";
 
 /**
- * Concentrate: what the farm holds and what it must mix — and the mixer runs
- * from here.
+ * Concentrate: a recipe for the store, mixed by the kilo.
  *
- * Its own surface rather than a section on the feeding page, because it is a
- * different question asked by a different person on a different day — the
- * feeder asks "what goes in this trough now", the store keeper asks "what do I
- * put through the mixer to get to next Monday".
+ * This page used to ask `concentrate_plan(days)` how many batches to mix to
+ * cover N days for the herds that eat it. That was the wrong shape for the
+ * question — a mixer takes a tonne of ingredients and makes a tonne of meal
+ * whether there are forty cows in the shed or none. Head count belongs to the
+ * TMR, which is fed per head. Here there is no herd and no calendar.
  *
- * Demand is read off the herds — every ration's concentrate line times its head
- * count — so nothing is typed in and a herd that grows moves the plan on its
- * own.
+ * Three things: make one, change one, mix one.
  *
- * `manufacture_concentrate` is the same Work Order → transfer → manufacture
- * route the desk's Livestock Operations block already runs. `can_mix` is
- * checked here before a request is ever sent — the plan already knows a row
- * is short, so refusing locally is a better answer than a round trip to a
- * stock error. Only one row runs at a time: the whole plan is refreshed after
- * a mix because a batch changes the raw-material picture for every other row
- * that draws on the same ingredients, not just the one just run.
- *
- * `manufacture_concentrate` commits partway through (Work Order, then each
- * Stock Entry) rather than standing or falling as one transaction — a known,
- * deliberately deferred gap. A failure partway can leave a Work Order behind
- * with no Stock Entry against it, so a refusal here is not proof nothing
- * happened; the plan reload after every attempt is what surfaces the truth.
+ * THE BASE IS WHAT THE LINES MAKE, declared rather than summed. 500 kg of meal
+ * can come from ingredients that do not add to 500 — moisture, or a recipe
+ * written in round numbers the mixer operator works to. Mixing 1000 off a 500
+ * base consumes exactly twice the lines, which is ERPNext's own Work Order
+ * scaling rather than arithmetic this page does.
  */
+
+type Row = { key: number; item_code: string; qty: string };
+let nextKey = 1;
+
 export function Concentrate() {
-  const [days, setDays] = useState("7");
-  const [plan, setPlan] = useState<ConcentrateWeeklyPlan | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [list, setList] = useState<Concentrate[] | null>(null);
+  const [feeds, setFeeds] = useState<FeedChoice[]>([]);
+  const [picked, setPicked] = useState<string | null>(null);
+  const [name, setName] = useState("");
+  const [base, setBase] = useState("");
+  const [rows, setRows] = useState<Row[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [problem, setProblem] = useState<string | null>(null);
+  const [said, setSaid] = useState<string | null>(null);
+  const [mixQty, setMixQty] = useState<Record<string, string>>({});
+  const [mixing, setMixing] = useState<string | null>(null);
 
-  const [qtyByItem, setQtyByItem] = useState<Record<string, string>>({});
-  const [mixingItem, setMixingItem] = useState<string | null>(null);
-  const [mixError, setMixError] = useState<string | null>(null);
-  const [mixSuccess, setMixSuccess] = useState<string | null>(null);
-
-  const load = useCallback(async (span: number) => {
-    setLoading(true);
-    const r = await concentratePlan(span);
-    setLoading(false);
+  const load = useCallback(async () => {
+    const r = await concentrates();
     if (isError(r)) {
-      setPlan(null);
-      setError(r.error);
+      setProblem(r.error);
+      setList([]);
       return;
     }
-    setError(null);
-    setPlan(r);
-    // Fresh figures from the server replace whatever the operator had typed —
-    // an edited quantity from before a mix belongs to a plan that no longer
-    // exists.
-    setQtyByItem({});
+    setList(r.concentrates);
   }, []);
 
   useEffect(() => {
-    load(7);
+    void load();
+    void (async () => {
+      const r = await getHerdRations();
+      if (!isError(r)) setFeeds(r.feeds);
+    })();
   }, [load]);
 
-  function changeQty(itemCode: string, value: string) {
-    setQtyByItem((prev) => ({ ...prev, [itemCode]: value }));
-  }
-
-  async function mix(row: ConcentrateWeeklyRow) {
-    setMixError(null);
-    setMixSuccess(null);
-    // The plan already knows this row is short; do not send it and let the
-    // server refuse.
-    if (!row.can_mix) {
-      const short = row.short.map((s) => s.item_name || s.item_code).filter(Boolean);
-      setMixError(
-        `${row.item_name} cannot be mixed yet${short.length ? ` — short: ${short.join(", ")}.` : "."}`,
-      );
-      return;
-    }
-    const qty = num(qtyByItem[row.item_code] ?? String(row.to_mix_kg));
-    if (qty <= 0) {
-      setMixError("Enter a quantity greater than zero.");
-      return;
-    }
-    setMixingItem(row.item_code);
-    const r = await manufactureConcentrate({
-      item_code: row.item_code,
-      qty,
-      bom_no: row.bom_no,
-    });
-    setMixingItem(null);
-    if (isError(r)) {
-      setMixError(r.error);
-      return;
-    }
-    setMixSuccess(
-      `Mixed ${fmt(r.produced_qty)} ${r.uom || "kg"} of ${row.item_name} — Work Order ${
-        r.work_order
-      }.`,
-    );
-    load(plan?.days || num(days) || 7);
-  }
-
-  const shortRows = (plan?.concentrates || []).filter(
-    (c) => c.to_mix_kg > 0 && !c.can_mix,
+  const chosen = useMemo(
+    () => (list || []).find((c) => c.item_code === picked) || null,
+    [list, picked],
   );
+
+  // Editing seeds from the recipe as it stands, so saving an untouched form is
+  // a no-op the server recognises rather than a new revision of the same thing.
+  useEffect(() => {
+    if (!chosen) return;
+    setName(chosen.item_name);
+    setBase(String(chosen.base_qty));
+    setRows(
+      chosen.lines.map((l) => ({ key: nextKey++, item_code: l.item_code, qty: String(l.qty) })),
+    );
+  }, [chosen?.item_code, chosen?.bom_no]);
+
+  function startNew() {
+    setPicked(null);
+    setName("");
+    setBase("");
+    setRows([{ key: nextKey++, item_code: "", qty: "" }]);
+    setSaid(null);
+    setProblem(null);
+  }
+
+  const linesTotal = rows.reduce((s, r) => s + (Number(r.qty) || 0), 0);
+  const ready = !!name.trim() && num(base) > 0 && rows.some((r) => r.item_code && num(r.qty) > 0);
+
+  async function save() {
+    setBusy(true);
+    setProblem(null);
+    const r = await setConcentrate({
+      name: name.trim(),
+      base_qty: num(base),
+      lines: rows
+        .filter((x) => x.item_code && Number(x.qty) > 0)
+        .map((x) => ({ item_code: x.item_code, qty: Number(x.qty) })),
+    });
+    setBusy(false);
+    if (isError(r)) {
+      setProblem(r.error);
+      return;
+    }
+    setSaid(
+      r.changed
+        ? `${r.item} now makes ${fmt(r.base_qty)} kg from these ingredients — recipe ${r.bom}.`
+        : `Nothing changed — ${r.item} already says exactly this.`,
+    );
+    setPicked(r.item);
+    void load();
+  }
+
+  async function mix(c: Concentrate) {
+    const qty = num(mixQty[c.item_code] ?? String(c.base_qty));
+    if (qty <= 0) {
+      setProblem("Enter how many kilos to mix.");
+      return;
+    }
+    setMixing(c.item_code);
+    setProblem(null);
+    const r = await manufactureConcentrate({ item_code: c.item_code, qty, bom_no: c.bom_no });
+    setMixing(null);
+    if (isError(r)) {
+      setProblem(r.error);
+      return;
+    }
+    setSaid(`Mixed ${fmt(r.produced_qty)} ${r.uom || "kg"} of ${c.item_name} — Work Order ${r.work_order}.`);
+    void load();
+  }
 
   return (
     <Page>
-      <PageHeading eyebrow="Upande Livestock · Feeding" title="Concentrate">
-        How much of each concentrate the herds will eat over the days you set, what the
-        stores already hold, and how many whole batches close the gap. Run a batch
-        straight from a row below once the raw materials cover it.
+      <PageHeading eyebrow="Feeding" title="Concentrate">
+        A mix made for the store. Not for a herd, and not for a number of days.
       </PageHeading>
 
-      {mixError && <Notice tone="error">{mixError}</Notice>}
-      {mixSuccess && <Notice tone="ok">{mixSuccess}</Notice>}
+      {problem && <Notice tone="error">{problem}</Notice>}
+      {said && <Notice tone="ok">{said}</Notice>}
+
+      <FigureRow>
+        <Figure loading={!list} label="Concentrates" value={String(list?.length ?? 0)} hint="recipes the farm mixes" />
+        <Figure
+          loading={!list}
+          label="In store"
+          value={fmt((list || []).reduce((s, c) => s + c.in_store, 0))}
+          hint="kg on the shelf"
+        />
+      </FigureRow>
 
       <Card>
-        <CardHeader className="flex flex-col gap-4">
-          <div className="flex flex-col gap-1">
-            <CardTitle>Cover</CardTitle>
-            <CardDescription>
-              Batches are whole: the recipes are stated per {plan ? fmt(plan.batch_kg) : "1,000"} kg
-              and a mixer does not run a fifth of a batch on purpose.
-            </CardDescription>
-          </div>
-          <div className="flex flex-wrap items-end gap-3">
-            <div className="flex w-32 flex-col gap-1.5">
-              <Label htmlFor="cp-days" className="text-[var(--sd-muted)]">
-                Days
-              </Label>
-              <Input
-                id="cp-days"
-                type="number"
-                min={1}
-                max={60}
-                step={1}
-                value={days}
-                onChange={(e) => setDays(e.target.value)}
-              />
-            </div>
-            <Button variant="outline" onClick={() => load(num(days) || 7)} disabled={loading}>
-              {loading ? "Reading the stores…" : "Recalculate"}
-            </Button>
-            {loading && <Loader2 className="h-4 w-4 animate-spin text-[var(--sd-quiet)]" />}
-          </div>
+        <CardHeader>
+          <CardTitle>What the farm mixes</CardTitle>
+          <CardDescription>
+            Pick one to change its recipe, or mix a batch of it. Type the kilos you want —
+            the ingredients scale from what the recipe says they make.
+          </CardDescription>
         </CardHeader>
-        <CardContent className="flex flex-col gap-5">
-          {plan && (
-            <FigureRow>
-              <Figure
-                label="Total to mix"
-                value={fmt(plan.total_to_mix_kg)}
-                unit="kg"
-                hint={`covers ${plan.days} day${plan.days === 1 ? "" : "s"}`}
-              />
-              <Figure
-                label="Whole batches"
-                value={String(plan.total_batches)}
-                hint={`${fmt(plan.batch_kg)} kg each`}
-              />
-              <Figure
-                label="Concentrates in play"
-                value={String(plan.concentrates.length)}
-                hint="drawn on by a herd ration"
-              />
-              <Figure
-                label="Cannot be mixed yet"
-                value={String(shortRows.length)}
-                hint={shortRows.length ? "raw material short" : "nothing blocked"}
-              />
-            </FigureRow>
+        <CardContent className="flex flex-col gap-3">
+          {!list ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : list.length === 0 ? (
+            <p className="text-[13px] text-[var(--sd-muted)]">
+              No concentrates yet. Make one below.
+            </p>
+          ) : (
+            list.map((c) => (
+              <div
+                key={c.item_code}
+                className="flex flex-wrap items-end justify-between gap-3 rounded-[var(--sd-radius-lg)] bg-[var(--sd-bg-soft)] px-3.5 py-3 shadow-[var(--sd-shadow-inset)]"
+              >
+                <button
+                  type="button"
+                  className="flex flex-col items-start text-left"
+                  onClick={() => setPicked(c.item_code)}
+                >
+                  <span className="text-[14px] font-medium">{c.item_name}</span>
+                  <span className="text-[12px] text-[var(--sd-muted)]">
+                    {c.lines.length} ingredients make {fmt(c.base_qty)} {c.uom || "kg"} ·{" "}
+                    {fmt(c.in_store)} in store
+                  </span>
+                </button>
+                <div className="flex items-end gap-2">
+                  <div className="flex flex-col gap-1.5">
+                    <Label htmlFor={`mix-${c.item_code}`}>Mix (kg)</Label>
+                    <Input
+                      id={`mix-${c.item_code}`}
+                      type="number"
+                      min="0"
+                      className="w-28"
+                      value={mixQty[c.item_code] ?? String(c.base_qty)}
+                      onChange={(e) =>
+                        setMixQty((s) => ({ ...s, [c.item_code]: e.target.value }))
+                      }
+                    />
+                  </div>
+                  <Button disabled={mixing === c.item_code} onClick={() => void mix(c)}>
+                    {mixing === c.item_code ? <Loader2 className="h-4 w-4 animate-spin" /> : "Mix"}
+                  </Button>
+                </div>
+              </div>
+            ))
           )}
-          <PlanTable
-            plan={plan}
-            error={error}
-            qtyByItem={qtyByItem}
-            onQtyChange={changeQty}
-            onMix={mix}
-            mixingItem={mixingItem}
-          />
         </CardContent>
       </Card>
 
-      {shortRows.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>What is blocking a batch</CardTitle>
-            <CardDescription>
-              These batches are in the plan but the raw materials are not in the stores.
-              Until they are, the figure above is a target, not a job.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-4">
-            {shortRows.map((c) => (
+      <Card>
+        <CardHeader>
+          <CardTitle>{chosen ? chosen.item_name : "New concentrate"}</CardTitle>
+          <CardDescription>
+            {chosen
+              ? `Recipe ${chosen.bom_no}. Changing it makes a new recipe; the old one stays as history.`
+              : "Name it, list what goes in, and say how much that makes."}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          <div className="flex flex-wrap gap-3">
+            <div className="flex min-w-[220px] flex-1 flex-col gap-1.5">
+              <Label htmlFor="c-name">Name</Label>
+              <Input
+                id="c-name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="e.g. Dairy Meal 18"
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="c-base">These ingredients make (kg)</Label>
+              <Input
+                id="c-base"
+                type="number"
+                min="0"
+                className="w-44"
+                value={base}
+                onChange={(e) => setBase(e.target.value)}
+                placeholder="500"
+              />
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <Label>What goes in</Label>
+            {rows.map((r, i) => (
               <div
-                key={c.item_code}
-                className="flex flex-col gap-2 rounded-[var(--sd-radius-lg)] border border-[var(--sd-line)] px-4 py-3"
+                key={r.key}
+                className="flex flex-wrap items-end gap-3 rounded-[var(--sd-radius-lg)] bg-[var(--sd-bg-soft)] px-3.5 py-3 shadow-[var(--sd-shadow-inset)]"
               >
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-[14px] font-semibold text-[var(--sd-ink)]">
-                    {c.item_name}
-                  </span>
-                  <Pill tone="short">
-                    {c.batches} batch{c.batches === 1 ? "" : "es"} — {fmt(c.to_mix_kg)} kg
-                  </Pill>
+                <div className="flex min-w-[220px] flex-1 flex-col gap-1.5">
+                  <Label htmlFor={`c-item-${r.key}`}>Ingredient</Label>
+                  <Picker
+                    id={`c-item-${r.key}`}
+                    value={r.item_code}
+                    onChange={(next) =>
+                      setRows((s) => s.map((x, j) => (j === i ? { ...x, item_code: next } : x)))
+                    }
+                    options={feeds.map((f) => ({ value: f.value, label: f.label }))}
+                    label="Ingredient"
+                    placeholder="Choose an ingredient…"
+                  />
                 </div>
-                <ul className="flex flex-col gap-1 text-[13px] text-[var(--sd-muted)]">
-                  {c.short.map((s, i) => (
-                    <li key={`${s.item_code || s.item_name || i}`}>
-                      Short: {s.item_name || s.item_code}
-                    </li>
-                  ))}
-                </ul>
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor={`c-qty-${r.key}`}>Amount (kg)</Label>
+                  <Input
+                    id={`c-qty-${r.key}`}
+                    type="number"
+                    min="0"
+                    className="w-32"
+                    value={r.qty}
+                    onChange={(e) =>
+                      setRows((s) => s.map((x, j) => (j === i ? { ...x, qty: e.target.value } : x)))
+                    }
+                  />
+                </div>
+                <Button
+                  variant="ghost"
+                  onClick={() => setRows((s) => s.filter((_, j) => j !== i))}
+                >
+                  Remove
+                </Button>
               </div>
             ))}
-          </CardContent>
-        </Card>
-      )}
+            <div className="flex items-center gap-3">
+              <Button
+                variant="secondary"
+                onClick={() => setRows((s) => [...s, { key: nextKey++, item_code: "", qty: "" }])}
+              >
+                Add an ingredient
+              </Button>
+              <span className="text-[12px] text-[var(--sd-muted)]">
+                {fmt(linesTotal)} kg of ingredients
+                {num(base) > 0 ? ` · makes ${fmt(num(base))} kg` : ""}
+              </span>
+            </div>
+          </div>
+
+          <div className="flex gap-3">
+            <Button disabled={!ready || busy} onClick={() => void save()}>
+              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : chosen ? "Save recipe" : "Create"}
+            </Button>
+            <Button variant="secondary" onClick={startNew}>
+              New concentrate
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     </Page>
   );
 }
