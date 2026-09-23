@@ -9,12 +9,16 @@ from upande_livestock.serverscripts.feeding import _engine as feeding
 
 
 @frappe.whitelist()
-def manufacture_concentrate(item_code, qty=None, bom_no=None, allow_shortage=False):
+def manufacture_concentrate(
+	item_code, qty=None, bom_no=None, allow_shortage=False,
+	source_warehouse=None, target_warehouse=None,
+):
 	def go():
 		guard("Work Order")
 		guard("Stock Entry")
 		res = feeding.manufacture_concentrate(
-			item_code, qty=qty, bom_no=bom_no, allow_shortage=allow_shortage
+			item_code, qty=qty, bom_no=bom_no, allow_shortage=allow_shortage,
+			source_warehouse=source_warehouse, target_warehouse=target_warehouse,
 		)
 		res["ok"] = True
 		return res

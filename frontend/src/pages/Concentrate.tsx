@@ -45,6 +45,11 @@ export function Concentrate() {
   const [problem, setProblem] = useState<string | null>(null);
   const [said, setSaid] = useState<string | null>(null);
   const [mixQty, setMixQty] = useState<Record<string, string>>({});
+  const [stores, setStores] = useState<string[]>([]);
+  // Blank means "as before": every feed store searched, the WIP store for the
+  // finished mix. Naming one narrows it — see _engine._source_warehouses.
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
   const [mixing, setMixing] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -55,6 +60,8 @@ export function Concentrate() {
       return;
     }
     setList(r.concentrates);
+    setStores(r.warehouses || []);
+    setTo((cur) => cur || r.default_target || "");
   }, []);
 
   useEffect(() => {
@@ -125,7 +132,13 @@ export function Concentrate() {
     }
     setMixing(c.item_code);
     setProblem(null);
-    const r = await manufactureConcentrate({ item_code: c.item_code, qty, bom_no: c.bom_no });
+    const r = await manufactureConcentrate({
+      item_code: c.item_code,
+      qty,
+      bom_no: c.bom_no,
+      source_warehouse: from || undefined,
+      target_warehouse: to || undefined,
+    });
     setMixing(null);
     if (isError(r)) {
       setProblem(r.error);
@@ -163,6 +176,34 @@ export function Concentrate() {
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
+          <div className="flex flex-wrap gap-3">
+            <div className="flex min-w-[240px] flex-1 flex-col gap-1.5">
+              <Label htmlFor="c-from">Take ingredients from</Label>
+              <Picker
+                id="c-from"
+                value={from}
+                onChange={setFrom}
+                options={[
+                  { value: "", label: "Any feed store" },
+                  ...stores.map((w) => ({ value: w, label: w })),
+                ]}
+                label="Source store"
+                placeholder="Any feed store"
+              />
+            </div>
+            <div className="flex min-w-[240px] flex-1 flex-col gap-1.5">
+              <Label htmlFor="c-to">Put the mix in</Label>
+              <Picker
+                id="c-to"
+                value={to}
+                onChange={setTo}
+                options={stores.map((w) => ({ value: w, label: w }))}
+                label="Destination store"
+                placeholder="Choose a store…"
+              />
+            </div>
+          </div>
+
           {!list ? (
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : list.length === 0 ? (

@@ -99,6 +99,21 @@ def assign_batches(doc) -> int:
 				continue
 			chosen = plan["picks"][0]["batch_no"]
 			r.batch_no = chosen
+			# NAMING THE BATCH IS NOT ENOUGH ON ITS OWN — upande_scp measured
+			# this on this same site (32dd07b). With Stock Settings'
+			# `auto_create_serial_and_batch_bundle_for_outward` on, which it is
+			# here AND on live, ERPNext builds its own Serial and Batch Bundle
+			# for every outgoing row by its own FIFO rule and then refuses:
+			#
+			#   At row 1: Serial and Batch Bundle ... has already created.
+			#   Please remove the values from the serial no or batch no fields.
+			#
+			# So the batch chosen above is either replaced by ERPNext's own or
+			# the entry never leaves. The row has to say it is using the plain
+			# batch fields. Set only on rows this actually filled: a row left
+			# blank is left entirely alone, so ERPNext handles it as it would
+			# have anyway.
+			r.use_serial_batch_fields = 1
 			filled += 1
 			if batch_suggestion.is_placeholder(chosen):
 				fillers.append(f"{r.item_code}={chosen}")

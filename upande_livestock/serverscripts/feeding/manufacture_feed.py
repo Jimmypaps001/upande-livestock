@@ -16,7 +16,11 @@ used to work around before this existed. Validated through `_base_for`, the
 same check `manual_feed`'s `tuned_bom` uses to decide whether a `base_bom`
 belongs to a herd, so both paths agree on what a herd may run and neither can
 drift from the other. Omitted, this behaves exactly as before: the herd's own
-standing ration."""
+standing ration.
+
+`source_warehouse` names the store the ingredients come out of and the batch is
+issued from. Omitted, every configured feed store is searched in order, which is
+what this always did."""
 
 import frappe
 
@@ -27,7 +31,8 @@ from upande_livestock.serverscripts.feeding._tuned_bom import _base_for
 
 @frappe.whitelist()
 def manufacture_feed(
-	herd, allow_shortage=False, employee=None, portion=1.0, posting_date=None, bom_no=None
+	herd, allow_shortage=False, employee=None, portion=1.0, posting_date=None, bom_no=None,
+	source_warehouse=None,
 ):
 	def go():
 		guard("Work Order")
@@ -40,6 +45,7 @@ def manufacture_feed(
 			portion=portion,
 			posting_date=posting_date,
 			bom_no=resolved_bom_no,
+			source_warehouse=source_warehouse,
 		)
 		res["ok"] = True
 		return res
