@@ -55,6 +55,7 @@
   "bought_in_concentrates",
   "sb_husbandry_stock",
   "drug_warehouse",
+  "custom_feed_item_group",
   "custom_drug_item_group",
   "custom_semen_item_group",
   "custom_drug_warehouses",
@@ -409,6 +410,13 @@
    "fieldtype": "Link",
    "label": "Drug Store",
    "options": "Warehouse"
+  },
+  {
+   "description": "The item group this farm keeps its feed in \u2014 raw materials, mixed concentrate and bought-in alike. The Stock page shows this group and nothing else, and a new ration or concentrate is created in it. Left blank it uses \u201cDAIRY\u201d.",
+   "fieldname": "custom_feed_item_group",
+   "fieldtype": "Link",
+   "label": "Feed Item Group",
+   "options": "Item Group"
   },
   {
    "description": "The item group this farm keeps its veterinary drugs in. The picker offers stock from this group and nothing else. Left blank it uses \u201cDRUGS\u201d, which is what this group's older sites call it \u2014 on a site that calls it something else, say so here or the picker comes back empty.",
