@@ -20,7 +20,7 @@ import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import flt
 
-from upande_livestock.serverscripts.feeding.concentrate_plan import concentrate_plan
+from upande_livestock.serverscripts.alerts._cover import concentrate_plan
 from upande_livestock.serverscripts.feeding.feed_day_status import feed_day_status
 
 

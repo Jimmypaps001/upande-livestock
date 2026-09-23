@@ -9,7 +9,7 @@ at once, and it stops them on a morning nobody chose.
 
 COVER IS COUNTED IN DAYS, NOT IN KILOGRAMS. "412 kg of calves meal" means
 nothing without the herd behind it — 412 kg is six weeks for the calves and two
-days for the milkers. `concentrate_plan` already does that arithmetic off the
+days for the milkers. `_cover.concentrate_plan` already does that arithmetic off the
 head counts and the rations, so this reads days of cover and says so in days.
 
 TWO KINDS, BECAUSE THEY NEED DIFFERENT ANSWERS:
@@ -29,7 +29,7 @@ import frappe
 from frappe.utils import flt
 
 from upande_livestock.serverscripts.common.timings import ALL_TIMING_DEFAULTS, read_setting
-from upande_livestock.serverscripts.feeding.concentrate_plan import concentrate_plan
+from upande_livestock.serverscripts.alerts._cover import concentrate_plan
 
 COVER_FIELD = "custom_concentrate_cover_days"
 

@@ -92,33 +92,20 @@ export type FeedRunResult = {
   portion: number;
 };
 
-export type ConcentrateWeeklyRow = {
+/** A concentrate: a name, a recipe, what that recipe makes, and what is on
+ *  the shelf. No head count and no calendar — a mixer takes a tonne of
+ *  ingredients and makes a tonne of meal whether there are forty cows in the
+ *  shed or none. `base_qty` is what the lines produce, declared by the farm
+ *  rather than summed from them: 500 kg of meal can come from lines that do
+ *  not add to 500. Mixing 1000 off a 500 base consumes twice the lines. */
+export type Concentrate = {
   item_code: string;
   item_name: string;
   bom_no: string;
-  per_day_kg: number;
-  needed_kg: number;
-  on_hand_kg: number;
-  to_mix_kg: number;
-  batches: number;
-  days_cover: number | null;
-  can_mix: boolean;
-  short: Array<{ item_name?: string; item_code?: string }>;
-  herds: unknown;
-  /** This batch's own BOM composition — item, quantity, unit, in RECIPE uom
-   *  — for the row expanded open on the Concentrate page. `undefined` until
-   *  `concentrate_plan` is extended to carry it: today it only returns
-   *  `short`, which is the items blocking a batch, not the batch's full
-   *  ingredient list, so it cannot stand in for `lines`. */
-  lines?: RecipeLine[];
-};
-
-export type ConcentrateWeeklyPlan = {
-  days: number;
-  batch_kg: number;
-  concentrates: ConcentrateWeeklyRow[];
-  total_to_mix_kg: number;
-  total_batches: number;
+  base_qty: number;
+  uom: string;
+  lines: RecipeLine[];
+  in_store: number;
 };
 
 /** One line of a recipe, in RECIPE qty/uom — `BOM Item.qty`/`uom` for ONE
@@ -192,8 +179,9 @@ export type ConcentrateMixResult = {
 
 const RECORD_FEEDING = "upande_livestock.serverscripts.mobile.record_feeding.record_feeding";
 const MANUAL_FEED = "upande_livestock.serverscripts.feeding.manual_feed.manual_feed";
-const CONCENTRATE_PLAN =
-  "upande_livestock.serverscripts.feeding.concentrate_plan.concentrate_plan";
+const CONCENTRATES = "upande_livestock.serverscripts.feeding.concentrates.concentrates";
+const SET_CONCENTRATE =
+  "upande_livestock.serverscripts.feeding.set_concentrate.set_concentrate";
 const MANUFACTURE_CONCENTRATE =
   "upande_livestock.serverscripts.feeding.manufacture_concentrate.manufacture_concentrate";
 const FEED_OPTIONS = "upande_livestock.serverscripts.feeding.feed_options.feed_options";
@@ -260,8 +248,19 @@ export function manualFeed(args: {
   return call(MANUAL_FEED, { payload: { ...rest, portion: portion ?? 1 } });
 }
 
-export function concentratePlan(days: number): Promise<Envelope<ConcentrateWeeklyPlan>> {
-  return call(CONCENTRATE_PLAN, { days });
+export function concentrates(): Promise<Envelope<{ concentrates: Concentrate[] }>> {
+  return call(CONCENTRATES, {});
+}
+
+/** Create a concentrate, or revise the recipe of one that exists. A name the
+ *  farm does not have yet creates it — both the recipe and the product it is a
+ *  recipe for, which ERPNext requires a BOM to have. */
+export function setConcentrate(args: {
+  name: string;
+  base_qty: number;
+  lines: Array<{ item_code: string; qty: number }>;
+}): Promise<Envelope<{ bom: string; item: string; base_qty: number; changed: boolean }>> {
+  return call(SET_CONCENTRATE, { payload: args });
 }
 
 /** Run one concentrate's batch. `qty` and `bom_no` come off the plan row the
