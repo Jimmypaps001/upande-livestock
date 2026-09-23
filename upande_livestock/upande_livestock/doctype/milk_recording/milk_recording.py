@@ -6,6 +6,7 @@ from frappe.model.document import Document
 from frappe.utils import flt
 
 from upande_livestock.serverscripts.common import backdate
+from upande_livestock.serverscripts.common import cost_center as livestock_cost_center
 
 
 def _item_account(item_code, company, fieldname):
@@ -178,6 +179,13 @@ class MilkRecording(Document):
 		if discarded > 0 and discard_wh:
 			_milk_row(discarded, discard_wh)
 
+		# The recording's own cost centre wins where it has one; `stamp` only
+		# fills rows left blank. Without this the milk rows carried none at all
+		# whenever the record did not name one, and ERPNext refused the receipt
+		# — four `Milk Recording Stock Entry creation failed` errors on
+		# 2026-09-22 died exactly there. See common/cost_center for the chain.
+		livestock_cost_center.stamp(se, company, herd=self.herd)
+
 		try:
 			se.insert(ignore_permissions=True)
 			se.submit()
@@ -207,8 +215,11 @@ class MilkRecording(Document):
 				cr = je.append("accounts", {})
 				cr.account = income_acct
 				cr.credit_in_account_currency = revenue
-				if cost_center:
-					cr.cost_center = cost_center
+				# Same chain as the Stock Entry above: the herd that produced
+				# the milk is charged for it, not the company default.
+				je_cost_center = cost_center or livestock_cost_center.resolve(company, herd=self.herd)
+				if je_cost_center:
+					cr.cost_center = je_cost_center
 				dr = je.append("accounts", {})
 				dr.account = credit_acct
 				dr.debit_in_account_currency = revenue

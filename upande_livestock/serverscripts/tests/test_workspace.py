@@ -23,7 +23,10 @@ import re
 import frappe
 from frappe.tests import IntegrationTestCase
 
-WORKSPACE = "Upande Livestock"
+#: The Workspace is NAMED "Livestock", not merely titled it: the desk grid
+#: slugs the card href from the title while the router resolves by name, so a
+#: split between the two aims the card at a route nothing answers to.
+WORKSPACE = "Livestock"
 NAV = "Livestock Navigation"
 #: Above this, the grid stops being a way in and becomes a directory. SCP's
 #: comparable block has seven.

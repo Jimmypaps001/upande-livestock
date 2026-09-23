@@ -27,7 +27,6 @@
   "custom_feed_account",
   "cb_acct",
   "custom_vet_account",
-  "custom_cost_center",
   "sb_amend",
   "amended_from"
  ],
@@ -136,7 +135,9 @@
    "fieldname": "cost_center",
    "fieldtype": "Link",
    "label": "Cost Center",
-   "options": "Cost Center"
+   "options": "Cost Center",
+   "allow_on_submit": 1,
+   "description": "Charged for every stock movement this herd causes \u2014 feed, milk, drugs and husbandry. Falls back to Livestock Settings > Default Cost Centres by Company, which says so when it is used. Must be a leaf cost centre of the company the movement posts under."
   },
   {
    "description": "Expense account for feed costs for this herd. Overrides the global setting in Livestock Settings.",
@@ -155,13 +156,6 @@
    "fieldtype": "Link",
    "label": "Vet / Drug Expense Account (override)",
    "options": "Account"
-  },
-  {
-   "description": "Cost centre for this herd. All JEs for events, feed, vet costs, and milk for this herd use this cost centre. Pulled from Livestock Settings if not set.",
-   "fieldname": "custom_cost_center",
-   "fieldtype": "Link",
-   "label": "Cost Center",
-   "options": "Cost Center"
   },
   {
    "fieldname": "sb_amend",

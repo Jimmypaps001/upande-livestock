@@ -7,6 +7,7 @@ from frappe import _
 from upande_livestock.serverscripts.common.envelope import as_dict, guard, run
 from upande_livestock.serverscripts.common.events import new_livestock_event
 from upande_livestock.serverscripts.common import backdate
+from upande_livestock.serverscripts.common import cost_center as livestock_cost_center
 from upande_livestock.serverscripts.common import stock as livestock_stock
 from upande_livestock.serverscripts.husbandry._shared import HUSBANDRY_TYPES, _clean_drug_rows, _husbandry_targets, _type_consumes_drugs
 
@@ -71,6 +72,10 @@ def create_husbandry_event(payload):
 				employee=d.get("operator"),
 				# So the ledger says "Deworming", not "Material Issue".
 				what=event_type,
+				# Charged to the herd the round was for. A round spanning two
+				# herds gets None — see cost_center.herd_of for why one entry
+				# cannot honestly be split between them.
+				herd=livestock_cost_center.herd_of(animals),
 			)
 
 		created = []

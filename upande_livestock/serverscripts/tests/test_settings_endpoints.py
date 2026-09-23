@@ -65,7 +65,13 @@ class TestLivestockSettingsEndpoints(IntegrationTestCase):
 		result = livestock_settings()
 		tables = {t["fieldname"]: t for t in result["tables"]}
 		self.assertEqual(
-			sorted(tables), ["bought_in_concentrates", "feed_source_warehouses", "growth_ladder"]
+			sorted(tables),
+			[
+				"bought_in_concentrates",
+				"custom_company_cost_centers",
+				"feed_source_warehouses",
+				"growth_ladder",
+			],
 		)
 		for table in tables.values():
 			self.assertIn("rows", table)

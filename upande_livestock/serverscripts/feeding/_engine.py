@@ -560,7 +560,7 @@ def _run_manufacture(
 	# either, so ERPNext's two-step fallback runs out and it refuses the entry
 	# with "Cost Center is mandatory for Item ...". Six of the eight feed runs
 	# that failed in the week to 2026-09-21 died there. See common/cost_center.
-	livestock_cost_center.stamp(transfer, company)
+	livestock_cost_center.stamp(transfer, company, herd=herd)
 	transfer.insert(ignore_permissions=True)
 	transfer.submit()
 
@@ -573,7 +573,7 @@ def _run_manufacture(
 	manufacture.stock_entry_type = livestock_stock.stock_entry_type_for(what)
 	# Same reason as the transfer above: this entry consumes the raws, so its
 	# rows need a cost centre too.
-	livestock_cost_center.stamp(manufacture, company)
+	livestock_cost_center.stamp(manufacture, company, herd=herd)
 	manufacture.insert(ignore_permissions=True)
 	manufacture.submit()
 
@@ -831,6 +831,11 @@ def _issue_feed(herd, bom, qty, employee, posting_date=None, feed_mode="System",
 	row.qty = qty
 	row.s_warehouse = store
 	se.remarks = "Animal feeding - {0} - {1} - {2} {3}".format(herd, item, qty, bom.uom or "")
+	# The mix leaving the store for the trough is charged to the herd that ate
+	# it, exactly as the transfer and manufacture above were. This issue had no
+	# cost centre of its own and rode on whatever the item default happened to
+	# be — which for a new feed item is nothing, and ERPNext then refuses it.
+	livestock_cost_center.stamp(se, company, herd=herd)
 	se.insert(ignore_permissions=True)
 	se.submit()
 	# No frappe.db.commit() here: it stranded the Stock Entry when the Livestock
