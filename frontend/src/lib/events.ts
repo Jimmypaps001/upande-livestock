@@ -29,8 +29,13 @@ export interface StockChoice {
   value: string;
   label: string;
   item_name?: string;
+  /** How much is in `warehouse` — never a sum across stores. */
   qty?: number;
   uom?: string;
+  /** The store holding the most of it, which is where the issue draws from. */
+  warehouse?: string;
+  /** Every store holding any, most first, so a short line has somewhere to try. */
+  locations?: { warehouse: string; qty: number }[];
 }
 
 export interface AnimalChoice {

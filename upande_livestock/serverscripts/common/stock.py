@@ -42,6 +42,42 @@ def drug_warehouse():
 	return frappe.db.get_single_value("Livestock Settings", "drug_warehouse")
 
 
+def _drug_warehouse_rows():
+	"""The configured drug stores, in grid order.
+
+	Asked for defensively: a site running this code before its migrate has no
+	such table, and reading it raises rather than returning nothing.
+	"""
+	try:
+		return frappe.get_all(
+			"Livestock Drug Warehouse",
+			filters={"parenttype": "Livestock Settings"},
+			fields=["warehouse"],
+			order_by="idx asc",
+		)
+	except Exception:
+		return []
+
+
+def drug_source_warehouses():
+	"""Ordered stores the drug and semen pickers look in.
+
+	Configured rows first, then the single `drug_warehouse` setting — which
+	keeps a site that has configured nothing behaving exactly as it did.
+
+	The single setting alone was not enough on live: it names `Livestock Drug
+	Store - KR`, a warehouse with zero Bin rows, while the drugs sit across
+	Drug/Medicine Store - Old Office, Westwood Dairy Store, General Store
+	Karen, the Delivery Truck and the Clinic Store. Feeding already answers
+	this with `_feed_source_warehouses`; this is the same answer.
+	"""
+	names = [r.warehouse for r in _drug_warehouse_rows() if r.warehouse]
+	single = drug_warehouse()
+	if single and single not in names:
+		names.append(single)
+	return names
+
+
 def semen_warehouse():
 	"""The semen store, falling back to the drug store when it is not set apart."""
 	return frappe.db.get_single_value("Livestock Settings", "semen_warehouse") or drug_warehouse()

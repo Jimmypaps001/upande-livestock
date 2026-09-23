@@ -22,7 +22,11 @@ def husbandry_options():
 			"animals": animal_choices(active_animals(), labels),
 			"event_types": list(HUSBANDRY_TYPES),
 			"drug_consuming_types": list(DRUG_CONSUMING_TYPES),
-			"drug_items": stock_items("drug", livestock_stock.drug_warehouse()),
+			# No warehouse: every configured drug store is searched, and each
+			# choice says which one its stock is in. The single setting named
+			# a store with no Bin rows at all on live.
+			"drug_items": stock_items("drug"),
+			"drug_warehouses": livestock_stock.drug_source_warehouses(),
 			"drug_warehouse": livestock_stock.drug_warehouse(),
 			"herds": herd_choices(),
 			"warehouses": [

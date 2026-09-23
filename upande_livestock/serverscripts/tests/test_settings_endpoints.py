@@ -69,6 +69,7 @@ class TestLivestockSettingsEndpoints(IntegrationTestCase):
 			[
 				"bought_in_concentrates",
 				"custom_company_cost_centers",
+				"custom_drug_warehouses",
 				"feed_source_warehouses",
 				"growth_ladder",
 			],
