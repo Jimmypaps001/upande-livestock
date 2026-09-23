@@ -20,6 +20,27 @@ import frappe
 from frappe.utils import flt
 
 
+def _concentrate_items():
+	"""Item codes that are a concentrate rather than a raw ingredient.
+
+	Asked of `feed_in_store._ration_roles`, which decides concentrate-ness the
+	way the feed run itself does — a farm-mixed sub-assembly (`_sub_bom_for`)
+	or an item named on Livestock Settings as bought in. Re-deriving it here
+	by item group or by name would let the editor and the run disagree about
+	what a concentrate is, which is the kind of drift nobody notices until a
+	mix comes out wrong.
+
+	Never raises: a line that cannot be classified is simply not flagged, and
+	an unflagged line still shows the recipe correctly.
+	"""
+	try:
+		from upande_livestock.serverscripts.feeding.feed_in_store import _ration_roles
+
+		return _ration_roles()[1]
+	except Exception:
+		return set()
+
+
 def lines_for(bom_nos):
 	"""{bom_no: [line, ...]} for every BOM named, in recipe qty/uom.
 
@@ -31,6 +52,7 @@ def lines_for(bom_nos):
 		return {}
 
 	out = {}
+	concentrates = _concentrate_items()
 	for row in frappe.get_all(
 		"BOM Item",
 		filters={"parent": ["in", wanted], "parenttype": "BOM"},
@@ -43,6 +65,10 @@ def lines_for(bom_nos):
 				"item_name": row.item_name or row.item_code,
 				"qty": flt(row.qty),
 				"uom": row.uom,
+				# Which line of a TMR is the mix the farm makes itself. Always
+				# present, never absent-meaning-false: the editor highlights on
+				# it and a missing key would read as false forever.
+				"is_concentrate": row.item_code in concentrates,
 			}
 		)
 	return out

@@ -26,6 +26,8 @@ Read-guarded on BOM: it discloses what the farm feeds.
 import frappe
 from frappe.utils import flt
 
+from upande_livestock.serverscripts.feeding._recipe_lines import _concentrate_items
+
 from upande_livestock.serverscripts.common.envelope import guard_read, run
 from upande_livestock.serverscripts.feeding._recipe_lines import lines_for
 
@@ -90,12 +92,18 @@ def _feeds():
 	on_hand = dict(frappe.db.sql(
 		"""SELECT item_code, IFNULL(SUM(actual_qty), 0) FROM `tabBin`
 		   WHERE item_code IN %(codes)s GROUP BY item_code""", {"codes": tuple(codes)}))
+	# The editor's rows are editable, so the concentrate highlight cannot come
+	# from the saved line alone: picking a different feed has to light up, or
+	# stop lighting up, straight away. The choices carry the same flag, from
+	# the same definition the lines and the feed run use.
+	concentrates = _concentrate_items()
 	return [
 		{
 			"value": r.item_code,
 			"label": r.item_name or r.item_code,
 			"uom": r.stock_uom,
 			"on_hand": flt(on_hand.get(r.item_code)),
+			"is_concentrate": r.item_code in concentrates,
 		}
 		for r in rows
 	]
