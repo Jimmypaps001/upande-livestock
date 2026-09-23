@@ -17,7 +17,9 @@ a real gap, so the check has to be at the endpoint, and it has to stay there.
 """
 
 import ast
+import json
 import pathlib
+import re
 
 import frappe
 from frappe.tests import IntegrationTestCase
@@ -197,3 +199,76 @@ class TestServerscriptsShape(IntegrationTestCase):
 				unrouted, [], f"{block['name']}: calls these with no ROUTES entry: {unrouted}"
 			)
 
+
+
+class TestEveryCustomFieldTheCodeNeedsIsShipped(IntegrationTestCase):
+	"""A column that exists only in this developer's database ships to nobody.
+
+	`ration_history` SELECTs `wo.custom_herd` and `wo.custom_no_of_cows` off
+	Work Order, `_engine` writes them and `_tuned_bom` filters on them. Both
+	were created by hand on kaitet.local on 2026-07-14 and were in no fixture,
+	so the Rations page worked here and died on the live site with
+
+	    OperationalError (1054): Unknown column 'wo.custom_herd' in 'SELECT'
+
+	The check is scoped to SQL, which is where that failure lives, and to
+	doctypes this app does not own — a `custom_` field on one of our own
+	DocTypes travels in its JSON and needs no fixture, which is why Animal and
+	Livestock Disposal do not appear here.
+	"""
+
+	#: `FROM \`tabWork Order\` wo` ... `wo.custom_herd`
+	TABLE = re.compile(r"`tab([A-Za-z ]+)`\s+(?:AS\s+)?([a-z_][a-z0-9_]*)", re.I)
+	COLUMN = re.compile(r"\b([a-z_][a-z0-9_]*)\.(custom_[a-z0-9_]+)")
+
+	def _shipped(self):
+		path = pathlib.Path(frappe.get_app_path("upande_livestock", "fixtures", "custom_field.json"))
+		return {(r["dt"], r["fieldname"]) for r in json.loads(path.read_text())} if path.exists() else set()
+
+	def _sql_columns(self):
+		"""Every ``(doctype, custom_field)`` this app reads in raw SQL."""
+		found = set()
+		app = pathlib.Path(frappe.get_app_path("upande_livestock"))
+		for path in app.rglob("*.py"):
+			if "tests" in path.parts:
+				continue
+			src = path.read_text()
+			aliases = {alias: table for table, alias in self.TABLE.findall(src)}
+			for alias, column in self.COLUMN.findall(src):
+				if alias in aliases:
+					found.add((aliases[alias], column))
+		return found
+
+	def _ours(self, doctype):
+		return frappe.db.get_value("DocType", doctype, "module") == "Upande Livestock"
+
+	def test_every_borrowed_column_the_sql_reads_is_in_the_fixture(self):
+		shipped = self._shipped()
+		missing = sorted(
+			f"{dt}-{column}"
+			for dt, column in self._sql_columns()
+			if not self._ours(dt) and (dt, column) not in shipped
+		)
+		self.assertEqual(
+			missing,
+			[],
+			"read in SQL off a doctype we do not own, and shipped by no fixture: "
+			"these exist only where someone made them by hand",
+		)
+
+	def test_the_work_order_fields_the_rations_page_needs_are_shipped(self):
+		shipped = self._shipped()
+		self.assertIn(("Work Order", "custom_herd"), shipped)
+		self.assertIn(("Work Order", "custom_no_of_cows"), shipped)
+
+	def test_the_hooks_filter_and_the_fixture_file_agree(self):
+		"""The JSON is only re-exported for names the filter asks for, so a
+		field in the file but not the filter silently stops being maintained."""
+		asked = set()
+		for entry in frappe.get_hooks("fixtures", app_name="upande_livestock"):
+			if not isinstance(entry, dict) or entry.get("dt") != "Custom Field":
+				continue
+			for f in entry.get("filters", []):
+				if f[0] == "name" and f[1] == "in":
+					asked |= set(f[2])
+		self.assertEqual(sorted(f"{dt}-{fn}" for dt, fn in self._shipped()), sorted(asked))

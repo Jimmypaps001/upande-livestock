@@ -137,6 +137,15 @@ fixtures = [
 					"BOM-custom_herd",
 					"BOM-custom_is_livestock_feed",
 					"BOM-custom_ration_kind",
+					# Work Order carries which herd a feed run was for and how
+					# many head it was mixed for. `feeding/ration_history`
+					# SELECTs both, `_engine` writes them and `_tuned_bom`
+					# filters on them — and they were in no fixture, so they
+					# existed only where someone had made them by hand. The
+					# Rations page died on the live site with
+					# "Unknown column 'wo.custom_herd' in 'SELECT'".
+					"Work Order-custom_herd",
+					"Work Order-custom_no_of_cows",
 				],
 			]
 		],
