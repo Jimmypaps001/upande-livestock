@@ -9,6 +9,13 @@ upande_livestock.patches.preserve_event_activity_cost
 # desk card at /desk/livestock, a route no workspace answered to.
 upande_livestock.patches.livestock_workspace_matches_its_name
 
+# Herds carried two Link-to-Cost-Center fields both labelled "Cost Center", and
+# nothing read either for feed, milk or drugs. Folds them into `cost_center`
+# (carrying the custom twin's value where the survivor is blank) and moves the
+# flat Livestock Settings default into a per-company row. Must run BEFORE model
+# sync: it reads `custom_cost_center`, which that sync drops.
+upande_livestock.patches.one_cost_centre_per_herd
+
 [post_model_sync]
 # Patches added in this section will be executed after doctypes are migrated
 upande_livestock.patches.rename_diagnosis_disease_field

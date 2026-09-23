@@ -5,6 +5,7 @@ from frappe.model.document import Document
 from frappe.utils import flt, getdate, today
 
 from upande_livestock.serverscripts.common import backdate
+from upande_livestock.serverscripts.common import cost_center as livestock_cost_center
 from upande_livestock.serverscripts.common import stock as livestock_stock
 from upande_livestock.serverscripts.common.event_link import cancel_event_for, sync_event_for
 
@@ -77,6 +78,9 @@ class LivestockHealthCase(Document):
 			what="Treatment",
 			posting_date=given,
 			employee=self.opened_by,
+			# A case is one animal, so its herd is unambiguous. Charged there
+			# rather than to whatever the company default happens to be.
+			herd=livestock_cost_center.herd_of(self.animal),
 		)
 		if name:
 			for t in pending:

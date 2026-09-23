@@ -169,7 +169,7 @@ def _employee_for(employee=None):
 	return employee or frappe.db.get_value("Employee", {"user_id": frappe.session.user}, "name")
 
 
-def issue_items(rows, remarks, company=None, posting_date=None, employee=None, what=None):
+def issue_items(rows, remarks, company=None, posting_date=None, employee=None, what=None, herd=None):
 	"""Post one Material Issue covering `rows`; return the Stock Entry name.
 
 	`rows` is a list of dicts with item_code, qty and warehouse (batch_no and uom
@@ -179,6 +179,11 @@ def issue_items(rows, remarks, company=None, posting_date=None, employee=None, w
 
 	Raises when the store cannot cover the rows, naming the drug and the gap —
 	see the module docstring for why that blocks rather than warns.
+
+	`herd` is which herd the round was for, and only decides the cost centre —
+	see common/cost_center. Optional, because not every caller is about one
+	herd; a round spanning two of them passes None and lands on the announced
+	company fallback rather than charging one herd for the other's drugs.
 	"""
 	usable = [r for r in (rows or []) if r.get("item_code") and flt(r.get("qty")) > 0]
 	if not usable:
@@ -252,7 +257,7 @@ def issue_items(rows, remarks, company=None, posting_date=None, employee=None, w
 	# centre and the company has no default, so ERPNext refuses the issue
 	# outright. See common/cost_center for why this is a setting and not a
 	# repair to 782 Item Defaults.
-	livestock_cost_center.stamp(se, company)
+	livestock_cost_center.stamp(se, company, herd=herd)
 	se.insert(ignore_permissions=True)
 	se.submit()
 	return se.name

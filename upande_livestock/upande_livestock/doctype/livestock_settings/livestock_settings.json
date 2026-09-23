@@ -61,7 +61,7 @@
   "sb_accounting",
   "custom_default_company",
   "custom_default_credit_account",
-  "custom_default_cost_center",
+  "custom_company_cost_centers",
   "tab_herd_movement",
   "sb_calf_intake",
   "female_calf_herd",
@@ -443,11 +443,11 @@
    "options": "Account"
   },
   {
-   "fieldname": "custom_default_cost_center",
-   "fieldtype": "Link",
-   "label": "Default Cost Center",
-   "options": "Cost Center",
-   "description": "Charged for feed and drug stock movements. ERPNext refuses a stock entry outright when the item's expense account is a P&amp;L one and no cost centre can be found \u2014 it looks at the Item Default, then the Company, and Karen Roses has neither. Leave blank only if every item carries its own."
+   "description": "Charged for feed, milk, drug and husbandry stock movements when the herd names no cost centre of its own. One row per company \u2014 the dairy and the flower side do not share a centre. ERPNext refuses a stock entry outright when the item's expense account is a P&amp;L one and no cost centre can be found.",
+   "fieldname": "custom_company_cost_centers",
+   "fieldtype": "Table",
+   "label": "Default Cost Centres by Company",
+   "options": "Livestock Cost Center Default"
   },
   {
    "fieldname": "tab_herd_movement",
