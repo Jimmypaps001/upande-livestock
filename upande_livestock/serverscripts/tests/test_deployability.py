@@ -17,7 +17,6 @@ a real gap, so the check has to be at the endpoint, and it has to stay there.
 """
 
 import ast
-import json
 import pathlib
 import re
 
@@ -222,8 +221,15 @@ class TestEveryCustomFieldTheCodeNeedsIsShipped(IntegrationTestCase):
 	COLUMN = re.compile(r"\b([a-z_][a-z0-9_]*)\.(custom_[a-z0-9_]+)")
 
 	def _shipped(self):
-		path = pathlib.Path(frappe.get_app_path("upande_livestock", "fixtures", "custom_field.json"))
-		return {(r["dt"], r["fieldname"]) for r in json.loads(path.read_text())} if path.exists() else set()
+		"""Every (doctype, field) this app declares on a doctype it borrows.
+
+		Read off the declaration rather than a fixture: the fixture is gone,
+		and it going is the point — see common/custom_fields."""
+		from upande_livestock.serverscripts.common import custom_fields
+
+		return {
+			(dt, f["fieldname"]) for dt, fields in custom_fields.field_spec().items() for f in fields
+		}
 
 	def _sql_columns(self):
 		"""Every ``(doctype, custom_field)`` this app reads in raw SQL."""
@@ -261,14 +267,17 @@ class TestEveryCustomFieldTheCodeNeedsIsShipped(IntegrationTestCase):
 		self.assertIn(("Work Order", "custom_herd"), shipped)
 		self.assertIn(("Work Order", "custom_no_of_cows"), shipped)
 
-	def test_the_hooks_filter_and_the_fixture_file_agree(self):
-		"""The JSON is only re-exported for names the filter asks for, so a
-		field in the file but not the filter silently stops being maintained."""
-		asked = set()
+	def test_no_custom_field_is_also_shipped_as_a_fixture(self):
+		"""Two owners for one field means whichever runs last silently wins."""
 		for entry in frappe.get_hooks("fixtures", app_name="upande_livestock"):
-			if not isinstance(entry, dict) or entry.get("dt") != "Custom Field":
-				continue
-			for f in entry.get("filters", []):
-				if f[0] == "name" and f[1] == "in":
-					asked |= set(f[2])
-		self.assertEqual(sorted(f"{dt}-{fn}" for dt, fn in self._shipped()), sorted(asked))
+			if isinstance(entry, dict):
+				self.assertNotEqual(entry.get("dt"), "Custom Field")
+			else:
+				self.assertNotEqual(entry, "Custom Field")
+
+	def test_the_declaration_is_rebuilt_on_every_migrate(self):
+		"""Declaring the fields achieves nothing if nothing applies them."""
+		self.assertIn(
+			"upande_livestock.serverscripts.common.custom_fields.ensure_livestock_custom_fields",
+			frappe.get_hooks("after_migrate", app_name="upande_livestock"),
+		)

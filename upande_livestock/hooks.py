@@ -108,48 +108,15 @@ doctype_js = {
 
 # Fixtures
 # --------
-# Custom fields added to the standard Herds doctype for dairy KPI grouping and
-# per-herd accounting overrides. Exported so they deploy to every site via migrate.
+# What ships as data. Deliberately short: a fixture only restores what was last
+# exported from some site's database, so anything that can be stated in code is.
 fixtures = [
-	{
-		# Only Stock Entry and BOM (both ERPNext core doctypes) still carry
-		# livestock custom fields — everything on our own doctypes (Herds,
-		# Livestock Event, Livestock Settings) was folded into the DocType JSONs
-		# natively. The milk fields are grouped in a "Milking" section that shows
-		# only for Milking stock entries; the trailing section break keeps the
-		# following (non-livestock) fields visible on other stock-entry types.
-		#
-		# The BOM fields give a tuned/standing ration a back-link to the herd it
-		# was made for: custom_livestock_tab only shows when custom_is_livestock_feed
-		# is set, so a non-livestock BOM (this site also runs upande_scp's
-		# tank-mix BOMs) never sees it.
-		"dt": "Custom Field",
-		"filters": [
-			[
-				"name",
-				"in",
-				[
-					"Stock Entry-custom_milking_details_section",
-					"Stock Entry-custom_milking_time",
-					"Stock Entry-custom_cows_milked",
-					"Stock Entry-custom_milking_end_section",
-					"BOM-custom_livestock_tab",
-					"BOM-custom_herd",
-					"BOM-custom_is_livestock_feed",
-					"BOM-custom_ration_kind",
-					# Work Order carries which herd a feed run was for and how
-					# many head it was mixed for. `feeding/ration_history`
-					# SELECTs both, `_engine` writes them and `_tuned_bom`
-					# filters on them — and they were in no fixture, so they
-					# existed only where someone had made them by hand. The
-					# Rations page died on the live site with
-					# "Unknown column 'wo.custom_herd' in 'SELECT'".
-					"Work Order-custom_herd",
-					"Work Order-custom_no_of_cows",
-				],
-			]
-		],
-	},
+	# NOTE: Custom Fields are no longer shipped as fixtures either. Work Order,
+	# BOM and Stock Entry are borrowed doctypes and their fields are DECLARED in
+	# serverscripts/common/custom_fields.py, rebuilt on after_migrate. A fixture
+	# only restores what was last exported from some site's database, so a field
+	# nobody exported exists nowhere else — which is how the Rations page came to
+	# die on live with "Unknown column 'wo.custom_herd' in 'SELECT'".
 	# NOTE: Client Scripts and Server Scripts are no longer shipped as fixtures.
 	# They now live in the codebase: form scripts under public/js/ (doctype_js),
 	# doc-event logic in the doctype controllers (livestock_event / animal /
@@ -194,6 +161,11 @@ after_install = "upande_livestock.install.after_install"
 # before_migrate would be a silent no-op (guarded by table_exists) anyway.
 before_migrate = ["upande_livestock.install.ensure_milking_stock_entry_type"]
 after_migrate = [
+	# The custom fields this app puts on Work Order, BOM and Stock Entry are
+	# declared in code and rebuilt here, not exported as a fixture — a fixture
+	# only restores what was last exported from some site, which is how
+	# Work Order.custom_herd came to exist on one machine and nowhere else.
+	"upande_livestock.serverscripts.common.custom_fields.ensure_livestock_custom_fields",
 	"upande_livestock.install.ensure_milking_stock_entry_type",
 	"upande_livestock.install.ensure_livestock_event_types",
 	"upande_livestock.install.ensure_livestock_timing_defaults",
@@ -202,7 +174,9 @@ after_migrate = [
 # Uninstallation
 # ------------
 
-# before_uninstall = "upande_livestock.uninstall.before_uninstall"
+before_uninstall = [
+	"upande_livestock.serverscripts.common.custom_fields.remove_livestock_custom_fields",
+]
 # after_uninstall = "upande_livestock.uninstall.after_uninstall"
 
 # Integration Setup

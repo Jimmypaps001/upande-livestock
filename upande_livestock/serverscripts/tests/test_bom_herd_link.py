@@ -41,11 +41,14 @@ class TestBomHerdLinkFields(IntegrationTestCase):
 		self.assertIsNotNone(field, "BOM has no custom_is_livestock_feed")
 		self.assertEqual(field.fieldtype, "Check")
 
-	def test_the_ration_kind_field_offers_standing_and_tuned(self):
+	def test_the_ration_kind_field_says_which_of_the_three_a_bom_is(self):
+		"""Concentrate joins Standing and Tuned: a concentrate is mixed for the
+		store rather than for a herd, and the pages that read this field must
+		not mistake one for a herd's own ration."""
 		field = frappe.get_meta("BOM").get_field("custom_ration_kind")
 		self.assertIsNotNone(field, "BOM has no custom_ration_kind")
 		self.assertEqual(field.fieldtype, "Select")
-		self.assertEqual(field.options, "\nStanding\nTuned")
+		self.assertEqual(field.options, "\nStanding\nTuned\nConcentrate")
 
 	def test_the_tab_is_hidden_on_a_non_livestock_bom(self):
 		"""depends_on keys on custom_is_livestock_feed, not the item's group —
