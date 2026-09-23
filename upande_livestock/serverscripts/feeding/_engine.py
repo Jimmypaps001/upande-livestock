@@ -163,6 +163,23 @@ def _feed_source_warehouses():
 	return names
 
 
+def _source_warehouses(chosen=None):
+	"""Which stores a run may draw from.
+
+	A named store is the ONLY candidate, not merely the preferred one —
+	otherwise "take the silage from pit 2" is a suggestion the run is free to
+	ignore, and it quietly takes it from pit 1 because that is where
+	`_pick_source` found enough. Naming nothing searches every configured feed
+	store, exactly as before.
+	"""
+	return [chosen] if (chosen or "").strip() else _feed_source_warehouses()
+
+
+def _target_warehouse(chosen=None):
+	"""Where a manufactured mix lands. The WIP/FG store unless told otherwise."""
+	return (chosen or "").strip() or _feed_store()
+
+
 def _bin_qty(item_code, warehouse):
 	return flt(frappe.db.get_value("Bin", {"item_code": item_code, "warehouse": warehouse}, "actual_qty"))
 
@@ -223,7 +240,7 @@ def manufacture_qty(per_head, heads, portion=1.0):
 	return flt(flt(per_head) * flt(heads) * (flt(portion) or 1.0), precision)
 
 
-def resolve_requirement(bom_no, total_qty):
+def resolve_requirement(bom_no, total_qty, source_warehouse=None):
 	"""Scale `bom_no` to `total_qty` and price every line against the stores.
 
 	Returns ``(bom_doc, lines)``. Each line carries what the run needs, where it
@@ -232,7 +249,7 @@ def resolve_requirement(bom_no, total_qty):
 	bom = frappe.get_doc("BOM", bom_no)
 	base = flt(bom.quantity) or 1.0
 	factor = flt(total_qty) / base
-	warehouses = _feed_source_warehouses()
+	warehouses = _source_warehouses(source_warehouse)
 	bought_in = _bought_in_concentrates()
 
 	lines = []
@@ -428,9 +445,9 @@ def _shortage_message(lines):
 	)
 
 
-def _assert_can_cover(production_item, bom_no, qty, allow_shortage=False):
+def _assert_can_cover(production_item, bom_no, qty, allow_shortage=False, source_warehouse=None):
 	"""Raise if the stores cannot cover this run. Read-only; writes nothing."""
-	_, lines = resolve_requirement(bom_no, qty)
+	_, lines = resolve_requirement(bom_no, qty, source_warehouse=source_warehouse)
 	if allow_shortage:
 		return lines
 	short = [ln for ln in lines if ln["short_qty"] > 0]
@@ -452,6 +469,8 @@ def _run_manufacture(
 	posting_date=None,
 	already_verified=False,
 	posting_time=FEED_RUN_TIME,
+	source_warehouse=None,
+	target_warehouse=None,
 ):
 	"""Work Order -> Material Transfer for Manufacture -> Manufacture.
 
@@ -497,12 +516,16 @@ def _run_manufacture(
 	if qty <= 0:
 		frappe.throw("Nothing to manufacture — quantity must be greater than zero.")
 
-	store = _feed_store()
+	# Both default to what this did before, so a caller that names neither is
+	# unchanged. See `_source_warehouses` / `_target_warehouse`.
+	store = _target_warehouse(target_warehouse)
 	company = _company()
 	if already_verified:
-		_bom, lines = resolve_requirement(bom_no, qty)
+		_bom, lines = resolve_requirement(bom_no, qty, source_warehouse=source_warehouse)
 	else:
-		lines = _assert_can_cover(production_item, bom_no, qty, allow_shortage)
+		lines = _assert_can_cover(
+			production_item, bom_no, qty, allow_shortage, source_warehouse=source_warehouse
+		)
 	source_of = {ln["item_code"]: ln["source_warehouse"] for ln in lines}
 
 	wo = frappe.new_doc("Work Order")
@@ -598,8 +621,13 @@ def manufacture_herd_feed(
 	bom_no=None,
 	heads=None,
 	feed_mode="System",
+	source_warehouse=None,
 ):
 	"""Manufacture the herd's TMR and issue the whole batch to that herd.
+
+	`source_warehouse` names the store the ingredients are taken from, and the
+	same store the finished batch is issued out of. Unnamed, every configured
+	feed store is searched, exactly as before.
 
 	Total produced = heads * BOM.quantity; every raw material and the
 	concentrate scale by head count. Refuses to run short unless explicitly
@@ -714,6 +742,7 @@ def manufacture_herd_feed(
 		# historical check passed was still wrongly refused.
 		already_verified=True,
 		posting_time=run_posting_time,
+		source_warehouse=source_warehouse,
 	)
 	issue = _issue_feed(
 		herd,
@@ -723,6 +752,10 @@ def manufacture_herd_feed(
 		posting_date=posting_date,
 		feed_mode=feed_mode,
 		posting_time=run_posting_time,
+		# The batch is issued out of the store the manufacture put it in, which
+		# `_run_manufacture` already resolved. Passing the source through keeps
+		# the two halves of one run in the same place.
+		source_warehouse=res.get("store"),
 	)
 	res.update(
 		{
@@ -740,7 +773,9 @@ def manufacture_herd_feed(
 	return res
 
 
-def manufacture_concentrate(item_code, qty=None, bom_no=None, allow_shortage=False):
+def manufacture_concentrate(
+	item_code, qty=None, bom_no=None, allow_shortage=False, source_warehouse=None, target_warehouse=None
+):
 	"""Stage A-prime — manufacture a concentrate so a TMR run can consume it.
 
 	Same Work Order route as the TMR. `qty` defaults to one full batch of the
@@ -758,6 +793,8 @@ def manufacture_concentrate(item_code, qty=None, bom_no=None, allow_shortage=Fal
 		qty,
 		CONCENTRATE_MANUFACTURE,
 		allow_shortage=frappe.parse_json(allow_shortage),
+		source_warehouse=source_warehouse,
+		target_warehouse=target_warehouse,
 	)
 	frappe.db.commit()
 	res["uom"] = bom.uom
@@ -781,7 +818,7 @@ def _operator_or_throw(employee=None):
 	return employee
 
 
-def feed_herd(herd, qty, employee=None, posting_date=None):
+def feed_herd(herd, qty, employee=None, posting_date=None, source_warehouse=None):
 	"""Issue `qty` of a herd's TMR out of the store.
 
 	Not the normal path any more — manufacturing issues its own batch. This
@@ -794,12 +831,24 @@ def feed_herd(herd, qty, employee=None, posting_date=None):
 	if posting_date and getdate(posting_date) < getdate(today()):
 		backdate.assert_allowed(True)
 	herd_doc, bom, heads = _herd_bom(herd)
-	return _issue_feed(herd, bom, qty, _operator_or_throw(employee), posting_date=posting_date)
+	return _issue_feed(
+		herd, bom, qty, _operator_or_throw(employee), posting_date=posting_date,
+		source_warehouse=source_warehouse,
+	)
 
 
-def _issue_feed(herd, bom, qty, employee, posting_date=None, feed_mode="System", posting_time=FEED_RUN_TIME):
-	"""Post the Material Issue and put the feeding on the herd's timeline."""
-	store = _feed_store()
+def _issue_feed(
+	herd, bom, qty, employee, posting_date=None, feed_mode="System",
+	posting_time=FEED_RUN_TIME, source_warehouse=None,
+):
+	"""Post the Material Issue and put the feeding on the herd's timeline.
+
+	`source_warehouse` is the store the mix is taken out of. Unnamed, it is the
+	WIP/FG store the manufacture put it in, which is where it has always come
+	from — but a farm that mixed into a different store, or is feeding from a
+	bought-in stock somewhere else, has to be able to say so.
+	"""
+	store = (source_warehouse or "").strip() or _feed_store()
 	company = _company()
 	item = bom.item
 	emp_name = frappe.db.get_value("Employee", employee, "employee_name")

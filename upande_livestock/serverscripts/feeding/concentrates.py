@@ -16,6 +16,7 @@ Read-guarded on BOM: it discloses what the farm feeds.
 import frappe
 
 from upande_livestock.serverscripts.common.envelope import guard_read, run
+from upande_livestock.serverscripts.feeding import _engine
 from upande_livestock.serverscripts.feeding._concentrate import concentrate_list
 
 
@@ -23,6 +24,14 @@ from upande_livestock.serverscripts.feeding._concentrate import concentrate_list
 def concentrates():
 	def go():
 		guard_read("BOM")
-		return {"ok": True, "concentrates": concentrate_list()}
+		return {
+			"ok": True,
+			"concentrates": concentrate_list(),
+			# What the mix may be drawn from and where it may land. Taken from
+			# the engine's own list rather than composed here, so the page
+			# cannot offer a store the run would never look in.
+			"warehouses": _engine._feed_source_warehouses(),
+			"default_target": _engine._feed_store(),
+		}
 
 	return run(go, "livestock concentrates failed")

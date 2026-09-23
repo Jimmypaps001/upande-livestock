@@ -18,6 +18,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { Picker } from "@/components/ui/picker";
 import {
   Select,
   SelectContent,
@@ -51,6 +52,8 @@ export function Feeding() {
   const [herd, setHerd] = useState("");
   const [program, setProgram] = useState<FeedingProgram | null>(null);
   const [day, setDay] = useState<FeedDayStatus | null>(null);
+  // Blank means "as before": every configured feed store, in order.
+  const [fromStore, setFromStore] = useState("");
   const [loading, setLoading] = useState(false);
   /** Whatever the server last said. Never reworded — see components/feeding/Notice. */
   const [failure, setFailure] = useState<string | null>(null);
@@ -220,6 +223,7 @@ export function Feeding() {
     // and manufacture_feed.py validates it against the herd. No hand-tuning
     // happens on this tab, so nothing here ever goes through manualFeed.
     const r = await manufactureFeed({
+      source_warehouse: fromStore || undefined,
       herd: program.herd,
       portion,
       posting_date: effectiveDate,
@@ -399,11 +403,27 @@ export function Feeding() {
 
                 <RequirementTable lines={program.lines} showConcentrateTag />
 
+                <div className="flex min-w-[240px] max-w-[420px] flex-col gap-1.5">
+                  <Label htmlFor="f-from">Take feed from</Label>
+                  <Picker
+                    id="f-from"
+                    value={fromStore}
+                    onChange={setFromStore}
+                    options={[
+                      { value: "", label: "Any feed store (in the usual order)" },
+                      ...(program.warehouses || []).map((w) => ({ value: w, label: w })),
+                    ]}
+                    label="Source store"
+                    placeholder="Any feed store"
+                  />
+                </div>
+
                 <p className="text-[12px] text-[var(--sd-quiet)]">
-                  Stock is checked in the order set on Livestock Settings → Feed Source
-                  Warehouses. A line is sourced from the first store that can cover it in
-                  full. What each concentrate would take to mix is on the Concentrate
-                  page.
+                  Left on "any", stock is checked in the order set on Livestock Settings →
+                  Feed Source Warehouses, and a line is sourced from the first store that
+                  can cover it in full. Naming a store draws every line from that one, and
+                  the batch is picked from what that store holds. What each concentrate
+                  would take to mix is on the Concentrate page.
                   {!usingStandingRecipe && (
                     <>
                       {" "}

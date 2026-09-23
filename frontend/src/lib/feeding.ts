@@ -62,6 +62,10 @@ export type FeedingProgram = {
   shortages: FeedLine[];
   concentrates: ConcentratePlanCard[];
   can_manufacture: boolean;
+  /** The feed stores this run may draw from, in the order they are searched.
+   *  Already returned by `get_herd_feeding_program`; the picker offers these
+   *  so the page cannot name a store the engine would not look in. */
+  warehouses: string[];
 };
 
 export type FeedDayStatus = {
@@ -221,6 +225,9 @@ export function manufactureFeed(args: {
   portion: number;
   posting_date: string;
   bom_no?: string;
+  /** The store the ingredients come out of, and the one the batch is issued
+   *  from. Unnamed, every configured feed store is searched in order. */
+  source_warehouse?: string;
 }): Promise<Envelope<FeedRunResult>> {
   return call(RECORD_FEEDING, { payload: { action: "manufacture", ...args } });
 }
@@ -248,7 +255,9 @@ export function manualFeed(args: {
   return call(MANUAL_FEED, { payload: { ...rest, portion: portion ?? 1 } });
 }
 
-export function concentrates(): Promise<Envelope<{ concentrates: Concentrate[] }>> {
+export function concentrates(): Promise<
+  Envelope<{ concentrates: Concentrate[]; warehouses: string[]; default_target: string }>
+> {
   return call(CONCENTRATES, {});
 }
 
@@ -272,6 +281,11 @@ export function manufactureConcentrate(args: {
   item_code: string;
   qty: number;
   bom_no?: string | null;
+  /** The store the ingredients come out of. Unnamed, every configured feed
+   *  store is searched, exactly as before. */
+  source_warehouse?: string;
+  /** Where the finished mix lands. Unnamed, the WIP/FG store. */
+  target_warehouse?: string;
 }): Promise<Envelope<ConcentrateMixResult>> {
   return call(MANUFACTURE_CONCENTRATE, { ...args });
 }
