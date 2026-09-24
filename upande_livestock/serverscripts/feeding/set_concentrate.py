@@ -11,7 +11,7 @@ from upande_livestock.serverscripts.feeding._concentrate import set_concentrate 
 
 @frappe.whitelist()
 def set_concentrate(payload):
-	"""Name it, give it ingredients, and say what they make.
+	"""Name it and give it ingredients. What they weigh is what it makes.
 
 	Guards BOM because that is what it writes. Naming a concentrate the farm
 	does not have yet creates it — both the recipe and the product it is a
@@ -22,12 +22,7 @@ def set_concentrate(payload):
 	def go():
 		guard("BOM")
 		d = as_dict(payload)
-		res = _set(
-			d.get("name"),
-			d.get("lines") or [],
-			d.get("base_qty"),
-			farm=d.get("farm"),
-		)
+		res = _set(d.get("name"), d.get("lines") or [], farm=d.get("farm"))
 		res["ok"] = True
 		return res
 

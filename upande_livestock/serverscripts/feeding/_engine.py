@@ -180,6 +180,27 @@ def _target_warehouse(chosen=None):
 	return (chosen or "").strip() or _feed_store()
 
 
+def _source_by_item(lines, overrides=None):
+	"""Which store each line is drawn from: `_pick_source`'s choice, overridden.
+
+	One store for a whole run is the wrong grain for a concentrate — silage
+	comes from a pit and the mineral from the feed store, and a run that makes
+	the operator choose one of them for everything cannot be posted at all.
+	`resolve_requirement` already assigns a store per line; this lets a named
+	one win for that line and leaves the rest as chosen.
+
+	A blank override is NOT an override. An untouched dropdown sends "", and
+	reading that as "no warehouse" would post the row against nothing.
+	"""
+	overrides = overrides or {}
+	chosen = {}
+	for line in lines:
+		item = line["item_code"]
+		override = (overrides.get(item) or "").strip()
+		chosen[item] = override or line.get("source_warehouse")
+	return chosen
+
+
 def _bin_qty(item_code, warehouse):
 	return flt(frappe.db.get_value("Bin", {"item_code": item_code, "warehouse": warehouse}, "actual_qty"))
 
@@ -471,6 +492,7 @@ def _run_manufacture(
 	posting_time=FEED_RUN_TIME,
 	source_warehouse=None,
 	target_warehouse=None,
+	source_by_item=None,
 ):
 	"""Work Order -> Material Transfer for Manufacture -> Manufacture.
 
@@ -526,7 +548,8 @@ def _run_manufacture(
 		lines = _assert_can_cover(
 			production_item, bom_no, qty, allow_shortage, source_warehouse=source_warehouse
 		)
-	source_of = {ln["item_code"]: ln["source_warehouse"] for ln in lines}
+	# Per line, with any store the operator named for that ingredient winning.
+	source_of = _source_by_item(lines, source_by_item)
 
 	wo = frappe.new_doc("Work Order")
 	wo.production_item = production_item
@@ -774,7 +797,8 @@ def manufacture_herd_feed(
 
 
 def manufacture_concentrate(
-	item_code, qty=None, bom_no=None, allow_shortage=False, source_warehouse=None, target_warehouse=None
+	item_code, qty=None, bom_no=None, allow_shortage=False,
+	source_warehouse=None, target_warehouse=None, source_by_item=None,
 ):
 	"""Stage A-prime — manufacture a concentrate so a TMR run can consume it.
 
@@ -795,6 +819,7 @@ def manufacture_concentrate(
 		allow_shortage=frappe.parse_json(allow_shortage),
 		source_warehouse=source_warehouse,
 		target_warehouse=target_warehouse,
+		source_by_item=source_by_item,
 	)
 	frappe.db.commit()
 	res["uom"] = bom.uom

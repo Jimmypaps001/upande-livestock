@@ -50,33 +50,18 @@ class TestMakingANewConcentrate(unittest.TestCase):
 		self.assertEqual(res["bom"], "BOM-Dairy Meal 18-001")
 		self.assertTrue(res["changed"])
 
-	def test_the_base_is_what_the_farm_says_it_makes(self):
-		"""Not the sum of the lines. 500 kg of meal can come from lines that do
-		not add to 500 — moisture, or a recipe written in round numbers."""
-		seen = {}
-
-		def spy(item, lines, base_qty, farm=None, template=None):
-			seen["base"] = base_qty
-			return "BOM-X-001"
-
-		with patch.object(CN, "feed_item_for", return_value="Dairy Meal 18"), patch.object(
-			CN, "_build_concentrate", side_effect=spy
-		), patch.object(CN, "_matching_concentrate", return_value=None):
-			CN.set_concentrate("Dairy Meal 18", self.LINES, 480)
-		self.assertEqual(seen["base"], 480)
-
-	def test_a_base_of_nothing_is_refused(self):
-		for bad in (0, -1, None, ""):
-			with self.assertRaises(frappe.ValidationError):
-				CN.set_concentrate("Dairy Meal 18", self.LINES, bad)
+	# What the recipe weighs is the sum of its lines, not a typed figure — see
+	# test_concentrate_page.TestTheIngredientsDecideTheTotal, which replaced the
+	# test that used to live here. A declared output permits 5000 kg and 6000 kg
+	# of ingredients producing 100 kg of meal.
 
 	def test_it_needs_an_ingredient(self):
 		with self.assertRaises(frappe.ValidationError):
-			CN.set_concentrate("Dairy Meal 18", [], 500)
+			CN.set_concentrate("Dairy Meal 18", [])
 
 	def test_it_needs_a_name(self):
 		with self.assertRaises(frappe.ValidationError):
-			CN.set_concentrate("", self.LINES, 500)
+			CN.set_concentrate("", self.LINES)
 
 	def test_saving_the_same_recipe_twice_mints_nothing(self):
 		"""The same discipline the standing ration keeps: this site's BOM list
@@ -84,7 +69,7 @@ class TestMakingANewConcentrate(unittest.TestCase):
 		with patch.object(CN, "feed_item_for", return_value="Dairy Meal 18"), patch.object(
 			CN, "_matching_concentrate", return_value="BOM-Dairy Meal 18-001"
 		), patch.object(CN, "_build_concentrate", side_effect=AssertionError("must not rebuild")):
-			res = CN.set_concentrate("Dairy Meal 18", self.LINES, 500)
+			res = CN.set_concentrate("Dairy Meal 18", self.LINES)
 		self.assertEqual(res["bom"], "BOM-Dairy Meal 18-001")
 		self.assertFalse(res["changed"])
 
@@ -130,10 +115,10 @@ class TestTheBomItBuilds(unittest.TestCase):
 		with patch.object(frappe, "new_doc", return_value=FakeBom()), patch.object(
 			frappe, "get_cached_doc", return_value=frappe._dict(item_name="Maize Germ", stock_uom="Kilogram")
 		), patch.object(frappe.db, "get_single_value", return_value="Karen Roses"):
-			CN._build_concentrate("Dairy Meal 18", [{"item_code": "Maize Germ", "qty": 300}], 500)
+			CN._build_concentrate("Dairy Meal 18", [{"item_code": "Maize Germ", "qty": 300}])
 
 		self.assertEqual(captured["custom_ration_kind"], CN.CONCENTRATE)
-		self.assertEqual(captured["quantity"], 500)
+		self.assertEqual(captured["quantity"], 300, "the sum of its one line")
 		self.assertTrue(captured["custom_is_livestock_feed"])
 		self.assertIsNone(captured.get("custom_herd"), "a concentrate is mixed for the store, not a herd")
 
@@ -218,21 +203,21 @@ class TestTheFarmIsFilledIn(unittest.TestCase):
 		with patch.object(CN, "_farm_for_concentrate", return_value="Kapkolia") as asked:
 			seen = {}
 
-			def spy(item, lines, base_qty, farm=None, template=None):
+			def spy(item, lines, farm=None, template=None):
 				seen["farm"] = farm
 				return "BOM-X-001"
 
 			with patch.object(CN, "feed_item_for", return_value="X"), patch.object(
 				CN, "_build_concentrate", side_effect=spy
 			), patch.object(CN, "_matching_concentrate", return_value=None):
-				CN.set_concentrate("X", [{"item_code": "Maize Germ", "qty": 1}], 500)
+				CN.set_concentrate("X", [{"item_code": "Maize Germ", "qty": 1}])
 		self.assertTrue(asked.called)
 		self.assertEqual(seen["farm"], "Kapkolia")
 
 	def test_a_farm_given_explicitly_wins(self):
 		seen = {}
 
-		def spy(item, lines, base_qty, farm=None, template=None):
+		def spy(item, lines, farm=None, template=None):
 			seen["farm"] = farm
 			return "BOM-X-001"
 
@@ -241,5 +226,5 @@ class TestTheFarmIsFilledIn(unittest.TestCase):
 		), patch.object(CN, "_matching_concentrate", return_value=None), patch.object(
 			CN, "_farm_for_concentrate", side_effect=AssertionError("must not be asked")
 		):
-			CN.set_concentrate("X", [{"item_code": "Maize Germ", "qty": 1}], 500, farm="Karen")
+			CN.set_concentrate("X", [{"item_code": "Maize Germ", "qty": 1}], farm="Karen")
 		self.assertEqual(seen["farm"], "Karen")
