@@ -106,10 +106,17 @@ export type Concentrate = {
   item_code: string;
   item_name: string;
   bom_no: string;
+  /** What the recipe weighs: the sum of its ingredients, never a typed figure. */
   base_qty: number;
   uom: string;
-  lines: RecipeLine[];
+  /** What the mix will take, priced against the stores — the same figures the
+   *  Feeding page shows. Scaled to `mix_qty`. */
+  lines: FeedLine[];
+  mix_qty: number;
   in_store: number;
+  /** Every store holding any of the finished concentrate, most first. Never
+   *  summed: a tonne across three stores is not a tonne a run can draw on. */
+  stores: Array<{ warehouse: string; qty: number }>;
 };
 
 /** One line of a recipe, in RECIPE qty/uom — `BOM Item.qty`/`uom` for ONE
@@ -255,10 +262,10 @@ export function manualFeed(args: {
   return call(MANUAL_FEED, { payload: { ...rest, portion: portion ?? 1 } });
 }
 
-export function concentrates(): Promise<
-  Envelope<{ concentrates: Concentrate[]; warehouses: string[]; default_target: string }>
-> {
-  return call(CONCENTRATES, {});
+export function concentrates(
+  qtyByItem?: Record<string, number>,
+): Promise<Envelope<{ concentrates: Concentrate[]; warehouses: string[]; default_target: string }>> {
+  return call(CONCENTRATES, qtyByItem ? { qty_by_item: JSON.stringify(qtyByItem) } : {});
 }
 
 /** Create a concentrate, or revise the recipe of one that exists. A name the
@@ -266,7 +273,6 @@ export function concentrates(): Promise<
  *  recipe for, which ERPNext requires a BOM to have. */
 export function setConcentrate(args: {
   name: string;
-  base_qty: number;
   lines: Array<{ item_code: string; qty: number }>;
 }): Promise<Envelope<{ bom: string; item: string; base_qty: number; changed: boolean }>> {
   return call(SET_CONCENTRATE, { payload: args });
@@ -286,6 +292,10 @@ export function manufactureConcentrate(args: {
   source_warehouse?: string;
   /** Where the finished mix lands. Unnamed, the WIP/FG store. */
   target_warehouse?: string;
+  /** A store per ingredient, overriding what the engine picked for that line.
+   *  Blank means "as chosen" — silage comes from a pit and the mineral from
+   *  the feed store, so one store for the whole run cannot be posted. */
+  source_by_item?: string;
 }): Promise<Envelope<ConcentrateMixResult>> {
   return call(MANUFACTURE_CONCENTRATE, { ...args });
 }

@@ -21,12 +21,14 @@ from upande_livestock.serverscripts.feeding._concentrate import concentrate_list
 
 
 @frappe.whitelist()
-def concentrates():
+def concentrates(qty_by_item=None):
 	def go():
 		guard_read("BOM")
 		return {
 			"ok": True,
-			"concentrates": concentrate_list(),
+			"concentrates": concentrate_list(
+				frappe.parse_json(qty_by_item) if qty_by_item else None
+			),
 			# What the mix may be drawn from and where it may land. Taken from
 			# the engine's own list rather than composed here, so the page
 			# cannot offer a store the run would never look in.

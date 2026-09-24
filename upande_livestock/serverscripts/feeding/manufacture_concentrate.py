@@ -11,7 +11,7 @@ from upande_livestock.serverscripts.feeding import _engine as feeding
 @frappe.whitelist()
 def manufacture_concentrate(
 	item_code, qty=None, bom_no=None, allow_shortage=False,
-	source_warehouse=None, target_warehouse=None,
+	source_warehouse=None, target_warehouse=None, source_by_item=None,
 ):
 	def go():
 		guard("Work Order")
@@ -19,6 +19,7 @@ def manufacture_concentrate(
 		res = feeding.manufacture_concentrate(
 			item_code, qty=qty, bom_no=bom_no, allow_shortage=allow_shortage,
 			source_warehouse=source_warehouse, target_warehouse=target_warehouse,
+			source_by_item=frappe.parse_json(source_by_item) if source_by_item else None,
 		)
 		res["ok"] = True
 		return res

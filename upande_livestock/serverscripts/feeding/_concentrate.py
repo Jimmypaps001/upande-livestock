@@ -48,6 +48,39 @@ from upande_livestock.serverscripts.feeding._tuned_bom import _clean
 CONCENTRATE = "Concentrate"
 
 
+def concentrate_items():
+	"""Item codes that ARE a concentrate, by the only rule that decides it.
+
+	`feed_in_store._ration_roles` — a BOM line that is itself manufactured
+	(`_sub_bom_for`) or named bought-in on Livestock Settings. The Ration
+	Editor highlights on exactly this, and so does the feed run.
+
+	It is deliberately NOT `custom_ration_kind`. That stamp is written on
+	concentrates created here and read by nobody: the page that decided what a
+	concentrate was by looking at it listed nothing while the editor
+	highlighted five in the same recipes, because no BOM on any site had ever
+	carried it. Stamping them all would have closed that for a day and left the
+	two rules free to drift again.
+	"""
+	try:
+		from upande_livestock.serverscripts.feeding.feed_in_store import _ration_roles
+
+		return _ration_roles()[1]
+	except Exception:
+		return set()
+
+
+def total_of(lines):
+	"""What a recipe weighs: the sum of its ingredients.
+
+	NOT a figure the farm types. That was the first shape of this and it
+	permits 5000 kg and 6000 kg of ingredients producing 100 kg of meal, which
+	is not a recipe anyone can check against a mixer. A ration's quantity has
+	always been the sum of its lines; a concentrate's is too.
+	"""
+	return sum(flt(row.get("qty")) for row in lines or [])
+
+
 def _signature(lines):
 	"""What makes one recipe the same as another: its lines, order-insensitive."""
 	return sorted((row["item_code"], round(flt(row["qty"]), 4)) for row in lines)
@@ -69,8 +102,8 @@ def _matching_concentrate(item, signature, base_qty):
 	return None
 
 
-def _build_concentrate(item, lines, base_qty, farm=None, template=None):
-	"""A fresh submitted BOM making `base_qty` of `item` from `lines`.
+def _build_concentrate(item, lines, farm=None, template=None):
+	"""A fresh submitted BOM of `item` from `lines`, weighing what they weigh.
 
 	`template` is the recipe being revised, and it is borrowed for the same
 	reason `_standing_ration._build` borrows one: the row UOMs travel with it.
@@ -82,8 +115,9 @@ def _build_concentrate(item, lines, base_qty, farm=None, template=None):
 
 	doc = frappe.copy_doc(template) if template else frappe.new_doc("BOM")
 	doc.item = item
-	# The declared output, NOT the sum of the lines. See the module docstring.
-	doc.quantity = flt(base_qty)
+	# The sum of the lines. A recipe whose stated output contradicts its inputs
+	# cannot be checked against the mixer — see `total_of`.
+	doc.quantity = total_of(lines)
 	doc.is_active = 1
 	doc.is_default = 1
 	doc.with_operations = 0
@@ -135,7 +169,7 @@ def _farm_for_concentrate(previous=None):
 	return frappe.db.get_value("Warehouse", store, "custom_farm") if store else None
 
 
-def set_concentrate(name, lines, base_qty, farm=None):
+def set_concentrate(name, lines, farm=None):
 	"""Create or revise a concentrate. Returns what it is now.
 
 	`name` is what the farm calls it, and creates the Item the first time it is
@@ -151,9 +185,9 @@ def set_concentrate(name, lines, base_qty, farm=None):
 	if not lines:
 		frappe.throw(_("A concentrate needs at least one ingredient."))
 
-	base_qty = flt(base_qty)
+	base_qty = total_of(lines)
 	if base_qty <= 0:
-		frappe.throw(_("Say how much these ingredients make."))
+		frappe.throw(_("A concentrate has to weigh something."))
 
 	item = feed_item_for(name)
 	signature = _signature(lines)
@@ -170,37 +204,45 @@ def set_concentrate(name, lines, base_qty, farm=None):
 	)
 	template = frappe.get_doc("BOM", previous) if previous else None
 	bom = _build_concentrate(
-		item, lines, base_qty, farm=farm or _farm_for_concentrate(previous), template=template
+		item, lines, farm=farm or _farm_for_concentrate(previous), template=template
 	)
 	return {"bom": bom, "item": item, "base_qty": base_qty, "changed": True, "superseded": previous}
 
 
-def concentrate_list():
-	"""Every concentrate the farm has, with its recipe and what is in store.
+def concentrate_list(qty_by_item=None):
+	"""Every concentrate the farm mixes, with its recipe priced against the stores.
 
-	No herd, no head count, no days — the three things the page this backs used
-	to be built out of.
+	Listed by `concentrate_items` — the rule the Ration Editor highlights on —
+	NOT by `custom_ration_kind`, which nothing outside this module has ever
+	carried. That mismatch is why this page came back empty while the editor
+	showed five in the same recipes.
+
+	Each one carries its ingredients as `resolve_requirement` returns them, so
+	the page shows what the Feeding page already shows: what the line needs,
+	which store it would come from, what is there, and how far short that is.
+	`qty_by_item` scales one concentrate's lines to the tonnage the operator is
+	about to mix; unscaled, the lines are the recipe as written.
+
+	No herd, no head count, no days.
 	"""
-	from upande_livestock.serverscripts.feeding import _engine, _recipe_lines
+	from upande_livestock.serverscripts.feeding import _engine
 
-	boms = frappe.get_all(
-		"BOM",
-		filters={"docstatus": 1, "is_active": 1, "custom_ration_kind": CONCENTRATE},
-		fields=["name", "item", "item_name", "quantity", "uom"],
-		order_by="item asc, creation desc",
-	)
-
-	# One row per concentrate: the newest active recipe wins, older revisions
-	# are history and belong on the BOM list, not on a page for mixing today.
-	newest = {}
-	for bom in boms:
-		newest.setdefault(bom.item, bom)
-
-	lines_by_bom = _recipe_lines.lines_for([b.name for b in newest.values()])
+	qty_by_item = qty_by_item or {}
 	store = _engine._feed_store()
 
 	out = []
-	for item, bom in newest.items():
+	for item in sorted(concentrate_items()):
+		bom = _newest_bom(item)
+		if not bom:
+			# A concentrate the engine recognises that has no submitted recipe
+			# of its own is a bought-in one: real, and nothing to mix here.
+			continue
+		want = flt(qty_by_item.get(item)) or flt(bom.quantity) or 1.0
+		try:
+			_bom, lines = _engine.resolve_requirement(bom.name, want)
+		except Exception:
+			# Pricing a recipe against the stores must not cost the whole list.
+			lines = []
 		out.append(
 			{
 				"item_code": item,
@@ -208,12 +250,43 @@ def concentrate_list():
 				"bom_no": bom.name,
 				"base_qty": flt(bom.quantity),
 				"uom": bom.uom,
-				"lines": lines_by_bom.get(bom.name, []),
+				"mix_qty": want,
+				"lines": lines,
 				"in_store": _on_hand(item, store),
+				"stores": _where_it_is(item),
 			}
 		)
 	out.sort(key=lambda r: (r["item_name"] or "").lower())
 	return out
+
+
+def _newest_bom(item):
+	"""The active recipe for `item`, newest first. None if it has none."""
+	rows = frappe.get_all(
+		"BOM",
+		filters={"item": item, "docstatus": 1, "is_active": 1},
+		fields=["name", "item_name", "quantity", "uom"],
+		order_by="creation desc",
+		limit=1,
+	)
+	return rows[0] if rows else None
+
+
+def _where_it_is(item_code):
+	"""How much of the finished concentrate sits in each store that holds any.
+
+	Never summed: a tonne spread over three stores is not a tonne the next TMR
+	run can draw on, and the page says which store to go to.
+	"""
+	return [
+		{"warehouse": r.warehouse, "qty": flt(r.actual_qty)}
+		for r in frappe.get_all(
+			"Bin",
+			filters={"item_code": item_code, "actual_qty": [">", 0]},
+			fields=["warehouse", "actual_qty"],
+			order_by="actual_qty desc",
+		)
+	]
 
 
 def _on_hand(item_code, warehouse):
