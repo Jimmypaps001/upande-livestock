@@ -62,13 +62,30 @@ def carry_the_herds_custom_field_across():
 		)
 
 
+def _flat_cost_centre(field="custom_default_cost_center"):
+	"""The literal `tabSingles` value for a Livestock Settings field, or None.
+
+	Raw SQL, matching `repair_zeroed_age_interval_settings._raw`, and for the
+	reason its docstring already gave: `Singles` is a pseudo-doctype with no
+	`creation` column, so `frappe.db.get_value` breaks against it on its own
+	default ordering —
+
+	    OperationalError (1054): Unknown column 'creation' in 'ORDER BY'
+
+	The field is read off `tabSingles` rather than through `get_single_value`
+	because by the time this runs the DocType no longer declares it: the whole
+	point is to rescue a value whose field has been removed.
+	"""
+	rows = frappe.db.sql(
+		"select `value` from `tabSingles` where doctype=%s and field=%s",
+		(SETTINGS, field),
+	)
+	return rows[0][0] if rows else None
+
+
 def carry_the_flat_setting_into_a_company_row():
 	"""The old site-wide default becomes the row for the default company."""
-	if not frappe.db.has_column("tabSingles", "value"):  # pragma: no cover - sanity
-		return
-	old = frappe.db.get_value(
-		"Singles", {"doctype": SETTINGS, "field": "custom_default_cost_center"}, "value"
-	)
+	old = _flat_cost_centre()
 	if not old:
 		return
 
