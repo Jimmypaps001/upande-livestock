@@ -240,11 +240,30 @@ def stamp(doc, company=None, herd=None) -> int:
 		cc, source = resolve_with_source(company, herd)
 		if not cc:
 			return 0
+		# What ERPNext already put there. A row equal to it was not chosen by
+		# anybody: `make_stock_entry` fills every row with the company default
+		# before this code sees it, so treating that as a deliberate value is
+		# what made this whole chain a no-op on feed manufacture — measured on
+		# kaitet.local, a fresh transfer arrives with all five rows on
+		# `Main - KR`. A more specific answer replaces it; anything that DIFFERS
+		# from it is a real decision, by an Item Default or by a person, and is
+		# left exactly as it is.
+		default = company_cost_center(company)
+		replaceable = {"", (default or "").strip().lower()}
+
 		stamped = 0
 		for row in doc.get("items") or []:
-			if not (row.get("cost_center") or "").strip():
-				row.cost_center = cc
-				stamped += 1
+			current = (row.get("cost_center") or "").strip()
+			if current.lower() not in replaceable:
+				continue
+			# The company tier IS the default, so writing it back is churn and
+			# the announcement that follows would be describing nothing.
+			if current and source == "company":
+				continue
+			if current == cc:
+				continue
+			row.cost_center = cc
+			stamped += 1
 		if stamped and source == "company":
 			_announce(cc, herd, company)
 		return stamped
