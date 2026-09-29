@@ -225,6 +225,24 @@ def _bin_qty(item_code, warehouse):
 	return flt(frappe.db.get_value("Bin", {"item_code": item_code, "warehouse": warehouse}, "actual_qty"))
 
 
+def _where_it_is(item_code, warehouses):
+	"""Which stores hold this item now, most first, skipping the empty ones.
+
+	`available_elsewhere` was a number with nowhere attached to it. "+35,000
+	elsewhere" tells an operator the feed exists and not where to go and get
+	it, which is the only thing that figure is for. This names the stores, so
+	the From picker can show how much is in each and the page can say where
+	rather than gesture at it.
+	"""
+	found = []
+	for wh in warehouses or []:
+		qty = _bin_qty(item_code, wh)
+		if qty > 0:
+			found.append({"warehouse": wh, "qty": qty})
+	found.sort(key=lambda r: (-r["qty"], r["warehouse"]))
+	return found
+
+
 def _pick_source(item_code, required, warehouses):
 	"""Return ``(warehouse, qty_there, qty_everywhere)`` for one line.
 
@@ -236,13 +254,19 @@ def _pick_source(item_code, required, warehouses):
 		return None, 0.0, 0.0
 	qtys = {wh: _bin_qty(item_code, wh) for wh in warehouses}
 	total = sum(qtys.values())
+	# FULLEST FIRST, not grid order. The configured order is a setting somebody
+	# typed once; what a store holds today is a fact about today. Ordering by it
+	# makes the default the store most likely to cover the line — and the one an
+	# operator would have chosen anyway, which is the point of a default.
+	ranked = sorted(warehouses, key=lambda w: (-qtys[w], w))
 	if required <= 0:
-		return warehouses[0], qtys[warehouses[0]], total
-	for wh in warehouses:
+		return ranked[0], qtys[ranked[0]], total
+	for wh in ranked:
 		if qtys[wh] >= required:
 			return wh, qtys[wh], total
-	best = max(warehouses, key=lambda w: qtys[w])
-	return best, qtys[best], total
+	# Nothing covers it: the biggest holding, so the shortfall is reported
+	# against a real place rather than an arbitrary one.
+	return ranked[0], qtys[ranked[0]], total
 
 
 def _bought_in_concentrates():
@@ -324,6 +348,10 @@ def resolve_requirement(bom_no, total_qty, source_warehouse=None):
 				"source_warehouse": wh,
 				"available": here,
 				"available_elsewhere": max(0.0, everywhere - here),
+				# Where that "elsewhere" actually is. The picker reads this to
+				# show a quantity beside each store, so choosing one is a
+				# decision rather than a guess.
+				"locations": _where_it_is(row.item_code, warehouses),
 				"short_qty": max(0.0, required - here),
 				"is_concentrate": bool(source),
 				"concentrate_source": source,

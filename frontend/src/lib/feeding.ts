@@ -20,6 +20,9 @@ export type FeedLine = {
   source_warehouse: string | null;
   available: number;
   available_elsewhere: number;
+  /** Every store holding any of it now, most first — so the From picker can
+   *  say how much is in each, and "elsewhere" can name a place. */
+  locations?: Array<{ warehouse: string; qty: number }>;
   short_qty: number;
   is_concentrate: boolean;
   concentrate_source: string | null;

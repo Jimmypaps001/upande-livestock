@@ -225,15 +225,30 @@ class TestManufactureIssuesItsBatch(IntegrationTestCase):
 class TestPickSource(IntegrationTestCase):
 	"""_pick_source is the single point both the check and the Work Order use."""
 
-	def test_first_warehouse_that_covers_the_line_wins(self):
+	def test_the_fullest_warehouse_that_covers_the_line_wins(self):
+		"""Fullest first, not grid order.
+
+		The configured order is a setting somebody typed once; what a store
+		holds today is a fact about today, and ordering by it makes the default
+		the store an operator would have picked anyway — which is the point of
+		a default, and what the Feeding page now opens on.
+
+		The cost is deliberate and worth naming: a small line is drawn from the
+		biggest pile rather than clearing out a small one first, so small
+		holdings sit longer. Against that, a line is far less likely to be
+		split, and the store it names is the one most able to cover it.
+		"""
 		whs = ["A", "B", "C"]
 		qtys = {"A": 5.0, "B": 50.0, "C": 500.0}
 		orig = feeding._bin_qty
 		feeding._bin_qty = lambda item, wh: qtys[wh]
 		try:
-			self.assertEqual(feeding._pick_source("X", 10.0, whs)[0], "B")
-			self.assertEqual(feeding._pick_source("X", 1.0, whs)[0], "A")
+			self.assertEqual(feeding._pick_source("X", 10.0, whs)[0], "C")
+			self.assertEqual(feeding._pick_source("X", 1.0, whs)[0], "C")
 			self.assertEqual(feeding._pick_source("X", 100.0, whs)[0], "C")
+			# Still only a store that can cover it: 600 fits nowhere, so the
+			# biggest holding takes the shortfall.
+			self.assertEqual(feeding._pick_source("X", 600.0, whs)[0], "C")
 		finally:
 			feeding._bin_qty = orig
 
