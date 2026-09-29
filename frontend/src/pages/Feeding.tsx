@@ -36,6 +36,7 @@ import {
   feedBatches,
   manualFeed,
   type BatchPlan,
+  type FeedLine,
   manualRowsDirty,
   manufactureFeed,
   runKg,
@@ -219,6 +220,50 @@ export function Feeding() {
     setManualRows(seeded);
     setManualSeed(seeded);
   }
+
+  /** What the rule would take per line, so the Batch column can show it and
+   *  the operator can change it before anything posts. */
+  const loadPlans = useCallback(
+    async (lines: FeedLine[]) => {
+      const want = lines
+        .map((l) => ({
+          item_code: l.item_code,
+          qty: l.required_qty,
+          warehouse: lineStore[l.item_code] || fromStore || l.source_warehouse || "",
+        }))
+        .filter((l) => l.warehouse);
+      if (!want.length) return;
+      const r = await feedBatches(want);
+      if (isError(r)) return;
+      setPlans(Object.fromEntries(r.lines.map((p) => [p.item_code, p])));
+    },
+    [lineStore, fromStore],
+  );
+
+  // Open with the fullest store already chosen for every line, so the page
+  // arrives at the answer an operator would have picked rather than at a blank
+  // "as chosen". `locations` is sorted by what each store holds, so the first
+  // is the fullest; the batch proposal follows from that choice below.
+  useEffect(() => {
+    if (!program?.lines?.length) return;
+    setLineStore((current) => {
+      const next = { ...current };
+      let changed = false;
+      for (const l of program.lines) {
+        if (next[l.item_code]) continue;
+        const fullest = (l.locations ?? [])[0]?.warehouse || l.source_warehouse;
+        if (fullest) {
+          next[l.item_code] = fullest;
+          changed = true;
+        }
+      }
+      return changed ? next : current;
+    });
+  }, [program?.lines]);
+
+  useEffect(() => {
+    if (program?.lines?.length) void loadPlans(program.lines);
+  }, [program?.lines, loadPlans]);
 
   async function mixAndFeed() {
     if (!program) return;

@@ -85,7 +85,9 @@ export function RequirementTable({
                     </div>
                   )}
                 </TableCell>
-                <TableCell className="text-right tabular-nums">{fmt(l.available)}</TableCell>
+                <TableCell className="text-right tabular-nums">
+                  {fmt(availableIn(l, lineStore?.[l.item_code]))}
+                </TableCell>
                 <TableCell
                   className={cn(
                     "text-right tabular-nums",
@@ -104,10 +106,15 @@ export function RequirementTable({
                         {
                           value: "",
                           label: l.source_warehouse
-                            ? `${l.source_warehouse} (chosen)`
+                            ? `${l.source_warehouse} · ${fmt(l.available)} here`
                             : "As chosen",
                         },
-                        ...(stores ?? []).map((w) => ({ value: w, label: w })),
+                        // Every store, each saying what IT holds — choosing one
+                        // blind is how a line is drawn from an empty shelf.
+                        ...(stores ?? []).map((w) => ({
+                          value: w,
+                          label: `${w} · ${fmt(qtyIn(l, w))}`,
+                        })),
                       ]}
                       label="Source store"
                       placeholder={l.source_warehouse || "As chosen"}
@@ -115,7 +122,17 @@ export function RequirementTable({
                   ) : (
                     l.source_warehouse || "—"
                   )}
-                  {elsewhere > 0 && (
+                  {/* Where the rest of it is, by name. "+35,000 elsewhere"
+                      tells an operator the feed exists and not where to go. */}
+                  {othersHolding(l, lineStore?.[l.item_code]).length > 0 && (
+                    <div className="text-[11px] text-[var(--sd-quiet)]">
+                      also{" "}
+                      {othersHolding(l, lineStore?.[l.item_code])
+                        .map((w) => `${fmt(w.qty)} in ${w.warehouse}`)
+                        .join(", ")}
+                    </div>
+                  )}
+                  {othersHolding(l, lineStore?.[l.item_code]).length === 0 && elsewhere > 0 && (
                     <div className="text-[11px] text-[var(--sd-quiet)]">
                       +{fmt(elsewhere)} elsewhere
                     </div>
@@ -180,4 +197,26 @@ function batchNote(plan?: BatchPlan): string {
   if (!plan.picks.length) return "Nothing in this store — the run will refuse";
   const head = plan.picks.map((p) => `${p.batch_no} (${fmt(p.qty)})`).join(" + ");
   return plan.short > 0 ? `${head} · short ${fmt(plan.short)}` : head;
+}
+
+
+/** What one store holds of this line, from the locations the server resolved. */
+function qtyIn(line: FeedLine, warehouse: string): number {
+  return (line.locations ?? []).find((w) => w.warehouse === warehouse)?.qty ?? 0;
+}
+
+/** What the chosen store holds — or, with none chosen, the engine's own. */
+function availableIn(line: FeedLine, chosen?: string): number {
+  return chosen ? qtyIn(line, chosen) : Number(line.available) || 0;
+}
+
+/** Stores holding it other than the one this line will actually be drawn from.
+ *  Keyed on the operator's choice when there is one — otherwise picking a store
+ *  leaves it listed under "also", as somewhere else to go. */
+function othersHolding(
+  line: FeedLine,
+  chosen?: string,
+): Array<{ warehouse: string; qty: number }> {
+  const from = chosen || line.source_warehouse;
+  return (line.locations ?? []).filter((w) => w.warehouse !== from);
 }

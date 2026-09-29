@@ -265,3 +265,75 @@ class TestTheHerdRunTakesThemPerItem(unittest.TestCase):
 		passed = {k.arg for k in call.keywords}
 		self.assertIn("source_by_item", passed)
 		self.assertIn("batch_by_item", passed)
+
+
+class TestALineSaysWhereItsStockActuallyIs(unittest.TestCase):
+	"""`available_elsewhere` is a number with nowhere attached to it.
+
+	"+35,000 elsewhere" tells an operator that the feed exists and not where to
+	go and get it, which is the one thing the figure is for. A line carries the
+	stores that hold it now, most first, so the From picker can say how much is
+	in each and the page can name them instead of gesturing at them.
+	"""
+
+	def test_a_line_lists_the_stores_holding_it(self):
+		with patch.object(_engine, "_feed_source_warehouses", return_value=["A", "B", "C"]), patch.object(
+			_engine, "_bin_qty", side_effect=lambda item, wh: {"A": 10.0, "B": 0.0, "C": 25.0}[wh]
+		):
+			where = _engine._where_it_is("Silage", ["A", "B", "C"])
+		self.assertEqual(where, [{"warehouse": "C", "qty": 25.0}, {"warehouse": "A", "qty": 10.0}])
+
+	def test_a_store_holding_none_is_not_listed(self):
+		"""Nought in a store is not a place to go."""
+		with patch.object(_engine, "_bin_qty", side_effect=lambda item, wh: 0.0):
+			self.assertEqual(_engine._where_it_is("Silage", ["A", "B"]), [])
+
+	def test_the_biggest_holding_comes_first(self):
+		with patch.object(
+			_engine, "_bin_qty", side_effect=lambda item, wh: {"A": 5.0, "B": 90.0}[wh]
+		):
+			where = _engine._where_it_is("Silage", ["A", "B"])
+		self.assertEqual([w["warehouse"] for w in where], ["B", "A"])
+
+	def test_the_resolved_line_carries_it(self):
+		"""So the page never has to ask a second time to draw the picker."""
+		import inspect
+
+		self.assertIn('"locations"', inspect.getsource(_engine.resolve_requirement))
+
+
+class TestTheFullestStoreIsTheDefault(unittest.TestCase):
+	"""Opening the page should already have chosen well.
+
+	`_pick_source` took the first CONFIGURED store that could cover a line in
+	full — grid order, which is a setting somebody typed once and not a fact
+	about today's stock. Ordering the candidates by what they actually hold
+	makes the default the store most likely to cover the line, and the one an
+	operator would have picked anyway; the cover rule on top of it is unchanged,
+	so a store that can cover in full still wins over a bigger one that is
+	needed elsewhere.
+	"""
+
+	def test_the_fullest_store_is_preferred(self):
+		qty = {"A": 10.0, "B": 500.0, "C": 90.0}
+		with patch.object(_engine, "_bin_qty", side_effect=lambda i, w: qty[w]):
+			wh, here, everywhere = _engine._pick_source("Silage", 5, ["A", "B", "C"])
+		self.assertEqual(wh, "B")
+		self.assertEqual(here, 500.0)
+		self.assertEqual(everywhere, 600.0)
+
+	def test_a_store_that_cannot_cover_is_passed_over(self):
+		"""Fullest first, but still only if it covers — otherwise the biggest."""
+		qty = {"A": 10.0, "B": 4.0}
+		with patch.object(_engine, "_bin_qty", side_effect=lambda i, w: qty[w]):
+			wh, here, _ = _engine._pick_source("Silage", 8, ["A", "B"])
+		self.assertEqual(wh, "A")
+
+	def test_nothing_anywhere_still_answers_with_a_place(self):
+		with patch.object(_engine, "_bin_qty", side_effect=lambda i, w: 0.0):
+			wh, here, everywhere = _engine._pick_source("Silage", 5, ["A", "B"])
+		self.assertIn(wh, ("A", "B"))
+		self.assertEqual(here, 0.0)
+
+	def test_no_warehouses_at_all_is_not_a_crash(self):
+		self.assertEqual(_engine._pick_source("Silage", 5, []), (None, 0.0, 0.0))
