@@ -62,6 +62,8 @@ POSTING_LINKS = frozenset(
 		"semen_item",
 		"custom_default_company",
 		"custom_default_credit_account",
+		# Books a concentrate mix somewhere. Wrong here does not raise either.
+		"custom_concentrate_cost_center",
 	}
 )
 

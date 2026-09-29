@@ -65,6 +65,7 @@
   "sb_accounting",
   "custom_default_company",
   "custom_default_credit_account",
+  "custom_concentrate_cost_center",
   "custom_company_cost_centers",
   "tab_herd_movement",
   "sb_calf_intake",
@@ -473,6 +474,13 @@
    "fieldtype": "Link",
    "label": "Default Credit Account (Livestock JE)",
    "options": "Account"
+  },
+  {
+   "description": "Where a CONCENTRATE mix books to. A mix has no herd \u2014 it is made for the store and eaten by several herds \u2014 so the herd's own cost centre cannot answer for it. Left blank it falls to the per-company row below, which is the answer for everything herdless.",
+   "fieldname": "custom_concentrate_cost_center",
+   "fieldtype": "Link",
+   "label": "Concentrate Cost Center",
+   "options": "Cost Center"
   },
   {
    "description": "Charged for feed, milk, drug and husbandry stock movements when the herd names no cost centre of its own. One row per company \u2014 the dairy and the flower side do not share a centre. ERPNext refuses a stock entry outright when the item's expense account is a P&amp;L one and no cost centre can be found.",

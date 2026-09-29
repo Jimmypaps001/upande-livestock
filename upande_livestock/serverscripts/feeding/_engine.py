@@ -660,7 +660,11 @@ def _run_manufacture(
 	# either, so ERPNext's two-step fallback runs out and it refuses the entry
 	# with "Cost Center is mandatory for Item ...". Six of the eight feed runs
 	# that failed in the week to 2026-09-21 died there. See common/cost_center.
-	livestock_cost_center.stamp(transfer, company, herd=herd)
+	# `what` already says which mix this is, so the concentrate tier is told
+	# rather than inferred from a missing herd — a drug round spanning two herds
+	# is herdless too. See common/cost_center.resolve_with_source.
+	is_mix = what == CONCENTRATE_MANUFACTURE
+	livestock_cost_center.stamp(transfer, company, herd=herd, concentrate=is_mix)
 	transfer.insert(ignore_permissions=True)
 	transfer.submit()
 
@@ -673,7 +677,7 @@ def _run_manufacture(
 	manufacture.stock_entry_type = livestock_stock.stock_entry_type_for(what)
 	# Same reason as the transfer above: this entry consumes the raws, so its
 	# rows need a cost centre too.
-	livestock_cost_center.stamp(manufacture, company, herd=herd)
+	livestock_cost_center.stamp(manufacture, company, herd=herd, concentrate=is_mix)
 	manufacture.insert(ignore_permissions=True)
 	manufacture.submit()
 
