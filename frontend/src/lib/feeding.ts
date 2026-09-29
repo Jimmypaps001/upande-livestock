@@ -191,6 +191,7 @@ export type ConcentrateMixResult = {
 const RECORD_FEEDING = "upande_livestock.serverscripts.mobile.record_feeding.record_feeding";
 const MANUAL_FEED = "upande_livestock.serverscripts.feeding.manual_feed.manual_feed";
 const CONCENTRATES = "upande_livestock.serverscripts.feeding.concentrates.concentrates";
+const FEED_BATCHES = "upande_livestock.serverscripts.feeding.feed_batches.feed_batches";
 const SET_CONCENTRATE =
   "upande_livestock.serverscripts.feeding.set_concentrate.set_concentrate";
 const MANUFACTURE_CONCENTRATE =
@@ -262,6 +263,24 @@ export function manualFeed(args: {
   return call(MANUAL_FEED, { payload: { ...rest, portion: portion ?? 1 } });
 }
 
+/** What the rule would take, per line: its proposal, everything else the store
+ *  holds so the operator can choose differently, and what it cannot cover.
+ *  Read-only — ask again whenever a store or a tonnage changes. */
+export type BatchPlan = {
+  item_code: string;
+  warehouse: string;
+  required_qty: number;
+  picks: Array<{ batch_no: string; qty: number }>;
+  short: number;
+  available: Array<{ batch_no: string; qty: number; expiry_date: string | null }>;
+};
+
+export function feedBatches(
+  lines: Array<{ item_code: string; qty: number; warehouse: string }>,
+): Promise<Envelope<{ lines: BatchPlan[] }>> {
+  return call(FEED_BATCHES, { lines: JSON.stringify(lines) });
+}
+
 export function concentrates(
   qtyByItem?: Record<string, number>,
 ): Promise<Envelope<{ concentrates: Concentrate[]; warehouses: string[]; default_target: string }>> {
@@ -296,6 +315,10 @@ export function manufactureConcentrate(args: {
    *  Blank means "as chosen" — silage comes from a pit and the mineral from
    *  the feed store, so one store for the whole run cannot be posted. */
   source_by_item?: string;
+  /** A batch per ingredient, chosen by the operator. Blank means "let the
+   *  rule decide", which splits across batches first-expiry-first-out and
+   *  refuses when no sound batch covers the line. */
+  batch_by_item?: string;
 }): Promise<Envelope<ConcentrateMixResult>> {
   return call(MANUFACTURE_CONCENTRATE, { ...args });
 }
