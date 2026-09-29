@@ -55,14 +55,18 @@ export function RequirementTable({
             <TableHead>Item</TableHead>
             <TableHead className="text-right">Required</TableHead>
             <TableHead className="text-right">Available</TableHead>
-            <TableHead className="text-right">Short</TableHead>
             <TableHead>From</TableHead>
             {pickable && <TableHead>Batch</TableHead>}
           </TableRow>
         </TableHeader>
         <TableBody>
           {lines.map((l) => {
-            const short = Number(l.short_qty) || 0;
+            // Worked out HERE, not read off the server. `short_qty` is
+            // computed against the store the engine chose, so it never moved
+            // when the operator picked a different one — a line needing 20.00
+            // with 19.36 in the chosen store still read "—".
+            const avail = availableIn(l, lineStore?.[l.item_code]);
+            const short = Math.max(0, (Number(l.required_qty) || 0) - avail);
             const elsewhere = Number(l.available_elsewhere) || 0;
             return (
               <TableRow
@@ -85,16 +89,21 @@ export function RequirementTable({
                     </div>
                   )}
                 </TableCell>
-                <TableCell className="text-right tabular-nums">
-                  {fmt(availableIn(l, lineStore?.[l.item_code]))}
-                </TableCell>
                 <TableCell
                   className={cn(
                     "text-right tabular-nums",
                     short > 0 && "font-semibold text-[var(--sd-sev-critical)]",
                   )}
                 >
-                  {short > 0 ? fmt(short) : "—"}
+                  {fmt(avail)}
+                  {/* The shortfall sits on the figure rather than in a column
+                      of its own: one number saying what is there, and under it
+                      how far that falls short. */}
+                  {short > 0 && (
+                    <div className="text-[11px] font-semibold text-[var(--sd-sev-critical)]">
+                      −{fmt(short)}
+                    </div>
+                  )}
                 </TableCell>
                 <TableCell className="text-[12px] text-[var(--sd-muted)]">
                   {pickable ? (
@@ -199,6 +208,19 @@ function batchNote(plan?: BatchPlan): string {
   return plan.short > 0 ? `${head} · short ${fmt(plan.short)}` : head;
 }
 
+
+/** Lines the chosen stores cannot cover, by the same arithmetic the table
+ *  shows. The server's `shortages` is computed against the stores the ENGINE
+ *  chose, so a banner reading it disagrees with the rows underneath it the
+ *  moment an operator picks a different store. */
+export function shortLines(
+  lines: FeedLine[],
+  lineStore?: Record<string, string>,
+): FeedLine[] {
+  return (lines ?? []).filter(
+    (l) => (Number(l.required_qty) || 0) - availableIn(l, lineStore?.[l.item_code]) > 0,
+  );
+}
 
 /** What one store holds of this line, from the locations the server resolved. */
 function qtyIn(line: FeedLine, warehouse: string): number {

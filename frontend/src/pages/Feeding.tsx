@@ -6,7 +6,7 @@ import { Mark, Notice, Pill } from "@/components/feeding/Notice";
 import { PortionSwitch } from "@/components/feeding/PortionSwitch";
 import { PostingDate } from "@/components/feeding/PostingDate";
 import { RecipePicker, recipeLabel } from "@/components/feeding/RecipePicker";
-import { RequirementTable } from "@/components/feeding/RequirementTable";
+import { RequirementTable, shortLines } from "@/components/feeding/RequirementTable";
 import { Figure, FigureRow } from "@/components/Figure";
 import { Page, PageHeading } from "@/components/PageShell";
 import { Button } from "@/components/ui/button";
@@ -445,13 +445,20 @@ export function Feeding() {
                   />
                 </FigureRow>
 
-                {program.can_manufacture ? (
+                {/* Derived from the stores actually chosen, like the rows
+                    below. `program.shortages` answers for the engine's own
+                    choice and would contradict the table as soon as an
+                    operator picked a different store. */}
+                {shortLines(program.lines, lineStore).length === 0 ? (
                   <Pill tone="ok">
                     Enough stock to manufacture {program.production_item_name}
                   </Pill>
                 ) : (
                   <Pill tone="short">
-                    Short: {program.shortages.map((l) => l.item_name).join(", ")}
+                    Short:{" "}
+                    {shortLines(program.lines, lineStore)
+                      .map((l) => l.item_name)
+                      .join(", ")}
                   </Pill>
                 )}
 
