@@ -33,7 +33,9 @@ import {
   feedOptions,
   feedingProgram,
   herdRecipes,
+  feedBatches,
   manualFeed,
+  type BatchPlan,
   manualRowsDirty,
   manufactureFeed,
   runKg,
@@ -54,6 +56,11 @@ export function Feeding() {
   const [day, setDay] = useState<FeedDayStatus | null>(null);
   // Blank means "as before": every configured feed store, in order.
   const [fromStore, setFromStore] = useState("");
+  // Per ingredient: the silage from a pit, the concentrate from the mixing
+  // store, each with its own batch. Blank means "as the engine chose".
+  const [lineStore, setLineStore] = useState<Record<string, string>>({});
+  const [lineBatch, setLineBatch] = useState<Record<string, string>>({});
+  const [plans, setPlans] = useState<Record<string, BatchPlan>>({});
   const [loading, setLoading] = useState(false);
   /** Whatever the server last said. Never reworded — see components/feeding/Notice. */
   const [failure, setFailure] = useState<string | null>(null);
@@ -224,6 +231,8 @@ export function Feeding() {
     // happens on this tab, so nothing here ever goes through manualFeed.
     const r = await manufactureFeed({
       source_warehouse: fromStore || undefined,
+      source_by_item: Object.keys(lineStore).length ? JSON.stringify(lineStore) : undefined,
+      batch_by_item: Object.keys(lineBatch).length ? JSON.stringify(lineBatch) : undefined,
       herd: program.herd,
       portion,
       posting_date: effectiveDate,
@@ -401,7 +410,16 @@ export function Feeding() {
                   </Pill>
                 )}
 
-                <RequirementTable lines={program.lines} showConcentrateTag />
+                <RequirementTable
+                  lines={program.lines}
+                  showConcentrateTag
+                  stores={program.warehouses}
+                  plans={plans}
+                  lineStore={lineStore}
+                  lineBatch={lineBatch}
+                  onStore={(item, w) => setLineStore((s) => ({ ...s, [item]: w }))}
+                  onBatch={(item, b) => setLineBatch((s) => ({ ...s, [item]: b }))}
+                />
 
                 <div className="flex min-w-[240px] max-w-[420px] flex-col gap-1.5">
                   <Label htmlFor="f-from">Take feed from</Label>

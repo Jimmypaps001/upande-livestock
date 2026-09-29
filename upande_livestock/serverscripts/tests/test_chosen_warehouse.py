@@ -216,3 +216,52 @@ class TestThePageIsToldWhatItMayChoose(unittest.TestCase):
 
 		res = concentrates()
 		self.assertIn(res["default_target"], res["warehouses"])
+
+
+class TestTheHerdRunTakesThemPerItem(unittest.TestCase):
+	"""The Feeding page needs what the Concentrate page got.
+
+	`1630c9c` gave feeding ONE store for the whole run, and `3e7d073` put the
+	per-ingredient store and batch pickers on the Concentrate page only. A TMR
+	is the same shape of problem — the silage comes from a pit, the concentrate
+	from the mixing store, the hay from the hay store — so one dropdown for all
+	four lines is a run that cannot be posted as the farm actually works.
+	"""
+
+	def test_the_herd_run_accepts_a_store_per_item(self):
+		import inspect
+
+		p = inspect.signature(_engine.manufacture_herd_feed).parameters
+		self.assertIn("source_by_item", p)
+
+	def test_the_herd_run_accepts_a_batch_per_item(self):
+		import inspect
+
+		p = inspect.signature(_engine.manufacture_herd_feed).parameters
+		self.assertIn("batch_by_item", p)
+
+	def test_the_endpoint_passes_both_through(self):
+		import inspect
+
+		from upande_livestock.serverscripts.feeding import manufacture_feed as MF
+
+		p = inspect.signature(MF.manufacture_feed).parameters
+		self.assertIn("source_by_item", p)
+		self.assertIn("batch_by_item", p)
+
+	def test_the_run_hands_them_to_the_manufacture(self):
+		"""Accepting them and dropping them on the floor is the failure mode
+		that looks like it works."""
+		import ast
+		import inspect
+		import textwrap
+
+		src = textwrap.dedent(inspect.getsource(_engine.manufacture_herd_feed))
+		call = next(
+			n
+			for n in ast.walk(ast.parse(src))
+			if isinstance(n, ast.Call) and getattr(n.func, "id", "") == "_run_manufacture"
+		)
+		passed = {k.arg for k in call.keywords}
+		self.assertIn("source_by_item", passed)
+		self.assertIn("batch_by_item", passed)

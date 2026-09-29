@@ -20,7 +20,12 @@ standing ration.
 
 `source_warehouse` names the store the ingredients come out of and the batch is
 issued from. Omitted, every configured feed store is searched in order, which is
-what this always did."""
+what this always did.
+
+`source_by_item` and `batch_by_item` are finer than that, and are what the
+Feeding page actually sends: a store and a batch per INGREDIENT, because a TMR
+draws its silage from a pit and its concentrate from the mixing store, and one
+dropdown for all four lines is a run nobody can post as the farm works."""
 
 import frappe
 
@@ -32,7 +37,7 @@ from upande_livestock.serverscripts.feeding._tuned_bom import _base_for
 @frappe.whitelist()
 def manufacture_feed(
 	herd, allow_shortage=False, employee=None, portion=1.0, posting_date=None, bom_no=None,
-	source_warehouse=None,
+	source_warehouse=None, source_by_item=None, batch_by_item=None,
 ):
 	def go():
 		guard("Work Order")
@@ -46,6 +51,8 @@ def manufacture_feed(
 			posting_date=posting_date,
 			bom_no=resolved_bom_no,
 			source_warehouse=source_warehouse,
+			source_by_item=frappe.parse_json(source_by_item) if source_by_item else None,
+			batch_by_item=frappe.parse_json(batch_by_item) if batch_by_item else None,
 		)
 		res["ok"] = True
 		return res

@@ -71,6 +71,26 @@ def _tracked_rows(doc) -> list:
 	return [r for r in rows if r.item_code in tracked]
 
 
+def _tracked_items(codes):
+	"""Which of `codes` are batch tracked. The rest are never asked for a batch.
+
+	`_tracked_rows` already filters on this before anything is assigned, so a
+	line the store cannot batch is simply not the splitter's business — and the
+	picker must know it too, or every un-batched silage line reads "the run
+	will refuse" on a page where most lines are un-batched.
+	"""
+	codes = sorted({c for c in codes if c})
+	if not codes:
+		return set()
+	return {
+		name
+		for name, flag in frappe.db.sql(
+			"SELECT name, has_batch_no FROM `tabItem` WHERE name IN %(codes)s", {"codes": codes}
+		)
+		if flag
+	}
+
+
 def _plan_for(rows):
 	"""``[(row, picks, short)]`` — what each row would be split into."""
 	available = available_in_store([(r.item_code, r.s_warehouse) for r in rows])
@@ -106,19 +126,27 @@ def suggest_batches(lines):
 	if not rows:
 		return []
 
+	tracked = _tracked_items([r.item_code for r in rows])
 	available = available_in_store([(r.item_code, r.s_warehouse) for r in rows])
 	today = frappe.utils.today()
 	out = []
 	for r in rows:
 		pool = available.get((r.item_code, r.s_warehouse), [])
 		plan = batch_suggestion.allocate(r.qty, pool, today)
+		is_tracked = r.item_code in tracked
 		out.append(
 			{
 				"item_code": r.item_code,
 				"warehouse": r.s_warehouse,
 				"required_qty": r.qty,
-				"picks": [{"batch_no": p["batch_no"], "qty": flt(p["qty"])} for p in plan["picks"]],
-				"short": flt(plan.get("short")),
+				# An untracked item is never asked for a batch, so it can never
+				# be short of one. Reporting a shortfall it cannot have is how a
+				# page ends up warning about every line on it.
+				"tracked": is_tracked,
+				"picks": [{"batch_no": p["batch_no"], "qty": flt(p["qty"])} for p in plan["picks"]]
+				if is_tracked
+				else [],
+				"short": flt(plan.get("short")) if is_tracked else 0.0,
 				"available": [
 					{
 						"batch_no": b.get("batch_no"),
