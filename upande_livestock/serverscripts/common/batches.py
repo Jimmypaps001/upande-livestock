@@ -35,6 +35,8 @@ round, because `upande_scp` also runs on Mona, where neither this app nor
 """
 
 import frappe
+from frappe import _
+from frappe.utils import flt
 
 from upande_scp.serverscripts.store import batch_suggestion
 from upande_scp.serverscripts.store.batch_stock import available_in_store
@@ -69,67 +71,180 @@ def _tracked_rows(doc) -> list:
 	return [r for r in rows if r.item_code in tracked]
 
 
-def assign_batches(doc) -> int:
-	"""Fill in the batches on a draft Stock Entry. Returns how many it set.
+def _plan_for(rows):
+	"""``[(row, picks, short)]`` — what each row would be split into."""
+	available = available_in_store([(r.item_code, r.s_warehouse) for r in rows])
+	today = frappe.utils.today()
+	out = []
+	for r in rows:
+		pool = available.get((r.item_code, r.s_warehouse), [])
+		plan = batch_suggestion.allocate(r.qty, pool, today)
+		out.append((r, plan["picks"], flt(plan.get("short"))))
+	return out
 
-	Call before `insert()`. Never raises: a feed run must not be lost because
-	the batch helper had a bad day — a row left blank fails afterwards with
-	ERPNext's own message, which names the item and is what the operator needs
-	anyway.
+
+def suggest_batches(lines):
+	"""What the picker shows before anything is posted.
+
+	`lines` is ``[{item_code, qty, warehouse}]``. Each answer carries the
+	proposal (`picks`, first-expiry-first-out), everything else the store holds
+	(`available`, so the operator can choose differently), and what the store
+	cannot cover (`short`).
+
+	Read-only. Nothing here writes, so a page may call it as often as the
+	operator changes a store or a quantity.
+	"""
+	rows = [
+		frappe._dict(
+			item_code=ln.get("item_code"),
+			qty=flt(ln.get("qty")),
+			s_warehouse=ln.get("warehouse"),
+		)
+		for ln in lines or []
+		if ln.get("item_code") and ln.get("warehouse")
+	]
+	if not rows:
+		return []
+
+	available = available_in_store([(r.item_code, r.s_warehouse) for r in rows])
+	today = frappe.utils.today()
+	out = []
+	for r in rows:
+		pool = available.get((r.item_code, r.s_warehouse), [])
+		plan = batch_suggestion.allocate(r.qty, pool, today)
+		out.append(
+			{
+				"item_code": r.item_code,
+				"warehouse": r.s_warehouse,
+				"required_qty": r.qty,
+				"picks": [{"batch_no": p["batch_no"], "qty": flt(p["qty"])} for p in plan["picks"]],
+				"short": flt(plan.get("short")),
+				"available": [
+					{
+						"batch_no": b.get("batch_no"),
+						"qty": flt(b.get("qty")),
+						"expiry_date": b.get("expiry_date"),
+					}
+					for b in pool
+				],
+			}
+		)
+	return out
+
+
+def assign_batches(doc) -> int:
+	"""Fill in the batches on a draft Stock Entry. Returns how many rows it set.
+
+	Call before `insert()`.
+
+	A ROW IS SPLIT ACROSS THE BATCHES THAT COVER IT. `allocate` says so in its
+	own docstring — one Stock Entry row carries one `batch_no`, so a line
+	needing more than one batch becomes more than one row. Taking only the
+	first pick and leaving the whole quantity on it is how a batch holding
+	10,000 is asked for 20,000, and how batch DAIR-2026-00037 reached net
+	-32,381 in the concentrate store.
+
+	A LINE THE SOUND BATCHES CANNOT COVER REFUSES. This used to leave the row
+	blank, reasoning that ERPNext's own error naming the item was more use than
+	a guess. That is true of the error and false of the behaviour: with
+	`auto_create_serial_and_batch_bundle_for_outward` on, ERPNext does not
+	error on a blank row, it PICKS — by a FIFO happy to choose a batch the
+	ledger does not back. Refusing here names the item, the store and the
+	shortfall, and stops the run. It is meant to stop runs that used to limp
+	through.
+
+	Everything else is still swallowed: a feed run must not be lost because
+	this helper had a bad day. The refusal is raised deliberately and is let
+	through.
 	"""
 	try:
 		rows = _tracked_rows(doc)
 		if not rows:
 			return 0
-
-		available = available_in_store(
-			[(r.item_code, r.s_warehouse) for r in rows]
-		)
-		today = frappe.utils.today()
-
-		filled = 0
-		fillers = []
-		for r in rows:
-			pool = available.get((r.item_code, r.s_warehouse), [])
-			plan = batch_suggestion.allocate(r.qty, pool, today)
-			if not plan["picks"]:
-				# Nothing in that store. Left blank on purpose — see the
-				# docstring; a wrong batch that submits is worse than a clear
-				# refusal naming the item.
-				continue
-			chosen = plan["picks"][0]["batch_no"]
-			r.batch_no = chosen
-			# NAMING THE BATCH IS NOT ENOUGH ON ITS OWN — upande_scp measured
-			# this on this same site (32dd07b). With Stock Settings'
-			# `auto_create_serial_and_batch_bundle_for_outward` on, which it is
-			# here AND on live, ERPNext builds its own Serial and Batch Bundle
-			# for every outgoing row by its own FIFO rule and then refuses:
-			#
-			#   At row 1: Serial and Batch Bundle ... has already created.
-			#   Please remove the values from the serial no or batch no fields.
-			#
-			# So the batch chosen above is either replaced by ERPNext's own or
-			# the entry never leaves. The row has to say it is using the plain
-			# batch fields. Set only on rows this actually filled: a row left
-			# blank is left entirely alone, so ERPNext handles it as it would
-			# have anyway.
-			r.use_serial_batch_fields = 1
-			filled += 1
-			if batch_suggestion.is_placeholder(chosen):
-				fillers.append(f"{r.item_code}={chosen}")
-
-		if fillers:
-			# Worth a line in the log: it means the real batches for that feed
-			# have run out or were never received, and the run is eating
-			# migration stock that does not exist.
-			frappe.logger("livestock_batches").warning(
-				"feed transfer fell back to migration placeholder batches: "
-				+ ", ".join(fillers)
-			)
-		return filled
+		plan = _plan_for(rows)
+	except frappe.ValidationError:
+		raise
 	except Exception:
 		frappe.logger("livestock_batches").warning(
-			"could not assign batches; leaving the rows as they were",
-			exc_info=True,
+			"could not assign batches; leaving the rows as they were", exc_info=True
 		)
 		return 0
+
+	short = [
+		"{0}: {1:g} short in {2}".format(r.item_code, gap, r.s_warehouse)
+		for r, _picks, gap in plan
+		if gap > 0 or not _picks
+	]
+	if short:
+		frappe.throw(
+			_("No batch in the store can cover this run: {0}.").format("; ".join(short)),
+			title=_("Not enough batched stock"),
+		)
+
+	try:
+		filled = _apply(doc, plan)
+	except Exception:
+		frappe.logger("livestock_batches").warning(
+			"could not apply the batch plan; leaving the rows as they were", exc_info=True
+		)
+		return 0
+	return filled
+
+
+def _apply(doc, plan):
+	"""Rewrite `doc.items`, splitting each planned row across its batches."""
+	by_row = {id(r): picks for r, picks, _short in plan}
+	rebuilt = []
+	filled = 0
+	fillers = []
+
+	for row in doc.get("items") or []:
+		picks = by_row.get(id(row))
+		if not picks:
+			rebuilt.append(row)
+			continue
+		for n, pick in enumerate(picks):
+			# The first pick keeps the original row so anything the caller set
+			# on it — cost centre, expense account, the employee grid — stays
+			# put. The rest are copies of it with their own batch and quantity.
+			target = row if n == 0 else _copy_row(doc, row)
+			target.qty = flt(pick["qty"])
+			target.batch_no = pick["batch_no"]
+			# See upande_scp 32dd07b: naming the batch is not enough with
+			# auto-bundle on, or ERPNext replaces the pick or refuses the submit.
+			target.use_serial_batch_fields = 1
+			rebuilt.append(target)
+			filled += 1
+			if batch_suggestion.is_placeholder(pick["batch_no"]):
+				fillers.append(f"{row.item_code}={pick['batch_no']}")
+
+	doc.set("items", rebuilt)
+	for n, row in enumerate(rebuilt, start=1):
+		if hasattr(row, "idx") or isinstance(row, dict):
+			row.idx = n
+
+	if fillers:
+		# The real batches for that feed have run out or were never received,
+		# and the run is eating migration stock that does not exist.
+		frappe.logger("livestock_batches").warning(
+			"feed transfer fell back to migration placeholder batches: " + ", ".join(fillers)
+		)
+	return filled
+
+
+def _copy_row(doc, row):
+	"""Another Stock Entry row exactly like `row`, for a second batch."""
+	try:
+		copy = doc.append("items", {})
+		for field, value in (row.as_dict() if hasattr(row, "as_dict") else dict(row)).items():
+			if field in ("name", "idx", "creation", "modified"):
+				continue
+			setattr(copy, field, value)
+		# `append` already put it on the doc; `_apply` rebuilds the list itself.
+		if doc.get("items") and doc.get("items")[-1] is copy:
+			doc.get("items").pop()
+		return copy
+	except Exception:
+		# A plain dict row in a test, or a doc that cannot append: a shallow
+		# copy carries every field the splitter needs.
+		return type(row)(dict(row)) if isinstance(row, dict) else row

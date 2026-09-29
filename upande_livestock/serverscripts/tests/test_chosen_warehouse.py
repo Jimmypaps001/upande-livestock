@@ -57,11 +57,18 @@ class Row(dict):
 
 
 class Doc:
+	"""Enough Stock Entry for the splitter: a line needing two batches becomes
+	two rows, so the assigner replaces `items` rather than only mutating it."""
+
 	def __init__(self, rows):
-		self._rows = rows
+		self._rows = list(rows)
 
 	def get(self, key):
 		return self._rows if key == "items" else None
+
+	def set(self, key, value):
+		if key == "items":
+			self._rows = list(value)
 
 
 class TestNamingTheSourceNarrowsTheSearch(unittest.TestCase):
@@ -128,7 +135,10 @@ class TestTheBatchFollowsTheStore(unittest.TestCase):
 		rows = [Row(item_code="Silage", qty=10, s_warehouse="Silage Pit 2 below Spray Race - KR")]
 		with patch.object(B, "available_in_store", side_effect=spy), patch.object(
 			B, "_tracked_rows", return_value=rows
-		):
+		), patch.object(
+			B.batch_suggestion, "allocate",
+			return_value={"picks": [{"batch_no": "B1", "qty": 10}], "short": 0.0},
+		), patch.object(B.batch_suggestion, "is_placeholder", return_value=False):
 			B.assign_batches(Doc(rows))
 		self.assertEqual(asked["pairs"], [("Silage", "Silage Pit 2 below Spray Race - KR")])
 
@@ -149,7 +159,8 @@ class TestNamingTheBatchIsNotEnough(unittest.TestCase):
 		with patch.object(B, "_tracked_rows", return_value=rows), patch.object(
 			B, "available_in_store", return_value=pool
 		), patch.object(
-			B.batch_suggestion, "allocate", return_value={"picks": [{"batch_no": "B1"}]}
+			B.batch_suggestion, "allocate",
+			return_value={"picks": [{"batch_no": "B1", "qty": 10}], "short": 0.0},
 		), patch.object(B.batch_suggestion, "is_placeholder", return_value=False):
 			B.assign_batches(Doc(rows))
 		self.assertEqual(rows[0]["batch_no"], "B1")
@@ -158,16 +169,19 @@ class TestNamingTheBatchIsNotEnough(unittest.TestCase):
 			"without this ERPNext replaces the pick by its own FIFO, or refuses the submit",
 		)
 
-	def test_a_row_it_could_not_fill_is_left_entirely_alone(self):
-		"""Blank on purpose. A wrong batch that submits is worse than ERPNext's
-		own refusal, which names the item."""
+	def test_a_row_it_could_not_fill_refuses(self):
+		"""It used to be left blank. ERPNext does not error on a blank row with
+		auto-bundle on — it picks, by a FIFO that will take a batch the ledger
+		does not back. See test_feed_batches_split."""
 		rows = [Row(item_code="Silage", qty=10, s_warehouse="W", batch_no="")]
 		with patch.object(B, "_tracked_rows", return_value=rows), patch.object(
 			B, "available_in_store", return_value={}
-		), patch.object(B.batch_suggestion, "allocate", return_value={"picks": []}):
-			B.assign_batches(Doc(rows))
+		), patch.object(
+			B.batch_suggestion, "allocate", return_value={"picks": [], "short": 10.0}
+		):
+			with self.assertRaises(frappe.ValidationError):
+				B.assign_batches(Doc(rows))
 		self.assertEqual(rows[0]["batch_no"], "")
-		self.assertIsNone(rows[0].get("use_serial_batch_fields"))
 
 	def test_the_setting_that_makes_this_necessary_is_really_on(self):
 		"""If this ever goes off, the flag is harmless rather than required —

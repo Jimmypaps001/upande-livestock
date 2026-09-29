@@ -25,6 +25,8 @@ Run:
 import unittest
 from unittest.mock import patch
 
+import frappe
+
 from upande_livestock.serverscripts.common import batches as B
 
 
@@ -42,11 +44,20 @@ class Row(dict):
 
 
 class Doc:
+	"""Enough Stock Entry for the splitter.
+
+	`set` is not decoration: a line needing two batches becomes two rows, so
+	the assigner REPLACES `items` rather than only mutating what is there."""
+
 	def __init__(self, rows):
-		self._rows = rows
+		self._rows = list(rows)
 
 	def get(self, key):
 		return self._rows if key == "items" else None
+
+	def set(self, key, value):
+		if key == "items":
+			self._rows = list(value)
 
 
 def row(item, qty, warehouse="Feed Store - Raw materials - KR", batch_no=""):
@@ -130,12 +141,16 @@ class TestWhatItLeavesAlone(_Wired):
 		r = Row(item_code="Limestone", qty=50, s_warehouse=None, batch_no="")
 		self.assertEqual(self.run_assign(Doc([r])), 0)
 
-	def test_a_row_with_no_stock_is_left_blank_not_guessed(self):
-		"""ERPNext's own error naming the item is more use than a wrong batch
-		that submits."""
+	def test_a_row_with_no_stock_now_refuses_rather_than_going_blank(self):
+		"""It used to be left blank, reasoning that ERPNext's own error naming
+		the item beat a guess. The error never came: with auto-bundle on,
+		ERPNext PICKS on a blank row, by a FIFO that will choose a batch the
+		ledger does not back — which is how DAIR-2026-00037 reached -32,381 in
+		the concentrate store. See test_feed_batches_split."""
 		self.available = {}
 		r = row("Limestone", 50)
-		self.assertEqual(self.run_assign(Doc([r])), 0)
+		with self.assertRaises(frappe.ValidationError):
+			self.run_assign(Doc([r]))
 		self.assertEqual(r.batch_no, "")
 
 

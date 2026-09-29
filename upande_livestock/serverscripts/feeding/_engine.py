@@ -180,6 +180,26 @@ def _target_warehouse(chosen=None):
 	return (chosen or "").strip() or _feed_store()
 
 
+def _stamp_chosen_batches(entry, batch_by_item):
+	"""Put the operator's chosen batch on the row for that item.
+
+	Only outgoing rows, and only ones with no batch yet. The rule in
+	`common/batches` skips any row that names a batch, so a choice made here
+	survives it untouched — including the choice to take a batch the rule would
+	not have proposed, which is the whole point of offering a picker.
+	"""
+	if not batch_by_item:
+		return
+	for row in entry.get("items") or []:
+		if not row.get("s_warehouse") or (row.get("batch_no") or "").strip():
+			continue
+		chosen = (batch_by_item.get(row.item_code) or "").strip()
+		if chosen:
+			row.batch_no = chosen
+			# See upande_scp 32dd07b — naming it is not enough on its own.
+			row.use_serial_batch_fields = 1
+
+
 def _source_by_item(lines, overrides=None):
 	"""Which store each line is drawn from: `_pick_source`'s choice, overridden.
 
@@ -493,6 +513,7 @@ def _run_manufacture(
 	source_warehouse=None,
 	target_warehouse=None,
 	source_by_item=None,
+	batch_by_item=None,
 ):
 	"""Work Order -> Material Transfer for Manufacture -> Manufacture.
 
@@ -601,6 +622,11 @@ def _run_manufacture(
 	# before migration filler, then first-expiry-first-out. Without it the
 	# transfer either refuses outright or takes a `-PREMIGRATION` batch, which
 	# is what all 1,394 batched feed rows before this did.
+	# A batch the operator chose wins for that item. `assign_batches` leaves a
+	# row that already names one alone, so this is a preference expressed
+	# before the rule runs rather than a fight with it — and every line the
+	# operator did not name is still filled, split and blocked by the rule.
+	_stamp_chosen_batches(transfer, batch_by_item)
 	livestock_batches.assign_batches(transfer)
 	# Karen Roses has no default cost centre and the dairy items carry none
 	# either, so ERPNext's two-step fallback runs out and it refuses the entry
@@ -798,7 +824,7 @@ def manufacture_herd_feed(
 
 def manufacture_concentrate(
 	item_code, qty=None, bom_no=None, allow_shortage=False,
-	source_warehouse=None, target_warehouse=None, source_by_item=None,
+	source_warehouse=None, target_warehouse=None, source_by_item=None, batch_by_item=None,
 ):
 	"""Stage A-prime — manufacture a concentrate so a TMR run can consume it.
 
@@ -820,6 +846,7 @@ def manufacture_concentrate(
 		source_warehouse=source_warehouse,
 		target_warehouse=target_warehouse,
 		source_by_item=source_by_item,
+		batch_by_item=batch_by_item,
 	)
 	frappe.db.commit()
 	res["uom"] = bom.uom

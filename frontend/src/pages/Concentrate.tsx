@@ -9,7 +9,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { isError } from "@/lib/frappe";
-import { concentrates, manufactureConcentrate, setConcentrate, type Concentrate } from "@/lib/feeding";
+import {
+  concentrates,
+  feedBatches,
+  manufactureConcentrate,
+  setConcentrate,
+  type BatchPlan,
+  type Concentrate,
+} from "@/lib/feeding";
 import { getHerdRations, type FeedChoice } from "@/lib/herds";
 import { fmt, num } from "@/lib/utils";
 
@@ -31,6 +38,16 @@ import { fmt, num } from "@/lib/utils";
 
 const DEFAULT_BATCH = 1000;
 
+/** What the rule proposes for a line, said in one line. Blank plan means the
+ *  page has not asked yet; an empty proposal means the store cannot cover it
+ *  and the run will refuse rather than pick a batch the ledger does not back. */
+function planLabel(plan?: BatchPlan): string {
+  if (!plan) return "Chosen by the rule";
+  if (!plan.picks.length) return "Nothing in this store — the run will refuse";
+  const head = plan.picks.map((p) => `${p.batch_no} (${fmt(p.qty)})`).join(" + ");
+  return plan.short > 0 ? `${head} · short ${fmt(plan.short)}` : head;
+}
+
 type Row = { key: number; item_code: string; qty: string };
 let nextKey = 1;
 
@@ -41,6 +58,8 @@ export function Concentrate() {
   const [open, setOpen] = useState<string | null>(null);
   const [mixQty, setMixQty] = useState<Record<string, string>>({});
   const [lineStore, setLineStore] = useState<Record<string, string>>({});
+  const [lineBatch, setLineBatch] = useState<Record<string, string>>({});
+  const [plans, setPlans] = useState<Record<string, BatchPlan>>({});
   const [to, setTo] = useState("");
   const [mixing, setMixing] = useState<string | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
@@ -87,6 +106,33 @@ export function Concentrate() {
     const q = num(qtyFor(c));
     if (q > 0) await load({ [c.item_code]: q });
   }
+
+  /** What the rule would take for this recipe, so the page can show it and
+   *  let the operator change it before anything is posted. */
+  const loadPlan = useCallback(
+    async (c: Concentrate) => {
+      const lines = c.lines
+        .map((l) => ({
+          item_code: l.item_code,
+          qty: l.required_qty,
+          warehouse: lineStore[`${c.item_code}:${l.item_code}`] || l.source_warehouse || "",
+        }))
+        .filter((l) => l.warehouse);
+      if (!lines.length) return;
+      const r = await feedBatches(lines);
+      if (isError(r)) return;
+      setPlans((s) => {
+        const next = { ...s };
+        for (const p of r.lines) next[`${c.item_code}:${p.item_code}`] = p;
+        return next;
+      });
+    },
+    [lineStore],
+  );
+
+  useEffect(() => {
+    if (chosen) void loadPlan(chosen);
+  }, [chosen, loadPlan]);
 
   function edit(c: Concentrate) {
     setEditing(true);
@@ -141,9 +187,11 @@ export function Concentrate() {
       return;
     }
     const picks: Record<string, string> = {};
+    const batches: Record<string, string> = {};
     for (const l of c.lines) {
-      const w = lineStore[`${c.item_code}:${l.item_code}`];
-      if (w) picks[l.item_code] = w;
+      const key = `${c.item_code}:${l.item_code}`;
+      if (lineStore[key]) picks[l.item_code] = lineStore[key];
+      if (lineBatch[key]) batches[l.item_code] = lineBatch[key];
     }
     setMixing(c.item_code);
     setProblem(null);
@@ -153,6 +201,7 @@ export function Concentrate() {
       bom_no: c.bom_no,
       target_warehouse: to,
       source_by_item: Object.keys(picks).length ? JSON.stringify(picks) : undefined,
+      batch_by_item: Object.keys(batches).length ? JSON.stringify(batches) : undefined,
     });
     setMixing(null);
     if (isError(r)) {
@@ -312,6 +361,30 @@ export function Concentrate() {
                                 ]}
                                 label="Source store"
                                 placeholder="As chosen"
+                              />
+                            </div>
+                            <div className="flex min-w-[240px] flex-col gap-1.5">
+                              <Label htmlFor={`b-${key}`}>Batch</Label>
+                              <Picker
+                                id={`b-${key}`}
+                                value={lineBatch[key] ?? ""}
+                                onChange={(next) =>
+                                  setLineBatch((s) => ({ ...s, [key]: next }))
+                                }
+                                options={[
+                                  {
+                                    value: "",
+                                    label: planLabel(plans[key]),
+                                  },
+                                  ...(plans[key]?.available ?? []).map((b) => ({
+                                    value: b.batch_no,
+                                    label: `${b.batch_no} · ${fmt(b.qty)} here${
+                                      b.expiry_date ? ` · expires ${b.expiry_date}` : ""
+                                    }`,
+                                  })),
+                                ]}
+                                label="Batch"
+                                placeholder="Chosen by the rule"
                               />
                             </div>
                           </div>
