@@ -118,7 +118,7 @@ class TestStampingTheRows(unittest.TestCase):
 		rows = [Row(cost_center="")]
 		seen = {}
 
-		def spy(company=None, herd=None):
+		def spy(company=None, herd=None, concentrate=False):
 			seen["company"] = company
 			return "Dairy - KR", "herd"
 
@@ -364,3 +364,77 @@ class TestTheCompanyDefaultIsNotADeliberateChoice(unittest.TestCase):
 		):
 			self.assertEqual(CC.stamp(self._doc(rows), herd="STEAMERS"), 1)
 		self.assertEqual(rows[0]["cost_center"], "Dairy - KR")
+
+
+class TestTheConcentrateHasACostCentreOfItsOwn(unittest.TestCase):
+	"""A mix has no herd, so the herd tier cannot answer for it.
+
+	It fell to the per-company row, which is right but blunt: that row is the
+	answer for everything herdless, and a farm may want the mixer booked
+	somewhere of its own. So a concentrate asks for its own setting first.
+
+	NOT simply "no herd", which would be the easy and wrong rule — a drug round
+	covering two herds has no herd either, and charging it to the concentrate
+	centre would be a quiet lie. `_run_manufacture` already knows which mix it
+	is running; the flag comes from there.
+	"""
+
+	def test_the_field_is_on_livestock_settings(self):
+		f = frappe.get_meta(CC.SETTINGS).get_field(CC.CONCENTRATE_SETTING)
+		self.assertIsNotNone(f, "Livestock Settings has no concentrate cost centre")
+		self.assertEqual(f.fieldtype, "Link")
+		self.assertEqual(f.options, "Cost Center")
+
+	def test_the_settings_page_offers_it(self):
+		"""The page reads its controls off the meta, so a scalar shows up by
+		itself — this pins that it did not land as a layout or table field."""
+		from upande_livestock.serverscripts.settings import _shared
+
+		self.assertIn(CC.CONCENTRATE_SETTING, _shared.editable_fieldnames())
+
+	def test_the_page_is_warned_that_it_posts(self):
+		"""It books money somewhere. A wrong value does not raise, it posts."""
+		from upande_livestock.serverscripts.settings import _shared
+
+		self.assertIn(CC.CONCENTRATE_SETTING, _shared.POSTING_LINKS)
+
+	def test_a_mix_uses_it_before_the_per_company_row(self):
+		with patch.object(CC, "herd_cost_center", return_value=None), patch.object(
+			CC, "concentrate_cost_center", return_value="Mill - KR"
+		), patch.object(CC, "setting_cost_center", side_effect=AssertionError("must not be asked")):
+			self.assertEqual(
+				CC.resolve_with_source("Karen Roses", concentrate=True), ("Mill - KR", "concentrate")
+			)
+
+	def test_unset_falls_to_the_per_company_row(self):
+		with patch.object(CC, "herd_cost_center", return_value=None), patch.object(
+			CC, "concentrate_cost_center", return_value=None
+		), patch.object(CC, "setting_cost_center", return_value="Dairy - KR"):
+			self.assertEqual(
+				CC.resolve_with_source("Karen Roses", concentrate=True), ("Dairy - KR", "setting")
+			)
+
+	def test_something_that_is_not_a_mix_never_touches_it(self):
+		"""A drug round spanning two herds is herdless and is not a mix."""
+		with patch.object(CC, "herd_cost_center", return_value=None), patch.object(
+			CC, "concentrate_cost_center", side_effect=AssertionError("must not be asked")
+		), patch.object(CC, "setting_cost_center", return_value="Dairy - KR"):
+			self.assertEqual(CC.resolve_with_source("Karen Roses"), ("Dairy - KR", "setting"))
+
+	def test_a_herd_still_wins_over_it(self):
+		"""Nothing herd-shaped is a concentrate, but if a caller says both, the
+		more specific fact is the herd."""
+		with patch.object(CC, "herd_cost_center", return_value="Dairy - KR"), patch.object(
+			CC, "concentrate_cost_center", side_effect=AssertionError("must not be asked")
+		):
+			self.assertEqual(
+				CC.resolve_with_source("Karen Roses", herd="STEAMERS", concentrate=True),
+				("Dairy - KR", "herd"),
+			)
+
+	def test_an_unusable_value_is_passed_over(self):
+		"""A group, or one belonging to another company — same guard as the rest."""
+		with patch.object(frappe.db, "get_single_value", return_value="Some Group - KR"), patch.object(
+			CC, "usable", return_value=False
+		):
+			self.assertIsNone(CC.concentrate_cost_center("Karen Roses"))

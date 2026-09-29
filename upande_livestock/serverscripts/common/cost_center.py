@@ -56,6 +56,8 @@ from frappe import _
 SETTINGS = "Livestock Settings"
 SETTINGS_TABLE = "custom_company_cost_centers"
 SETTINGS_TABLE_DOCTYPE = "Livestock Cost Center Default"
+#: Where a concentrate mix books to, when the farm wants one of its own.
+CONCENTRATE_SETTING = "custom_concentrate_cost_center"
 
 
 def usable(cost_center, company=None) -> bool:
@@ -158,6 +160,27 @@ def setting_cost_center(company):
 	return None
 
 
+def concentrate_cost_center(company=None):
+	"""The cost centre a CONCENTRATE mix books to, if the farm named one.
+
+	A mix has no herd — it is made for the store and eaten by several herds —
+	so the herd tier cannot answer for it, and it fell to the per-company row.
+	That row is right but blunt: it answers for everything herdless, and a farm
+	may want the mixer booked somewhere of its own.
+
+	Asked for by name rather than read straight off the Single, for the same
+	reason the rest of this module is: a deploy that lands before its migrate
+	must fall through, not raise.
+	"""
+	try:
+		if not frappe.get_meta(SETTINGS).has_field(CONCENTRATE_SETTING):
+			return None
+		cc = frappe.db.get_single_value(SETTINGS, CONCENTRATE_SETTING)
+	except Exception:
+		return None
+	return cc if usable(cc, company) else None
+
+
 def company_cost_center(company):
 	"""Tier 3. ERPNext's own default for the company — the announced fallback."""
 	if not company:
@@ -169,10 +192,15 @@ def company_cost_center(company):
 	return cc if usable(cc, company) else None
 
 
-def resolve_with_source(company=None, herd=None):
-	"""``(cost_centre, tier)`` where tier is "herd", "setting", "company" or None.
+def resolve_with_source(company=None, herd=None, concentrate=False):
+	"""``(cost_centre, tier)``: "herd", "concentrate", "setting", "company" or None.
 
 	`stamp` needs the tier, because only the company default is announced.
+
+	`concentrate` is told to it, never inferred from a missing herd. A drug
+	round covering two herds is herdless too, and booking that to the mixer's
+	cost centre would be a quiet lie; `_run_manufacture` already knows which
+	mix it is running and says so.
 	"""
 	if not company:
 		company = frappe.db.get_single_value(SETTINGS, "custom_default_company")
@@ -180,6 +208,11 @@ def resolve_with_source(company=None, herd=None):
 	cc = herd_cost_center(herd, company)
 	if cc:
 		return cc, "herd"
+
+	if concentrate:
+		cc = concentrate_cost_center(company)
+		if cc:
+			return cc, "concentrate"
 
 	cc = setting_cost_center(company)
 	if cc:
@@ -192,9 +225,9 @@ def resolve_with_source(company=None, herd=None):
 	return None, None
 
 
-def resolve(company=None, herd=None):
+def resolve(company=None, herd=None, concentrate=False):
 	"""The cost centre for a livestock movement, or None to leave it to ERPNext."""
-	return resolve_with_source(company, herd)[0]
+	return resolve_with_source(company, herd, concentrate)[0]
 
 
 def _announce(cost_center, herd, company):
@@ -224,7 +257,7 @@ def _announce(cost_center, herd, company):
 		)
 
 
-def stamp(doc, company=None, herd=None) -> int:
+def stamp(doc, company=None, herd=None, concentrate=False) -> int:
 	"""Put the resolved cost centre on every row that has none. Returns how many.
 
 	Only blank rows: a row that already names one was set deliberately, whether
@@ -237,7 +270,7 @@ def stamp(doc, company=None, herd=None) -> int:
 	"""
 	try:
 		company = company or getattr(doc, "company", None)
-		cc, source = resolve_with_source(company, herd)
+		cc, source = resolve_with_source(company, herd, concentrate)
 		if not cc:
 			return 0
 		# What ERPNext already put there. A row equal to it was not chosen by
