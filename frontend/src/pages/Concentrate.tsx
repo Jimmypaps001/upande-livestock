@@ -386,6 +386,20 @@ export function Concentrate() {
                                 label="Batch"
                                 placeholder="Chosen by the rule"
                               />
+                              {/* The proposal, shown as text rather than as the
+                                  picker's empty option — Picker drops an option
+                                  with an empty value, so a rule nobody can see
+                                  would be exactly the problem this page exists
+                                  to fix. */}
+                              <span
+                                className={
+                                  plans[key] && !plans[key].picks.length
+                                    ? "text-[11px] text-[var(--sd-danger,#dc2626)]"
+                                    : "text-[11px] text-[var(--sd-quiet)]"
+                                }
+                              >
+                                {lineBatch[key] ? "Chosen by you" : planLabel(plans[key])}
+                              </span>
                             </div>
                           </div>
                         );
