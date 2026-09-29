@@ -297,3 +297,70 @@ class TestTheHerdFieldCanActuallyBeSet(unittest.TestCase):
 		herd, so "the herd's cost centre" had two answers."""
 		fields = [f.fieldname for f in frappe.get_meta("Herds").fields if "cost_center" in f.fieldname]
 		self.assertEqual(fields, ["cost_center"])
+
+
+class TestTheCompanyDefaultIsNotADeliberateChoice(unittest.TestCase):
+	"""The rule that made the whole chain a no-op on feed manufacture.
+
+	`stamp` only ever filled BLANK rows, reasoning that a row already naming a
+	cost centre had been set deliberately — by an Item Default or by a person —
+	and that this is a fallback rather than a policy. Sound, and false about
+	what actually arrives: ERPNext's own `make_stock_entry` fills every row with
+	the COMPANY DEFAULT before this code sees it. Measured on kaitet.local, a
+	fresh Calves Meal transfer arrives with all five rows on `Main - KR`.
+
+	So every feed row was "already set", nothing was ever stamped, and the herd
+	tier changed nothing — while `resolve_with_source` cheerfully returned
+	`Dairy - KR` when asked. The chain was right and reached no document.
+
+	A value that equals the company default is not a decision, it is the absence
+	of one, and a more specific answer replaces it. Anything else is left alone:
+	an Item Default that differs, or a centre somebody typed, is a real choice.
+	"""
+
+	def _doc(self, rows):
+		return Doc(rows, "Karen Roses")
+
+	def test_the_company_default_is_replaced_by_the_herds_own(self):
+		rows = [Row(cost_center="Main - KR")]
+		with patch.object(CC, "resolve_with_source", return_value=("Dairy - KR", "herd")), patch.object(
+			CC, "company_cost_center", return_value="Main - KR"
+		):
+			self.assertEqual(CC.stamp(self._doc(rows), herd="STEAMERS"), 1)
+		self.assertEqual(rows[0]["cost_center"], "Dairy - KR")
+
+	def test_the_company_default_is_replaced_by_the_settings_row(self):
+		"""A concentrate has no herd; the per-company row is its answer."""
+		rows = [Row(cost_center="Main - KR")]
+		with patch.object(CC, "resolve_with_source", return_value=("Dairy - KR", "setting")), patch.object(
+			CC, "company_cost_center", return_value="Main - KR"
+		):
+			self.assertEqual(CC.stamp(self._doc(rows)), 1)
+		self.assertEqual(rows[0]["cost_center"], "Dairy - KR")
+
+	def test_a_centre_somebody_chose_is_still_left_alone(self):
+		"""Differs from the company default, so it is a real decision."""
+		rows = [Row(cost_center="Post Harvest - KR")]
+		with patch.object(CC, "resolve_with_source", return_value=("Dairy - KR", "herd")), patch.object(
+			CC, "company_cost_center", return_value="Main - KR"
+		):
+			self.assertEqual(CC.stamp(self._doc(rows), herd="STEAMERS"), 0)
+		self.assertEqual(rows[0]["cost_center"], "Post Harvest - KR")
+
+	def test_the_company_tier_never_overwrites_anything(self):
+		"""Replacing the company default with the company default is churn, and
+		the announcement that goes with it would be a lie."""
+		rows = [Row(cost_center="Main - KR")]
+		with patch.object(CC, "resolve_with_source", return_value=("Main - KR", "company")), patch.object(
+			CC, "company_cost_center", return_value="Main - KR"
+		):
+			self.assertEqual(CC.stamp(self._doc(rows)), 0)
+		self.assertEqual(rows[0]["cost_center"], "Main - KR")
+
+	def test_blank_rows_are_still_filled(self):
+		rows = [Row(cost_center="")]
+		with patch.object(CC, "resolve_with_source", return_value=("Dairy - KR", "herd")), patch.object(
+			CC, "company_cost_center", return_value="Main - KR"
+		):
+			self.assertEqual(CC.stamp(self._doc(rows), herd="STEAMERS"), 1)
+		self.assertEqual(rows[0]["cost_center"], "Dairy - KR")
