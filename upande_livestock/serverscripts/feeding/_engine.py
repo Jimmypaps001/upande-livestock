@@ -671,8 +671,15 @@ def manufacture_herd_feed(
 	heads=None,
 	feed_mode="System",
 	source_warehouse=None,
+	source_by_item=None,
+	batch_by_item=None,
 ):
 	"""Manufacture the herd's TMR and issue the whole batch to that herd.
+
+	`source_by_item` and `batch_by_item` are the operator's choices per
+	ingredient — the silage from a pit, the concentrate from the mixing store,
+	each with its own batch. One store for a whole TMR was never the shape of
+	the problem; see `_source_by_item`.
 
 	`source_warehouse` names the store the ingredients are taken from, and the
 	same store the finished batch is issued out of. Unnamed, every configured
@@ -792,6 +799,8 @@ def manufacture_herd_feed(
 		already_verified=True,
 		posting_time=run_posting_time,
 		source_warehouse=source_warehouse,
+		source_by_item=source_by_item,
+		batch_by_item=batch_by_item,
 	)
 	issue = _issue_feed(
 		herd,

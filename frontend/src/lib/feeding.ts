@@ -236,6 +236,10 @@ export function manufactureFeed(args: {
   /** The store the ingredients come out of, and the one the batch is issued
    *  from. Unnamed, every configured feed store is searched in order. */
   source_warehouse?: string;
+  /** A store per ingredient, overriding what the engine chose for that line. */
+  source_by_item?: string;
+  /** A batch per ingredient; blank lets the rule decide, split FEFO. */
+  batch_by_item?: string;
 }): Promise<Envelope<FeedRunResult>> {
   return call(RECORD_FEEDING, { payload: { action: "manufacture", ...args } });
 }
@@ -268,6 +272,9 @@ export function manualFeed(args: {
  *  Read-only — ask again whenever a store or a tonnage changes. */
 export type BatchPlan = {
   item_code: string;
+  /** Batch tracked at all. An untracked line is never asked for a batch, so it
+   *  is never short of one and gets no picker. */
+  tracked: boolean;
   warehouse: string;
   required_qty: number;
   picks: Array<{ batch_no: string; qty: number }>;

@@ -216,7 +216,7 @@ class TestWhatThePickerIsOffered(unittest.TestCase):
 		), patch.object(
 			B.batch_suggestion, "allocate",
 			return_value={"picks": [{"batch_no": "B1", "qty": 40}], "short": 0.0},
-		):
+		), patch.object(B, "_tracked_items", return_value={"Silage"}):
 			plan = B.suggest_batches([{"item_code": "Silage", "qty": 40, "warehouse": "W"}])
 		self.assertEqual(plan[0]["item_code"], "Silage")
 		self.assertEqual(plan[0]["picks"], [{"batch_no": "B1", "qty": 40}])
@@ -231,15 +231,52 @@ class TestWhatThePickerIsOffered(unittest.TestCase):
 		with patch.object(B, "available_in_store", return_value={POOL_KEY: pool}), patch.object(
 			B.batch_suggestion, "allocate",
 			return_value={"picks": [{"batch_no": "B1", "qty": 40}], "short": 0.0},
-		):
+		), patch.object(B, "_tracked_items", return_value={"Silage"}):
 			plan = B.suggest_batches([{"item_code": "Silage", "qty": 40, "warehouse": "W"}])
 		self.assertEqual([b["batch_no"] for b in plan[0]["available"]], ["B1", "B2"])
 
 	def test_a_line_with_nothing_says_so_rather_than_vanishing(self):
 		with patch.object(B, "available_in_store", return_value={}), patch.object(
 			B.batch_suggestion, "allocate", return_value={"picks": [], "short": 40.0}
-		):
+		), patch.object(B, "_tracked_items", return_value={"Silage"}):
 			plan = B.suggest_batches([{"item_code": "Silage", "qty": 40, "warehouse": "W"}])
 		self.assertEqual(plan[0]["picks"], [])
 		self.assertEqual(plan[0]["short"], 40.0)
 		self.assertEqual(plan[0]["available"], [])
+
+
+class TestAnUntrackedItemIsNotAskedForABatch(unittest.TestCase):
+	"""Most feed on this farm is not batch tracked at all.
+
+	`assign_batches` only ever looks at rows whose item has `has_batch_no`, so
+	an untracked line is never blocked and never needs a batch. The picker has
+	to know that too, or every silage line on the Feeding page reads "the run
+	will refuse" — a warning that is false, on the lines there are most of.
+	"""
+
+	def test_the_suggestion_says_whether_the_item_is_tracked(self):
+		with patch.object(B, "available_in_store", return_value={}), patch.object(
+			B.batch_suggestion, "allocate", return_value={"picks": [], "short": 40.0}
+		), patch.object(B, "_tracked_items", return_value=set()):
+			plan = B.suggest_batches([{"item_code": "Silage", "qty": 40, "warehouse": "W"}])
+		self.assertIn("tracked", plan[0])
+		self.assertFalse(plan[0]["tracked"])
+
+	def test_a_tracked_item_says_so(self):
+		with patch.object(
+			B, "available_in_store",
+			return_value={("Wheat Bran", "W"): [{"batch_no": "B1", "qty": 100, "expiry_date": None}]},
+		), patch.object(
+			B.batch_suggestion, "allocate",
+			return_value={"picks": [{"batch_no": "B1", "qty": 40}], "short": 0.0},
+		), patch.object(B, "_tracked_items", return_value={"Wheat Bran"}):
+			plan = B.suggest_batches([{"item_code": "Wheat Bran", "qty": 40, "warehouse": "W"}])
+		self.assertTrue(plan[0]["tracked"])
+
+	def test_an_untracked_item_is_never_short(self):
+		"""It cannot be: nothing will ask it for a batch."""
+		with patch.object(B, "available_in_store", return_value={}), patch.object(
+			B.batch_suggestion, "allocate", return_value={"picks": [], "short": 40.0}
+		), patch.object(B, "_tracked_items", return_value=set()):
+			plan = B.suggest_batches([{"item_code": "Silage", "qty": 40, "warehouse": "W"}])
+		self.assertEqual(plan[0]["short"], 0.0)

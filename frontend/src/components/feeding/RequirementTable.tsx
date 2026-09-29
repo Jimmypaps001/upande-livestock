@@ -6,7 +6,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import type { FeedLine } from "@/lib/feeding";
+import { Picker } from "@/components/ui/picker";
+import type { BatchPlan, FeedLine } from "@/lib/feeding";
 import { cn, fmt } from "@/lib/utils";
 
 /**
@@ -16,14 +17,35 @@ import { cn, fmt } from "@/lib/utils";
  * (hay: BALE) on top, and underneath it the recipe uom the mixer works to
  * (hay: kg). Both come from the server already resolved — nothing on this
  * page multiplies one into the other.
+ *
+ * FROM AND BATCH ARE PER LINE, when `stores` is given. A TMR draws its silage
+ * from a pit, its concentrate from the mixing store and its hay from the hay
+ * store; one dropdown for the whole run is a run the farm cannot post as it
+ * actually works. Left alone, each line keeps the store the engine chose and
+ * the batch the rule picks — which is shown underneath, because a rule nobody
+ * can see is one nobody can correct.
  */
 export function RequirementTable({
   lines,
   showConcentrateTag,
+  stores,
+  plans,
+  lineStore,
+  lineBatch,
+  onStore,
+  onBatch,
 }: {
   lines: FeedLine[];
   showConcentrateTag?: boolean;
+  /** Offering these turns From and Batch into pickers. */
+  stores?: string[];
+  plans?: Record<string, BatchPlan>;
+  lineStore?: Record<string, string>;
+  lineBatch?: Record<string, string>;
+  onStore?: (itemCode: string, warehouse: string) => void;
+  onBatch?: (itemCode: string, batchNo: string) => void;
 }) {
+  const pickable = !!stores && !!onStore;
   if (!lines?.length) return null;
   return (
     <div className="overflow-x-auto rounded-[var(--sd-radius-lg)] border border-[var(--sd-line)]">
@@ -35,6 +57,7 @@ export function RequirementTable({
             <TableHead className="text-right">Available</TableHead>
             <TableHead className="text-right">Short</TableHead>
             <TableHead>From</TableHead>
+            {pickable && <TableHead>Batch</TableHead>}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -72,13 +95,75 @@ export function RequirementTable({
                   {short > 0 ? fmt(short) : "—"}
                 </TableCell>
                 <TableCell className="text-[12px] text-[var(--sd-muted)]">
-                  {l.source_warehouse || "—"}
+                  {pickable ? (
+                    <Picker
+                      id={`f-from-${l.item_code}`}
+                      value={lineStore?.[l.item_code] ?? ""}
+                      onChange={(next) => onStore?.(l.item_code, next)}
+                      options={[
+                        {
+                          value: "",
+                          label: l.source_warehouse
+                            ? `${l.source_warehouse} (chosen)`
+                            : "As chosen",
+                        },
+                        ...(stores ?? []).map((w) => ({ value: w, label: w })),
+                      ]}
+                      label="Source store"
+                      placeholder={l.source_warehouse || "As chosen"}
+                    />
+                  ) : (
+                    l.source_warehouse || "—"
+                  )}
                   {elsewhere > 0 && (
                     <div className="text-[11px] text-[var(--sd-quiet)]">
                       +{fmt(elsewhere)} elsewhere
                     </div>
                   )}
                 </TableCell>
+                {pickable && (
+                  <TableCell className="text-[12px] text-[var(--sd-muted)]">
+                    {plans?.[l.item_code] && !plans[l.item_code].tracked ? (
+                      // Not batch tracked, so nothing will ever ask it for a
+                      // batch. Offering a picker here would invite a choice
+                      // that cannot be honoured.
+                      <span className="text-[var(--sd-quiet)]">not batched</span>
+                    ) : (
+                      <>
+                    <Picker
+                      id={`f-batch-${l.item_code}`}
+                      value={lineBatch?.[l.item_code] ?? ""}
+                      onChange={(next) => onBatch?.(l.item_code, next)}
+                      options={[
+                        { value: "", label: "Chosen by the rule" },
+                        ...((plans?.[l.item_code]?.available ?? []).map((b) => ({
+                          value: b.batch_no,
+                          label: `${b.batch_no} · ${fmt(b.qty)} here${
+                            b.expiry_date ? ` · expires ${b.expiry_date}` : ""
+                          }`,
+                        }))),
+                      ]}
+                      label="Batch"
+                      placeholder="Chosen by the rule"
+                    />
+                    {/* The proposal in words: Picker drops an empty-valued
+                        option, so this is the only place the rule's own choice
+                        can be read before the run posts. */}
+                    <div
+                      className={
+                        plans?.[l.item_code] && !plans[l.item_code].picks.length
+                          ? "text-[11px] text-[var(--sd-sev-critical)]"
+                          : "text-[11px] text-[var(--sd-quiet)]"
+                      }
+                    >
+                      {lineBatch?.[l.item_code]
+                        ? "Chosen by you"
+                        : batchNote(plans?.[l.item_code])}
+                    </div>
+                      </>
+                    )}
+                  </TableCell>
+                )}
               </TableRow>
             );
           })}
@@ -86,4 +171,13 @@ export function RequirementTable({
       </Table>
     </div>
   );
+}
+
+
+/** What the rule proposes for one line, in a phrase. */
+function batchNote(plan?: BatchPlan): string {
+  if (!plan) return "Chosen by the rule";
+  if (!plan.picks.length) return "Nothing in this store — the run will refuse";
+  const head = plan.picks.map((p) => `${p.batch_no} (${fmt(p.qty)})`).join(" + ");
+  return plan.short > 0 ? `${head} · short ${fmt(plan.short)}` : head;
 }
