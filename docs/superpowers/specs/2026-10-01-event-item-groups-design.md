@@ -11,6 +11,35 @@ lubricant, gloves and a calcium bolus has nowhere to record any of it. Neither
 has Dehorning, which certainly uses a blade and an antiseptic. The farm cannot
 add one, because what an event may consume is a developer's decision today.
 
+**And the biggest drug consumer of all is not an event.** A treatment is a
+`Livestock Health Treatment` row on a `Livestock Health Case` — the case is the
+folder, the treatments are what happens inside it, and an animal is treated
+under an open case or a new one is opened for her. That structure is right and
+is not changing. But it means a design keyed only on `Livestock Event Type`
+reaches every minor consumer and misses the main one.
+
+Three consequences, all live today:
+
+**Every treatment on the live site issues from an empty store.**
+`LivestockHealthCase.post_drug_issue` reads `livestock_stock.drug_warehouse()`
+— the single setting, `Livestock Drug Store - KR`, which has zero stocked bins.
+It does not read `drug_source_warehouses()`, so configuring the drug stores
+does not reach this path: the picker now offers 46 drugs and the issue then
+asks a shelf holding none of them. `issue_items` blocks when the store cannot
+cover, so treatments are refused.
+
+**A treatment cannot name a store or a batch.** `Livestock Drug Issue` carries
+`source_warehouse` and `batch_no`; `Livestock Health Treatment` carries
+neither. The farm's main drug consumer is the one that cannot say where the
+drug came from.
+
+**A treatment's cost is never written, and the case never sums it.**
+`Livestock Health Treatment.cost` exists and `add_case_treatment` does not set
+it. `Livestock Health Case.total_treatment_cost` is `read_only = 1` and nothing
+in the codebase assigns it. Two halves of one unfinished feature, which is why
+the Health page reads "TREATMENT COST — written down on 0 of 25 cases" and
+always will.
+
 **Which items it may consume is hard-coded to one group per kind.**
 `stock_items(kind, ...)` knows exactly two kinds, "drug" and "semen", each
 resolving to a single item group through `SETTING = {"drug":
@@ -103,6 +132,40 @@ rename is not worth a migration of every existing row.
 `consumes_drugs` stops being a flag somebody sets. It becomes derived: *does
 this event type have any mapped groups?*
 
+### Treatments join the same mapping
+
+A `Treatment` row is added to `Livestock Event Type`, and it exists to be the
+mapping's key — so the Settings line reads `Treatment -> Dairy Drugs`, which is
+what the farm calls the thing that consumes the drug. It is not a separately
+recordable event: the screens are hardcoded pages, not generated from this
+doctype, so adding the row offers nobody a new form. Treatments are still
+recorded where they are recorded — under an open case.
+
+`Livestock Health Treatment` gains the two columns `Livestock Drug Issue`
+already has:
+
+- `source_warehouse` (Link, Warehouse) — the store this drug came out of,
+  defaulting to the one holding the most of it
+- `batch_no` (Data) — for the drugs that are batch tracked
+
+`post_drug_issue` then issues `t.source_warehouse or drug_warehouse()` per row,
+the same shape `post_stock_issue` already uses for event drug rows. The global
+`drug_warehouse()` stays only as the fallback for rows recorded before this
+change.
+
+And the cost is closed at both ends: `add_case_treatment` writes `cost` from
+the item's valuation at the issuing store, and `Livestock Health Case`
+recomputes `total_treatment_cost` as the sum of its treatments whenever they
+change. The Health page's tile is then reporting something real rather than
+counting zeroes.
+
+**Out of scope, recorded so it is not lost:** when an animal is treated and has
+no open case, the farm wants to be prompted to open one. Today a Check Up that
+treats an animal without a file says, in a toast, "she was treated but has no
+file open; open one on the Treatment screen if this is more than a one-off" — a
+suggestion that is easy to miss, not a prompt. Turning that into a real
+prompt is its own change and is not in this spec.
+
 ### Service folds in
 
 Service currently consumes its straw through three bespoke fields —
@@ -182,10 +245,12 @@ A patch that writes the mapping rows today's settings already imply:
 | event_type | item_group |
 |---|---|
 | Vaccination, Deworming, Check Up, Drying Off | `custom_drug_item_group` |
+| Treatment | `custom_drug_item_group` |
 
-Those four are exactly the types carrying `consumes_drugs = 1` today, checked
-against the fixture rather than assumed. There is no `Treatment` event type —
-the Treatment page records against a health case, not an event type of its own.
+The first four are exactly the types carrying `consumes_drugs = 1` today,
+checked against the fixture rather than assumed. The fifth is the `Treatment`
+row this change creates: treatments already consume drugs from that group, so
+mapping them preserves what the farm has rather than granting anything new.
 
 **The patch deliberately does not map Service.** It would have to use
 `custom_semen_item_group`, which on the live site is `Dairy Others` — 410 items,
@@ -214,6 +279,19 @@ Server:
   one now)
 - the sire resolves in all four orders above, including the legacy field
 - the patch is idempotent and writes nothing on an unconfigured site
+
+Treatments specifically, because they are the path that is broken on live:
+- a treatment issues from its own `source_warehouse`, not from
+  `drug_warehouse()` — the regression test is a case whose drug is stocked
+  somewhere other than the configured drug store, which fails today
+- a treatment row with no store falls back to `drug_warehouse()`, so cases
+  recorded before this change still post
+- a batch-tracked drug carries its batch onto the issue
+- `cost` is written from the item's valuation at the issuing store
+- `total_treatment_cost` equals the sum of its treatments, and changes when a
+  treatment is added or removed
+- the `Treatment` event type is a mapping key only: it is not offered as a
+  recordable event anywhere in the app
 
 Frontend:
 - the Items table appears only when the type has mapped groups
