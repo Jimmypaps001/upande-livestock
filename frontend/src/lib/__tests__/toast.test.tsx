@@ -93,6 +93,33 @@ describe("saying what happened", () => {
     await waitFor(() => expect(screen.getAllByRole("status").length).toBe(3));
   });
 
+  it("carries its tone as a filled panel, not a strip down the side", async () => {
+    // The red edge was the loudest thing on the screen and said "error" twice
+    // — once in the icon and once in a bar the eye reads before the words.
+    // Frappe's own desk alert fills the panel with a wash of the tone and
+    // leaves the edge alone; this is that.
+    draw({ tone: "error", text: "The store cannot cover this issue." });
+    fireEvent.click(screen.getByText("do it"));
+    const toast = await screen.findByRole("alert");
+    expect(toast.className).not.toMatch(/border-l-/);
+    expect(toast.style.borderLeftColor).toBe("");
+    expect(toast.style.background).toContain("var(--sd-alert-error)");
+  });
+
+  it("gives every tone its own wash", async () => {
+    const { unmount } = draw({ tone: "ok", text: "Saved." });
+    fireEvent.click(screen.getByText("do it"));
+    expect((await screen.findByRole("status")).style.background).toContain(
+      "var(--sd-alert-ok)",
+    );
+    unmount();
+    draw({ tone: "info", text: "Noted." });
+    fireEvent.click(screen.getByText("do it"));
+    expect((await screen.findByRole("status")).style.background).toContain(
+      "var(--sd-alert-info)",
+    );
+  });
+
   it("says nothing when there is nothing to say", async () => {
     draw({ text: "   " });
     fireEvent.click(screen.getByText("do it"));

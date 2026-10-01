@@ -46,22 +46,25 @@ const LIFETIME: Record<ToastTone, number> = { ok: 5000, info: 7000, warn: 9000, 
 /**
  * How each tone is coloured, and what is NOT coloured: the words.
  *
- * A toast that set its whole message in red asked a herdsman to READ in red —
- * the one thing red is worst for — and it shouted the same shade at a refusal
- * and at a warning. The message stays in ink at full contrast; the tone is
- * carried by an accent edge, a wash of the same colour at a few percent, and
- * the icon. A green confirmation should be felt rather than announced, so its
- * wash is the faintest of the three.
+ * This is Frappe's desk alert, so that a message from this app and a message
+ * from the desk are recognisably the same object to somebody who uses both all
+ * day. The panel is filled with a wash of the tone and the icon carries the
+ * colour; the words stay in ink at full contrast, because asking a herdsman to
+ * READ in red is the one thing red is worst for.
+ *
+ * WHAT WENT: the 3px coloured bar down the left edge. It was the loudest thing
+ * on the screen and it said "error" twice — once in the icon and once in a
+ * stripe the eye reaches before the sentence. Frappe leaves the edge alone and
+ * so does this.
  */
 const TONES: Record<ToastTone, { accent: string; wash: string }> = {
-  // Red, and only on the edge and the icon.
-  error: { accent: "var(--sd-sev-critical)", wash: "color-mix(in srgb, var(--sd-sev-critical) 7%, var(--sd-card))" },
+  error: { accent: "var(--sd-sev-critical)", wash: "var(--sd-alert-error)" },
   // Amber: something worth knowing that is not a refusal.
-  warn: { accent: "var(--sd-sev-high)", wash: "color-mix(in srgb, var(--sd-sev-high) 8%, var(--sd-card))" },
-  // Green, subtle — it worked, which is what was expected.
-  ok: { accent: "var(--sd-sev-moderate)", wash: "color-mix(in srgb, var(--sd-sev-moderate) 6%, var(--sd-card))" },
-  // Neutral: a statement of fact wearing no colour at all.
-  info: { accent: "var(--sd-line)", wash: "var(--sd-card)" },
+  warn: { accent: "var(--sd-sev-high)", wash: "var(--sd-alert-warn)" },
+  // Green — it worked, which is what was expected.
+  ok: { accent: "var(--sd-sev-moderate)", wash: "var(--sd-alert-ok)" },
+  // Neutral: a statement of fact wearing no colour of its own.
+  info: { accent: "var(--sd-quiet)", wash: "var(--sd-alert-info)" },
 };
 
 const ToastContext = createContext<(text: string, tone?: ToastTone) => void>(() => {});
@@ -134,14 +137,14 @@ function ToastCard({ toast, onDismiss }: { toast: Toast; onDismiss: () => void }
       // confirmation does not.
       role={toast.tone === "error" ? "alert" : "status"}
       className={cn(
-        "pointer-events-auto flex items-start gap-2.5 rounded-[var(--sd-radius-lg)] px-3.5 py-3",
+        "pointer-events-auto flex items-start gap-2.5 rounded-[var(--sd-radius-toast)] px-4 py-3.5",
         "text-[13px] leading-relaxed whitespace-pre-line shadow-[var(--sd-shadow-3)]",
         "animate-in slide-in-from-bottom-2 fade-in duration-200",
         // The words are ink whatever the tone. Colour marks the message; it
-        // does not set it.
-        "border-l-[3px] text-[var(--sd-ink)]",
+        // does not set it. Medium weight, as the desk alert sets it.
+        "font-medium text-[var(--sd-ink)]",
       )}
-      style={{ background: tone.wash, borderLeftColor: tone.accent }}
+      style={{ background: tone.wash }}
     >
       <Icon className="mt-0.5 h-4 w-4 shrink-0" style={{ color: tone.accent }} />
       <span className="min-w-0 flex-1">{toast.text}</span>

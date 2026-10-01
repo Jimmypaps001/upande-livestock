@@ -56,7 +56,15 @@ def breeding_options():
 			"diagnosis_results": select_options("Livestock Event", "diagnosis_result")
 			or ["Confirmed", "Not Pregnant", "Aborted"],
 			"sires": sires,
-			"semen_items": stock_items("semen", livestock_stock.semen_warehouse()),
+			# Every configured store, NOT `semen_warehouse()`. Pinning the
+			# lookup to that one setting is what emptied this picker on live:
+			# it names `Livestock Drug Store - KR`, a warehouse with zero
+			# stocked bins, while the 361 straws sit in Drug/Medicine Store -
+			# Old Office and Westwood Dairy Store. The drug picker was emptied
+			# by the same line and fixed the same way; semen was left behind.
+			# Each choice carries its own `warehouse` and `locations`, so the
+			# form can offer the store alongside the straw.
+			"semen_items": stock_items("semen"),
 			"default_semen_item": livestock_stock.default_semen_item(),
 			"employee": current_employee(),
 		}

@@ -7,7 +7,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Picker } from "@/components/ui/picker";
-import type { BatchPlan, FeedLine } from "@/lib/feeding";
+import { batchNote, type BatchPlan, type FeedLine } from "@/lib/feeding";
 import { cn, fmt } from "@/lib/utils";
 
 /**
@@ -197,15 +197,6 @@ export function RequirementTable({
       </Table>
     </div>
   );
-}
-
-
-/** What the rule proposes for one line, in a phrase. */
-function batchNote(plan?: BatchPlan): string {
-  if (!plan) return "Chosen by the rule";
-  if (!plan.picks.length) return "Nothing in this store — the run will refuse";
-  const head = plan.picks.map((p) => `${p.batch_no} (${fmt(p.qty)})`).join(" + ");
-  return plan.short > 0 ? `${head} · short ${fmt(plan.short)}` : head;
 }
 
 

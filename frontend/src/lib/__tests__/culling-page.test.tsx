@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "@/components/Toast";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -50,13 +50,30 @@ const board = {
     { name: "A101/23", burn_name: "SITA", herd: "Lactating group 2", reason: "Three mastitis cases", marked_on: "2026-09-01", marked_by: "x@y.z" },
   ],
   recent: [],
-  open_claims: [],
+  open_claims: [
+    {
+      name: "CLAIM-0001",
+      animal: "A039/26",
+      policy: "POL-1",
+      cause: "Lightning",
+      status: "Submitted",
+      claimed_amount: 80000,
+    },
+  ],
   counts: { awaiting_vet: 1, awaiting_approval: 0, ready_to_post: 0, flagged: 1 },
 };
 
+const sent: Array<{ method: string; args: Record<string, unknown> }> = [];
+
 vi.mock("@/lib/frappe", async () => {
   const actual = await vi.importActual<typeof import("@/lib/frappe")>("@/lib/frappe");
-  return { ...actual, call: vi.fn(async () => board) };
+  return {
+    ...actual,
+    call: vi.fn(async (method?: string, args?: Record<string, unknown>) => {
+      sent.push({ method: method ?? "", args: args ?? {} });
+      return board;
+    }),
+  };
 });
 
 const { Culling } = await import("@/pages/Culling");
@@ -72,7 +89,25 @@ function draw() {
 }
 
 describe("the culling page", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    sent.length = 0;
+  });
+
+  it("records WHEN an insurer paid, not just that they did", async () => {
+    // `settle_insurance_claim` writes `claim.payout_date` ("Paid On") and
+    // defaulted it to today() because nothing ever sent one — so a cheque
+    // banked last week was booked as today. Found by the endpoint sweep.
+    draw();
+    const tab = await waitFor(() => screen.getByRole("tab", { name: /Open a case/ }));
+    fireEvent.focus(tab);
+    const paidOn = await waitFor(() => screen.getByLabelText("Paid on"));
+    fireEvent.change(paidOn, { target: { value: "2026-09-24" } });
+    fireEvent.click(screen.getByRole("button", { name: /Paid in full/ }));
+    await waitFor(() => expect(sent.some((c) => c.method.includes("settle_insurance_claim"))).toBe(true));
+    const settle = sent.find((c) => c.method.includes("settle_insurance_claim"))!;
+    expect((settle.args.payload as Record<string, unknown>).payout_date).toBe("2026-09-24");
+  });
 
   it("draws the queue with the case on it", async () => {
     draw();

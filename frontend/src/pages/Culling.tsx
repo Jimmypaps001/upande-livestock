@@ -39,7 +39,7 @@ import {
 } from "@/lib/culling";
 import { OperatorField } from "@/components/events/OperatorField";
 import { useOperator } from "@/lib/operator";
-import { cn, fmt } from "@/lib/utils";
+import { cn, fmt, todayISO} from "@/lib/utils";
 
 /**
  * Everything leaving the farm, and whose turn each case is.
@@ -61,6 +61,8 @@ export function Culling() {
   const [failure, setFailure] = useState<string | null>(null);
   const [active, setActive] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // When each open claim was paid, keyed by claim. Defaults to today per row.
+  const [paidOn, setPaidOn] = useState<Record<string, string>>({});
   const [tab, setTab] = useState("queue");
   const [preselect, setPreselect] = useState<string | null>(null);
   const [term, setTerm] = useState("");
@@ -68,6 +70,7 @@ export function Culling() {
   const [notes, setNotes] = useState("");
   const [price, setPrice] = useState("");
   const [buyer, setBuyer] = useState("");
+  const [buyerContact, setBuyerContact] = useState("");
   const who = useOperator();
 
   const load = useCallback(async () => {
@@ -111,6 +114,7 @@ export function Culling() {
     setNotes("");
     setPrice(chosen?.sale_price ? String(chosen.sale_price) : "");
     setBuyer(chosen?.buyer_name ?? "");
+    setBuyerContact(chosen?.buyer_contact ?? "");
   }, [chosen?.name]);
 
   async function act(fn: () => Promise<{ error?: string } | Record<string, unknown>>, said: string) {
@@ -266,6 +270,8 @@ export function Culling() {
                     setPrice={setPrice}
                     buyer={buyer}
                     setBuyer={setBuyer}
+                    buyerContact={buyerContact}
+                    setBuyerContact={setBuyerContact}
                     act={act}
                     who={who}
                   />
@@ -347,19 +353,48 @@ export function Culling() {
                       </Button>
                     )}
                     {cl.status === "Submitted" && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={busy}
-                        onClick={() =>
-                          act(
-                            () => settleClaim(cl.name, "Paid", cl.claimed_amount),
-                            `${cl.name} is settled in full.`,
-                          )
-                        }
-                      >
-                        Paid in full
-                      </Button>
+                      <div className="flex items-end gap-2">
+                        {/* WHEN the insurer paid. The claim has always had a
+                            "Paid On" field and nothing ever sent one, so the
+                            server booked every settlement as today — a cheque
+                            banked last week was dated wrong. Defaults to today,
+                            which is right most of the time and wrong silently
+                            the rest of it. */}
+                        <div className="flex flex-col gap-1.5">
+                          <Label htmlFor={`paid-on-${cl.name}`} className="text-[11.5px]">
+                            Paid on
+                          </Label>
+                          <Input
+                            id={`paid-on-${cl.name}`}
+                            type="date"
+                            className="h-8 w-[9.5rem] text-[12.5px]"
+                            value={paidOn[cl.name] ?? todayISO()}
+                            onChange={(e) =>
+                              setPaidOn((p) => ({ ...p, [cl.name]: e.target.value }))
+                            }
+                          />
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={busy}
+                          onClick={() =>
+                            act(
+                              () =>
+                                settleClaim(
+                                  cl.name,
+                                  "Paid",
+                                  cl.claimed_amount,
+                                  undefined,
+                                  paidOn[cl.name] ?? todayISO(),
+                                ),
+                              `${cl.name} is settled in full.`,
+                            )
+                          }
+                        >
+                          Paid in full
+                        </Button>
+                      </div>
                     )}
                   </div>
                 ))}
@@ -427,6 +462,8 @@ function CaseChain({
   setPrice,
   buyer,
   setBuyer,
+  buyerContact,
+  setBuyerContact,
   act,
   who,
 }: {
@@ -438,6 +475,8 @@ function CaseChain({
   setPrice: (v: string) => void;
   buyer: string;
   setBuyer: (v: string) => void;
+  buyerContact: string;
+  setBuyerContact: (v: string) => void;
   act: (fn: () => Promise<{ error?: string } | Record<string, unknown>>, said: string) => void;
   who: ReturnType<typeof useOperator>;
 }) {
@@ -506,6 +545,17 @@ function CaseChain({
                 <Input id="ap-buyer" value={buyer} onChange={(e) => setBuyer(e.target.value)} />
               </div>
               <div className="flex flex-col gap-1.5">
+                {/* `approve_cull` has always written buyer_contact; only the
+                    name was ever collected, so a sale had no way to reach the
+                    buyer afterwards. */}
+                <Label htmlFor="ap-buyer-contact">Buyer contact / phone</Label>
+                <Input
+                  id="ap-buyer-contact"
+                  value={buyerContact}
+                  onChange={(e) => setBuyerContact(e.target.value)}
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
                 <Label htmlFor="ap-price">Price</Label>
                 <Input
                   id="ap-price"
@@ -530,7 +580,11 @@ function CaseChain({
                     approveCull(
                       c.name,
                       c.flow === "Sale"
-                        ? { sale_price: price ? Number(price) : undefined, buyer_name: buyer || undefined }
+                        ? {
+                            sale_price: price ? Number(price) : undefined,
+                            buyer_name: buyer || undefined,
+                            buyer_contact: buyerContact || undefined,
+                          }
                         : {},
                     ),
                   "Approved. She can be posted out.",

@@ -42,6 +42,26 @@ describe("the server's message, as a person reads it", () => {
     expect(screen.getByRole("alert").textContent).toContain("Beatrice is sick");
   });
 
+  it("sets the words in ink, not in the tone's colour", () => {
+    // "You are not permitted to read Livestock Settings" was rendered in red
+    // on red — the one colour that is hardest to read a sentence in, used for
+    // the whole sentence. Frappe's alert fills the panel and leaves the text
+    // alone; the icon carries the tone.
+    render(<Notice tone="error">Not permitted.</Notice>);
+    const box = screen.getByRole("alert");
+    expect(box.className).toContain("text-[var(--sd-ink)]");
+    expect(box.className).not.toContain("text-[var(--sd-sev-critical)]");
+  });
+
+  it("fills the panel with the same wash the toast uses", () => {
+    // One alert style across the app: an inline refusal and a floating one are
+    // the same object in two places.
+    render(<Notice tone="error">Not permitted.</Notice>);
+    expect(screen.getByRole("alert").className).toContain("bg-[var(--sd-alert-error)]");
+    render(<Notice tone="ok">Saved.</Notice>);
+    expect(screen.getByRole("status").className).toContain("bg-[var(--sd-alert-ok)]");
+  });
+
   it("passes a React child through untouched", () => {
     render(
       <Notice tone="info">

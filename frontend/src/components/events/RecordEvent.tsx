@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Picker } from "@/components/ui/picker";
+import { Picker, type PickerOption } from "@/components/ui/picker";
 import { Textarea } from "@/components/ui/textarea";
 import { OperatorField } from "@/components/events/OperatorField";
 import { useToast } from "@/components/Toast";
@@ -42,12 +42,21 @@ import { cn, todayISO } from "@/lib/utils";
 
 export type FieldKind = "text" | "number" | "select" | "date" | "notes";
 
+/** What a select would actually submit, whether its options are labelled. */
+function optionValues(spec: FieldSpec): string[] {
+  return (spec.options ?? []).map((o) => (typeof o === "string" ? o : o.value));
+}
+
 export interface FieldSpec {
   name: string;
   label: string;
   kind: FieldKind;
-  /** Options for a select. A field whose list is empty is not rendered. */
-  options?: string[];
+  /** Options for a select. A field whose list is empty is not rendered.
+   *  A labelled option carries a value distinct from what is shown — the straw
+   *  picker sends an item code and shows "Semen Chico · 12 Nos in Westwood
+   *  Dairy Store", which is the difference between choosing a straw and
+   *  choosing a number. */
+  options?: (PickerOption | string)[];
   placeholder?: string;
   hint?: string;
   /** What the field starts at. A select whose farm-configured answer is on the
@@ -61,6 +70,12 @@ export interface FieldSpec {
   always?: boolean;
   min?: number;
   step?: string;
+  /** Start on the first option, and move when the options change underneath.
+   *  For a select whose list BELONGS to another field: the stores holding a
+   *  straw are the stores for THAT straw, so a value left from the previous
+   *  one names a shelf that does not hold this one. The server orders these
+   *  most-stocked first, so the first option is the store to go to. */
+  autoPick?: boolean;
 }
 
 export interface RecordEventProps<O> {
@@ -75,7 +90,9 @@ export interface RecordEventProps<O> {
   /** Which animals this screen may act on, out of what `load` returned. */
   animalsOf: (options: O) => AnimalChoice[];
   /** The fields, which may depend on the options just loaded. */
-  fieldsOf: (options: O) => FieldSpec[];
+  /** `values` is the form as it stands, so a field's options may depend on
+   *  another field — the store list belongs to the straw that was chosen. */
+  fieldsOf: (options: O, values: Record<string, string>) => FieldSpec[];
   /** The date field's name, if this screen has one. */
   dateField?: string;
   submitLabel: string;
@@ -137,7 +154,10 @@ export function RecordEvent<O>({
   }, [refresh]);
 
   const animals = options ? animalsOf(options) : [];
-  const fields = useMemo(() => (options ? fieldsOf(options) : []), [options, fieldsOf]);
+  const fields = useMemo(
+    () => (options ? fieldsOf(options, values) : []),
+    [options, fieldsOf, values],
+  );
 
   // Defaults are seeded once per options load: a select with one sensible
   // answer should not make somebody choose it, and a date the farm is
@@ -145,13 +165,30 @@ export function RecordEvent<O>({
   useEffect(() => {
     if (!options) return;
     const seed: Record<string, string> = {};
-    for (const f of fieldsOf(options)) {
+    for (const f of fieldsOf(options, {})) {
       if (f.value) seed[f.name] = f.value;
       else if (f.kind === "date") seed[f.name] = todayISO();
-      else if (f.kind === "select" && f.options?.length === 1) seed[f.name] = f.options[0];
+      else if (f.kind === "select" && f.options?.length === 1)
+        seed[f.name] = optionValues(f)[0];
     }
     setValues(seed);
   }, [options, fieldsOf]);
+
+  // A dependent select follows its parent. Only ever written when the current
+  // value is not on offer, so this cannot fight the operator for the field.
+  useEffect(() => {
+    setValues((prev) => {
+      let next = prev;
+      for (const f of fields) {
+        if (f.kind !== "select" || !f.autoPick) continue;
+        const vals = optionValues(f);
+        if (!vals.length || vals.includes(prev[f.name] ?? "")) continue;
+        if (next === prev) next = { ...prev };
+        next[f.name] = vals[0];
+      }
+      return next;
+    });
+  }, [fields]);
 
   const chosen = animals.find((a) => a.name === picked) || null;
   const results = useMemo(() => {

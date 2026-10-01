@@ -47,6 +47,12 @@ export function CheckUp() {
           { name: "appearance", label: "Appearance", kind: "select", options: o.appearances },
           { name: "hydration", label: "Hydration", kind: "select", options: o.hydrations },
           { name: "suggested_disease", label: "Suspected", kind: "select", options: o.diseases },
+          // What else it might be, and why. The server has stored this on the
+          // Livestock Diagnosis all along — every neighbour on this form was
+          // rendered and this one was not, so the reasoning behind "Suspected"
+          // had nowhere to go.
+          { name: "differential_notes", label: "Differential / notes", kind: "notes",
+            placeholder: "Could be ketosis; check urine before treating." },
           { name: "action_taken", label: "What was done", kind: "select", options: o.actions },
           { name: "follow_up_date", label: "Look again on", kind: "date" },
           { name: "action_notes", label: "Notes", kind: "notes" },

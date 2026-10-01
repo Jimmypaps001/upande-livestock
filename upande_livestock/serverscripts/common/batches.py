@@ -91,6 +91,63 @@ def _tracked_items(codes):
 	}
 
 
+def _held_on_disabled_batches(pairs: list) -> dict:
+	"""`{(item_code, warehouse): [{batch_no, qty}]}` for stock nobody can take.
+
+	The mirror of `available_in_store`, which says `AND bt.disabled = 0` and is
+	right to: ERPNext refuses to consume a disabled batch. But that makes a
+	store holding 48 kg offer nothing, and the page had no way to say why — it
+	showed "48 available" beside an empty Batch cell, and the run then refused
+	with a shortfall the operator could not account for.
+
+	On live that is not an edge case. All 1,971 `-PREMIGRATION` batches are
+	disabled, and seven of the twenty stocked feed lines hold every kilo they
+	have on one: `Dry Cows  Meal` keeps its whole 48 kg on
+	`Dry Cows  Meal-PREMIGRATION`. Naming the batch turns a blank into a job.
+
+	Asked only for the pairs that came up empty, so a normal run never pays for
+	it. Never raises: this is an explanation, and failing to explain must not
+	cost the farm its answer.
+	"""
+	if not pairs:
+		return {}
+	items = sorted({p[0] for p in pairs})
+	houses = sorted({p[1] for p in pairs if p[1]})
+	if not items or not houses:
+		return {}
+
+	try:
+		rows = frappe.db.sql(
+			"""
+			SELECT sle.item_code, sbe.warehouse, sbe.batch_no, SUM(sbe.qty) AS qty
+			FROM   `tabStock Ledger Entry` sle
+			JOIN   `tabSerial and Batch Entry` sbe
+			       ON sbe.parent = sle.serial_and_batch_bundle
+			JOIN   `tabBatch` bt ON bt.name = sbe.batch_no
+			WHERE  sle.is_cancelled = 0
+			  AND  bt.disabled = 1
+			  AND  sle.item_code IN %(items)s
+			  AND  sbe.warehouse IN %(houses)s
+			GROUP  BY sle.item_code, sbe.warehouse, sbe.batch_no
+			HAVING SUM(sbe.qty) > 0
+			""",
+			{"items": items, "houses": houses},
+			as_dict=True,
+		)
+	except Exception:
+		frappe.logger("livestock_batches").warning(
+			"could not look up disabled-batch holdings", exc_info=True
+		)
+		return {}
+
+	out: dict = {}
+	for r in rows:
+		out.setdefault((r["item_code"], r["warehouse"]), []).append(
+			{"batch_no": r["batch_no"], "qty": flt(r["qty"])}
+		)
+	return out
+
+
 def _plan_for(rows):
 	"""``[(row, picks, short)]`` — what each row would be split into."""
 	available = available_in_store([(r.item_code, r.s_warehouse) for r in rows])
@@ -128,6 +185,16 @@ def suggest_batches(lines):
 
 	tracked = _tracked_items([r.item_code for r in rows])
 	available = available_in_store([(r.item_code, r.s_warehouse) for r in rows])
+	# Only the pairs that came up empty, and only the tracked ones. A store
+	# that can answer needs no explanation, and an untracked item is never
+	# asked for a batch in the first place.
+	held = _held_on_disabled_batches(
+		[
+			(r.item_code, r.s_warehouse)
+			for r in rows
+			if r.item_code in tracked and not available.get((r.item_code, r.s_warehouse))
+		]
+	)
 	today = frappe.utils.today()
 	out = []
 	for r in rows:
@@ -147,6 +214,11 @@ def suggest_batches(lines):
 				if is_tracked
 				else [],
 				"short": flt(plan.get("short")) if is_tracked else 0.0,
+				# Stock that is here and cannot be taken, because the batch
+				# holding it is disabled. The difference between "this store is
+				# empty" and "this store is full of stock nobody can issue" is
+				# the whole of what the operator needs to know.
+				"blocked_by": held.get((r.item_code, r.s_warehouse), []) if is_tracked else [],
 				"available": [
 					{
 						"batch_no": b.get("batch_no"),
@@ -198,12 +270,25 @@ def assign_batches(doc) -> int:
 		)
 		return 0
 
-	short = [
-		"{0}: {1:g} short in {2}".format(r.item_code, gap, r.s_warehouse)
-		for r, _picks, gap in plan
-		if gap > 0 or not _picks
-	]
-	if short:
+	failing = [(r, gap) for r, picks, gap in plan if gap > 0 or not picks]
+	if failing:
+		# Why, not just how much. A run posted from the mobile round never
+		# passes the picker, so this sentence is the only one that operator
+		# reads — and "48 short" beside a store holding exactly 48 is what sent
+		# somebody looking for stock that was already in front of them. The
+		# stock is there; the batch holding it is disabled, and ERPNext will
+		# not issue from a disabled batch.
+		held = _held_on_disabled_batches([(r.item_code, r.s_warehouse) for r, _gap in failing])
+		short = []
+		for r, gap in failing:
+			line = "{0}: {1:g} short in {2}".format(r.item_code, gap, r.s_warehouse)
+			blocked = held.get((r.item_code, r.s_warehouse)) or []
+			if blocked:
+				worst = max(blocked, key=lambda b: b["qty"])
+				line += _(" ({0:g} there is on disabled batch {1})").format(
+					worst["qty"], worst["batch_no"]
+				)
+			short.append(line)
 		frappe.throw(
 			_("No batch in the store can cover this run: {0}.").format("; ".join(short)),
 			title=_("Not enough batched stock"),

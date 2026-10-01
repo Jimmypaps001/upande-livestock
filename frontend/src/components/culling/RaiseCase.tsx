@@ -56,6 +56,10 @@ export function RaiseCase({
   const [buyer, setBuyer] = useState("");
   const [price, setPrice] = useState("");
   const [giftedTo, setGiftedTo] = useState("");
+  // Both of these are fields the case has always had and the form never
+  // offered — a buyer with no phone number is a sale nobody can follow up.
+  const [buyerContact, setBuyerContact] = useState("");
+  const [giftDestination, setGiftDestination] = useState("");
   const [evidence, setEvidence] = useState<Evidence | null>(null);
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
@@ -102,6 +106,8 @@ export function RaiseCase({
             reason: reason || undefined,
             disposal_date: when,
             buyer_name: flow === "Sale" ? buyer || undefined : undefined,
+            buyer_contact: flow === "Sale" ? buyerContact || undefined : undefined,
+            gift_destination: flow === "Gift" ? giftDestination || undefined : undefined,
             sale_price: flow === "Sale" && price ? Number(price) : undefined,
             gifted_to: flow === "Gift" ? giftedTo || undefined : undefined,
           });
@@ -125,6 +131,8 @@ export function RaiseCase({
     setBuyer("");
     setPrice("");
     setGiftedTo("");
+    setBuyerContact("");
+    setGiftDestination("");
   }
 
   const chosenAnimal = animals.find((a) => a.id === animal) || null;
@@ -255,6 +263,14 @@ export function RaiseCase({
               <Input id="cull-buyer" value={buyer} onChange={(e) => setBuyer(e.target.value)} />
             </div>
             <div className="flex flex-col gap-1.5">
+              <Label htmlFor="cull-buyer-contact">Buyer contact / phone</Label>
+              <Input
+                id="cull-buyer-contact"
+                value={buyerContact}
+                onChange={(e) => setBuyerContact(e.target.value)}
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
               <Label htmlFor="cull-price">Asking price</Label>
               <Input
                 id="cull-price"
@@ -268,10 +284,20 @@ export function RaiseCase({
         )}
 
         {flow === "Gift" && (
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="cull-gift">Given to</Label>
-            <Input id="cull-gift" value={giftedTo} onChange={(e) => setGiftedTo(e.target.value)} />
-          </div>
+          <>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="cull-gift">Given to</Label>
+              <Input id="cull-gift" value={giftedTo} onChange={(e) => setGiftedTo(e.target.value)} />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="cull-gift-destination">Gift destination</Label>
+              <Input
+                id="cull-gift-destination"
+                value={giftDestination}
+                onChange={(e) => setGiftDestination(e.target.value)}
+              />
+            </div>
+          </>
         )}
       </div>
 

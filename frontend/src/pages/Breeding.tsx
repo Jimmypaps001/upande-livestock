@@ -53,17 +53,45 @@ export function Service() {
         emptyPick="No cow is ready to serve. They are either too soon after calving or already carrying."
         load={load}
         animalsOf={(o) => o.animals}
-        fieldsOf={(o): FieldSpec[] => [
-          { name: "service_date", label: "Service date", kind: "date" },
-          { name: "service_type", label: "How", kind: "select", options: o.service_types, required: true },
-          { name: "sire", label: "Sire", kind: "select", options: o.sires,
-            hint: "Or leave blank and note it below." },
-          { name: "semen_item", label: "Straw used", kind: "select",
-            options: o.semen_items.map((i) => i.value),
-            hint: "Issued from the semen store when chosen." },
-          { name: "remarks", label: "Notes", kind: "notes",
-            placeholder: "Standing heat at 6am, served at 4pm." },
-        ]}
+        fieldsOf={(o, v): FieldSpec[] => {
+          // The straw carries its own stores. Asking the server again when the
+          // operator changes straw would be a round trip for something it
+          // already sent: `locations` is every store holding any, most first.
+          const straw = o.semen_items.find((i) => i.value === v.semen_item);
+          const stores = straw?.locations ?? [];
+          return [
+            { name: "service_date", label: "Service date", kind: "date" },
+            { name: "service_type", label: "How", kind: "select", options: o.service_types, required: true },
+            { name: "sire", label: "Sire", kind: "select", options: o.sires,
+              hint: "Or leave blank and note it below." },
+            { name: "semen_item", label: "Straw used", kind: "select",
+              // The LABEL, not the bare item code. `4040030118` tells a
+              // herdsman nothing; "Semen Chico · 12 Nos in Westwood Dairy
+              // Store" tells him which bull and which fridge.
+              options: o.semen_items.map((i) => ({ value: i.value, label: i.label })),
+              hint: o.semen_items.length
+                ? "Only straws the stores actually hold are offered."
+                : "No straws in stock in any configured store." },
+            // How many straws this session actually used. A double
+            // insemination within one day is real practice (guards.py says so
+            // in as many words), and without this every service deducted
+            // exactly one straw whatever the technician took out of the flask.
+            { name: "semen_qty", label: "Straws used", kind: "number", value: "1", min: 1, step: "1",
+              hint: straw
+                ? `${straw.qty ?? 0} ${straw.uom ?? ""} in the store below.`.trim()
+                : "One unless the cow was served twice." },
+            { name: "semen_warehouse", label: "From store", kind: "select", autoPick: true,
+              options: stores.map((l) => ({
+                value: l.warehouse,
+                label: `${l.warehouse} · ${l.qty} ${straw?.uom ?? ""}`.trim(),
+              })),
+              hint: stores.length > 1
+                ? "Starts on the store holding the most of this straw."
+                : "Where this straw is." },
+            { name: "remarks", label: "Notes", kind: "notes",
+              placeholder: "Standing heat at 6am, served at 4pm." },
+          ];
+        }}
         operatorOf={(o) => o.employee}
         submitLabel="Record the service"
         submit={createServiceEvent}
