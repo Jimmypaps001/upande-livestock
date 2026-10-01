@@ -57,13 +57,23 @@ class LivestockHealthCase(Document):
 			self.db_set("drug_stock_entry", None, update_modified=False)
 			return
 
-		warehouse = livestock_stock.drug_warehouse()
+		# The store each treatment names, not one for the whole case. On live
+		# `drug_warehouse()` is `Livestock Drug Store - KR`, which holds nothing
+		# — so every treatment asked an empty shelf while the drugs sat in
+		# Drug/Medicine Store - Old Office, Westwood Dairy Store and General
+		# Store Karen. The fallback stays for rows recorded before this.
+		default_wh = livestock_stock.drug_warehouse()
 		pending = [t for t in (self.treatments or []) if t.drug_item and not t.stock_entry_ref]
 		if not pending:
 			return
 
 		rows = [
-			{"item_code": t.drug_item, "qty": flt(t.get("qty")) or 1, "warehouse": warehouse}
+			{
+				"item_code": t.drug_item,
+				"qty": flt(t.get("qty")) or 1,
+				"warehouse": t.get("source_warehouse") or default_wh,
+				"batch_no": t.get("batch_no"),
+			}
 			for t in pending
 		]
 		# Post on the day the treatment was given, not the day the case opened. A
