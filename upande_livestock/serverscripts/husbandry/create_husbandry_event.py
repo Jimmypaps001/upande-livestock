@@ -9,7 +9,7 @@ from upande_livestock.serverscripts.common.events import new_livestock_event
 from upande_livestock.serverscripts.common import backdate
 from upande_livestock.serverscripts.common import cost_center as livestock_cost_center
 from upande_livestock.serverscripts.common import stock as livestock_stock
-from upande_livestock.serverscripts.husbandry._shared import HUSBANDRY_TYPES, _clean_drug_rows, _husbandry_targets, _type_consumes_drugs
+from upande_livestock.serverscripts.husbandry._shared import HUSBANDRY_TYPES, _clean_drug_rows, _refuse_foreign_items, _husbandry_targets, _type_consumes_drugs
 
 
 @frappe.whitelist()
@@ -40,6 +40,7 @@ def create_husbandry_event(payload):
 		consumes = _type_consumes_drugs(event_type)
 		default_wh = d.get("source_warehouse") or livestock_stock.drug_warehouse()
 		drugs = _clean_drug_rows(d.get("drugs"), default_wh) if consumes else []
+		_refuse_foreign_items(event_type, drugs)
 
 		# One Material Issue for the whole round, not one per animal. Dosing is
 		# entered per animal — 2 ml a cow across 119 cows — so the store sees a

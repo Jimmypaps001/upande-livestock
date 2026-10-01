@@ -122,3 +122,27 @@ def _clean_drug_rows(drugs, default_wh):
 			}
 		)
 	return rows
+
+
+def _refuse_foreign_items(event_type, rows):
+	"""Refuse a drug row whose item is not in a group mapped to THIS event type.
+
+	The options payload carries the union of every husbandry type's items, so the
+	picker can offer a dewormer on a Vaccination. Naming the line is better than
+	dropping it: the farm sees which one it cannot use. A site with no mapping
+	for the type (running before its migrate) has nothing to check against and
+	keeps the old behaviour.
+	"""
+	from upande_livestock.serverscripts.common import event_items
+
+	groups = event_items.groups_for_event(event_type)
+	if not groups:
+		return
+	for row in rows:
+		group = frappe.db.get_value("Item", row["item_code"], "item_group")
+		if group not in groups:
+			frappe.throw(
+				_("{0} is not an item a {1} may use. Its group, {2}, is not mapped to {1}.").format(
+					row["item_code"], event_type, group or _("(none)")
+				)
+			)
