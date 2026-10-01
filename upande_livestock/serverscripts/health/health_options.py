@@ -14,6 +14,7 @@ from upande_livestock.serverscripts.common.choices import (
 from upande_livestock.serverscripts.common.company import default_company
 from upande_livestock.serverscripts.common.employee import current_employee
 from upande_livestock.serverscripts.common.envelope import guard_read, run
+from upande_livestock.serverscripts.common.event_items import items_for_event
 
 
 @frappe.whitelist()
@@ -49,6 +50,9 @@ def health_options():
 			# the operator type "Oral" and lose the whole case.
 			"routes": select_options("Livestock Health Treatment", "route"),
 			"responses": select_options("Livestock Health Treatment", "response_observed"),
+			# What each of this screen's event types may use, by type. One
+			# endpoint serves several screens, so a bare list could not say whose.
+			"items_by_event": {t: items_for_event(t) for t in ('Abortion',)},
 			"employee": current_employee(),
 			"company": default_company(),
 		}
