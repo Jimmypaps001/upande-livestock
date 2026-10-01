@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { FileText, FolderOpen, Plus, Syringe, X } from "lucide-react";
+import { FileText, FolderOpen, Syringe } from "lucide-react";
 import { AnimalSearch } from "@/components/animals/AnimalSearch";
 import { DatePicker } from "@/components/DatePicker";
 import { Notice } from "@/components/feeding/Notice";
+import { ItemsUsed, blankRow, type ItemRow } from "@/components/events/ItemsUsed";
 import { OperatorField } from "@/components/events/OperatorField";
 import { Page, PageHeading } from "@/components/PageShell";
 import { RefreshButton } from "@/components/RefreshButton";
@@ -16,7 +17,6 @@ import { Label } from "@/components/ui/label";
 import { Picker } from "@/components/ui/picker";
 import { Textarea } from "@/components/ui/textarea";
 import { isError } from "@/lib/frappe";
-import { drugRowsForIssue } from "@/lib/drug-lines";
 import type { AnimalSummary } from "@/lib/animals";
 import { getHealthOptions, getOpenCases, type HealthOptions, type OpenCasesView } from "@/lib/events";
 import { getAnimalCase, treatAnimal, type AnimalCaseStanding } from "@/lib/health";
@@ -24,10 +24,9 @@ import { useOperator } from "@/lib/operator";
 import { useSaveShortcut } from "@/lib/use-save-shortcut";
 import { cn, fmt, todayISO } from "@/lib/utils";
 
-interface Dose {
-  key: number;
-  drug: string;
-  qty: string;
+/** What is recorded about a dose beyond the item, quantity and store, which
+ *  are the shared `ItemRow`. Held by the row's key so the two stay together. */
+interface DoseDetail {
   dosage: string;
   route: string;
   withdrawal: string;
@@ -35,20 +34,9 @@ interface Dose {
   notes: string;
 }
 
-let nextKey = 1;
-
 const RESPONSES = ["Improving", "No Change", "Worsening", "Resolved", "Not Yet Assessed"];
 
-const blank = (): Dose => ({
-  key: nextKey++,
-  drug: "",
-  qty: "1",
-  dosage: "",
-  route: "",
-  withdrawal: "",
-  response: "",
-  notes: "",
-});
+const NO_DETAIL: DoseDetail = { dosage: "", route: "", withdrawal: "", response: "", notes: "" };
 
 /**
  * Treating an animal, which is also how a file gets opened.
@@ -85,7 +73,8 @@ export function Treatment() {
   const [suspected, setSuspected] = useState("");
   const [severity, setSeverity] = useState("");
   const [when, setWhen] = useState(todayISO());
-  const [doses, setDoses] = useState<Dose[]>([blank()]);
+  const [doses, setDoses] = useState<ItemRow[]>(() => [blankRow()]);
+  const [details, setDetails] = useState<Record<number, DoseDetail>>({});
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
@@ -145,7 +134,7 @@ export function Treatment() {
   );
 
   const picked = roster.find((a) => a.id === animal) || null;
-  const usable = doses.filter((d) => d.drug && Number(d.qty) > 0);
+  const usable = doses.filter((d) => d.item && Number(d.qty) > 0);
   const needComplaint = fresh && !complaint.trim();
   const ready = !!animal && usable.length > 0 && !needComplaint && !who.needed && !asking;
 
@@ -154,14 +143,6 @@ export function Treatment() {
   async function send() {
     if (!ready || !animal) return;
     setBusy(true);
-    // Each drug out of the store that actually holds it. `store.drug_items` is
-    // what the picker was filled from, so its `warehouse` is the one the
-    // operator was shown — and until now the issue ignored it and took
-    // everything off `Livestock Settings.drug_warehouse`.
-    const placed = drugRowsForIssue(
-      usable.map((d) => ({ item_code: d.drug, qty: d.qty })),
-      store?.drug_items ?? [],
-    );
     const r = await treatAnimal({
       animal,
       case: !fresh && standing?.open_case ? standing.open_case.name : undefined,
@@ -172,19 +153,21 @@ export function Treatment() {
       operator: who.value,
       opened_by: who.value,
       treatment_date: when,
-      treatments: usable.map((d) => ({
-        drug_item: d.drug,
-        qty: Number(d.qty),
-        dosage: d.dosage || undefined,
-        route: d.route || undefined,
-        withdrawal_period_days: d.withdrawal ? Number(d.withdrawal) : undefined,
-        response_observed: d.response || undefined,
-        administered_by: who.value,
-        notes: d.notes || undefined,
-        // Matched on item rather than index: `drugRowsForIssue` drops lines
-        // with no item or a zero quantity, so the two arrays would drift.
-        source_warehouse: placed.find((p) => p.item_code === d.drug)?.source_warehouse,
-      })),
+      treatments: usable.map((d) => {
+        const x = details[d.key] ?? NO_DETAIL;
+        return {
+          drug_item: d.item,
+          qty: Number(d.qty),
+          dosage: x.dosage || undefined,
+          route: x.route || undefined,
+          withdrawal_period_days: x.withdrawal ? Number(x.withdrawal) : undefined,
+          response_observed: x.response || undefined,
+          administered_by: who.value,
+          notes: x.notes || undefined,
+          // The store the operator saw it in, on the row itself.
+          source_warehouse: d.store || undefined,
+        };
+      }),
     });
     setBusy(false);
     if (isError(r)) {
@@ -196,7 +179,8 @@ export function Treatment() {
         ? `A new file is open for ${r.animal} — ${r.case} — with ${r.added} treatment${r.added === 1 ? "" : "s"} in it.`
         : `${r.added} treatment${r.added === 1 ? "" : "s"} added to ${r.case}. ${r.treatments} in the file now.`,
     );
-    setDoses([blank()]);
+    setDoses([blankRow()]);
+    setDetails({});
     setComplaint("");
     setSuspected("");
     setSeverity("");
@@ -385,107 +369,70 @@ export function Treatment() {
                 )}
               </div>
 
-              {doses.map((d, i) => (
-                <div
-                  key={d.key}
-                  className="flex flex-col gap-3 rounded-[var(--sd-radius-lg)] bg-[var(--sd-bg-soft)] px-3.5 py-3 shadow-[var(--sd-shadow-inset)]"
-                >
-                  <div className="flex flex-wrap items-end gap-3">
-                    <div className="flex min-w-[220px] flex-1 flex-col gap-1.5">
-                      <Label htmlFor={`tx-drug-${d.key}`}>Drug</Label>
-                      <Picker
-                        id={`tx-drug-${d.key}`}
-                        value={d.drug}
-                        onChange={(v) => set(i, { drug: v })}
-                        options={(store?.drug_items ?? []).map((x) => ({
-                          value: x.value,
-                          label: x.label,
-                        }))}
-                        label="Drug"
-                        placeholder="From the store…"
-                      />
-                    </div>
-                    <div className="flex flex-col gap-1.5">
-                      <Label htmlFor={`tx-qty-${d.key}`}>Qty</Label>
-                      <Input
-                        id={`tx-qty-${d.key}`}
-                        type="number"
-                        min={0}
-                        step="any"
-                        value={d.qty}
-                        onChange={(e) => set(i, { qty: e.target.value })}
-                        className="w-24 text-right tabular-nums"
-                      />
-                    </div>
-                    <div className="flex flex-col gap-1.5">
-                      <Label htmlFor={`tx-dosage-${d.key}`}>Dose</Label>
-                      <Input
-                        id={`tx-dosage-${d.key}`}
-                        value={d.dosage}
-                        onChange={(e) => set(i, { dosage: e.target.value })}
-                        placeholder="20 ml"
-                        className="w-28"
-                      />
-                    </div>
-                    {doses.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => setDoses((s) => s.filter((_, j) => j !== i))}
-                        aria-label="Take this drug off"
-                        className="mb-2 text-[var(--sd-quiet)] transition-colors hover:text-[var(--sd-sev-critical)]"
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
-                    )}
-                  </div>
-                  <div className="flex flex-wrap items-end gap-3">
-                    <div className="flex flex-col gap-1.5">
-                      <Label htmlFor={`tx-route-${d.key}`}>How</Label>
-                      <Picker
-                        id={`tx-route-${d.key}`}
-                        value={d.route}
-                        onChange={(v) => set(i, { route: v })}
-                        options={(options?.routes ?? []).filter(Boolean)}
-                        label="How"
-                        placeholder="Route"
-                        className="w-[180px]"
-                      />
-                    </div>
-                    <div className="flex flex-col gap-1.5">
-                      <Label htmlFor={`tx-wd-${d.key}`}>Withdrawal (days)</Label>
-                      <Input
-                        id={`tx-wd-${d.key}`}
-                        type="number"
-                        min={0}
-                        value={d.withdrawal}
-                        onChange={(e) => set(i, { withdrawal: e.target.value })}
-                        className="w-28 text-right tabular-nums"
-                      />
-                    </div>
-                    <div className="flex flex-col gap-1.5">
-                      <Label htmlFor={`tx-resp-${d.key}`}>How she is</Label>
-                      <Picker
-                        id={`tx-resp-${d.key}`}
-                        value={d.response}
-                        onChange={(v) => set(i, { response: v })}
-                        options={RESPONSES}
-                        label="How she is"
-                        placeholder="Not assessed"
-                        className="w-[170px]"
-                      />
-                    </div>
-                  </div>
-                </div>
-              ))}
+              <ItemsUsed choices={store?.drug_items ?? []} rows={doses} onChange={setDoses} />
 
-              <button
-                type="button"
-                onClick={() => setDoses((s) => [...s, blank()])}
-                className="inline-flex w-fit items-center gap-1.5 text-[12.5px] font-medium text-[var(--sd-muted)] transition-colors hover:text-[var(--sd-ink)]"
-              >
-                <Plus className="h-3.5 w-3.5" strokeWidth={2.5} />
-                Another drug
-              </button>
+              {doses
+                .filter((d) => d.item)
+                .map((d) => {
+                  const x = details[d.key] ?? NO_DETAIL;
+                  const name =
+                    store?.drug_items.find((c) => c.value === d.item)?.item_name || d.item;
+                  return (
+                    <div
+                      key={d.key}
+                      className="flex flex-col gap-3 rounded-[var(--sd-radius-lg)] bg-[var(--sd-bg-soft)] px-3.5 py-3 shadow-[var(--sd-shadow-inset)]"
+                    >
+                      <p className="text-[12.5px] font-medium text-[var(--sd-ink)]">{name}</p>
+                      <div className="flex flex-wrap items-end gap-3">
+                        <div className="flex flex-col gap-1.5">
+                          <Label htmlFor={`tx-dosage-${d.key}`}>Dose</Label>
+                          <Input
+                            id={`tx-dosage-${d.key}`}
+                            value={x.dosage}
+                            onChange={(e) => detail(d.key, { dosage: e.target.value })}
+                            placeholder="20 ml"
+                            className="w-28"
+                          />
+                        </div>
+                        <div className="flex flex-col gap-1.5">
+                          <Label htmlFor={`tx-route-${d.key}`}>How</Label>
+                          <Picker
+                            id={`tx-route-${d.key}`}
+                            value={x.route}
+                            onChange={(v) => detail(d.key, { route: v })}
+                            options={(options?.routes ?? []).filter(Boolean)}
+                            label="How"
+                            placeholder="Route"
+                            className="w-[180px]"
+                          />
+                        </div>
+                        <div className="flex flex-col gap-1.5">
+                          <Label htmlFor={`tx-wd-${d.key}`}>Withdrawal (days)</Label>
+                          <Input
+                            id={`tx-wd-${d.key}`}
+                            type="number"
+                            min={0}
+                            value={x.withdrawal}
+                            onChange={(e) => detail(d.key, { withdrawal: e.target.value })}
+                            className="w-28 text-right tabular-nums"
+                          />
+                        </div>
+                        <div className="flex flex-col gap-1.5">
+                          <Label htmlFor={`tx-resp-${d.key}`}>How she is</Label>
+                          <Picker
+                            id={`tx-resp-${d.key}`}
+                            value={x.response}
+                            onChange={(v) => detail(d.key, { response: v })}
+                            options={RESPONSES}
+                            label="How she is"
+                            placeholder="Not assessed"
+                            className="w-[170px]"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
 
               <div className="flex flex-wrap items-center gap-3">
                 <Button onClick={send} disabled={!ready || busy}>
@@ -554,8 +501,8 @@ export function Treatment() {
     </Page>
   );
 
-  function set(i: number, patch: Partial<Dose>) {
-    setDoses((s) => s.map((x, j) => (j === i ? { ...x, ...patch } : x)));
+  function detail(key: number, patch: Partial<DoseDetail>) {
+    setDetails((s) => ({ ...s, [key]: { ...(s[key] ?? NO_DETAIL), ...patch } }));
   }
 }
 
