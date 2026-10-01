@@ -5,6 +5,7 @@ import { Picker } from "@/components/ui/picker";
 import { Notice } from "@/components/feeding/Notice";
 import type { StockChoice } from "@/lib/events";
 import type { BatchPlan } from "@/lib/feeding";
+import { planKey } from "@/lib/use-batch-plans";
 
 /**
  * What this event used, out of the stores that actually hold it.
@@ -50,7 +51,7 @@ export function ItemsUsed({
   rows: ItemRow[];
   onChange: (rows: ItemRow[]) => void;
   defaultQty?: string;
-  /** What `event_batches` said, by item code. Absent until it has answered;
+  /** What `event_batches` said, keyed by `planKey(item, store)`. Absent until it has answered;
    *  a plan for an item that is not batch tracked turns the picker into words. */
   plans?: Record<string, BatchPlan>;
 }) {
@@ -79,7 +80,10 @@ export function ItemsUsed({
     <div className="flex flex-col gap-3">
       {rows.map((r) => {
         const chosen = where.get(r.item);
-        const plan = plans?.[r.item];
+        // A plan answers for one item in one store. Anything else is somebody
+        // else's batches and must never render here.
+        const found = plans?.[planKey(r.item, r.store)];
+        const plan = found && found.warehouse === r.store ? found : undefined;
         return (
           <div key={r.key} className="grid gap-3 sm:grid-cols-[2fr_0.6fr_1.4fr_1.4fr_auto]">
             <div className="flex flex-col gap-1.5">
