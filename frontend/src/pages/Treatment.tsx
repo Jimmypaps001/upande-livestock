@@ -369,7 +369,7 @@ export function Treatment() {
                 )}
               </div>
 
-              <ItemsUsed choices={store?.drug_items ?? []} rows={doses} onChange={setDoses} />
+              <ItemsUsed choices={store?.drug_items ?? []} rows={doses} onChange={changeDoses} />
 
               {doses
                 .filter((d) => d.item)
@@ -500,6 +500,22 @@ export function Treatment() {
       </div>
     </Page>
   );
+
+  // A different drug on a row is a different dose, route and — above all —
+  // withdrawal period. Carrying drug A's 7 days under drug B's name would send
+  // milk to the tank before it is safe, so a changed item wipes its details.
+  // A changed quantity or store keeps them.
+  function changeDoses(next: ItemRow[]) {
+    const was = new Map(doses.map((d) => [d.key, d.item]));
+    const cleared = next.filter((d) => was.has(d.key) && was.get(d.key) !== d.item).map((d) => d.key);
+    if (cleared.length)
+      setDetails((s) => {
+        const rest = { ...s };
+        for (const k of cleared) delete rest[k];
+        return rest;
+      });
+    setDoses(next);
+  }
 
   function detail(key: number, patch: Partial<DoseDetail>) {
     setDetails((s) => ({ ...s, [key]: { ...(s[key] ?? NO_DETAIL), ...patch } }));
