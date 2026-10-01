@@ -2,6 +2,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Picker } from "@/components/ui/picker";
+import { Notice } from "@/components/feeding/Notice";
 import type { StockChoice } from "@/lib/events";
 
 /**
@@ -27,22 +28,32 @@ export interface ItemRow {
 
 let nextKey = 1;
 
-export function blankRow(): ItemRow {
-  return { key: nextKey++, item: "", qty: "1", store: "" };
+/** `qty` is the starting quantity. A per-animal dose (Husbandry) must start
+ *  blank, or an untouched 1 on a 50-head round quietly draws 50 units. */
+export function blankRow(qty = "1"): ItemRow {
+  return { key: nextKey++, item: "", qty, store: "" };
 }
 
 export function ItemsUsed({
   choices,
   rows,
   onChange,
+  defaultQty = "1",
 }: {
   choices: StockChoice[];
   rows: ItemRow[];
   onChange: (rows: ItemRow[]) => void;
+  defaultQty?: string;
 }) {
-  // An event type with no mapped group consumes nothing, and a list with
-  // nothing on offer is a control that can only frustrate.
-  if (!choices.length) return null;
+  // Nothing on offer: no control to frustrate, but say why, or the screen
+  // asks for a drug it has nowhere to pick from.
+  if (!choices.length)
+    return (
+      <Notice tone="info">
+        No items are mapped to this event, so it cannot use anything from the
+        store. Set that in Settings, &ldquo;What Each Event May Consume&rdquo;.
+      </Notice>
+    );
 
   const where = new Map(choices.map((c) => [c.value, c]));
 
@@ -110,7 +121,7 @@ export function ItemsUsed({
         );
       })}
       <div>
-        <Button type="button" variant="outline" size="sm" onClick={() => onChange([...rows, blankRow()])}>
+        <Button type="button" variant="outline" size="sm" onClick={() => onChange([...rows, blankRow(defaultQty)])}>
           Another item
         </Button>
       </div>

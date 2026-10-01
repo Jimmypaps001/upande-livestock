@@ -65,3 +65,33 @@ describe("what this event used", () => {
     expect(screen.queryByLabelText("Item")).toBeNull();
   });
 });
+
+describe("quantity defaults and an empty mapping", () => {
+  it("starts an added row blank when the caller says doses are per animal", () => {
+    const onChange = vi.fn();
+    render(
+      <TooltipProvider>
+        <ItemsUsed choices={choices} rows={[blankRow("")]} onChange={onChange} defaultQty="" />
+      </TooltipProvider>,
+    );
+    fireEvent.click(screen.getByText("Another item"));
+    const rows = onChange.mock.calls.at(-1)![0] as ItemRow[];
+    expect(rows[1].qty).toBe("");
+  });
+
+  it("starts an added row at 1 by default", () => {
+    const onChange = draw([blankRow()]);
+    fireEvent.click(screen.getByText("Another item"));
+    expect((onChange.mock.calls.at(-1)![0] as ItemRow[])[1].qty).toBe("1");
+  });
+
+  it("says nothing is mapped, and where to map it, when there is nothing to offer", () => {
+    render(
+      <TooltipProvider>
+        <ItemsUsed choices={[]} rows={[blankRow()]} onChange={vi.fn()} />
+      </TooltipProvider>,
+    );
+    expect(screen.getByText(/No items are mapped to this event/)).toBeTruthy();
+    expect(screen.getByText(/What Each Event May Consume/)).toBeTruthy();
+  });
+});
