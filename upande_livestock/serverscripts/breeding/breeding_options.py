@@ -7,7 +7,7 @@ import frappe
 from upande_livestock.serverscripts.common.choices import active_animals, animal_choices, herd_label_map, select_options
 from upande_livestock.serverscripts.common.employee import current_employee
 from upande_livestock.serverscripts.common.envelope import guard_read, run
-from upande_livestock.serverscripts.common.event_items import items_for_event
+from upande_livestock.serverscripts.common.event_items import consumes_items, items_for_event
 from upande_livestock.serverscripts.common.stock_items import stock_items
 from upande_livestock.serverscripts.common import stock as livestock_stock
 from upande_livestock.serverscripts.common import herd_movement
@@ -69,7 +69,9 @@ def breeding_options():
 			"default_semen_item": livestock_stock.default_semen_item(),
 			# What each of this screen's event types may use, by type. One
 			# endpoint serves several screens, so a bare list could not say whose.
-			"items_by_event": {t: items_for_event(t) for t in ('Heat Detection', 'Pregnancy Diagnosis')},
+			# A type the farm mapped nothing to has NO key: absent means "not
+			# configured, show nothing", while [] means "mapped, nothing in stock".
+			"items_by_event": {t: items_for_event(t) for t in ('Heat Detection', 'Pregnancy Diagnosis') if consumes_items(t)},
 			"employee": current_employee(),
 		}
 

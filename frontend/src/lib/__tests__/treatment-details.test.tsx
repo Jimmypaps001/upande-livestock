@@ -70,39 +70,39 @@ describe("treatment details follow the drug", () => {
     await waitFor(() => expect(wd().value).toBe(""));
   });
 
-  it("says so, rather than asking for a drug it cannot offer, when nothing is mapped", async () => {
+  it("says so, rather than asking for a drug it cannot offer, when nothing mapped is in stock", async () => {
     state.drugs = [];
     state.gate = null;
     state.fail = false;
     draw();
     await waitFor(() =>
-      expect(screen.getByText(/No items are mapped to this event/)).toBeTruthy(),
+      expect(screen.getByText(/Nothing mapped to this event is in stock right now/)).toBeTruthy(),
     );
   });
 
-  it("does not claim nothing is mapped before the list has arrived, only once it is empty", async () => {
+  it("does not claim nothing is in stock before the list has arrived, only once it is empty", async () => {
     let open!: () => void;
     state.gate = new Promise<void>((r) => (open = r));
     state.fail = false;
     state.drugs = [];
     draw();
     // Before the call resolves, and after the options have.
-    expect(screen.queryByText(/No items are mapped/)).toBeNull();
+    expect(screen.queryByText(/Nothing mapped to this event is in stock right now/)).toBeNull();
     await waitFor(() => expect(call).toHaveBeenCalled());
     await new Promise((r) => setTimeout(r, 50));
-    expect(screen.queryByText(/No items are mapped/)).toBeNull();
+    expect(screen.queryByText(/Nothing mapped to this event is in stock right now/)).toBeNull();
     open();
-    await waitFor(() => expect(screen.getByText(/No items are mapped/)).toBeTruthy());
+    await waitFor(() => expect(screen.getByText(/Nothing mapped to this event is in stock right now/)).toBeTruthy());
     state.gate = null;
   });
 
-  it("says the list could not be loaded, not that nothing is mapped, when the call fails", async () => {
+  it("says the list could not be loaded, not that nothing is in stock, when the call fails", async () => {
     state.gate = null;
     state.fail = true;
     state.drugs = [];
     draw();
     await waitFor(() => expect(screen.getByText(/could not be loaded/)).toBeTruthy());
-    expect(screen.queryByText(/No items are mapped/)).toBeNull();
+    expect(screen.queryByText(/Nothing mapped to this event is in stock right now/)).toBeNull();
     state.fail = false;
   });
 });

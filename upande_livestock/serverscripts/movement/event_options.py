@@ -13,7 +13,7 @@ import frappe
 from upande_livestock.serverscripts.common.choices import active_animals, animal_choices, herd_label_map, select_options
 from upande_livestock.serverscripts.common.employee import current_employee
 from upande_livestock.serverscripts.common.envelope import guard_read, run
-from upande_livestock.serverscripts.common.event_items import items_for_event
+from upande_livestock.serverscripts.common.event_items import consumes_items, items_for_event
 from upande_livestock.serverscripts.common import herd_movement
 
 
@@ -58,7 +58,9 @@ def event_options():
 			or ["Live Birth", "Still Birth"],
 			# What each of this screen's event types may use, by type. One
 			# endpoint serves several screens, so a bare list could not say whose.
-			"items_by_event": {t: items_for_event(t) for t in ('Calving',)},
+			# A type the farm mapped nothing to has NO key: absent means "not
+			# configured, show nothing", while [] means "mapped, nothing in stock".
+			"items_by_event": {t: items_for_event(t) for t in ('Calving',) if consumes_items(t)},
 			"employee": current_employee(),
 		}
 

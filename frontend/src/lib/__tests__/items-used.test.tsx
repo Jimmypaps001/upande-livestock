@@ -86,14 +86,15 @@ describe("quantity defaults and an empty mapping", () => {
     expect((onChange.mock.calls.at(-1)![0] as ItemRow[])[1].qty).toBe("1");
   });
 
-  it("says nothing is mapped, and where to map it, when there is nothing to offer", () => {
+  it("says nothing mapped to the event is in stock, and does not send a configured farm to Settings", () => {
     render(
       <TooltipProvider>
         <ItemsUsed choices={[]} rows={[blankRow()]} onChange={vi.fn()} />
       </TooltipProvider>,
     );
-    expect(screen.getByText(/No items are mapped to this event/)).toBeTruthy();
-    expect(screen.getByText(/What Each Event May Consume/)).toBeTruthy();
+    expect(screen.getByText(/Nothing mapped to this event is in stock right now/)).toBeTruthy();
+    expect(screen.queryByText(/No items are mapped/)).toBeNull();
+    expect(screen.queryByText(/Settings/)).toBeNull();
   });
 });
 

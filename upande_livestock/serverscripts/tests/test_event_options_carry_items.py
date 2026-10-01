@@ -19,7 +19,8 @@ def _fake(event_type, company=None):
 
 class TestOptionsCarryItemsByEvent(unittest.TestCase):
 	def _items(self, mod, fn):
-		with patch.object(mod, "items_for_event", side_effect=_fake, create=True):
+		with patch.object(mod, "items_for_event", side_effect=_fake, create=True), \
+		     patch.object(mod, "consumes_items", return_value=True, create=True):
 			out = getattr(mod, fn)()
 		self.assertTrue(out.get("ok"), out)
 		return out["items_by_event"]
@@ -37,7 +38,17 @@ class TestOptionsCarryItemsByEvent(unittest.TestCase):
 		m = self._items(EO, "event_options")
 		self.assertEqual(m["Calving"][0]["value"], "ITEM-Calving")
 
-	def test_an_unmapped_type_is_an_empty_list_not_a_missing_key(self):
-		with patch.object(BO, "items_for_event", return_value=[], create=True):
+	def test_an_unmapped_type_has_no_key_at_all(self):
+		"""Absent, not []: the screen reads absent as "not configured, show
+		nothing", and [] as "mapped, but nothing in stock"."""
+		for mod, fn in ((BO, "breeding_options"), (HO, "health_options"), (EO, "event_options")):
+			with patch.object(mod, "items_for_event", return_value=[], create=True), \
+			     patch.object(mod, "consumes_items", return_value=False, create=True):
+				m = getattr(mod, fn)()["items_by_event"]
+			self.assertEqual(m, {}, fn)
+
+	def test_a_mapped_type_with_nothing_in_stock_keeps_an_empty_list(self):
+		with patch.object(BO, "items_for_event", return_value=[], create=True), \
+		     patch.object(BO, "consumes_items", side_effect=lambda t: t == "Heat Detection", create=True):
 			m = BO.breeding_options()["items_by_event"]
-		self.assertEqual(m["Heat Detection"], [])
+		self.assertEqual(m, {"Heat Detection": []})

@@ -46,7 +46,7 @@ export function ItemsUsed({
   plans,
 }: {
   /** `undefined` means not loaded yet (or failed to load) and renders nothing;
-   *  only an explicit empty array says nothing is mapped. */
+   *  only an explicit empty array says what is mapped is out of stock. */
   choices: StockChoice[] | undefined;
   rows: ItemRow[];
   onChange: (rows: ItemRow[]) => void;
@@ -60,13 +60,15 @@ export function ItemsUsed({
   // that is not broken.
   if (!choices) return null;
 
-  // Nothing on offer: no control to frustrate, but say why, or the screen
-  // asks for a drug it has nowhere to pick from.
+  // `[]` means ONE thing: the event is mapped to item groups and nothing in
+  // them is in stock. Not-mapped is an absent list (`undefined`, above), so a
+  // farm that has configured everything is never sent to Settings to add a row
+  // it already has.
   if (!choices.length)
     return (
       <Notice tone="info">
-        No items are mapped to this event, so it cannot use anything from the
-        store. Set that in Settings, &ldquo;What Each Event May Consume&rdquo;.
+        Nothing mapped to this event is in stock right now, so it cannot use
+        anything from the store.
       </Notice>
     );
 

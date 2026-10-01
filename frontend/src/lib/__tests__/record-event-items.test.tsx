@@ -104,17 +104,17 @@ describe("RecordEvent with itemsOf", () => {
     expect(submit.mock.calls[0][0].items).toEqual([]);
   });
 
-  it("renders nothing while the list is not loaded, and says so only for an explicit empty one", async () => {
+  it("renders nothing while the list is not loaded, and says so only for an explicit empty one (mapped, nothing in stock)", async () => {
     const { unmount } = screenWith(() => undefined);
     fireEvent.click(await screen.findByText("Daisy"));
     await screen.findByRole("button", { name: "Record heat" });
     expect(screen.queryByLabelText("Item")).toBeNull();
-    expect(screen.queryByText(/No items are mapped/)).toBeNull();
+    expect(screen.queryByText(/Nothing mapped to this event is in stock right now/)).toBeNull();
     unmount();
 
     screenWith(() => []);
     fireEvent.click(await screen.findByText("Daisy"));
-    expect(await screen.findByText(/No items are mapped/)).toBeTruthy();
+    expect(await screen.findByText(/Nothing mapped to this event is in stock right now/)).toBeTruthy();
   });
 
   it("is absent altogether on a screen that passed no itemsOf", async () => {
