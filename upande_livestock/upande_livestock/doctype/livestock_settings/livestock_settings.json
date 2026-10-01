@@ -59,6 +59,7 @@
   "custom_drug_item_group",
   "custom_semen_item_group",
   "custom_drug_warehouses",
+  "custom_event_item_groups",
   "semen_warehouse",
   "cb_husbandry_stock",
   "semen_item",
@@ -439,6 +440,13 @@
    "fieldtype": "Table",
    "label": "Drug & Semen Stores Searched",
    "options": "Livestock Drug Warehouse"
+  },
+  {
+   "fieldname": "custom_event_item_groups",
+   "fieldtype": "Table",
+   "options": "Livestock Event Item Group",
+   "label": "What Each Event May Consume",
+   "description": "Which item groups each event type draws its items from. Add as many rows per event as the farm needs \u2014 an event with no row consumes nothing and shows no items list."
   },
   {
    "description": "Fallback store for a Service that names none. The straw picker itself searches the Drug & Semen Stores Searched list below. Falls back to the Drug Store when unset.",
