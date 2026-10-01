@@ -166,20 +166,34 @@ animal is issuing stock to her, and every such issue belongs in a file.** A
 treatment with no case is a drug that left the store with nothing to explain
 it, and a cow whose history has a hole in exactly the place a vet would look.
 
-`add_case_treatment` already honours it — it refuses without a case. One path
-does not. `create_check_up` looks for a standing case and attaches to it when
-there is one, but when the action is "treated on the spot" and the animal has
-no file, it issues the drugs anyway and returns `suggest_case: True`. The
-screen then says, in a toast that fades, "she was treated but has no file open;
-open one on the Treatment screen if this is more than a one-off."
+**`treat_animal` already honours it, and is the model.** It is the one door in:
+a treatment goes into the file she has, or into one the caller explicitly asked
+to open, and otherwise it refuses —
 
-So the drugs go out and the file is a suggestion. That becomes: when a check up
-issues drugs and the animal has no standing case, a case is opened for her as
-part of the same action, the way an escalation already does. Nothing is
-refused, nothing waits on a second visit to another screen — the file simply
-exists, because the treatment made it exist.
+    "{0} has no open file. Say what is wrong with her and a new one will be
+     opened for this treatment."
 
-`suggest_case` is then dead and goes with it.
+It also refuses to decide for itself, and the reason is worth keeping in front
+of us: *opening a second file for an illness already being treated is exactly
+the mistake that makes a farm's case history unreadable — three files for one
+bout of mastitis, none of them the whole story.* Nothing in this spec may
+auto-open a case, because that is the failure `treat_animal` was built to
+prevent.
+
+**`create_check_up` is the one path that does not honour it.** It attaches to a
+standing case when there is one, but when the action is "treated on the spot"
+and the animal has no file, it issues the drugs anyway and returns
+`suggest_case: True` — which the screen shows in a toast that fades: "she was
+treated but has no file open; open one on the Treatment screen if this is more
+than a one-off." The drugs go out and the file is a suggestion.
+
+So a check up that would issue drugs to an animal with no open file is
+**refused**, in the same words and for the same reason as `treat_animal`. One
+rule, one message, one place to understand. The operator opens the file — on
+the Treatment screen, which already does this properly — and the drugs go out
+against it.
+
+`suggest_case` becomes dead and goes with it.
 
 **This does not spread to vaccination and deworming.** A routine round is not a
 treatment and opens no file; those are their own event types, they consume
@@ -312,10 +326,11 @@ Treatments specifically, because they are the path that is broken on live:
   treatment is added or removed
 - the `Treatment` event type is a mapping key only: it is not offered as a
   recordable event anywhere in the app
-- a check up that issues drugs to an animal with no standing case OPENS one,
-  and the treatment lands in it
-- a check up that issues drugs to an animal WITH a standing case still uses
-  that one, and does not open a second
+- a check up that would issue drugs to an animal with no standing case is
+  REFUSED, in the same words `treat_animal` uses
+- a check up that issues drugs to an animal WITH a standing case uses that one,
+  and does not open a second
+- nothing in this change auto-opens a case, on any path
 - a check up that issues no drugs opens no case
 - a vaccination and a deworming open no case, however many drugs they issue
 
