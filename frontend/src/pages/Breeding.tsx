@@ -125,6 +125,7 @@ export function Diagnosis() {
             placeholder: "Scanned; roughly 45 days." },
         ]}
         operatorOf={(o) => o.employee}
+        itemsOf={(o) => o.items_by_event?.["Pregnancy Diagnosis"]}
         submitLabel="Record the result"
         submit={createPregnancyDiagnosis}
         said={(r, a) => `${a} checked — ${r.name}.`}
@@ -160,6 +161,7 @@ export function Abortion() {
             placeholder: "Found the foetus in the morning; she is eating." },
         ]}
         operatorOf={(o) => o.employee}
+        itemsOf={(o) => o.items_by_event?.["Abortion"]}
         submitLabel="Record the loss"
         submit={createAbortionEvent}
         said={(r, a) => `Recorded against ${a} — ${r.name}. Her pregnancy is closed.`}
@@ -248,6 +250,7 @@ export function Heat() {
             placeholder: "Standing to be mounted, clear mucus." },
         ]}
         operatorOf={(o) => o.employee}
+        itemsOf={(o) => o.items_by_event?.["Heat Detection"]}
         submitLabel="Record the heat"
         submit={createHeatEvent}
         said={(r, a) => `${a} noted in heat — ${r.name}.`}

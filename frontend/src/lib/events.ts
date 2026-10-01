@@ -62,6 +62,10 @@ export interface AnimalChoice {
 }
 
 export interface BreedingOptions {
+  /** What each of this screen's event types may use, keyed by event type.
+   *  Absent until loaded: `undefined` must stay `undefined`, because only an
+   *  explicit empty list means "nothing is mapped". */
+  items_by_event?: Record<string, StockChoice[]>;
   animals: AnimalChoice[];
   diagnosis_animals: AnimalChoice[];
   /** Wider than `animals`: a served cow is not servable, but her coming back
@@ -77,6 +81,10 @@ export interface BreedingOptions {
 }
 
 export interface HealthOptions {
+  /** What each of this screen's event types may use, keyed by event type.
+   *  Absent until loaded: `undefined` must stay `undefined`, because only an
+   *  explicit empty list means "nothing is mapped". */
+  items_by_event?: Record<string, StockChoice[]>;
   animals: AnimalChoice[];
   /** Cows the farm believes are in calf — the only ones an abortion can
    *  happen to. */
@@ -131,6 +139,10 @@ export interface WeightRow {
 }
 
 export interface MovementOptions {
+  /** What each of this screen's event types may use, keyed by event type.
+   *  Absent until loaded: `undefined` must stay `undefined`, because only an
+   *  explicit empty list means "nothing is mapped". */
+  items_by_event?: Record<string, StockChoice[]>;
   animals: AnimalChoice[];
   /** In calf, still in milk, inside the farm's dry-off window. */
   dry_off_animals: AnimalChoice[];

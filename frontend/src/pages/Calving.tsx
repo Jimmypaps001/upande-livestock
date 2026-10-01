@@ -24,6 +24,8 @@ import {
   type MovementOptions,
 } from "@/lib/events";
 import { OperatorField } from "@/components/events/OperatorField";
+import { ItemsUsed, blankRow, type ItemRow } from "@/components/events/ItemsUsed";
+import { useBatchPlans } from "@/lib/use-batch-plans";
 import { useOperator } from "@/lib/operator";
 import { cn, todayISO } from "@/lib/utils";
 
@@ -65,6 +67,8 @@ export function Calving() {
   const [remarks, setRemarks] = useState("");
   const [calves, setCalves] = useState<CalfRow[]>([blankCalf()]);
   const [where, setWhere] = useState<CalvingDestinations | null>(null);
+  const [itemRows, setItemRows] = useState<ItemRow[]>(() => [blankRow()]);
+  const plans = useBatchPlans(itemRows);
   const [busy, setBusy] = useState(false);
   const toast = useToast();
   const [term, setTerm] = useState("");
@@ -132,6 +136,15 @@ export function Calving() {
       event_date: when,
       remarks: remarks.trim() || undefined,
       operator: who.value,
+      // Never an empty batch_no: an empty string reads as a batch named "".
+      items: itemRows
+        .filter((r) => r.item && Number(r.qty) > 0)
+        .map((r) => ({
+          item_code: r.item,
+          qty: Number(r.qty),
+          source_warehouse: r.store,
+          batch_no: r.batch || undefined,
+        })),
       outcome: calves.every((c) => c.is_stillborn) ? "Still Birth" : "Live Birth",
       calves: calves.map((c) => ({
         sex: c.sex,
@@ -154,6 +167,7 @@ export function Calving() {
     setDam(null);
     setCalves([blankCalf()]);
     setRemarks("");
+    setItemRows([blankRow()]);
     void load();
   }
 
@@ -364,6 +378,16 @@ export function Calving() {
                       Another calf
                     </button>
                   </div>
+
+                  {/* `undefined` while the options have not named a list: nothing
+                      is shown, because "nothing is mapped" is only for an
+                      explicit empty one. */}
+                  <ItemsUsed
+                    choices={options?.items_by_event?.["Calving"]}
+                    rows={itemRows}
+                    onChange={setItemRows}
+                    plans={plans}
+                  />
 
                   <div className="flex flex-col gap-1.5">
                     <Label htmlFor="c-remarks">Notes</Label>
