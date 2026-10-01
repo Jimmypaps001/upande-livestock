@@ -159,12 +159,32 @@ recomputes `total_treatment_cost` as the sum of its treatments whenever they
 change. The Health page's tile is then reporting something real rather than
 counting zeroes.
 
-**Out of scope, recorded so it is not lost:** when an animal is treated and has
-no open case, the farm wants to be prompted to open one. Today a Check Up that
-treats an animal without a file says, in a toast, "she was treated but has no
-file open; open one on the Treatment screen if this is more than a one-off" — a
-suggestion that is easy to miss, not a prompt. Turning that into a real
-prompt is its own change and is not in this spec.
+### A treatment never happens outside a case
+
+This is the farm's rule and it is an invariant, not a preference: **treating an
+animal is issuing stock to her, and every such issue belongs in a file.** A
+treatment with no case is a drug that left the store with nothing to explain
+it, and a cow whose history has a hole in exactly the place a vet would look.
+
+`add_case_treatment` already honours it — it refuses without a case. One path
+does not. `create_check_up` looks for a standing case and attaches to it when
+there is one, but when the action is "treated on the spot" and the animal has
+no file, it issues the drugs anyway and returns `suggest_case: True`. The
+screen then says, in a toast that fades, "she was treated but has no file open;
+open one on the Treatment screen if this is more than a one-off."
+
+So the drugs go out and the file is a suggestion. That becomes: when a check up
+issues drugs and the animal has no standing case, a case is opened for her as
+part of the same action, the way an escalation already does. Nothing is
+refused, nothing waits on a second visit to another screen — the file simply
+exists, because the treatment made it exist.
+
+`suggest_case` is then dead and goes with it.
+
+**This does not spread to vaccination and deworming.** A routine round is not a
+treatment and opens no file; those are their own event types, they consume
+their own drugs, and a herd dosed on schedule is not twenty-four health cases.
+The rule is about treating a sick animal, which is what a case is for.
 
 ### Service folds in
 
@@ -292,6 +312,12 @@ Treatments specifically, because they are the path that is broken on live:
   treatment is added or removed
 - the `Treatment` event type is a mapping key only: it is not offered as a
   recordable event anywhere in the app
+- a check up that issues drugs to an animal with no standing case OPENS one,
+  and the treatment lands in it
+- a check up that issues drugs to an animal WITH a standing case still uses
+  that one, and does not open a second
+- a check up that issues no drugs opens no case
+- a vaccination and a deworming open no case, however many drugs they issue
 
 Frontend:
 - the Items table appears only when the type has mapped groups
