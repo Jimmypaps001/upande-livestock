@@ -18,6 +18,19 @@ class LivestockHealthCase(Document):
 		# the flag stays stored, never derived, so this only ever unsets a false one.
 		backdate.assert_not_future(self.opened_date, "Opened Date")
 		backdate.sanitise(self, "opened_date")
+		self.recompute_treatment_cost()
+
+	def recompute_treatment_cost(self):
+		"""The case has cost the sum of its treatments, and nothing else.
+
+		`total_treatment_cost` is read_only and was never assigned by anything,
+		so the Health page's tile counted zeroes for every case on the farm.
+		Recomputed rather than incremented: a treatment removed has to take its
+		cost with it.
+		"""
+		self.total_treatment_cost = flt(
+			sum(flt(t.get("cost")) for t in (self.treatments or []))
+		)
 
 	def on_submit(self):
 		sync_event_for(self, "Health Case")

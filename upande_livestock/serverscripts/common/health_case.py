@@ -175,6 +175,33 @@ def open_file(d, opened_from=None):
 	return doc
 
 
+def _unit_cost(item_code, warehouse):
+	"""What one unit of this drug is worth where it is being taken from.
+
+	The store matters: the same drug carries a different valuation in two
+	warehouses, and a treatment priced at the wrong shelf's rate is a number
+	nobody can reconcile. Never raises — an unpriced treatment is worth
+	recording, and a cost lookup must not cost the farm its drug issue.
+	"""
+	if not item_code:
+		return 0.0
+	from frappe.utils import flt
+
+	try:
+		rate = (
+			frappe.db.get_value(
+				"Bin", {"item_code": item_code, "warehouse": warehouse}, "valuation_rate"
+			)
+			if warehouse
+			else None
+		)
+		if rate is None:
+			rate = frappe.db.get_value("Item", item_code, "valuation_rate")
+	except Exception:
+		return 0.0
+	return flt(rate)
+
+
 def treatment_row(t, fallback_date=None):
 	"""One treatment as the child table wants it. Quantities are as issued."""
 	from frappe.utils import flt
@@ -193,6 +220,12 @@ def treatment_row(t, fallback_date=None):
 		# store with zero stocked bins.
 		"source_warehouse": t.get("source_warehouse") or None,
 		"batch_no": t.get("batch_no") or None,
+		# What it cost, priced where it came from. A cost the caller typed is an
+		# invoice and wins; this only fills the gap, which until now was every
+		# treatment ever recorded.
+		"cost": flt(t.get("cost")) if t.get("cost") else flt(
+			_unit_cost(t.get("drug_item"), t.get("source_warehouse")) * (flt(t.get("qty")) or 1)
+		),
 		"route": t.get("route") or None,
 		"withdrawal_period_days": int(flt(t.get("withdrawal_period_days"))) or None,
 		"administered_by": t.get("administered_by") or current_employee(),
