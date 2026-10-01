@@ -108,6 +108,8 @@ export interface HusbandryOptions {
   /** Which of them take something out of the drug store. */
   drug_consuming_types: string[];
   drug_items: StockChoice[];
+  /** Whether anything is mapped; `drug_items` of [] cannot say. */
+  drug_items_mapped?: boolean;
   drug_warehouse: string | null;
   herds: { name: string; label: string; heads: number }[];
   employee: string | null;
@@ -263,6 +265,8 @@ export interface OpenCase {
 export interface OpenCasesView {
   cases: OpenCase[];
   drug_items: StockChoice[];
+  /** Whether anything is mapped; `drug_items` of [] cannot say. */
+  drug_items_mapped?: boolean;
   routes?: string[];
   employee?: string | null;
 }

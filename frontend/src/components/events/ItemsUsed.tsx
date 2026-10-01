@@ -44,9 +44,10 @@ export function ItemsUsed({
   onChange,
   defaultQty = "1",
   plans,
+  mapped = true,
 }: {
   /** `undefined` means not loaded yet (or failed to load) and renders nothing;
-   *  only an explicit empty array says what is mapped is out of stock. */
+   *  an explicit empty array is "nothing to offer" (see `mapped`). */
   choices: StockChoice[] | undefined;
   rows: ItemRow[];
   onChange: (rows: ItemRow[]) => void;
@@ -54,21 +55,29 @@ export function ItemsUsed({
   /** What `event_batches` said, keyed by `planKey(item, store)`. Absent until it has answered;
    *  a plan for an item that is not batch tracked turns the picker into words. */
   plans?: Record<string, BatchPlan>;
+  /** Only read when `choices` is `[]`, which alone cannot say why. `false`:
+   *  the farm mapped nothing to this event (point it at Settings). Otherwise
+   *  something is mapped and none of it is in stock. A caller that cannot know
+   *  leaves it out and gets the stock wording. */
+  mapped?: boolean;
 }) {
   // Not known yet: say nothing. Claiming "nothing is mapped" while the list is
   // still loading, or after it failed, sends a correct farm to fix a mapping
   // that is not broken.
   if (!choices) return null;
 
-  // `[]` means ONE thing: the event is mapped to item groups and nothing in
-  // them is in stock. Not-mapped is an absent list (`undefined`, above), so a
-  // farm that has configured everything is never sent to Settings to add a row
-  // it already has.
+  // `[]` alone is ambiguous, so `mapped` says which: nothing mapped at all
+  // (Settings is the fix), or mapped with nothing in stock (it is not).
   if (!choices.length)
-    return (
+    return mapped ? (
       <Notice tone="info">
         Nothing mapped to this event is in stock right now, so it cannot use
         anything from the store.
+      </Notice>
+    ) : (
+      <Notice tone="info">
+        No items are mapped to this event, so it cannot use anything from the
+        store. Set that in Settings, &ldquo;What Each Event May Consume&rdquo;.
       </Notice>
     );
 

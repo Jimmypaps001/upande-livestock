@@ -8,7 +8,7 @@ from upande_livestock.serverscripts.common.choices import select_options
 from upande_livestock.serverscripts.common.employee import current_employee
 from upande_livestock.serverscripts.common.envelope import guard_read, run
 from upande_livestock.serverscripts.common.health_case import TREATING_STATUSES
-from upande_livestock.serverscripts.common.event_items import items_for_event
+from upande_livestock.serverscripts.common.event_items import consumes_items, items_for_event
 
 
 @frappe.whitelist()
@@ -46,6 +46,8 @@ def open_health_cases():
 				for r in rows
 			],
 			"drug_items": items_for_event("Treatment"),
+			# [] above is unmapped OR unstocked; this says which.
+			"drug_items_mapped": consumes_items("Treatment"),
 			"routes": select_options("Livestock Health Treatment", "route"),
 			"employee": current_employee(),
 		}

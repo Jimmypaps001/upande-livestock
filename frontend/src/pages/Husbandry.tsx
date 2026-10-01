@@ -216,7 +216,7 @@ export function Husbandry() {
                 Quantities are per animal. The basket underneath is what actually
                 leaves the store.
               </p>
-              <ItemsUsed choices={options?.drug_items} rows={drugs} onChange={setDrugs} defaultQty="" plans={plans} />
+              <ItemsUsed choices={options?.drug_items} mapped={options?.drug_items_mapped} rows={drugs} onChange={setDrugs} defaultQty="" plans={plans} />
               <div className="flex flex-col gap-1">
                 {drugs.map((d) => {
                   const item = options?.drug_items.find((x) => x.value === d.item);

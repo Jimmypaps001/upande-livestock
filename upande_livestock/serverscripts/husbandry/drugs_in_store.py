@@ -5,7 +5,7 @@ Read-guarded on Item — this discloses stock balances."""
 import frappe
 
 from upande_livestock.serverscripts.common.envelope import guard_read, run
-from upande_livestock.serverscripts.husbandry._shared import husbandry_drug_items
+from upande_livestock.serverscripts.husbandry._shared import husbandry_drug_items, husbandry_items_mapped
 
 
 @frappe.whitelist()
@@ -19,6 +19,7 @@ def drugs_in_store():
 
 	def go():
 		guard_read("Item")
-		return {"ok": True, "drug_items": husbandry_drug_items()}
+		return {"ok": True, "drug_items": husbandry_drug_items(),
+		        "drug_items_mapped": husbandry_items_mapped()}
 
 	return run(go, "livestock drugs_in_store failed")
