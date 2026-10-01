@@ -52,3 +52,14 @@ class TestOptionsCarryItemsByEvent(unittest.TestCase):
 		     patch.object(BO, "consumes_items", side_effect=lambda t: t == "Heat Detection", create=True):
 			m = BO.breeding_options()["items_by_event"]
 		self.assertEqual(m, {"Heat Detection": []})
+
+	def test_breeding_carries_service_when_mapped_and_omits_it_when_not(self):
+		"""Absent Service key is what keeps the legacy straw picker on screen."""
+		with patch.object(BO, "items_for_event", side_effect=_fake, create=True), \
+		     patch.object(BO, "consumes_items", side_effect=lambda t: t == "Service", create=True):
+			m = BO.breeding_options()["items_by_event"]
+		self.assertEqual(list(m), ["Service"])
+		with patch.object(BO, "items_for_event", side_effect=_fake, create=True), \
+		     patch.object(BO, "consumes_items", side_effect=lambda t: t != "Service", create=True):
+			m = BO.breeding_options()["items_by_event"]
+		self.assertNotIn("Service", m)

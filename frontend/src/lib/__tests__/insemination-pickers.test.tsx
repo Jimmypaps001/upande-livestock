@@ -47,7 +47,7 @@ const straws = [
   },
 ];
 
-const breeding = {
+const breeding: Record<string, unknown> = {
   ok: true,
   animals: [
     { name: "A039/26", label: "APIJA (A039/26)", herd: "Lactating group 1", herd_label: "Lactating group 1", repro: "Open" },
@@ -68,6 +68,7 @@ const call = vi.fn(async (method?: string, args?: Record<string, unknown>) => {
     sent.push(args ?? {});
     return { ok: true, name: "SERVICE-2026-0001" };
   }
+  if ((method || "").includes("event_batches")) return { ok: true, lines: [] };
   return breeding;
 });
 const sent: Record<string, unknown>[] = [];
@@ -104,6 +105,7 @@ describe("the insemination pickers", () => {
   beforeEach(() => {
     call.mockClear();
     sent.length = 0;
+    delete breeding.items_by_event;
   });
 
   it("names the bull and the store on the straw, not the item code", async () => {
@@ -195,5 +197,42 @@ describe("the insemination pickers", () => {
     const payload = sent[0].payload as Record<string, unknown>;
     expect(payload.semen_item).toBe("4040030119");
     expect(payload.semen_warehouse).toBe("Westwood Dairy Store - KR");
+  });
+
+  describe("when the farm has mapped Service to an item group", () => {
+    beforeEach(() => {
+      breeding.items_by_event = { Service: straws };
+    });
+
+    it("shows the shared Items table and none of the bespoke straw fields", async () => {
+      await pickTheCow();
+      expect(await screen.findByLabelText("Item")).toBeTruthy();
+      expect(screen.queryByLabelText("Straw used")).toBeNull();
+      expect(screen.queryByLabelText("Straws used")).toBeNull();
+    });
+
+    it("posts the straw as an items row and writes no legacy field", async () => {
+      await pickTheCow();
+      await choose("How", "A.I.");
+      fireEvent.click(await screen.findByLabelText("Item"));
+      fireEvent.click(await screen.findByRole("option", { name: /Semen Chico/ }));
+      const button = screen.getByRole("button", { name: /Record the service/ });
+      await waitFor(() => expect((button as HTMLButtonElement).disabled).toBe(false));
+      fireEvent.click(button);
+      await waitFor(() => expect(sent.length).toBe(1));
+      const payload = sent[0].payload as Record<string, unknown>;
+      expect(payload.items).toEqual([
+        { item_code: "4040030118", qty: 1, source_warehouse: "Westwood Dairy Store - KR", batch_no: undefined },
+      ]);
+      expect(payload.semen_item).toBeUndefined();
+      expect(payload.semen_warehouse).toBeUndefined();
+    });
+  });
+
+  it("keeps the straw picker and shows no Items table while Service is unmapped", async () => {
+    await pickTheCow();
+    expect(screen.getByLabelText("Straw used")).toBeTruthy();
+    expect(screen.queryByLabelText("Item")).toBeNull();
+    expect(screen.queryByText(/Nothing mapped to this event is in stock right now/)).toBeNull();
   });
 });
