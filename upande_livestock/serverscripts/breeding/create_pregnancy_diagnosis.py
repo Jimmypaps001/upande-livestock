@@ -8,6 +8,7 @@ from frappe.utils import today
 
 from upande_livestock.serverscripts.common.envelope import as_dict, guard, run
 from upande_livestock.serverscripts.common.events import new_livestock_event
+from upande_livestock.serverscripts.husbandry._shared import append_items
 from upande_livestock.serverscripts.common import herd_movement
 
 
@@ -39,6 +40,7 @@ def create_pregnancy_diagnosis(payload):
 		doc.diagnosis_remarks = d.get("diagnosis_remarks")
 		if d.get("related_service"):
 			doc.related_service = d.get("related_service")
+		append_items(doc, d)
 		doc.insert()
 		doc.submit()
 		return {"ok": True, "name": doc.name, "result": doc.diagnosis_result}

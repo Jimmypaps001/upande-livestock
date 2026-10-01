@@ -18,11 +18,13 @@ import { Label } from "@/components/ui/label";
 import { Picker, type PickerOption } from "@/components/ui/picker";
 import { Textarea } from "@/components/ui/textarea";
 import { OperatorField } from "@/components/events/OperatorField";
+import { ItemsUsed, blankRow, type ItemRow } from "@/components/events/ItemsUsed";
 import { useToast } from "@/components/Toast";
 import { useSaveShortcut } from "@/lib/use-save-shortcut";
 import { isError, type Envelope } from "@/lib/frappe";
 import { useOperator } from "@/lib/operator";
-import type { AnimalChoice } from "@/lib/events";
+import type { AnimalChoice, StockChoice } from "@/lib/events";
+import { useBatchPlans } from "@/lib/use-batch-plans";
 import { cn, todayISO } from "@/lib/utils";
 
 /**
@@ -107,6 +109,10 @@ export interface RecordEventProps<O> {
   aside?: (animal: AnimalChoice, options: O) => React.ReactNode;
   /** Who the server thinks is recording this, from the options endpoint. */
   operatorOf?: (options: O) => string | null;
+  /** What this event may consume, if the farm mapped anything to its type.
+   *  Absent: no table. `undefined` returned: not loaded, renders nothing.
+   *  An explicit `[]` says nothing is mapped. */
+  itemsOf?: (options: O) => StockChoice[] | undefined;
 }
 
 export function RecordEvent<O>({
@@ -124,6 +130,7 @@ export function RecordEvent<O>({
   said,
   aside,
   operatorOf,
+  itemsOf,
 }: RecordEventProps<O>) {
   const [options, setOptions] = useState<O | null>(null);
   const [loading, setLoading] = useState(true);
@@ -131,6 +138,9 @@ export function RecordEvent<O>({
   const [term, setTerm] = useState("");
   const [picked, setPicked] = useState<string | null>(null);
   const [values, setValues] = useState<Record<string, string>>({});
+
+  const [itemRows, setItemRows] = useState<ItemRow[]>(() => [blankRow()]);
+  const plans = useBatchPlans(itemRows);
 
   const [busy, setBusy] = useState(false);
   const toast = useToast();
@@ -227,6 +237,17 @@ export function RecordEvent<O>({
       }
       payload[f.name] = f.kind === "number" ? Number(v) : v;
     }
+    if (itemsOf) {
+      // Never an empty batch_no: an empty string reads as a batch named "".
+      payload.items = itemRows
+        .filter((r) => r.item && Number(r.qty) > 0)
+        .map((r) => ({
+          item_code: r.item,
+          qty: Number(r.qty),
+          source_warehouse: r.store,
+          batch_no: r.batch || undefined,
+        }));
+    }
     const r = await submit(payload);
     setBusy(false);
     if (isError(r)) {
@@ -235,6 +256,7 @@ export function RecordEvent<O>({
     }
     toast(said(r, picked));
     setPicked(null);
+    setItemRows([blankRow()]);
     void refresh();
   }
 
@@ -328,6 +350,14 @@ export function RecordEvent<O>({
                   />
                 ))}
               </div>
+              {itemsOf && options && (
+                <ItemsUsed
+                  choices={itemsOf(options)}
+                  rows={itemRows}
+                  onChange={setItemRows}
+                  plans={plans}
+                />
+              )}
               {!!operatorOf && who.mustAsk && (
                 <OperatorField operator={who.operator} onChange={who.setOperator} />
               )}
