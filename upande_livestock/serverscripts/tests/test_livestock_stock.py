@@ -30,15 +30,25 @@ from upande_livestock.serverscripts.tests.test_operations import _assert_ok, _em
 
 
 def _stocked_drug():
-	"""A drug item with a positive balance in the configured drug store, or None."""
+	"""A DRUG item with a positive balance in the configured drug store, or None.
+
+	"Anything in the drug store" is not a drug: a semen straw is stocked there
+	too, and once it was the deepest balance this handed a straw to a Deworming,
+	which the event path rightly refuses (its group is not mapped to the type).
+	So the pick is limited to the farm's drug item group.
+	"""
 	warehouse = livestock_stock.drug_warehouse()
 	if not warehouse:
 		return None, None
+	group = frappe.db.get_single_value("Livestock Settings", "custom_drug_item_group")
+	if not group:
+		return None, warehouse
 	row = frappe.db.sql(
-		"""SELECT item_code, actual_qty FROM `tabBin`
-		   WHERE warehouse = %s AND actual_qty > 0
-		   ORDER BY actual_qty DESC LIMIT 1""",
-		(warehouse,),
+		"""SELECT b.item_code, b.actual_qty FROM `tabBin` b
+		   JOIN `tabItem` i ON i.name = b.item_code
+		   WHERE b.warehouse = %s AND b.actual_qty > 0 AND i.item_group = %s
+		   ORDER BY b.actual_qty DESC LIMIT 1""",
+		(warehouse, group),
 		as_dict=True,
 	)
 	return (row[0].item_code, warehouse) if row else (None, warehouse)
