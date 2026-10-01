@@ -49,7 +49,7 @@ describe("what this event used", () => {
   });
 
   it("lets the store be changed to any other that holds it", async () => {
-    const onChange = draw([{ key: 1, item: "DRUG-A", qty: "2", store: "General Store Karen - KR" }]);
+    const onChange = draw([{ key: 1, item: "DRUG-A", qty: "2", store: "General Store Karen - KR", batch: "" }]);
     fireEvent.click(screen.getByLabelText("From store"));
     fireEvent.click(await screen.findByRole("option", { name: /Westwood Dairy Store - KR/ }));
     await waitFor(() => expect(onChange).toHaveBeenCalled());
@@ -93,5 +93,56 @@ describe("quantity defaults and an empty mapping", () => {
     );
     expect(screen.getByText(/No items are mapped to this event/)).toBeTruthy();
     expect(screen.getByText(/What Each Event May Consume/)).toBeTruthy();
+  });
+});
+
+describe("naming a batch", () => {
+  const plans = {
+    "DRUG-A": {
+      item_code: "DRUG-A", warehouse: "General Store Karen - KR",
+      required_qty: 2, tracked: true,
+      picks: [{ batch_no: "B-1", qty: 2 }], short: 0, blocked_by: [],
+      available: [{ batch_no: "B-1", qty: 9, expiry_date: null }],
+    },
+  };
+
+  it("offers the batches the store actually holds", async () => {
+    render(
+      <TooltipProvider>
+        <ItemsUsed
+          choices={choices}
+          rows={[{ key: 1, item: "DRUG-A", qty: "2", store: "General Store Karen - KR", batch: "" }]}
+          plans={plans}
+          onChange={vi.fn()}
+        />
+      </TooltipProvider>,
+    );
+    fireEvent.click(screen.getByLabelText("Batch"));
+    expect(await screen.findByRole("option", { name: /B-1/ })).toBeTruthy();
+  });
+
+  it("says so rather than offering a picker when the item is not batched", () => {
+    render(
+      <TooltipProvider>
+        <ItemsUsed
+          choices={choices}
+          rows={[{ key: 1, item: "DRUG-A", qty: "2", store: "General Store Karen - KR", batch: "" }]}
+          plans={{ "DRUG-A": { ...plans["DRUG-A"], tracked: false, picks: [], available: [] } }}
+          onChange={vi.fn()}
+        />
+      </TooltipProvider>,
+    );
+    expect(screen.queryByLabelText("Batch")).toBeNull();
+    expect(screen.getByText("not batched")).toBeTruthy();
+  });
+
+  it("says nothing about batches while no plan has arrived", () => {
+    draw([{ key: 1, item: "DRUG-A", qty: "2", store: "General Store Karen - KR", batch: "" }]);
+    expect(screen.queryByLabelText("Batch")).toBeNull();
+    expect(screen.queryByText("not batched")).toBeNull();
+  });
+
+  it("starts a blank row with no batch", () => {
+    expect(blankRow().batch).toBe("");
   });
 });

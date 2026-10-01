@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Picker } from "@/components/ui/picker";
 import { Notice } from "@/components/feeding/Notice";
 import type { StockChoice } from "@/lib/events";
+import type { BatchPlan } from "@/lib/feeding";
 
 /**
  * What this event used, out of the stores that actually hold it.
@@ -24,6 +25,8 @@ export interface ItemRow {
   item: string;
   qty: string;
   store: string;
+  /** Empty means the rule chooses (first expiry first out). */
+  batch: string;
 }
 
 let nextKey = 1;
@@ -31,7 +34,7 @@ let nextKey = 1;
 /** `qty` is the starting quantity. A per-animal dose (Husbandry) must start
  *  blank, or an untouched 1 on a 50-head round quietly draws 50 units. */
 export function blankRow(qty = "1"): ItemRow {
-  return { key: nextKey++, item: "", qty, store: "" };
+  return { key: nextKey++, item: "", qty, store: "", batch: "" };
 }
 
 export function ItemsUsed({
@@ -39,6 +42,7 @@ export function ItemsUsed({
   rows,
   onChange,
   defaultQty = "1",
+  plans,
 }: {
   /** `undefined` means not loaded yet (or failed to load) and renders nothing;
    *  only an explicit empty array says nothing is mapped. */
@@ -46,6 +50,9 @@ export function ItemsUsed({
   rows: ItemRow[];
   onChange: (rows: ItemRow[]) => void;
   defaultQty?: string;
+  /** What `event_batches` said, by item code. Absent until it has answered;
+   *  a plan for an item that is not batch tracked turns the picker into words. */
+  plans?: Record<string, BatchPlan>;
 }) {
   // Not known yet: say nothing. Claiming "nothing is mapped" while the list is
   // still loading, or after it failed, sends a correct farm to fix a mapping
@@ -72,8 +79,9 @@ export function ItemsUsed({
     <div className="flex flex-col gap-3">
       {rows.map((r) => {
         const chosen = where.get(r.item);
+        const plan = plans?.[r.item];
         return (
-          <div key={r.key} className="grid gap-3 sm:grid-cols-[2fr_0.6fr_1.4fr_auto]">
+          <div key={r.key} className="grid gap-3 sm:grid-cols-[2fr_0.6fr_1.4fr_1.4fr_auto]">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor={`item-${r.key}`}>Item</Label>
               <Picker
@@ -81,7 +89,7 @@ export function ItemsUsed({
                 value={r.item}
                 // Choosing the item chooses the store it is mostly in.
                 onChange={(next) =>
-                  set(r.key, { item: next, store: where.get(next)?.warehouse ?? "" })
+                  set(r.key, { item: next, store: where.get(next)?.warehouse ?? "", batch: "" })
                 }
                 options={choices.map((c) => ({ value: c.value, label: c.label }))}
                 label="Item"
@@ -104,7 +112,7 @@ export function ItemsUsed({
               <Picker
                 id={`store-${r.key}`}
                 value={r.store}
-                onChange={(next) => set(r.key, { store: next })}
+                onChange={(next) => set(r.key, { store: next, batch: "" })}
                 options={(chosen?.locations ?? []).map((l) => ({
                   value: l.warehouse,
                   label: `${l.warehouse} · ${l.qty} ${chosen?.uom ?? ""}`.trim(),
@@ -112,6 +120,27 @@ export function ItemsUsed({
                 label="From store"
                 placeholder="—"
               />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              {plan && <Label htmlFor={`batch-${r.key}`}>Batch</Label>}
+              {plan?.tracked ? (
+                <Picker
+                  id={`batch-${r.key}`}
+                  value={r.batch}
+                  onChange={(next) => set(r.key, { batch: next })}
+                  options={plan.available.map((b) => ({
+                    value: b.batch_no,
+                    label: `${b.batch_no} · ${b.qty} here${
+                      b.expiry_date ? ` · expires ${b.expiry_date}` : ""
+                    }`,
+                  }))}
+                  label="Batch"
+                  placeholder="Chosen by the rule"
+                />
+              ) : plan ? (
+                // Not batch tracked, so nothing will ever ask it for a batch.
+                <span className="pt-2 text-[12px] text-[var(--sd-quiet)]">not batched</span>
+              ) : null}
             </div>
             <div className="flex items-end">
               <Button
