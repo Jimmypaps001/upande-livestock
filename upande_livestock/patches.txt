@@ -81,3 +81,13 @@ upande_livestock.patches.settle_services_their_diagnoses_answered
 # livestock_workspace_matches_its_name above; this one's Workspace branch is a
 # no-op by the time it runs on a site that gets both.
 upande_livestock.patches.call_it_livestock_on_the_desk
+
+# Carry today's configuration into the per-event item group mapping. The four
+# types carrying `consumes_drugs = 1` already draw on `custom_drug_item_group`,
+# and treatments consume drugs through a health case, so the rows these facts
+# imply are written: a site that configured something keeps it, a site that
+# configured nothing gets nothing. Service is deliberately not mapped — it would
+# migrate from a working picker onto a worse one (Dairy Others, 410 items
+# including 63 straws). Service is mapped by hand, per site, once that site has
+# a group holding straws alone.
+upande_livestock.patches.seed_event_item_groups

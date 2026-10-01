@@ -62,6 +62,7 @@ SEED_EVENT_TYPES = [
 	# type of its own, which put a health record on her timeline for a decision
 	# about her productivity.
 	{"name": "Cull Review", "creates_animal": 0, "detail_doctype": None},
+	{"name": "Treatment", "creates_animal": 0, "detail_doctype": None},
 ]
 
 
