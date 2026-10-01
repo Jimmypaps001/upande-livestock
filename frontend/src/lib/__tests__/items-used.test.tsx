@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ItemsUsed, blankRow, type ItemRow } from "@/components/events/ItemsUsed";
+import { planKey } from "@/lib/use-batch-plans";
 
 /**
  * What this event used, out of the stores that hold it.
@@ -96,9 +97,11 @@ describe("quantity defaults and an empty mapping", () => {
   });
 });
 
+const KEY = planKey("DRUG-A", "General Store Karen - KR");
+
 describe("naming a batch", () => {
   const plans = {
-    "DRUG-A": {
+    [planKey("DRUG-A", "General Store Karen - KR")]: {
       item_code: "DRUG-A", warehouse: "General Store Karen - KR",
       required_qty: 2, tracked: true,
       picks: [{ batch_no: "B-1", qty: 2 }], short: 0, blocked_by: [],
@@ -127,7 +130,7 @@ describe("naming a batch", () => {
         <ItemsUsed
           choices={choices}
           rows={[{ key: 1, item: "DRUG-A", qty: "2", store: "General Store Karen - KR", batch: "" }]}
-          plans={{ "DRUG-A": { ...plans["DRUG-A"], tracked: false, picks: [], available: [] } }}
+          plans={{ [KEY]: { ...plans[KEY], tracked: false, picks: [], available: [] } }}
           onChange={vi.fn()}
         />
       </TooltipProvider>,
@@ -144,5 +147,27 @@ describe("naming a batch", () => {
 
   it("starts a blank row with no batch", () => {
     expect(blankRow().batch).toBe("");
+  });
+});
+
+describe("a plan for another store is never shown", () => {
+  it("ignores a plan whose warehouse is not the row's store, however it was keyed", () => {
+    const wrong = {
+      item_code: "DRUG-A", warehouse: "Westwood Dairy Store - KR", required_qty: 1, tracked: true,
+      picks: [], short: 0, blocked_by: [],
+      available: [{ batch_no: "WRONG-STORE", qty: 3, expiry_date: null }],
+    };
+    render(
+      <TooltipProvider>
+        <ItemsUsed
+          choices={choices}
+          rows={[{ key: 1, item: "DRUG-A", qty: "1", store: "General Store Karen - KR", batch: "" }]}
+          plans={{ [KEY]: wrong }}
+          onChange={vi.fn()}
+        />
+      </TooltipProvider>,
+    );
+    expect(screen.queryByLabelText("Batch")).toBeNull();
+    expect(screen.queryByText("not batched")).toBeNull();
   });
 });

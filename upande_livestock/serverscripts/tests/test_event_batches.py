@@ -33,7 +33,10 @@ class TestTheEndpointAnswersPerLine(unittest.TestCase):
 			]))
 		self.assertTrue(out["ok"])
 		self.assertEqual(out["lines"], self.PLAN)
-		asked.assert_called_once()
+		# The JSON string the screen sends is parsed before the rule sees it.
+		asked.assert_called_once_with([
+			{"item_code": "DRUG-A", "qty": 2, "warehouse": "General Store Karen - KR"}
+		])
 
 	def test_an_untracked_item_is_never_asked_for_a_batch(self):
 		untracked = [dict(self.PLAN[0], tracked=False, picks=[], available=[])]
@@ -42,7 +45,13 @@ class TestTheEndpointAnswersPerLine(unittest.TestCase):
 				{"item_code": "DRUG-A", "qty": 2, "warehouse": "General Store Karen - KR"}
 			]))
 		self.assertFalse(out["lines"][0]["tracked"])
+		self.assertEqual(out["lines"][0]["picks"], [])
+		# Whatever the rule answers is passed through untouched, never padded
+		# with a batch the rule did not name.
+		self.assertEqual(out["lines"], untracked)
 
 	def test_nothing_in_means_nothing_out(self):
-		out = IB.event_batches(frappe.as_json([]))
+		with patch.object(IB, "suggest_batches", return_value=[]) as asked:
+			out = IB.event_batches(frappe.as_json([]))
 		self.assertEqual(out["lines"], [])
+		asked.assert_called_once_with([])
