@@ -20,6 +20,13 @@ from upande_livestock.serverscripts.health import create_check_up as C
 
 
 class TestACheckUpThatIssuesDrugs(unittest.TestCase):
+	def setUp(self):
+		# Two of these submit a real Livestock Diagnosis, which mirrors a
+		# Livestock Event through sync_event_for. A rollback as the last line of
+		# the test body is skipped by a failing assertion, and leaves both on
+		# the site; in tearDown it runs either way.
+		self.addCleanup(frappe.db.rollback)
+
 	def test_it_refuses_when_she_has_no_open_file(self):
 		with patch.object(C, "open_case_for", return_value=None):
 			res = C.create_check_up({
@@ -56,7 +63,6 @@ class TestACheckUpThatIssuesDrugs(unittest.TestCase):
 				"drugs": [],
 			})
 		self.assertTrue(res.get("ok"), res.get("error"))
-		frappe.db.rollback()
 
 	def test_suggest_case_is_gone(self):
 		"""A fading toast was the whole problem; there is nothing left to suggest."""
@@ -69,4 +75,28 @@ class TestACheckUpThatIssuesDrugs(unittest.TestCase):
 				"drugs": [],
 			})
 		self.assertNotIn("suggest_case", res)
-		frappe.db.rollback()
+
+
+class TestEscalatingOpensTheFileItNeeds(unittest.TestCase):
+	"""Escalating IS saying what is wrong with her, so it cannot be refused.
+
+	The guard asked "has she an open file?" before the escalation branch had a
+	chance to open one, so a vet who escalated AND gave a drug was told to go
+	and do the thing they were already doing — and `run()` rolled the whole
+	check up back, so nothing was recorded at all. Found by the whole-branch
+	review; unreachable from the app today, because the Check Up screen sends
+	no drugs, so only Desk and API callers met it.
+	"""
+
+	def test_escalating_with_a_drug_is_not_refused(self):
+		res = C.create_check_up({
+			"animal": "A001/24",
+			"operator": "10212",
+			"reason_for_check": "Mastitis, quarter hot",
+			"action_taken": "Escalated to Case",
+			"drugs": [{"item_code": "LSK-AB-OTC", "qty": 1}],
+		})
+		self.addCleanup(frappe.db.rollback)
+		self.assertTrue(res.get("ok"), res.get("error"))
+		self.assertTrue(res.get("case"), "escalating must open the file it needs")
+		self.assertTrue(res.get("case_opened"))

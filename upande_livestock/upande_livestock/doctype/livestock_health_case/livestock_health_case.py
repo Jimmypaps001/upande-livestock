@@ -36,6 +36,22 @@ class LivestockHealthCase(Document):
 		sync_event_for(self, "Health Case")
 		self.post_drug_issue()
 
+	def before_update_after_submit(self):
+		"""Treatments are added to a case that is ALREADY submitted.
+
+		Frappe runs `validate` only for `_action in ("save", "submit")`; a doc
+		that is saved again at docstatus 1 takes the `update_after_submit`
+		branch, which runs this and not `validate`. Both doors that add a
+		treatment — `treat_animal` and `add_case_treatment` — arrive here, so a
+		roll-up hung only off `validate` fired twice per case, at insert and at
+		submit, with the treatments table empty both times. The total was
+		written as 0.0 and never touched again.
+
+		Not `on_update_after_submit`: that runs AFTER `db_update()`, so the
+		assignment would never reach the row.
+		"""
+		self.recompute_treatment_cost()
+
 	def on_update_after_submit(self):
 		# A case is treated over days, not once. Treatments are allow_on_submit so
 		# the vet can add today's round to an open case, and each new row issues

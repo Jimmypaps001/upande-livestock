@@ -33,8 +33,6 @@ interface Dose {
   withdrawal: string;
   response: string;
   notes: string;
-  /** Chosen where the drug is batch tracked; blank otherwise. */
-  batch: string;
 }
 
 let nextKey = 1;
@@ -50,7 +48,6 @@ const blank = (): Dose => ({
   withdrawal: "",
   response: "",
   notes: "",
-  batch: "",
 });
 
 /**
@@ -162,7 +159,7 @@ export function Treatment() {
     // operator was shown — and until now the issue ignored it and took
     // everything off `Livestock Settings.drug_warehouse`.
     const placed = drugRowsForIssue(
-      usable.map((d) => ({ item_code: d.drug, qty: d.qty, batch_no: d.batch })),
+      usable.map((d) => ({ item_code: d.drug, qty: d.qty })),
       store?.drug_items ?? [],
     );
     const r = await treatAnimal({
@@ -187,7 +184,6 @@ export function Treatment() {
         // Matched on item rather than index: `drugRowsForIssue` drops lines
         // with no item or a zero quantity, so the two arrays would drift.
         source_warehouse: placed.find((p) => p.item_code === d.drug)?.source_warehouse,
-        batch_no: d.batch || undefined,
       })),
     });
     setBusy(false);
