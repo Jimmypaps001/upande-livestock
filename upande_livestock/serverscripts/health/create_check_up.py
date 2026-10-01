@@ -17,8 +17,6 @@ from upande_livestock.serverscripts.common.health_case import open_case_for, ope
 #: was written, and until now acted on nowhere.
 ESCALATED = "Escalated to Case"
 
-#: Something was given at the crush. Not an escalation — the screen asks.
-TREATED_ON_SPOT = "Treated on Spot"
 
 
 @frappe.whitelist()
@@ -37,8 +35,12 @@ def create_check_up(payload):
 	split one illness across two.
 
 	"Treated on Spot" is not an escalation and does not open anything. It
-	answers `suggest_case` instead, so the screen can ask: a cow dosed at the
-	crush may be a one-off, and only the person who looked at her knows.
+	refuses instead: a check up that would issue a drug to an animal with no open
+	file is stopped in the same words `treat_animal` uses, because treating a cow
+	is issuing stock to her and that belongs in a file. The file is not opened
+	here — nothing may open a second file for an illness already being treated.
+	A check that issues nothing is untouched; looking at a cow is not treating
+	her.
 	"""
 
 	def go():
@@ -69,6 +71,18 @@ def create_check_up(payload):
 		doc.action_taken = d.get("action_taken")
 		doc.action_notes = d.get("action_notes")
 		doc.follow_up_date = d.get("follow_up_date") or None
+		# Treating a cow is issuing stock to her, and that belongs in a file.
+		# `treat_animal` has always refused this; a check up quietly did not, and
+		# said so afterwards in a toast that fades — so the drugs went out and
+		# the file was a suggestion. Same rule, same words. The file is NOT
+		# opened here: see treat_animal on why nothing may open a second file
+		# for an illness already being treated.
+		if _clean_drug_rows(d.get("drugs"), None) and not open_case_for(d["animal"]):
+			frappe.throw(
+				_("{0} has no open file. Say what is wrong with her and a new one will be "
+				  "opened for this treatment.").format(d["animal"])
+			)
+
 		# Anything given at the check. LivestockDiagnosis.post_drug_issue posts these
 		# out of the drug store on submit, and blocks the check if it cannot.
 		for drug in _clean_drug_rows(d.get("drugs"), d.get("source_warehouse") or livestock_stock.drug_warehouse()):
@@ -108,7 +122,6 @@ def create_check_up(payload):
 			# Whether the screen should ask about opening one. Asked, never
 			# assumed: a dose at the crush may be a one-off, and only the person
 			# who looked at her knows.
-			"suggest_case": bool(doc.action_taken == TREATED_ON_SPOT and not standing),
 		}
 
 	return run(go, "livestock create_check_up failed")
