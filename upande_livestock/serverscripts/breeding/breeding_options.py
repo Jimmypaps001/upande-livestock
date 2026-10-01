@@ -71,7 +71,7 @@ def breeding_options():
 			# endpoint serves several screens, so a bare list could not say whose.
 			# A type the farm mapped nothing to has NO key: absent means "not
 			# configured, show nothing", while [] means "mapped, nothing in stock".
-			"items_by_event": {t: items_for_event(t) for t in ('Heat Detection', 'Pregnancy Diagnosis') if consumes_items(t)},
+			"items_by_event": {t: items_for_event(t) for t in ('Service', 'Heat Detection', 'Pregnancy Diagnosis') if consumes_items(t)},
 			"employee": current_employee(),
 		}
 

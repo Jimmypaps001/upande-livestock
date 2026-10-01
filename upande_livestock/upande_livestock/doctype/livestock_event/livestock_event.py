@@ -1274,7 +1274,10 @@ class LivestockEvent(Document):
 					alert=True,
 					indicator="orange",
 				)
-		elif self.event_type == "Service":
+		elif self.event_type == "Service" and not event_items.consumes_items("Service"):
+			# The legacy straw fields, for a site with no straws-only item group
+			# to map Service to. They are still READ: historical services hold
+			# their straw here and a calf's record must not lose its sire.
 			what = "Service"
 			item = self.semen_item or livestock_stock.default_semen_item()
 			if item:
