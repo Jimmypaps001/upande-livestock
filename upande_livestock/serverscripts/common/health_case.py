@@ -187,6 +187,12 @@ def treatment_row(t, fallback_date=None):
 		"drug_name_text": t.get("drug_name_text"),
 		"dosage": t.get("dosage"),
 		"qty": flt(t.get("qty")) or 1,
+		# Where it came out of, and which batch. A drug row has carried both
+		# since drugs were first issued from an event; a treatment could say
+		# neither, so every one of them came off `drug_warehouse()` — on live, a
+		# store with zero stocked bins.
+		"source_warehouse": t.get("source_warehouse") or None,
+		"batch_no": t.get("batch_no") or None,
 		"route": t.get("route") or None,
 		"withdrawal_period_days": int(flt(t.get("withdrawal_period_days"))) or None,
 		"administered_by": t.get("administered_by") or current_employee(),

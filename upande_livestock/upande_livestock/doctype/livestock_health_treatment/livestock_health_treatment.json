@@ -2,7 +2,7 @@
  "actions": [],
  "allow_rename": 1,
  "creation": "2026-06-08 00:00:00.000000",
- "description": "Child table for Livestock Health Case — records each individual treatment administered during a clinical case.",
+ "description": "Child table for Livestock Health Case \u2014 records each individual treatment administered during a clinical case.",
  "doctype": "DocType",
  "editable_grid": 1,
  "engine": "InnoDB",
@@ -15,6 +15,8 @@
   "section_break_1",
   "dosage",
   "qty",
+  "source_warehouse",
+  "batch_no",
   "route",
   "withdrawal_period_days",
   "col_break_2",
@@ -76,6 +78,18 @@
    "fieldtype": "Float",
    "in_list_view": 1,
    "label": "Qty Issued"
+  },
+  {
+   "fieldname": "source_warehouse",
+   "fieldtype": "Link",
+   "options": "Warehouse",
+   "label": "Issue from Warehouse",
+   "description": "Which store this drug came out of. Blank falls back to Livestock Settings > Drug Store."
+  },
+  {
+   "fieldname": "batch_no",
+   "fieldtype": "Data",
+   "label": "Batch / Lot No."
   },
   {
    "fieldname": "route",
