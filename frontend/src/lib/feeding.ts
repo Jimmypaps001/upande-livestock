@@ -509,3 +509,12 @@ export function runRationQty(
   if (!program) return null;
   return (Number(program.total_manufacture_qty) || 0) * portion;
 }
+
+const EVENT_BATCHES = "upande_livestock.serverscripts.common.item_batches.event_batches";
+
+/** The event-shaped door onto the same rule `feedBatches` asks. */
+export function eventBatches(
+  lines: Array<{ item_code: string; qty: number; warehouse: string }>,
+): Promise<Envelope<{ lines: BatchPlan[] }>> {
+  return call(EVENT_BATCHES, { lines: JSON.stringify(lines) });
+}

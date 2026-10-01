@@ -20,6 +20,7 @@ import { isError } from "@/lib/frappe";
 import type { AnimalSummary } from "@/lib/animals";
 import { getHealthOptions, getOpenCases, type HealthOptions, type OpenCasesView } from "@/lib/events";
 import { getAnimalCase, treatAnimal, type AnimalCaseStanding } from "@/lib/health";
+import { useBatchPlans } from "@/lib/use-batch-plans";
 import { useOperator } from "@/lib/operator";
 import { useSaveShortcut } from "@/lib/use-save-shortcut";
 import { cn, fmt, todayISO } from "@/lib/utils";
@@ -77,6 +78,7 @@ export function Treatment() {
   const [doses, setDoses] = useState<ItemRow[]>(() => [blankRow()]);
   const [details, setDetails] = useState<Record<number, DoseDetail>>({});
   const [busy, setBusy] = useState(false);
+  const plans = useBatchPlans(doses);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -171,6 +173,7 @@ export function Treatment() {
           notes: x.notes || undefined,
           // The store the operator saw it in, on the row itself.
           source_warehouse: d.store || undefined,
+          batch_no: d.batch || undefined,
         };
       }),
     });
@@ -380,7 +383,7 @@ export function Treatment() {
                   yet. {itemsFailure}
                 </Notice>
               )}
-              <ItemsUsed choices={store?.drug_items} rows={doses} onChange={changeDoses} />
+              <ItemsUsed choices={store?.drug_items} rows={doses} onChange={changeDoses} plans={plans} />
 
               {doses
                 .filter((d) => d.item)
