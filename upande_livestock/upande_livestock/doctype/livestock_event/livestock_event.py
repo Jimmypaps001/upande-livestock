@@ -1275,7 +1275,12 @@ class LivestockEvent(Document):
 						"item_code": item,
 						# A Service with no straw count still consumes one straw.
 						"qty": flt(self.semen_qty) or 1,
-						"warehouse": livestock_stock.semen_warehouse(),
+						# The store the operator picked, exactly as a drug row
+						# uses its own `source_warehouse`. The straws are spread
+						# across two stores on live and the settings name a
+						# third that holds none, so issuing every service from
+						# that one setting asked for stock that was never there.
+						"warehouse": self.semen_warehouse or livestock_stock.semen_warehouse(),
 					}
 				)
 

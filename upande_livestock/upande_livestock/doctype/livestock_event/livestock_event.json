@@ -21,6 +21,7 @@
   "sire",
   "semen_item",
   "semen_qty",
+  "semen_warehouse",
   "service_type",
   "service_date",
   "cb_service",
@@ -495,6 +496,14 @@
    "fieldname": "semen_qty",
    "fieldtype": "Float",
    "label": "Straws Used"
+  },
+  {
+   "depends_on": "eval:doc.event_type=='Service'",
+   "description": "Which store the straw came out of. Left blank, the issue falls back to Livestock Settings > Semen Warehouse.",
+   "fieldname": "semen_warehouse",
+   "fieldtype": "Link",
+   "label": "Issue from Warehouse",
+   "options": "Warehouse"
   },
   {
    "fieldname": "tab_husbandry",

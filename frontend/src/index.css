@@ -132,6 +132,19 @@ html { font-size: 85%; }
     monospace;
 
   /* Geometry */
+  /* Alert washes, taken from Frappe's own desk alert so a livestock toast and
+     a desk toast are the same object: --alert-bg-danger/warning/info/success,
+     which resolve to red-50 / yellow-50 / blue-50 / green-100. The tone is the
+     fill plus the icon — never a strip down one edge, which read as a second,
+     louder copy of the word "error". */
+  --sd-alert-error: #fff7f7;
+  --sd-alert-warn: #fffcef;
+  --sd-alert-info: #f7fbfd;
+  --sd-alert-ok: #e4f5e9;
+  /* The one place this deliberately parts company with Frappe, which uses its
+     --border-radius-md. Rounder, to sit with this app's cards. */
+  --sd-radius-toast: 16px;
+
   --sd-radius-xs: 4px;
   --sd-radius: 8px;
   --sd-radius-lg: 12px;

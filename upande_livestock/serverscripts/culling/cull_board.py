@@ -42,7 +42,8 @@ def cull_board(payload=None):
 			          d.custom_cull_flow AS flow, d.custom_review_status AS status,
 			          d.custom_evidence AS evidence, d.custom_was_productive AS was_productive,
 			          d.custom_death_cause AS death_cause, d.custom_vet_verdict AS vet_verdict,
-			          d.custom_vet_on AS vet_on, d.sale_price, d.buyer_name, d.gifted_to,
+			          d.custom_vet_on AS vet_on, d.sale_price, d.buyer_name,
+			          d.buyer_contact, d.gift_destination, d.gifted_to,
 			          a.current_herd AS herd
 			   FROM `tabLivestock Disposal` d
 			   LEFT JOIN `tabAnimal` a ON a.name = d.animal

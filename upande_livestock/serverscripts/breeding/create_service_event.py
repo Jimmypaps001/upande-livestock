@@ -29,6 +29,9 @@ def create_service_event(payload):
 		doc.sire = d.get("sire")
 		doc.semen_item = d.get("semen_item") or None
 		doc.semen_qty = flt(d.get("semen_qty")) or 1
+		# Blank is allowed and means "wherever the settings say"; the posting
+		# falls back for us rather than this guessing a store.
+		doc.semen_warehouse = d.get("semen_warehouse") or None
 		doc.insert()
 		doc.submit()
 		doc.reload()

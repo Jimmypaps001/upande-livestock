@@ -437,11 +437,11 @@
    "description": "Every store the drug and semen pickers look in, in the order they are searched \u2014 the same idea as the feed source warehouses above. A farm's drugs sit across the stores it actually uses; one store named alone offers stock the issue cannot find. The single Drug Warehouse above is searched last.",
    "fieldname": "custom_drug_warehouses",
    "fieldtype": "Table",
-   "label": "Drug Stores Searched",
+   "label": "Drug & Semen Stores Searched",
    "options": "Livestock Drug Warehouse"
   },
   {
-   "description": "Warehouse the semen straws are issued from. Falls back to the Drug Store when unset.",
+   "description": "Fallback store for a Service that names none. The straw picker itself searches the Drug & Semen Stores Searched list below. Falls back to the Drug Store when unset.",
    "fieldname": "semen_warehouse",
    "fieldtype": "Link",
    "label": "Semen Store",

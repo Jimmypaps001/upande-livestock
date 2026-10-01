@@ -1,3 +1,4 @@
+import { fmt } from "@/lib/utils";
 import { call, type Envelope } from "@/lib/frappe";
 
 /* ── Wire shapes ────────────────────────────────────────────────────────────
@@ -283,7 +284,36 @@ export type BatchPlan = {
   picks: Array<{ batch_no: string; qty: number }>;
   short: number;
   available: Array<{ batch_no: string; qty: number; expiry_date: string | null }>;
+  /** Stock that IS in this store and cannot be taken, because the batch
+   *  holding it is disabled. ERPNext refuses to consume one, so the pool
+   *  drops it — and the page used to show that drop as a blank beside a
+   *  perfectly good Available figure. Empty on a line the store can cover. */
+  blocked_by: Array<{ batch_no: string; qty: number }>;
 };
+
+/** What the rule proposes for one line, in a phrase.
+ *
+ *  Shared because the Feeding page and the Concentrate page had a copy each
+ *  and both copies said "Nothing in this store" whenever the pool came back
+ *  empty. On live that is usually false: `Dry Cows  Meal` holds 48 kg in the
+ *  raw-materials store, all of it on the disabled batch
+ *  `Dry Cows  Meal-PREMIGRATION`, and seven of the twenty stocked feed lines
+ *  are the same. "Nothing here" sends an operator to look for stock that is
+ *  already in front of them; naming the batch tells them what to fix. */
+export function batchNote(plan?: BatchPlan): string {
+  if (!plan) return "Chosen by the rule";
+  if (!plan.picks.length) {
+    const held = plan.blocked_by ?? [];
+    if (held.length) {
+      const worst = [...held].sort((a, b) => b.qty - a.qty)[0];
+      const rest = held.length > 1 ? ` +${held.length - 1} more` : "";
+      return `${fmt(worst.qty)} here on disabled batch ${worst.batch_no}${rest} — the run will refuse`;
+    }
+    return "Nothing in this store — the run will refuse";
+  }
+  const head = plan.picks.map((p) => `${p.batch_no} (${fmt(p.qty)})`).join(" + ");
+  return plan.short > 0 ? `${head} · short ${fmt(plan.short)}` : head;
+}
 
 export function feedBatches(
   lines: Array<{ item_code: string; qty: number; warehouse: string }>,

@@ -15,6 +15,7 @@ import {
   manufactureConcentrate,
   setConcentrate,
   type BatchPlan,
+  batchNote,
   type Concentrate,
 } from "@/lib/feeding";
 import { getHerdRations, type FeedChoice } from "@/lib/herds";
@@ -41,13 +42,6 @@ const DEFAULT_BATCH = 1000;
 /** What the rule proposes for a line, said in one line. Blank plan means the
  *  page has not asked yet; an empty proposal means the store cannot cover it
  *  and the run will refuse rather than pick a batch the ledger does not back. */
-function planLabel(plan?: BatchPlan): string {
-  if (!plan) return "Chosen by the rule";
-  if (!plan.picks.length) return "Nothing in this store — the run will refuse";
-  const head = plan.picks.map((p) => `${p.batch_no} (${fmt(p.qty)})`).join(" + ");
-  return plan.short > 0 ? `${head} · short ${fmt(plan.short)}` : head;
-}
-
 type Row = { key: number; item_code: string; qty: string };
 let nextKey = 1;
 
@@ -374,7 +368,7 @@ export function Concentrate() {
                                 options={[
                                   {
                                     value: "",
-                                    label: planLabel(plans[key]),
+                                    label: batchNote(plans[key]),
                                   },
                                   ...(plans[key]?.available ?? []).map((b) => ({
                                     value: b.batch_no,
@@ -398,7 +392,7 @@ export function Concentrate() {
                                     : "text-[11px] text-[var(--sd-quiet)]"
                                 }
                               >
-                                {lineBatch[key] ? "Chosen by you" : planLabel(plans[key])}
+                                {lineBatch[key] ? "Chosen by you" : batchNote(plans[key])}
                               </span>
                             </div>
                           </div>

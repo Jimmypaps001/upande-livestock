@@ -93,6 +93,10 @@ export interface CullCase {
   vet_on: string | null;
   sale_price: number;
   buyer_name: string | null;
+  /** How to reach them. Written by raise/approve, and read back here so the
+   *  approval panel can show what the case already holds. */
+  buyer_contact: string | null;
+  gift_destination: string | null;
   gifted_to: string | null;
 }
 
@@ -195,7 +199,9 @@ export interface RaiseInput {
   disposal_date?: string;
   death_cause?: string;
   gifted_to?: string;
+  gift_destination?: string;
   buyer_name?: string;
+  buyer_contact?: string;
   sale_price?: number;
 }
 
@@ -212,7 +218,12 @@ export function vetVerdict(caseName: string, verdict: Verdict, notes?: string) {
   });
 }
 
-export function approveCull(caseName: string, terms: { sale_price?: number; buyer_name?: string; customer?: string } = {}) {
+export function approveCull(caseName: string, terms: {
+    sale_price?: number;
+    buyer_name?: string;
+    buyer_contact?: string;
+    customer?: string;
+  } = {}) {
   return call<{ name: string; status: ReviewStatus }>(APPROVE, {
     payload: { case: caseName, ...terms },
   });
@@ -248,9 +259,12 @@ export function recordMortality(input: {
   );
 }
 
-export function settleClaim(claim: string, status: "Submitted" | "Paid" | "Rejected", payout_amount?: number, remarks?: string) {
+export function settleClaim(claim: string, status: "Submitted" | "Paid" | "Rejected", payout_amount?: number, remarks?: string,
+  /** When the insurer actually paid. Blank lets the server use today. */
+  payout_date?: string,
+) {
   return call<{ name: string; status: string; payout_amount: number; shortfall: number }>(SETTLE, {
-    payload: { claim, status, payout_amount, remarks },
+    payload: { claim, status, payout_amount, remarks, payout_date },
   });
 }
 

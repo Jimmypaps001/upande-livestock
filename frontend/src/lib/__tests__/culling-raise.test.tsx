@@ -92,6 +92,25 @@ async function openTheRaiseTab() {
 }
 
 describe("opening a cull case", () => {
+  it("asks for the buyer's contact, not just a name", async () => {
+    // `raise_cull` writes `doc.buyer_contact` — "Buyer Contact / Phone" on the
+    // Livestock Disposal — and the form collected only the name, so there was
+    // never a way to reach the person the cow was sold to. Found by sweeping
+    // every endpoint's payload keys against the frontend source.
+    await openTheRaiseTab();
+    expect(screen.getByLabelText("Buyer")).toBeTruthy();
+    expect(screen.getByLabelText("Buyer contact / phone")).toBeTruthy();
+  });
+
+  it("asks where a gifted animal is going", async () => {
+    // `gift_destination` is a separate field from `gifted_to`: who received
+    // her, and where she went.
+    await openTheRaiseTab();
+    fireEvent.click(screen.getByText("Give her away"));
+    await waitFor(() => expect(screen.getByLabelText("Given to")).toBeTruthy());
+    expect(screen.getByLabelText("Gift destination")).toBeTruthy();
+  });
+
   it("offers the four ways an animal leaves", async () => {
     await openTheRaiseTab();
     for (const flow of ["Sell her", "Dispose of her", "Record a death", "Give her away"]) {

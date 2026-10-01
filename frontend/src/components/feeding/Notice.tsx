@@ -54,20 +54,29 @@ export function Notice({
   className?: string;
 }) {
   const Icon = tone === "error" ? AlertTriangle : tone === "ok" ? CheckCircle2 : Info;
+  // The same four washes the toast uses, so an inline refusal and a floating
+  // one are one object in two places. The words are ink in every tone: this
+  // used to set the whole sentence in its own colour, and "You are not
+  // permitted to read Livestock Settings" arrived as red text on red.
+  const accent =
+    tone === "error"
+      ? "var(--sd-sev-critical)"
+      : tone === "ok"
+        ? "var(--sd-sev-moderate)"
+        : "var(--sd-quiet)";
   return (
     <div
       role={tone === "error" ? "alert" : "status"}
       className={cn(
-        "flex items-start gap-2.5 rounded-[var(--sd-radius-lg)] border px-3.5 py-3 text-[13px] leading-relaxed whitespace-pre-line",
-        tone === "error" &&
-          "border-[rgba(196,48,43,0.24)] bg-[rgba(196,48,43,0.06)] text-[var(--sd-sev-critical)]",
-        tone === "ok" &&
-          "border-[rgba(63,143,79,0.28)] bg-[rgba(63,143,79,0.07)] text-[var(--sd-sev-moderate)]",
-        tone === "info" && "border-[var(--sd-line)] bg-[var(--sd-bg-soft)] text-[var(--sd-muted)]",
+        "flex items-start gap-2.5 rounded-[var(--sd-radius-toast)] px-4 py-3.5 text-[13px] font-medium leading-relaxed whitespace-pre-line",
+        "text-[var(--sd-ink)]",
+        tone === "error" && "bg-[var(--sd-alert-error)]",
+        tone === "ok" && "bg-[var(--sd-alert-ok)]",
+        tone === "info" && "bg-[var(--sd-alert-info)]",
         className,
       )}
     >
-      <Icon className="mt-0.5 h-4 w-4 shrink-0" />
+      <Icon className="mt-0.5 h-4 w-4 shrink-0" style={{ color: accent }} />
       <div className="min-w-0 flex-1">{plainText(children)}</div>
     </div>
   );
@@ -77,8 +86,8 @@ export function Notice({
  *  on the backdate toggle and the manual tab. Amber, like the desk block. */
 export function AmberNotice({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex items-start gap-2.5 rounded-[var(--sd-radius-lg)] border border-[var(--sd-amber-line)] bg-[var(--sd-amber-bg)] px-3.5 py-3 text-[13px] leading-relaxed text-[var(--sd-amber)]">
-      <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+    <div className="flex items-start gap-2.5 rounded-[var(--sd-radius-toast)] bg-[var(--sd-alert-warn)] px-4 py-3.5 text-[13px] font-medium leading-relaxed text-[var(--sd-ink)]">
+      <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" style={{ color: "var(--sd-sev-high)" }} />
       <div className="min-w-0 flex-1">{plainText(children)}</div>
     </div>
   );
