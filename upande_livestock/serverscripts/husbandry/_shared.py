@@ -23,13 +23,39 @@ DRUG_CONSUMING_TYPES = ("Vaccination", "Deworming")
 
 
 def _type_consumes_drugs(event_type):
-	"""Read off Livestock Event Type, so the farm can flag a new drug-consuming
-	type without a deploy. DRUG_CONSUMING_TYPES is the fallback for a site whose
-	event types predate the flag."""
+	"""Whether this event type consumes anything, per the farm's mapping.
+
+	It used to read a `consumes_drugs` checkbox on Livestock Event Type, so the
+	farm could flag a new drug-consuming type without a deploy. What an event may
+	consume is a list the farm writes now; the mapping is asked first. The
+	checkbox stays as the fallback for a site running this code before its
+	migrate, and DRUG_CONSUMING_TYPES for a site whose event types predate the
+	flag.
+	"""
+	from upande_livestock.serverscripts.common import event_items
+
+	if event_items.groups_for_event(event_type):
+		return True
 	flagged = frappe.db.get_value("Livestock Event Type", event_type, "consumes_drugs")
 	if flagged is None:
 		return event_type in DRUG_CONSUMING_TYPES
 	return bool(flagged)
+
+
+def husbandry_drug_items():
+	"""Items any husbandry event may consume, one choice per item.
+
+	The husbandry screen serves every routine type from one payload, so this is
+	the union of what the farm mapped to each of them. Two types mapped to the
+	same group yield the same items, which are listed once.
+	"""
+	from upande_livestock.serverscripts.common.event_items import items_for_event
+
+	seen = {}
+	for event_type in HUSBANDRY_TYPES:
+		for item in items_for_event(event_type):
+			seen.setdefault(item["value"], item)
+	return sorted(seen.values(), key=lambda i: (i["item_name"] or "").lower())
 
 
 def _animals_in_herd(herd):

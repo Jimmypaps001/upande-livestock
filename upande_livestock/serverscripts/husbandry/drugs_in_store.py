@@ -5,28 +5,20 @@ Read-guarded on Item — this discloses stock balances."""
 import frappe
 
 from upande_livestock.serverscripts.common.envelope import guard_read, run
-from upande_livestock.serverscripts.common.stock_items import stock_items
-from upande_livestock.serverscripts.common import stock as livestock_stock
+from upande_livestock.serverscripts.husbandry._shared import husbandry_drug_items
 
 
 @frappe.whitelist()
-def drugs_in_store(warehouse=None):
+def drugs_in_store():
 	"""The drug picker, with the balances of the store each drug is actually in.
 
-	Called when the user changes the store, so the quantities on screen always
-	describe the shelf the issue will come off. Called with no store to search
-	every configured one, which is what the pickers do on first load.
+	No store to name: each choice carries the `warehouse` its stock is mostly in
+	and every store holding any in `locations`, so the quantities on screen
+	describe the shelf the issue will come off.
 	"""
 
 	def go():
 		guard_read("Item")
-		# A named store narrows to it; without one every configured drug store
-		# is searched and each choice carries the store its stock is in.
-		return {
-			"ok": True,
-			"warehouse": warehouse,
-			"warehouses": livestock_stock.drug_source_warehouses(),
-			"drug_items": stock_items("drug", warehouse),
-		}
+		return {"ok": True, "drug_items": husbandry_drug_items()}
 
 	return run(go, "livestock drugs_in_store failed")

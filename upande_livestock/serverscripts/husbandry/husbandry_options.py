@@ -7,9 +7,8 @@ import frappe
 from upande_livestock.serverscripts.common.choices import active_animals, animal_choices, herd_choices, herd_label_map
 from upande_livestock.serverscripts.common.employee import current_employee
 from upande_livestock.serverscripts.common.envelope import guard_read, run
-from upande_livestock.serverscripts.common.stock_items import stock_items
 from upande_livestock.serverscripts.common import stock as livestock_stock
-from upande_livestock.serverscripts.husbandry._shared import DRUG_CONSUMING_TYPES, HUSBANDRY_TYPES
+from upande_livestock.serverscripts.husbandry._shared import DRUG_CONSUMING_TYPES, HUSBANDRY_TYPES, husbandry_drug_items
 
 
 @frappe.whitelist()
@@ -22,11 +21,11 @@ def husbandry_options():
 			"animals": animal_choices(active_animals(), labels),
 			"event_types": list(HUSBANDRY_TYPES),
 			"drug_consuming_types": list(DRUG_CONSUMING_TYPES),
-			# No warehouse: every configured drug store is searched, and each
-			# choice says which one its stock is in. The single setting named
-			# a store with no Bin rows at all on live.
-			"drug_items": stock_items("drug"),
-			"drug_warehouses": livestock_stock.drug_source_warehouses(),
+			# The groups the farm mapped to these events, searched across every
+			# warehouse of its company. The old two-kind lookup asked one group
+			# named by a constant, in stores somebody had typed — and on live
+			# that returned nothing while 74 stocked drug bins sat elsewhere.
+			"drug_items": husbandry_drug_items(),
 			"drug_warehouse": livestock_stock.drug_warehouse(),
 			"herds": herd_choices(),
 			"warehouses": [

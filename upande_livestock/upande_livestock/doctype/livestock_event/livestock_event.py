@@ -1201,9 +1201,16 @@ class LivestockEvent(Document):
 		Read off Livestock Event Type rather than a tuple in code, so the farm can
 		flag a new drug-consuming type — dry-cow therapy at Drying Off, calcium at
 		Calving — without a deploy. Mirrors `creates_animal`.
+
+		The farm's event-to-item-group mapping is asked first; the flag stays as
+		the fallback for a site running this code before its migrate.
 		"""
 		if not self.event_type:
 			return False
+		from upande_livestock.serverscripts.common import event_items
+
+		if event_items.groups_for_event(self.event_type):
+			return True
 		return bool(frappe.db.get_value("Livestock Event Type", self.event_type, "consumes_drugs"))
 
 	def post_stock_issue(self):
