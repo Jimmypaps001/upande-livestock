@@ -118,3 +118,20 @@ class TestTheIssueUsesTheRowsStore(unittest.TestCase):
 			    source_warehouse="Drug/ Medicine store- old office - KR")
 		)
 		self.assertEqual(rows[0]["batch_no"], "DAIR-2026-00277")
+
+
+class TestTheEndpointsCarryTheStore(unittest.TestCase):
+	def test_add_case_treatment_builds_its_row_through_treatment_row(self):
+		"""Two places built a treatment row and only one carried the store.
+
+		`treat_animal` uses `treatment_row`; `add_case_treatment` built its own
+		dict inline, so a store sent to it was dropped on the floor. One builder
+		is the fix — the drift between them is the bug.
+		"""
+		import inspect
+
+		from upande_livestock.serverscripts.health import add_case_treatment as A
+
+		src = inspect.getsource(A)
+		self.assertIn("treatment_row", src,
+		              "add_case_treatment must build its rows through the shared builder")

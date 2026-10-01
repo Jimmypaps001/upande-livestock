@@ -2,10 +2,9 @@
 
 import frappe
 from frappe import _
-from frappe.utils import flt, today
 
-from upande_livestock.serverscripts.common.employee import current_employee
 from upande_livestock.serverscripts.common.envelope import as_dict, guard, run
+from upande_livestock.serverscripts.common.health_case import treatment_row
 
 
 @frappe.whitelist()
@@ -35,19 +34,12 @@ def add_case_treatment(payload):
 
 		before = {t.name for t in doc.treatments or []}
 		for t in treatments:
+			# The shared builder, not a second copy of it. These two call sites
+			# drifted: `treat_animal` carried the store and this one dropped it,
+			# so where a drug came from depended on which door it came through.
 			doc.append(
 				"treatments",
-				{
-					"treatment_date": t.get("treatment_date") or d.get("treatment_date") or today(),
-					"drug_item": t.get("drug_item") or None,
-					"drug_name_text": t.get("drug_name_text"),
-					"dosage": t.get("dosage"),
-					"qty": flt(t.get("qty")) or 1,
-					"route": t.get("route") or None,
-					"withdrawal_period_days": int(flt(t.get("withdrawal_period_days"))) or None,
-					"administered_by": t.get("administered_by") or current_employee(),
-					"notes": t.get("notes"),
-				},
+				treatment_row(t, fallback_date=d.get("treatment_date")),
 			)
 		doc.flags.ignore_permissions = True
 		doc.save()
