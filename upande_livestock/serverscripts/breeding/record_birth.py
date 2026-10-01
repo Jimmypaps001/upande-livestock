@@ -9,6 +9,7 @@ from frappe.utils import today
 from upande_livestock.serverscripts.common.employee import employee_or_throw
 from upande_livestock.serverscripts.breeding.record_calf_births import record_calf_births
 from upande_livestock.serverscripts.common.envelope import as_dict, guard, run
+from upande_livestock.serverscripts.husbandry._shared import append_items
 
 
 def _calf_row(calf, outcome):
@@ -105,6 +106,7 @@ def record_birth(payload):
 			calving.custom_calf_sex = calves[0].get("sex")
 		if related_pregnancy:
 			calving.custom_related_pregnancy = related_pregnancy
+		append_items(calving, d)
 		calving.insert()
 		calving.submit()
 

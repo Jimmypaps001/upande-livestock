@@ -5,6 +5,7 @@ from frappe import _
 
 from upande_livestock.serverscripts.common.envelope import as_dict, guard, run
 from upande_livestock.serverscripts.common.events import new_livestock_event
+from upande_livestock.serverscripts.husbandry._shared import append_items
 
 
 @frappe.whitelist()
@@ -22,6 +23,7 @@ def create_heat_event(payload):
 		if not d.get("animal"):
 			frappe.throw(_("Select an animal."))
 		doc = new_livestock_event(d, "Heat Detection")
+		append_items(doc, d)
 		doc.insert()
 		doc.submit()
 		return {"ok": True, "name": doc.name}

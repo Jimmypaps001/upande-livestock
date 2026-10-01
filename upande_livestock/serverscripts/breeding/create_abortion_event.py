@@ -8,6 +8,7 @@ from frappe import _
 
 from upande_livestock.serverscripts.common.envelope import as_dict, guard, run
 from upande_livestock.serverscripts.common.events import new_livestock_event
+from upande_livestock.serverscripts.husbandry._shared import append_items
 
 
 @frappe.whitelist()
@@ -36,6 +37,7 @@ def create_abortion_event(payload):
 		doc.abortion_notes = d.get("abortion_notes")
 		if d.get("related_pregnancy"):
 			doc.custom_related_pregnancy = d.get("related_pregnancy")
+		append_items(doc, d)
 		doc.insert()
 		doc.submit()
 		doc.reload()

@@ -20,6 +20,7 @@ from frappe.model.naming import make_autoname
 from frappe.utils import flt, getdate, nowdate
 
 from upande_livestock.serverscripts.common import backdate
+from upande_livestock.serverscripts.common import event_items
 from upande_livestock.serverscripts.common import stock as livestock_stock
 
 from upande_livestock.serverscripts.common.animal import create_calf
@@ -1249,7 +1250,7 @@ class LivestockEvent(Document):
 			return
 
 		rows, what = [], None
-		if self._type_consumes_drugs():
+		if event_items.consumes_items(self.event_type) or self._type_consumes_drugs():
 			what = self.event_type
 			default_wh = livestock_stock.drug_warehouse()
 			for row in self.drug_issues or []:
