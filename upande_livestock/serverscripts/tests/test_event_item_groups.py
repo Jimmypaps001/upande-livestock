@@ -122,8 +122,34 @@ class TestWhereTheItemsComeFrom(unittest.TestCase):
 		self.assertEqual(a["qty"], 16.0)
 
 	def test_an_event_with_no_groups_offers_nothing(self):
-		with patch.object(EI, "groups_for_event", return_value=[]):
+		with patch.object(EI, "groups_for_event", return_value=[]), \
+		     patch.object(EI, "_company_warehouses") as wh, \
+		     patch.object(EI, "_balances") as bal:
 			self.assertEqual(EI.items_for_event("Heat Detection", company="Karen Roses"), [])
+			wh.assert_not_called()
+			bal.assert_not_called()
+
+	def test_no_company_and_no_default_offers_nothing(self):
+		with patch.object(EI, "groups_for_event", return_value=["Dairy Drugs"]), \
+		     patch.object(EI, "_default_company", return_value=None), \
+		     patch.object(EI, "_balances") as bal:
+			self.assertEqual(EI.items_for_event("Vaccination"), [])
+			bal.assert_not_called()
+
+	def test_the_default_company_is_used_when_none_is_given(self):
+		with patch.object(EI, "groups_for_event", return_value=["Dairy Drugs"]), \
+		     patch.object(EI, "_default_company", return_value="Karen Roses"), \
+		     patch.object(EI, "_company_warehouses", return_value=["W - KR"]) as wh, \
+		     patch.object(EI, "_balances", return_value=[]):
+			EI.items_for_event("Vaccination")
+			wh.assert_called_once_with("Karen Roses")
+
+	def test_default_company_reads_the_setting(self):
+		with patch.object(frappe.db, "get_single_value", return_value="Karen Roses") as g:
+			self.assertEqual(EI._default_company(), "Karen Roses")
+			g.assert_called_once_with("Livestock Settings", "custom_default_company")
+		with patch.object(frappe.db, "get_single_value", side_effect=Exception("x")):
+			self.assertIsNone(EI._default_company())
 
 	def test_only_the_companys_warehouses_are_searched(self):
 		seen = {}
@@ -137,3 +163,77 @@ class TestWhereTheItemsComeFrom(unittest.TestCase):
 		     patch.object(EI, "_balances", side_effect=fake_balances):
 			EI.items_for_event("Vaccination", company="Karen Roses")
 		self.assertEqual(seen["warehouses"], ["Westwood Dairy Store - KR"])
+
+
+
+class TestMappingFallsBackBeforeMigrate(unittest.TestCase):
+	"""A deploy that lands before its migrate must not take event forms down."""
+
+	def test_a_settings_meta_without_the_table_gives_nothing(self):
+		meta = type("M", (), {"has_field": lambda self, f: False})()
+		with patch.object(frappe, "get_meta", return_value=meta), \
+		     patch.object(frappe, "get_all") as ga:
+			self.assertEqual(EI._mapping_rows(), [])
+			ga.assert_not_called()
+
+	def test_a_failing_query_gives_nothing(self):
+		with patch.object(frappe, "get_all", side_effect=Exception("no table")):
+			self.assertEqual(EI._mapping_rows(), [])
+
+	def test_the_real_query_runs_with_the_right_filters(self):
+		with patch.object(frappe, "get_all", wraps=frappe.get_all) as ga:
+			rows = EI._mapping_rows()
+		self.assertIsInstance(rows, list)
+		kwargs = ga.call_args.kwargs
+		self.assertEqual(kwargs["filters"], {"parenttype": "Livestock Settings", "parentfield": "custom_event_item_groups"})
+		self.assertEqual(kwargs["order_by"], "idx asc")
+
+
+class TestTheRealQueries(unittest.TestCase):
+	"""Unmocked: column names, filters and IN-list expansion against the DB."""
+
+	def test_company_warehouses_are_leaf_enabled_and_the_companys_own(self):
+		names = EI._company_warehouses("Karen Roses")
+		self.assertTrue(names)
+		for n in names[:25]:
+			co, grp, dis = frappe.db.get_value("Warehouse", n, ["company", "is_group", "disabled"])
+			self.assertEqual((co, grp, dis), ("Karen Roses", 0, 0))
+
+	def test_company_warehouses_excludes_group_and_disabled_ones(self):
+		names = set(EI._company_warehouses("Karen Roses"))
+		excluded = frappe.get_all(
+			"Warehouse",
+			filters={"company": "Karen Roses"},
+			or_filters={"is_group": 1, "disabled": 1},
+			pluck="name",
+		)
+		self.assertFalse(names & set(excluded))
+
+	def test_no_company_gives_no_warehouses(self):
+		self.assertEqual(EI._company_warehouses(None), [])
+
+	def test_two_companies_do_not_share_warehouses(self):
+		a = set(EI._company_warehouses("Karen Roses"))
+		b = set(EI._company_warehouses("Westwood Dairies Limited"))
+		self.assertTrue(a and b)
+		self.assertFalse(a & b)
+
+	def test_balances_executes_and_returns_the_keys_callers_use(self):
+		row = frappe.db.sql(
+			"""SELECT i.item_group, b.warehouse FROM `tabBin` b
+			   JOIN `tabItem` i ON i.name = b.item_code
+			   WHERE b.actual_qty > 0 AND IFNULL(i.disabled, 0) = 0
+			     AND IFNULL(i.is_stock_item, 1) = 1 LIMIT 1""",
+			as_dict=True,
+		)
+		if not row:
+			self.skipTest("no stocked item on this site")
+		rows = EI._balances([row[0].item_group], [row[0].warehouse])
+		self.assertTrue(rows)
+		for key in ("name", "item_name", "stock_uom", "warehouse", "qty"):
+			self.assertIn(key, rows[0])
+		self.assertEqual({r["warehouse"] for r in rows}, {row[0].warehouse})
+
+	def test_balances_with_nothing_to_search_returns_nothing(self):
+		self.assertEqual(EI._balances([], ["x"]), [])
+		self.assertEqual(EI._balances(["x"], []), [])
