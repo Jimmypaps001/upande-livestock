@@ -9,7 +9,11 @@ import { TooltipProvider } from "@/components/ui/tooltip";
  * milk goes to the tank on the old drug's date.
  */
 
-const state = vi.hoisted(() => ({ drugs: [] as unknown[] }));
+const state = vi.hoisted(() => ({
+  drugs: [] as unknown[],
+  gate: null as Promise<void> | null,
+  fail: false,
+}));
 
 const drug = (value: string, name: string) => ({
   value, label: `${name} · 10 Litre in Store A`, item_name: name, qty: 10, uom: "Litre",
@@ -18,6 +22,10 @@ const drug = (value: string, name: string) => ({
 
 const call = vi.fn(async (method?: string) => {
   const m = method || "";
+  if (m.includes("open_health_cases")) {
+    if (state.gate) await state.gate;
+    if (state.fail) return { error: "The store is unreachable." };
+  }
   if (m.includes("open_health_cases"))
     return { ok: true, cases: [], drug_items: state.drugs, routes: [], employee: "E1" };
   if (m.includes("health_options"))
@@ -64,9 +72,37 @@ describe("treatment details follow the drug", () => {
 
   it("says so, rather than asking for a drug it cannot offer, when nothing is mapped", async () => {
     state.drugs = [];
+    state.gate = null;
+    state.fail = false;
     draw();
     await waitFor(() =>
       expect(screen.getByText(/No items are mapped to this event/)).toBeTruthy(),
     );
+  });
+
+  it("does not claim nothing is mapped before the list has arrived, only once it is empty", async () => {
+    let open!: () => void;
+    state.gate = new Promise<void>((r) => (open = r));
+    state.fail = false;
+    state.drugs = [];
+    draw();
+    // Before the call resolves, and after the options have.
+    expect(screen.queryByText(/No items are mapped/)).toBeNull();
+    await waitFor(() => expect(call).toHaveBeenCalled());
+    await new Promise((r) => setTimeout(r, 50));
+    expect(screen.queryByText(/No items are mapped/)).toBeNull();
+    open();
+    await waitFor(() => expect(screen.getByText(/No items are mapped/)).toBeTruthy());
+    state.gate = null;
+  });
+
+  it("says the list could not be loaded, not that nothing is mapped, when the call fails", async () => {
+    state.gate = null;
+    state.fail = true;
+    state.drugs = [];
+    draw();
+    await waitFor(() => expect(screen.getByText(/could not be loaded/)).toBeTruthy());
+    expect(screen.queryByText(/No items are mapped/)).toBeNull();
+    state.fail = false;
   });
 });

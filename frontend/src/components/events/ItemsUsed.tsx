@@ -40,11 +40,18 @@ export function ItemsUsed({
   onChange,
   defaultQty = "1",
 }: {
-  choices: StockChoice[];
+  /** `undefined` means not loaded yet (or failed to load) and renders nothing;
+   *  only an explicit empty array says nothing is mapped. */
+  choices: StockChoice[] | undefined;
   rows: ItemRow[];
   onChange: (rows: ItemRow[]) => void;
   defaultQty?: string;
 }) {
+  // Not known yet: say nothing. Claiming "nothing is mapped" while the list is
+  // still loading, or after it failed, sends a correct farm to fix a mapping
+  // that is not broken.
+  if (!choices) return null;
+
   // Nothing on offer: no control to frustrate, but say why, or the screen
   // asks for a drug it has nowhere to pick from.
   if (!choices.length)

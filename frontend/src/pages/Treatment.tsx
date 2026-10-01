@@ -62,6 +62,7 @@ export function Treatment() {
   const [store, setStore] = useState<OpenCasesView | null>(null);
   const [loading, setLoading] = useState(true);
   const [failure, setFailure] = useState<string | null>(null);
+  const [itemsFailure, setItemsFailure] = useState<string | null>(null);
   const toast = useToast();
   const who = useOperator(options?.employee);
 
@@ -87,7 +88,11 @@ export function Treatment() {
     }
     setFailure(null);
     setOptions(o);
-    if (!isError(s)) setStore(s);
+    if (isError(s)) setItemsFailure(s.error);
+    else {
+      setItemsFailure(null);
+      setStore(s);
+    }
   }, []);
 
   useEffect(() => {
@@ -369,7 +374,13 @@ export function Treatment() {
                 )}
               </div>
 
-              <ItemsUsed choices={store?.drug_items ?? []} rows={doses} onChange={changeDoses} />
+              {itemsFailure && (
+                <Notice tone="error">
+                  The list of items could not be loaded, so nothing can be picked
+                  yet. {itemsFailure}
+                </Notice>
+              )}
+              <ItemsUsed choices={store?.drug_items} rows={doses} onChange={changeDoses} />
 
               {doses
                 .filter((d) => d.item)
