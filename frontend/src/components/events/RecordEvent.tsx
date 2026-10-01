@@ -110,8 +110,8 @@ export interface RecordEventProps<O> {
   /** Who the server thinks is recording this, from the options endpoint. */
   operatorOf?: (options: O) => string | null;
   /** What this event may consume, if the farm mapped anything to its type.
-   *  Absent: no table. `undefined` returned: not loaded, renders nothing.
-   *  An explicit `[]` says nothing is mapped. */
+   *  Absent: no table. `undefined` returned: not loaded or not mapped, renders nothing.
+   *  An explicit `[]` says it is mapped but nothing is in stock. */
   itemsOf?: (options: O) => StockChoice[] | undefined;
 }
 

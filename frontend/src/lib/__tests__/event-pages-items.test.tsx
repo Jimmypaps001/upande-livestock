@@ -52,7 +52,7 @@ vi.mock("@/lib/frappe", async () => {
   return { ...actual, call };
 });
 
-const { Heat, Abortion } = await import("@/pages/Breeding");
+const { Heat, Abortion, Diagnosis } = await import("@/pages/Breeding");
 const { Calving } = await import("@/pages/Calving");
 
 const wrap = (el: React.ReactNode) =>
@@ -127,6 +127,28 @@ describe("each screen reads its own event type's list", () => {
     ]);
   });
 
+  it("Diagnosis reads the Pregnancy Diagnosis key and sends its items", async () => {
+    wrap(<Diagnosis />);
+    fireEvent.click(await screen.findByText("Daisy"));
+    await useItem(/Diag Drug/, "2", /B-1/);
+    fireEvent.click(await screen.findByLabelText("Result"));
+    fireEvent.click(await screen.findByRole("option", { name: "Confirmed" }));
+    fireEvent.click(screen.getByRole("button", { name: "Record the result" }));
+    await waitFor(() => expect(sent("create_pregnancy_diagnosis")).toBeTruthy());
+    expect(sent("create_pregnancy_diagnosis")!.payload.items).toEqual([
+      { item_code: "DIAG-DRUG", qty: 2, source_warehouse: "Store A", batch_no: "B-1" },
+    ]);
+  });
+
+  it("a type the farm mapped nothing to has no key, and the screen shows nothing at all", async () => {
+    state.byEvent = { Calving: [drug("CALF-DRUG", "Calf Drug")] };
+    wrap(<Heat />);
+    fireEvent.click(await screen.findByText("Daisy"));
+    await screen.findByRole("button", { name: "Record the heat" });
+    expect(screen.queryByLabelText("Item")).toBeNull();
+    expect(screen.queryByText(/in stock right now|No items are mapped/)).toBeNull();
+  });
+
   it("an event type absent from the payload shows nothing, not 'nothing is mapped'", async () => {
     state.byEvent = undefined;
     wrap(<Heat />);
@@ -136,10 +158,10 @@ describe("each screen reads its own event type's list", () => {
     expect(screen.queryByText(/No items are mapped/)).toBeNull();
   });
 
-  it("a mapped-to-nothing type says so", async () => {
+  it("a mapped type with nothing in stock says exactly that", async () => {
     state.byEvent = { "Heat Detection": [] };
     wrap(<Heat />);
     fireEvent.click(await screen.findByText("Daisy"));
-    expect(await screen.findByText(/No items are mapped/)).toBeTruthy();
+    expect(await screen.findByText(/Nothing mapped to this event is in stock right now/)).toBeTruthy();
   });
 });

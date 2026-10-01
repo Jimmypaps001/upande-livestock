@@ -41,8 +41,8 @@ class Doc:
 		self.operator = None
 		self.semen_item = None
 
-	def _type_consumes_drugs(self):
-		return False
+	# The REAL method, so the gate's fallback is exercised, not stubbed.
+	_type_consumes_drugs = LE.LivestockEvent._type_consumes_drugs
 
 	def get(self, key, default=None):
 		return getattr(self, key, default)
@@ -64,7 +64,9 @@ class TestAMappedEventIssuesItsItems(unittest.TestCase):
 		                           batch_no=None)])
 		with patch.object(LE.livestock_stock, "issue_items", side_effect=fake_issue), \
 		     patch.object(LE.livestock_stock, "drug_warehouse", return_value="Fallback - KR"), \
-		     patch.object(LE.event_items, "consumes_items", return_value=consumes), \
+		     patch.object(LE.event_items, "groups_for_event",
+		                  return_value=["Drugs"] if consumes else []), \
+		     patch.object(LE.frappe.db, "get_value", return_value=0), \
 		     patch.object(LE.backdate, "suppresses_stock", return_value=False):
 			LE.LivestockEvent.post_stock_issue(doc)
 		return captured
@@ -156,7 +158,6 @@ class TestEveryCreatorAcceptsItems(unittest.TestCase):
 		self._check(doc, out)
 
 	def test_pregnancy_diagnosis(self):
-		from upande_livestock.serverscripts.breeding import create_pregnancy_diagnosis as M
 		doc, out = self._run("diagnosis", "create_pregnancy_diagnosis", "Pregnancy Diagnosis",
 		                     {"animal": "A1", "diagnosis_result": "Confirmed",
 		                      "related_service": "S1", "items": ITEMS})
