@@ -3,13 +3,15 @@
 
 """Carry today's configuration into the per-event item group mapping.
 
-Nothing is invented. The four types carrying `consumes_drugs = 1` already draw
-on `custom_drug_item_group`, and treatments already issue drugs from it through
-a health case — so those five rows record what the site already does. An event
-type with no mapped group consumes nothing and shows no items list, which is
-exactly what `consumes_drugs = 0` meant.
+Nothing is invented. The event types flagged with `consumes_drugs = 1` already
+draw on `custom_drug_item_group`, and treatments already issue drugs from it
+through a health case — so rows for those flagged types plus Treatment record
+what the site already does. An event type with no mapped group consumes nothing
+and shows no items list, which is exactly what `consumes_drugs = 0` meant.
 
 A site that configured no drug item group gets no rows and behaves as it did.
+A site that flagged a drug-consuming type without a deploy gets a row for it,
+and a site that un-flagged one gets no row invented.
 
 SERVICE IS DELIBERATELY NOT MAPPED. It would have to use
 `custom_semen_item_group`, which on live is `Dairy Others` — 410 items, 63 of
@@ -21,10 +23,6 @@ import frappe
 
 SETTINGS = "Livestock Settings"
 TABLE = "custom_event_item_groups"
-
-#: Exactly the types carrying `consumes_drugs = 1`, plus Treatment, which
-#: consumes through a health case rather than an event.
-DRUG_CONSUMING = ("Vaccination", "Deworming", "Check Up", "Drying Off", "Treatment")
 
 
 def execute():
@@ -54,11 +52,13 @@ def ensure_treatment_event_type():
 
 
 def seed_rows_from_the_drug_group():
-	"""One row per drug-consuming type, pointing at the configured group."""
-	try:
-		settings = frappe.get_single(SETTINGS)
-	except Exception:
-		return
+	"""One row per drug-consuming type, pointing at the configured group.
+
+	Drug-consuming types are those flagged with consumes_drugs = 1, plus
+	Treatment (which this patch creates). Nothing is invented: a site that
+	flags a type gets a row for it, and one that un-flags gets no row.
+	"""
+	settings = frappe.get_single(SETTINGS)
 	if not settings.meta.has_field(TABLE):
 		return
 
@@ -66,9 +66,18 @@ def seed_rows_from_the_drug_group():
 	if not group:
 		return
 
+	# Read the flagged drug-consuming types from the database
+	flagged = frappe.get_all(
+		"Livestock Event Type",
+		filters={"consumes_drugs": 1},
+		pluck="name",
+	)
+	# Add Treatment unconditionally: the patch creates it, and it has no flag
+	drug_consuming = set(flagged) | {"Treatment"}
+
 	have = {(r.event_type, r.item_group) for r in settings.get(TABLE) or []}
 	added = 0
-	for event_type in DRUG_CONSUMING:
+	for event_type in drug_consuming:
 		if (event_type, group) in have:
 			continue
 		if not frappe.db.exists("Livestock Event Type", event_type):
