@@ -181,29 +181,59 @@ class TestMappingFallsBackBeforeMigrate(unittest.TestCase):
 			self.assertEqual(EI._mapping_rows(), [])
 
 	def test_the_real_query_runs_with_the_right_filters(self):
-		with patch.object(frappe, "get_all", wraps=frappe.get_all) as ga:
-			rows = EI._mapping_rows()
-		self.assertIsInstance(rows, list)
+		if not frappe.get_meta("Livestock Settings").has_field("custom_event_item_groups"):
+			self.skipTest("this site has not migrated the mapping table yet")
+		outcome = {}
+		original = frappe.get_all
+
+		def real_get_all(*args, **kwargs):
+			# _mapping_rows swallows errors, so record whether the real call worked.
+			try:
+				outcome["rows"] = original(*args, **kwargs)
+			except Exception as e:
+				outcome["error"] = e
+				raise
+			return outcome["rows"]
+
+		with patch.object(frappe, "get_all", side_effect=real_get_all) as ga:
+			EI._mapping_rows()
+		ga.assert_called_once()
+		self.assertNotIn("error", outcome)
+		self.assertIsInstance(outcome["rows"], list)
 		kwargs = ga.call_args.kwargs
 		self.assertEqual(kwargs["filters"], {"parenttype": "Livestock Settings", "parentfield": "custom_event_item_groups"})
 		self.assertEqual(kwargs["order_by"], "idx asc")
 
 
+def _companies_with_leaf_warehouses():
+	return frappe.get_all(
+		"Warehouse", filters={"is_group": 0, "disabled": 0}, distinct=True, pluck="company"
+	)
+
+
 class TestTheRealQueries(unittest.TestCase):
 	"""Unmocked: column names, filters and IN-list expansion against the DB."""
 
+	def _company(self):
+		companies = _companies_with_leaf_warehouses()
+		if not companies:
+			raise unittest.SkipTest("no company has a leaf warehouse on this site")
+		return companies[0]
+
 	def test_company_warehouses_are_leaf_enabled_and_the_companys_own(self):
-		names = EI._company_warehouses("Karen Roses")
+		company = self._company()
+		names = EI._company_warehouses(company)
 		self.assertTrue(names)
 		for n in names[:25]:
 			co, grp, dis = frappe.db.get_value("Warehouse", n, ["company", "is_group", "disabled"])
-			self.assertEqual((co, grp, dis), ("Karen Roses", 0, 0))
+			self.assertEqual((co, grp, dis), (company, 0, 0))
 
 	def test_company_warehouses_excludes_group_and_disabled_ones(self):
-		names = set(EI._company_warehouses("Karen Roses"))
+		company = self._company()
+		names = set(EI._company_warehouses(company))
 		excluded = frappe.get_all(
 			"Warehouse",
-			filters={"company": "Karen Roses"},
+			filters={"company": company},
 			or_filters={"is_group": 1, "disabled": 1},
 			pluck="name",
 		)
@@ -213,8 +243,11 @@ class TestTheRealQueries(unittest.TestCase):
 		self.assertEqual(EI._company_warehouses(None), [])
 
 	def test_two_companies_do_not_share_warehouses(self):
-		a = set(EI._company_warehouses("Karen Roses"))
-		b = set(EI._company_warehouses("Westwood Dairies Limited"))
+		companies = [c for c in _companies_with_leaf_warehouses() if c]
+		if len(companies) < 2:
+			raise unittest.SkipTest("fewer than two companies have leaf warehouses on this site")
+		a = set(EI._company_warehouses(companies[0]))
+		b = set(EI._company_warehouses(companies[1]))
 		self.assertTrue(a and b)
 		self.assertFalse(a & b)
 
