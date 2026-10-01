@@ -71,21 +71,31 @@ def create_check_up(payload):
 		doc.action_taken = d.get("action_taken")
 		doc.action_notes = d.get("action_notes")
 		doc.follow_up_date = d.get("follow_up_date") or None
+		# Anything given at the check. LivestockDiagnosis.post_drug_issue posts these
+		# out of the drug store on submit, and blocks the check if it cannot.
+		# Built once: the guard below and the rows share a definition of what
+		# counts as issuing a drug, and two calls could only drift apart.
+		drugs = _clean_drug_rows(
+			d.get("drugs"), d.get("source_warehouse") or livestock_stock.drug_warehouse()
+		)
+
 		# Treating a cow is issuing stock to her, and that belongs in a file.
 		# `treat_animal` has always refused this; a check up quietly did not, and
 		# said so afterwards in a toast that fades — so the drugs went out and
-		# the file was a suggestion. Same rule, same words. The file is NOT
-		# opened here: see treat_animal on why nothing may open a second file
-		# for an illness already being treated.
-		if _clean_drug_rows(d.get("drugs"), None) and not open_case_for(d["animal"]):
+		# the file was a suggestion. Same rule, same words.
+		#
+		# ESCALATING IS EXEMPT, because escalating IS saying what is wrong with
+		# her: the branch below opens the file as part of the same action.
+		# Without this a vet who escalated AND gave a drug was told to go and do
+		# the thing they were already doing, and `run()` rolled the whole check
+		# up back — so nothing was recorded at all.
+		if drugs and d.get("action_taken") != ESCALATED and not open_case_for(d["animal"]):
 			frappe.throw(
 				_("{0} has no open file. Say what is wrong with her and a new one will be "
 				  "opened for this treatment.").format(d["animal"])
 			)
 
-		# Anything given at the check. LivestockDiagnosis.post_drug_issue posts these
-		# out of the drug store on submit, and blocks the check if it cannot.
-		for drug in _clean_drug_rows(d.get("drugs"), d.get("source_warehouse") or livestock_stock.drug_warehouse()):
+		for drug in drugs:
 			doc.append("drug_issues", drug)
 		doc.insert()
 		doc.submit()

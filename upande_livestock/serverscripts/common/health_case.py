@@ -187,16 +187,20 @@ def _unit_cost(item_code, warehouse):
 		return 0.0
 	from frappe.utils import flt
 
+	if not warehouse:
+		return 0.0
+
 	try:
-		rate = (
-			frappe.db.get_value(
-				"Bin", {"item_code": item_code, "warehouse": warehouse}, "valuation_rate"
-			)
-			if warehouse
-			else None
+		# The store's own rate, and no fallback. `Item.valuation_rate` is the
+		# item master's static figure — unrelated to any warehouse and often
+		# stale by an order of magnitude — so falling back to it would price a
+		# treatment at a number reconcilable against no Stock Ledger Entry
+		# anywhere, contradicting the paragraph above in the one case this whole
+		# change exists for: a named store with no Bin row. Unpriced is honest;
+		# wrongly priced is not.
+		rate = frappe.db.get_value(
+			"Bin", {"item_code": item_code, "warehouse": warehouse}, "valuation_rate"
 		)
-		if rate is None:
-			rate = frappe.db.get_value("Item", item_code, "valuation_rate")
 	except Exception:
 		return 0.0
 	return flt(rate)
