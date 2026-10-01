@@ -96,6 +96,17 @@ describe("quantity defaults and an empty mapping", () => {
     expect(screen.queryByText(/No items are mapped/)).toBeNull();
     expect(screen.queryByText(/Settings/)).toBeNull();
   });
+
+  it("with mapped={false}, says nothing is mapped and where to map it", () => {
+    render(
+      <TooltipProvider>
+        <ItemsUsed choices={[]} mapped={false} rows={[blankRow()]} onChange={vi.fn()} />
+      </TooltipProvider>,
+    );
+    expect(screen.getByText(/No items are mapped to this event/)).toBeTruthy();
+    expect(screen.getByText(/What Each Event May Consume/)).toBeTruthy();
+    expect(screen.queryByText(/in stock right now/)).toBeNull();
+  });
 });
 
 const KEY = planKey("DRUG-A", "General Store Karen - KR");

@@ -13,6 +13,7 @@ const state = vi.hoisted(() => ({
   drugs: [] as unknown[],
   gate: null as Promise<void> | null,
   fail: false,
+  mapped: true,
 }));
 
 const drug = (value: string, name: string) => ({
@@ -27,7 +28,7 @@ const call = vi.fn(async (method?: string) => {
     if (state.fail) return { error: "The store is unreachable." };
   }
   if (m.includes("open_health_cases"))
-    return { ok: true, cases: [], drug_items: state.drugs, routes: [], employee: "E1" };
+    return { ok: true, cases: [], drug_items: state.drugs, drug_items_mapped: state.mapped, routes: [], employee: "E1" };
   if (m.includes("health_options"))
     return { ok: true, animals: [], carrying: [], diseases: [], abortion_causes: [], appearances: [],
       hydrations: [], actions: [], case_statuses: [], severities: [], routes: [], employee: "E1" };
@@ -70,14 +71,29 @@ describe("treatment details follow the drug", () => {
     await waitFor(() => expect(wd().value).toBe(""));
   });
 
-  it("says so, rather than asking for a drug it cannot offer, when nothing mapped is in stock", async () => {
+  it("sends a farm that mapped nothing to Settings", async () => {
     state.drugs = [];
+    state.mapped = false;
+    state.gate = null;
+    state.fail = false;
+    draw();
+    await waitFor(() => expect(screen.getByText(/No items are mapped to this event/)).toBeTruthy());
+    expect(screen.getByText(/What Each Event May Consume/)).toBeTruthy();
+    expect(screen.queryByText(/in stock right now/)).toBeNull();
+    state.mapped = true;
+  });
+
+  it("says the stock is out, not that nothing is mapped, when mapped and empty", async () => {
+    state.drugs = [];
+    state.mapped = true;
     state.gate = null;
     state.fail = false;
     draw();
     await waitFor(() =>
       expect(screen.getByText(/Nothing mapped to this event is in stock right now/)).toBeTruthy(),
     );
+    expect(screen.queryByText(/No items are mapped/)).toBeNull();
+    expect(screen.queryByText(/Settings/)).toBeNull();
   });
 
   it("does not claim nothing is in stock before the list has arrived, only once it is empty", async () => {

@@ -8,7 +8,7 @@ from upande_livestock.serverscripts.common.choices import active_animals, animal
 from upande_livestock.serverscripts.common.employee import current_employee
 from upande_livestock.serverscripts.common.envelope import guard_read, run
 from upande_livestock.serverscripts.common import stock as livestock_stock
-from upande_livestock.serverscripts.husbandry._shared import HUSBANDRY_TYPES, _type_consumes_drugs, husbandry_drug_items
+from upande_livestock.serverscripts.husbandry._shared import HUSBANDRY_TYPES, _type_consumes_drugs, husbandry_drug_items, husbandry_items_mapped
 
 
 @frappe.whitelist()
@@ -26,6 +26,8 @@ def husbandry_options():
 			# named by a constant, in stores somebody had typed — and on live
 			# that returned nothing while 74 stocked drug bins sat elsewhere.
 			"drug_items": husbandry_drug_items(),
+			# [] above is unmapped OR unstocked; this says which.
+			"drug_items_mapped": husbandry_items_mapped(),
 			"drug_warehouse": livestock_stock.drug_warehouse(),
 			"herds": herd_choices(),
 			"warehouses": [

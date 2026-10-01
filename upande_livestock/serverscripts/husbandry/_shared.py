@@ -58,6 +58,17 @@ def husbandry_drug_items():
 	return sorted(seen.values(), key=lambda i: (i["item_name"] or "").lower())
 
 
+def husbandry_items_mapped():
+	"""Whether the farm mapped item groups to ANY husbandry event type.
+
+	`husbandry_drug_items()` is [] both when nothing is mapped and when what is
+	mapped is out of stock; the screen words those differently, so it is told.
+	"""
+	from upande_livestock.serverscripts.common.event_items import consumes_items
+
+	return any(consumes_items(t) for t in HUSBANDRY_TYPES)
+
+
 def _animals_in_herd(herd):
 	"""Animals in a herd that may still receive an event.
 

@@ -35,6 +35,7 @@ const state = vi.hoisted(() => ({
   /** When set, answers each event_batches request (and may delay it). */
   answer: null as null | ((lines: Array<{ item_code: string; warehouse: string }>) => unknown),
   twoStores: false,
+  unmapped: false,
 }));
 
 const perStore = (lines: Array<{ item_code: string; warehouse: string }>) =>
@@ -61,7 +62,8 @@ const call = vi.fn(async (method?: string, args?: Record<string, unknown>) => {
     return { ok: true, animal: "A1", open_case: null, history: [], closed_count: 0 };
   if (m.includes("husbandry_options"))
     return { ok: true, animals: [{ name: "A1", label: "Daisy", herd: "H1", herd_label: "Herd 1" }],
-      event_types: ["Vaccination"], drug_consuming_types: ["Vaccination"], drug_items: [state.twoStores ? twoStoreDrug() : drug],
+      event_types: ["Vaccination"], drug_consuming_types: ["Vaccination"], drug_items: state.unmapped ? [] : [state.twoStores ? twoStoreDrug() : drug],
+      drug_items_mapped: !state.unmapped,
       drug_warehouse: null, herds: [], employee: "E1" };
   return { ok: true };
 });
@@ -101,6 +103,7 @@ beforeEach(() => {
   state.held = false;
   state.answer = null;
   state.twoStores = false;
+  state.unmapped = false;
 });
 
 describe("Treatment sends the batch it was given", () => {
@@ -246,5 +249,15 @@ describe("the plan belongs to the item AND the store", () => {
     await new Promise((r) => setTimeout(r, 30));
     expect(batchCalls().length).toBe(1);
     expect(asked(0)[0].warehouse).toBe("Store A");
+  });
+});
+
+describe("Husbandry tells unmapped from out of stock", () => {
+  it("points an unmapped farm at Settings", async () => {
+    state.unmapped = true;
+    wrap(<Husbandry />);
+    fireEvent.click(await screen.findByText("Daisy"));
+    expect(await screen.findByText(/No items are mapped to this event/)).toBeTruthy();
+    expect(screen.queryByText(/in stock right now/)).toBeNull();
   });
 });

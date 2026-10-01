@@ -383,7 +383,7 @@ export function Treatment() {
                   yet. {itemsFailure}
                 </Notice>
               )}
-              <ItemsUsed choices={store?.drug_items} rows={doses} onChange={changeDoses} plans={plans} />
+              <ItemsUsed choices={store?.drug_items} mapped={store?.drug_items_mapped} rows={doses} onChange={changeDoses} plans={plans} />
 
               {doses
                 .filter((d) => d.item)
