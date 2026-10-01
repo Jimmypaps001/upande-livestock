@@ -23,9 +23,25 @@ class TestWhatThePatchSeeds(unittest.TestCase):
 	def test_treatment_becomes_an_event_type(self):
 		"""A mapping key, not a recordable event: the screens are hardcoded
 		pages, so the row offers nobody a new form. The patch creates it."""
-		# Delete Treatment if it already exists, to verify the patch creates it
+		# Snapshot Treatment's values before deleting, restore in cleanup
+		treatment_backup = None
 		if frappe.db.exists("Livestock Event Type", "Treatment"):
-			frappe.db.delete("Livestock Event Type", {"name": "Treatment"})
+			treatment_backup = frappe.get_doc("Livestock Event Type", "Treatment").as_dict()
+			# Use raw SQL to forcefully delete, bypassing link checks
+			frappe.db.sql("DELETE FROM `tabLivestock Event Type` WHERE name = 'Treatment'")
+			# Register cleanup to restore Treatment from backup
+			def restore_treatment():
+				if treatment_backup:
+					# Delete the patch-created version (if it exists) and restore from backup
+					frappe.db.sql("DELETE FROM `tabLivestock Event Type` WHERE name = 'Treatment'")
+					# Recreate Treatment with original field values
+					doc = frappe.new_doc("Livestock Event Type")
+					for key, value in treatment_backup.items():
+						if key not in ("idx", "modified", "creation", "docstatus"):
+							setattr(doc, key, value)
+					doc.insert(ignore_permissions=True)
+			self.addCleanup(restore_treatment)
+
 		P.execute()
 		self.assertTrue(frappe.db.exists("Livestock Event Type", "Treatment"))
 
@@ -35,9 +51,36 @@ class TestWhatThePatchSeeds(unittest.TestCase):
 		group = frappe.db.get_single_value("Livestock Settings", "custom_drug_item_group")
 		if not group:
 			raise unittest.SkipTest("this site has no drug item group configured")
-		# Clear existing mapping rows to have a clean state
-		frappe.db.delete("Livestock Event Item Group", {"parenttype": "Livestock Settings"})
-		# Take a before-snapshot (should be empty now)
+
+		# Snapshot all mapping rows before any deletion
+		all_rows_backup = frappe.get_all(
+			"Livestock Event Item Group",
+			filters={"parenttype": "Livestock Settings"},
+			fields=["event_type", "item_group", "idx"],
+		)
+		# Register cleanup to restore all rows exactly as they were
+		def restore_mapping_rows():
+			settings = frappe.get_single("Livestock Settings")
+			settings.set(P.TABLE, all_rows_backup)
+			settings.flags.ignore_permissions = True
+			settings.save()
+		self.addCleanup(restore_mapping_rows)
+
+		# Delete only the rows for drug-consuming types to have a clean test state
+		flagged = frappe.get_all(
+			"Livestock Event Type",
+			filters={"consumes_drugs": 1},
+			pluck="name",
+		)
+		drug_consuming = set(flagged) | {"Treatment"}
+		for row in all_rows_backup[:]:  # iterate copy to avoid modifying during iteration
+			if row["event_type"] in drug_consuming:
+				frappe.db.delete(
+					"Livestock Event Item Group",
+					{"parenttype": "Livestock Settings", "event_type": row["event_type"], "item_group": row["item_group"]}
+				)
+
+		# Take a before-snapshot after deleting only drug-consuming rows
 		before = frappe.get_all(
 			"Livestock Event Item Group",
 			filters={"parenttype": "Livestock Settings"},
@@ -54,12 +97,6 @@ class TestWhatThePatchSeeds(unittest.TestCase):
 		after_set = {(r.event_type, r.item_group) for r in after}
 		added = after_set - before_set
 		# Verify that the patch added rows for flagged drug-consuming types
-		flagged = frappe.get_all(
-			"Livestock Event Type",
-			filters={"consumes_drugs": 1},
-			pluck="name",
-		)
-		drug_consuming = set(flagged) | {"Treatment"}
 		for event_type in drug_consuming:
 			if frappe.db.exists("Livestock Event Type", event_type):
 				self.assertIn(
