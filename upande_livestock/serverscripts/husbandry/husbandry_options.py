@@ -8,7 +8,7 @@ from upande_livestock.serverscripts.common.choices import active_animals, animal
 from upande_livestock.serverscripts.common.employee import current_employee
 from upande_livestock.serverscripts.common.envelope import guard_read, run
 from upande_livestock.serverscripts.common import stock as livestock_stock
-from upande_livestock.serverscripts.husbandry._shared import DRUG_CONSUMING_TYPES, HUSBANDRY_TYPES, husbandry_drug_items
+from upande_livestock.serverscripts.husbandry._shared import HUSBANDRY_TYPES, _type_consumes_drugs, husbandry_drug_items
 
 
 @frappe.whitelist()
@@ -20,7 +20,7 @@ def husbandry_options():
 			"ok": True,
 			"animals": animal_choices(active_animals(), labels),
 			"event_types": list(HUSBANDRY_TYPES),
-			"drug_consuming_types": list(DRUG_CONSUMING_TYPES),
+			"drug_consuming_types": [t for t in HUSBANDRY_TYPES if _type_consumes_drugs(t)],
 			# The groups the farm mapped to these events, searched across every
 			# warehouse of its company. The old two-kind lookup asked one group
 			# named by a constant, in stores somebody had typed — and on live
