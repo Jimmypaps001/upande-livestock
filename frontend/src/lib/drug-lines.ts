@@ -3,12 +3,15 @@ import type { StockChoice } from "@/lib/events";
 export interface DrugLine {
   item_code: string;
   qty: string | number;
+  /** Chosen by the operator where the drug is batch tracked. */
+  batch_no?: string;
 }
 
 export interface DrugRow {
   item_code: string;
   qty: number;
   source_warehouse: string | undefined;
+  batch_no: string | undefined;
 }
 
 /**
@@ -33,5 +36,6 @@ export function drugRowsForIssue(lines: DrugLine[], choices: StockChoice[]): Dru
       item_code: l.item_code,
       qty: Number(l.qty),
       source_warehouse: where.get(l.item_code),
+      batch_no: l.batch_no || undefined,
     }));
 }

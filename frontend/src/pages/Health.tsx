@@ -70,9 +70,6 @@ export function CheckUp() {
           if (r.case) {
             return `${a} seen — ${r.name}. Added to her open file ${r.case}.`;
           }
-          if (r.suggest_case) {
-            return `${a} seen — ${r.name}. She was treated but has no file open; open one on the Treatment screen if this is more than a one-off.`;
-          }
           return `${a} seen — ${r.name}.`;
         }}
       />

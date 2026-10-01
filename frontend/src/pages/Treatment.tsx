@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Picker } from "@/components/ui/picker";
 import { Textarea } from "@/components/ui/textarea";
 import { isError } from "@/lib/frappe";
+import { drugRowsForIssue } from "@/lib/drug-lines";
 import type { AnimalSummary } from "@/lib/animals";
 import { getHealthOptions, getOpenCases, type HealthOptions, type OpenCasesView } from "@/lib/events";
 import { getAnimalCase, treatAnimal, type AnimalCaseStanding } from "@/lib/health";
@@ -32,6 +33,8 @@ interface Dose {
   withdrawal: string;
   response: string;
   notes: string;
+  /** Chosen where the drug is batch tracked; blank otherwise. */
+  batch: string;
 }
 
 let nextKey = 1;
@@ -47,6 +50,7 @@ const blank = (): Dose => ({
   withdrawal: "",
   response: "",
   notes: "",
+  batch: "",
 });
 
 /**
@@ -153,6 +157,14 @@ export function Treatment() {
   async function send() {
     if (!ready || !animal) return;
     setBusy(true);
+    // Each drug out of the store that actually holds it. `store.drug_items` is
+    // what the picker was filled from, so its `warehouse` is the one the
+    // operator was shown — and until now the issue ignored it and took
+    // everything off `Livestock Settings.drug_warehouse`.
+    const placed = drugRowsForIssue(
+      usable.map((d) => ({ item_code: d.drug, qty: d.qty, batch_no: d.batch })),
+      store?.drug_items ?? [],
+    );
     const r = await treatAnimal({
       animal,
       case: !fresh && standing?.open_case ? standing.open_case.name : undefined,
@@ -172,6 +184,10 @@ export function Treatment() {
         response_observed: d.response || undefined,
         administered_by: who.value,
         notes: d.notes || undefined,
+        // Matched on item rather than index: `drugRowsForIssue` drops lines
+        // with no item or a zero quantity, so the two arrays would drift.
+        source_warehouse: placed.find((p) => p.item_code === d.drug)?.source_warehouse,
+        batch_no: d.batch || undefined,
       })),
     });
     setBusy(false);

@@ -80,11 +80,15 @@ class TestACheckUpIsWhereAFileComesFrom(IntegrationTestCase):
 		self.assertEqual(second["case"], first["case"])
 		self.assertFalse(second["case_opened"])
 
-	def test_a_dose_at_the_crush_asks_rather_than_opening_one(self):
-		"""Only the person who looked at her knows whether it is a one-off."""
+	def test_a_look_at_her_that_gave_nothing_opens_no_file(self):
+		"""Only the person who looked at her knows whether it is a one-off, and
+		a check that issued no drug has nothing to file. `suggest_case` used to
+		be returned here so the screen could ask; it is gone, because a check
+		that DOES issue a drug is now refused outright rather than asked about
+		afterwards — see test_check_up_needs_a_case."""
 		got = self._check("Treated on Spot")
 		self.assertIsNone(got["case"])
-		self.assertTrue(got["suggest_case"])
+		self.assertNotIn("suggest_case", got)
 
 	def test_the_complaint_on_the_file_is_what_the_check_said(self):
 		got = self._check("Escalated to Case")
