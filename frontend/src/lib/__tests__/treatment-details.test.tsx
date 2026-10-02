@@ -32,6 +32,10 @@ const call = vi.fn(async (method?: string) => {
   if (m.includes("health_options"))
     return { ok: true, animals: [], carrying: [], diseases: [], abortion_causes: [], appearances: [],
       hydrations: [], actions: [], case_statuses: [], severities: [], routes: [], employee: "E1" };
+  // The batch endpoint answers with a `lines` array. Returning a bare `ok`
+  // here made the hook read `.map` off undefined, which the run counted as an
+  // unhandled rejection while every test still passed.
+  if (m.includes("event_batches")) return { ok: true, lines: [] };
   return { ok: true };
 });
 
