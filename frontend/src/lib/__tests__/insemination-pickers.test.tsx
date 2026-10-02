@@ -221,9 +221,12 @@ describe("the insemination pickers", () => {
       fireEvent.click(button);
       await waitFor(() => expect(sent.length).toBe(1));
       const payload = sent[0].payload as Record<string, unknown>;
-      expect(payload.items).toEqual([
-        { item_code: "4040030118", qty: 1, source_warehouse: "Westwood Dairy Store - KR", batch_no: undefined },
-      ]);
+      const items = payload.items as Array<Record<string, unknown>>;
+      expect(items).toHaveLength(1);
+      expect(items[0]).toMatchObject({ item_code: "4040030118", qty: 1, source_warehouse: "Westwood Dairy Store - KR" });
+      // Absent or undefined, never "" (an empty string reads as a batch named "").
+      expect(items[0].batch_no).toBeUndefined();
+      expect(items[0].batch_no).not.toBe("");
       expect(payload.semen_item).toBeUndefined();
       expect(payload.semen_warehouse).toBeUndefined();
     });

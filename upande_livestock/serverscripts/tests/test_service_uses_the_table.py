@@ -22,7 +22,7 @@ from upande_livestock.upande_livestock.doctype.livestock_event import (
 
 
 class TestWhichPathAServiceTakes(unittest.TestCase):
-	def _rows_posted(self, *, mapped, legacy_item=None, table_rows=None):
+	def _rows_posted(self, *, mapped, legacy_item=None, table_rows=None, drugs_flag=False):
 		captured = []
 
 		def fake_issue(rows, **kw):
@@ -33,6 +33,7 @@ class TestWhichPathAServiceTakes(unittest.TestCase):
 		doc.semen_item = legacy_item
 		doc.semen_qty = 2
 		doc.semen_warehouse = "Legacy Store - KR"
+		doc._type_consumes_drugs = lambda: drugs_flag
 		with patch.object(LE.livestock_stock, "issue_items", side_effect=fake_issue), \
 		     patch.object(LE.livestock_stock, "drug_warehouse", return_value="Fallback - KR"), \
 		     patch.object(LE.livestock_stock, "semen_warehouse", return_value="Legacy Store - KR"), \
@@ -54,6 +55,19 @@ class TestWhichPathAServiceTakes(unittest.TestCase):
 		self.assertEqual(rows[0]["item_code"], "SEMEN-A")
 		self.assertEqual(rows[0]["qty"], 3)
 		self.assertEqual(rows[0]["warehouse"], "Drug/Medicine Store - Old Office - KR")
+
+	def test_a_mapped_service_with_no_item_rows_issues_nothing_not_the_legacy_straw(self):
+		"""Mapped but nothing ticked: the table is empty, and the straw fields
+		must not quietly step in."""
+		rows = self._rows_posted(mapped=True, legacy_item="LEGACY-STRAW", table_rows=[])
+		self.assertEqual(rows, [])
+
+	def test_an_unmapped_service_with_the_drugs_flag_still_issues_its_straw(self):
+		"""The consumes_drugs checkbox must not send an unmapped Service down the
+		general branch, where it has no rows and silently issues nothing."""
+		rows = self._rows_posted(mapped=False, legacy_item="LSK-SEMEN-TEST", drugs_flag=True)
+		self.assertEqual(len(rows), 1)
+		self.assertEqual(rows[0]["item_code"], "LSK-SEMEN-TEST")
 
 	def test_an_unmapped_site_still_issues_the_legacy_straw(self):
 		"""Live has no straws-only group yet and must keep working."""
