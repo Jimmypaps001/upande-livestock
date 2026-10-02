@@ -9,6 +9,7 @@ from frappe.utils import today
 from upande_livestock.serverscripts.common.employee import employee_or_throw
 from upande_livestock.serverscripts.breeding.record_calf_births import record_calf_births
 from upande_livestock.serverscripts.common.envelope import as_dict, guard, run
+from upande_livestock.serverscripts.common.sire import sire_of as _sire_of
 from upande_livestock.serverscripts.husbandry._shared import append_items
 
 
@@ -44,42 +45,6 @@ def _calf_row(calf, outcome):
 		"vet_remarks": calf.get("vet_remarks"),
 		"photo": calf.get("photo"),
 	}
-
-
-def _sire_of(svc):
-	"""The bull behind a service, in the order the farm would answer it.
-
-	1. the Sire box, when somebody typed one: an explicit answer wins
-	2. the straw on the service's items table (a site where Service is mapped
-	   to an item group keeps its straw there)
-	3. the straw on the legacy `semen_item` field (a site where Service is
-	   unmapped, and services recorded before the table existed, keep it here)
-	4. blank
-
-	Both straw sources are needed because storage is per-site. Total: a service
-	with none of the three yields "", never None and never an exception.
-
-	The straw's ITEM NAME, not its code: `4040030118` on a calf's record tells
-	nobody anything, while "Semen Delta Stormer" is what the herdsman chose.
-	`sire` is a Data field, so there is no Link to satisfy.
-	"""
-	typed = (svc.get("sire") or "").strip()
-	if typed:
-		return typed
-
-	straw = None
-	for row in svc.get("drug_issues") or []:
-		if row.get("item_code"):
-			straw = row["item_code"]
-			break
-	straw = straw or svc.get("semen_item")
-	if not straw:
-		return ""
-
-	try:
-		return frappe.db.get_value("Item", straw, "item_name") or straw
-	except Exception:
-		return straw
 
 
 @frappe.whitelist()
@@ -125,6 +90,11 @@ def record_birth(payload):
 				elif preg.related_service:
 					svc = frappe.get_doc("Livestock Event", preg.related_service)
 					sire = _sire_of(svc)
+					# A Diagnosis cannot be stored on custom_related_pregnancy:
+					# _validate_pregnancy_link throws unless it is a Service. Store
+					# the Service it confirmed, which is what that error's own hint
+					# tells a user to do.
+					related_pregnancy = preg.related_service
 			except Exception:
 				pass
 
