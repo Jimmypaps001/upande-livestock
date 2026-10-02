@@ -26,6 +26,7 @@ from upande_livestock.serverscripts.common import stock as livestock_stock
 from upande_livestock.serverscripts.common.animal import create_calf
 from upande_livestock.serverscripts.common.guards import check_guards
 from upande_livestock.serverscripts.common.notice import heading
+from upande_livestock.serverscripts.common.sire import sire_of
 from upande_livestock.serverscripts.common.timings import get_timing
 
 # The headings the reminders this controller raises carry. An icon here because
@@ -793,6 +794,14 @@ class LivestockEvent(Document):
 
 			# Validate gestation length
 			service = frappe.get_doc("Livestock Event", self.custom_related_pregnancy)
+
+			# The calf's sire is the bull behind this Service. Settled HERE, where
+			# the Service is known, because the app never sends related_pregnancy:
+			# a caller that read the sire before this point saw a blank and stamped
+			# it. A sire somebody typed stays.
+			if not (self.sire or "").strip():
+				self.sire = sire_of(service)
+
 			if service.service_date:
 				gestation_days = frappe.utils.date_diff(self.event_date, service.service_date)
 

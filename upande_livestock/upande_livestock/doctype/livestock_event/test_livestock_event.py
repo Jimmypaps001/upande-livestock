@@ -919,6 +919,55 @@ class TestLivestockEventMultipleBirths(IntegrationTestCase):
 		for n in (1, 2):
 			self.assertEqual(frappe.db.count("Animal", {"tag_number": f"TEST-TRIPLET-{n}"}), 1)
 
+	def _book_with_straw(self, related_pregnancy=None):
+		"""record_birth for a Service that carries a straw, LIVE: real Service,
+		Diagnosis, Calving insert and validate. Returns (calving_row, item_name).
+
+		The straw is written straight onto the submitted Service so no stock is
+		needed; what is under test is the sire, not the issue.
+		"""
+		from upande_livestock.serverscripts.breeding.record_birth import record_birth
+
+		item = frappe.db.get_value("Item", {"disabled": 0}, ["name", "item_name"], as_dict=True)
+		service = self._confirm_pregnancy()
+		frappe.db.set_value("Livestock Event", service, "semen_item", item.name)
+		payload = {
+			"dam": self.dam,
+			"operator": self.operator,
+			"event_date": "2026-07-02",
+			"outcome": "Live Birth",
+			"calves": [{"name": "TEST-TRIPLET-1", "sex": "Female"}],
+		}
+		if related_pregnancy:
+			payload["related_pregnancy"] = related_pregnancy(service)
+		result = record_birth(payload)
+		self.assertNotIn("error", result, result)
+		self.addCleanup(_delete_and_commit, "Livestock Event", result["name"])
+		self._register_birth_family_cleanup(result["name"], [c["animal"] for c in result["calves"]])
+		row = frappe.db.get_value(
+			"Livestock Event", result["name"], ["sire", "custom_related_pregnancy"], as_dict=True
+		)
+		return row, item.item_name, service
+
+	def test_the_sire_lands_when_the_app_sends_no_related_pregnancy(self):
+		"""The app's Calving form sends no related_pregnancy. The Service is found by
+		validate()'s auto-resolver, so the sire must be settled there."""
+		row, item_name, service = self._book_with_straw()
+		self.assertEqual(row.custom_related_pregnancy, service)
+		self.assertEqual(row.sire, item_name)
+
+	def test_a_diagnosis_passed_as_related_pregnancy_succeeds_and_finds_the_sire(self):
+		"""A Diagnosis used to be stored as-is and rejected by the validator."""
+
+		def diagnosis_of(service):
+			return frappe.db.get_value(
+				"Livestock Event", {"related_service": service, "event_type": "Pregnancy Diagnosis"}
+			)
+
+		row, item_name, service = self._book_with_straw(related_pregnancy=diagnosis_of)
+		self.assertEqual(row.custom_related_pregnancy, service)
+		self.assertEqual(row.sire, item_name)
+
 	def test_record_birth_calves_entries_carry_animal_tag_and_sex(self):
 		"""Same per-item contract as record_calf_births' own "created" list —
 		record_birth returns it under the "calves" key instead.
