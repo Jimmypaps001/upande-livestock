@@ -68,3 +68,68 @@ class TestWhereTheSireComesFrom(unittest.TestCase):
 		svc = Svc(semen_item="4040030118")
 		with patch.object(RB.frappe.db, "get_value", side_effect=Exception("db down")):
 			self.assertEqual(RB._sire_of(svc), "4040030118")
+
+
+class Calving:
+	"""Stands in for the new Calving Livestock Event; records what was set."""
+
+	def __init__(self):
+		self.name = "CALVING-1"
+
+	def insert(self):
+		pass
+
+	def submit(self):
+		pass
+
+
+class TestRecordBirthUsesTheResolver(unittest.TestCase):
+	"""Drives record_birth itself, so a disconnected call site fails here.
+
+	Still Birth outcome keeps record_calf_births out of it: only the Calving is
+	created, which is all the sire lands on.
+	"""
+
+	def _book(self, docs, related):
+		calving = Calving()
+		dam = Svc()
+		dam.current_herd = ""
+
+		def get_doc(doctype, name=None):
+			return dam if doctype == "Animal" else docs[name]
+
+		with patch.object(RB, "guard"), patch.object(
+			RB, "employee_or_throw", return_value="EMP-1"
+		), patch.object(RB, "append_items"), patch.object(
+			RB.frappe, "get_doc", side_effect=get_doc
+		), patch.object(RB.frappe, "new_doc", return_value=calving), patch.object(
+			RB.frappe.db, "get_value", return_value="Semen Delta Stormer"
+		):
+			out = RB.record_birth(
+				{
+					"dam": "COW-1",
+					"outcome": "Still Birth",
+					"related_pregnancy": related,
+					"calves": [{"sex": "Female"}],
+				}
+			)
+		self.assertNotIn("error", out, out)
+		return calving
+
+	def test_service_with_a_straw_and_no_typed_sire(self):
+		"""Call site 1. Source exercised: legacy `semen_item` (unmapped Service)."""
+		docs = {"SVC-1": Svc(semen_item="4040030118")}
+		docs["SVC-1"].related_service = None
+		self.assertEqual(self._book(docs, "SVC-1").sire, "Semen Delta Stormer")
+
+	def test_service_on_the_items_table_via_a_diagnosis(self):
+		"""Call site 2. Source exercised: `drug_issues` row (mapped Service),
+		reached Diagnosis -> related_service -> Service."""
+		svc = Svc(drug_issues=[Row(item_code="4040030118")])
+		diag = Svc()
+		diag.event_type = "Pregnancy Diagnosis"
+		diag.related_service = "SVC-1"
+		self.assertEqual(
+			self._book({"DIAG-1": diag, "SVC-1": svc}, "DIAG-1").sire,
+			"Semen Delta Stormer",
+		)
