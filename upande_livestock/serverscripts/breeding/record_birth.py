@@ -9,7 +9,6 @@ from frappe.utils import today
 from upande_livestock.serverscripts.common.employee import employee_or_throw
 from upande_livestock.serverscripts.breeding.record_calf_births import record_calf_births
 from upande_livestock.serverscripts.common.envelope import as_dict, guard, run
-from upande_livestock.serverscripts.common.sire import sire_of as _sire_of
 from upande_livestock.serverscripts.husbandry._shared import append_items
 
 
@@ -71,29 +70,18 @@ def record_birth(payload):
 
 		dam = frappe.get_doc("Animal", dam_name)
 
-		# The sire comes off the Service, but `related_pregnancy` can name either
-		# link in the chain, so follow whichever arrived.
+		# `related_pregnancy` can name either link in the chain. A Diagnosis cannot
+		# be stored on custom_related_pregnancy: _validate_pregnancy_link throws
+		# unless it is a Service, so follow it to the Service it confirmed, which
+		# is what that error's own hint tells a user to do.
 		#
-		# It used to only handle a Pregnancy Diagnosis, hopping Diagnosis ->
-		# related_service -> Service. `_validate_pregnancy_link` now rejects a
-		# Diagnosis on `custom_related_pregnancy` (every reader of that field
-		# joins it against a Service), which left no input for which this both
-		# succeeded and found a sire: pass a Diagnosis and the insert below
-		# throws; pass a Service and `related_service` is blank, because only a
-		# Diagnosis carries it. Every Birth event lost its sire, silently.
-		sire = ""
+		# The sire is NOT resolved here. The app sends no related_pregnancy, and
+		# Livestock Event.validate() finds the Service itself and settles the sire
+		# there (common.sire), which covers this path and every other.
 		if related_pregnancy:
 			try:
 				preg = frappe.get_doc("Livestock Event", related_pregnancy)
-				if preg.event_type == "Service":
-					sire = _sire_of(preg)
-				elif preg.related_service:
-					svc = frappe.get_doc("Livestock Event", preg.related_service)
-					sire = _sire_of(svc)
-					# A Diagnosis cannot be stored on custom_related_pregnancy:
-					# _validate_pregnancy_link throws unless it is a Service. Store
-					# the Service it confirmed, which is what that error's own hint
-					# tells a user to do.
+				if preg.event_type != "Service" and preg.related_service:
 					related_pregnancy = preg.related_service
 			except Exception:
 				pass
@@ -105,7 +93,6 @@ def record_birth(payload):
 		calving.current_herd = dam.current_herd or ""
 		calving.custom_calving_outcome = outcome
 		calving.custom_no_of_calves = len(calves)
-		calving.sire = sire
 		calving.operator = operator
 		calving.remarks = remarks
 		if len(calves) == 1 and calves[0].get("sex"):

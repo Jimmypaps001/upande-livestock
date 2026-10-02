@@ -10,7 +10,6 @@ resolver in a module both can import covers every write path at once.
 import frappe
 
 from upande_livestock.serverscripts.common import event_items
-from upande_livestock.serverscripts.common import stock as livestock_stock
 
 
 def _item_name(code):
@@ -48,31 +47,57 @@ def _straw_on_the_table(svc, groups):
 	return None
 
 
+def _straw_actually_issued(svc):
+	"""The item the store really gave up for this Service, read off its Stock Entry.
+
+	A Service with no straw of its own still issues one (post_stock_issue falls
+	back to Livestock Settings' default). The Stock Entry it posted is the true
+	record of what was administered, and it is one indexed read away, so it is
+	preferred to reading Settings again: the calving is booked roughly 280 days
+	after the service, and a default changed in between would name a bull that
+	was never used. A service that posted nothing (backdated, or issued before
+	the stock was wired) names no straw here, which is honest.
+	"""
+	entry = svc.get("stock_entry")
+	if not entry:
+		return None
+	try:
+		if frappe.db.get_value("Stock Entry", entry, "docstatus") != 1:
+			return None
+		return frappe.db.get_value("Stock Entry Detail", {"parent": entry}, "item_code")
+	except Exception:
+		return None
+
+
 def sire_of(svc):
 	"""The bull behind a service, in the order the farm would answer it.
 
-	1. the Sire box, when somebody typed one: an explicit answer wins
+	1. the Sire box, when somebody typed one: an explicit answer wins. Roughly
+	   every Service on Kaitet has it filled, and some hold an Item CODE
+	   (`4040030327`), not a name, because the box was filled from the picker. A
+	   value that is an Item is shown as its name; one that is not (a hand-typed
+	   "Mazira") is the best answer available and is returned unchanged.
 	2. the straw on the service's items table (storage when Service is mapped
 	   to an item group), restricted to rows in the mapped groups
 	3. the straw on the legacy `semen_item` field (services recorded before the
 	   table, and sites where Service is unmapped)
-	4. when Service is UNMAPPED, the Settings default straw: it is what
-	   post_stock_issue actually takes from the store for such a service, so the
-	   sire recorded is the straw that left the shelf
+	4. the straw on the Stock Entry the service posted, for an unmapped service
+	   that named none and so issued the Settings default
 	5. blank
+
+	Not Settings' current default: that is read at calving time and may differ
+	from what was issued at service time. If the Stock Entry cannot be read the
+	answer is blank rather than a guess.
 
 	Total: never None, never an exception. The straw's ITEM NAME, not its code.
 	"""
 	typed = (svc.get("sire") or "").strip()
 	if typed:
-		return typed
+		return _item_name(typed) or typed
 
 	groups = event_items.groups_for_event("Service")
 	straw = _straw_on_the_table(svc, groups) if groups else None
 	straw = straw or svc.get("semen_item")
 	if not straw and not groups:
-		try:
-			straw = livestock_stock.default_semen_item()
-		except Exception:
-			straw = None
+		straw = _straw_actually_issued(svc)
 	return _item_name(straw) if straw else ""

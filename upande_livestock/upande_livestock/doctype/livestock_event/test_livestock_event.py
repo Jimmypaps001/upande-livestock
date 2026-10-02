@@ -928,9 +928,15 @@ class TestLivestockEventMultipleBirths(IntegrationTestCase):
 		"""
 		from upande_livestock.serverscripts.breeding.record_birth import record_birth
 
-		item = frappe.db.get_value("Item", {"disabled": 0}, ["name", "item_name"], as_dict=True)
+		# An item whose NAME differs from its CODE, or the assertions below cannot
+		# tell a name from a code (1052 items here have name == item_name).
+		item = frappe.db.sql(
+			"SELECT name, item_name FROM `tabItem` WHERE disabled = 0 AND item_name != name LIMIT 1",
+			as_dict=True,
+		)[0]
 		service = self._confirm_pregnancy()
 		frappe.db.set_value("Livestock Event", service, "semen_item", item.name)
+		self._straw_code = item.name
 		payload = {
 			"dam": self.dam,
 			"operator": self.operator,
@@ -955,6 +961,7 @@ class TestLivestockEventMultipleBirths(IntegrationTestCase):
 		row, item_name, service = self._book_with_straw()
 		self.assertEqual(row.custom_related_pregnancy, service)
 		self.assertEqual(row.sire, item_name)
+		self.assertNotEqual(row.sire, self._straw_code)
 
 	def test_a_diagnosis_passed_as_related_pregnancy_succeeds_and_finds_the_sire(self):
 		"""A Diagnosis used to be stored as-is and rejected by the validator."""
@@ -967,6 +974,7 @@ class TestLivestockEventMultipleBirths(IntegrationTestCase):
 		row, item_name, service = self._book_with_straw(related_pregnancy=diagnosis_of)
 		self.assertEqual(row.custom_related_pregnancy, service)
 		self.assertEqual(row.sire, item_name)
+		self.assertNotEqual(row.sire, self._straw_code)
 
 	def test_record_birth_calves_entries_carry_animal_tag_and_sex(self):
 		"""Same per-item contract as record_calf_births' own "created" list —

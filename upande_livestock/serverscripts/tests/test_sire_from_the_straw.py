@@ -24,13 +24,23 @@ ITEMS = {
 }
 
 
+STOCK_ENTRIES = {"STE-1": {"docstatus": 1, "item_code": "DEFAULT"}, "STE-X": {"docstatus": 2, "item_code": "DEFAULT"}}
+
+
 def fake_get_value(doctype, name, field=None, *a, **kw):
+	if doctype == "Stock Entry":
+		row = STOCK_ENTRIES.get(name)
+		return row["docstatus"] if row else None
+	if doctype == "Stock Entry Detail":
+		row = STOCK_ENTRIES.get(name.get("parent"))
+		return row["item_code"] if row else None
 	row = ITEMS.get(name)
 	return row.get(field) if row else None
 
 
 class Svc:
-	def __init__(self, sire=None, semen_item=None, drug_issues=None):
+	def __init__(self, sire=None, semen_item=None, drug_issues=None, stock_entry=None):
+		self.stock_entry = stock_entry
 		self.sire = sire
 		self.semen_item = semen_item
 		self.drug_issues = drug_issues or []
@@ -45,7 +55,7 @@ class Row(dict):
 	pass
 
 
-def resolver(mapped, default=None):
+def resolver(mapped):
 	"""Patches the three things the resolver asks the outside world."""
 	from contextlib import ExitStack
 
@@ -53,7 +63,6 @@ def resolver(mapped, default=None):
 	stack.enter_context(
 		patch.object(SIRE.event_items, "groups_for_event", return_value=["Semen"] if mapped else [])
 	)
-	stack.enter_context(patch.object(SIRE.livestock_stock, "default_semen_item", return_value=default))
 	stack.enter_context(patch.object(SIRE.frappe.db, "get_value", side_effect=fake_get_value))
 	return stack
 
@@ -61,7 +70,7 @@ def resolver(mapped, default=None):
 class TestWhereTheSireComesFrom(unittest.TestCase):
 	def test_a_typed_sire_wins(self):
 		with resolver(mapped=False):
-			self.assertEqual(SIRE.sire_of(Svc(sire="Delta Stormer", semen_item="STRAW")), "Delta Stormer")
+			self.assertEqual(SIRE.sire_of(Svc(sire="Delta Stormer", semen_item="STRAW2")), "Delta Stormer")
 
 	def test_unmapped_service_reads_the_legacy_straw_field(self):
 		"""Source: semen_item. 51 services recorded before the table hold it here."""
@@ -89,14 +98,28 @@ class TestWhereTheSireComesFrom(unittest.TestCase):
 		with resolver(mapped=True):
 			self.assertEqual(SIRE.sire_of(Svc(drug_issues=[Row(item_code="GLOVE")])), "")
 
-	def test_an_unmapped_service_with_no_straw_uses_the_straw_that_was_issued(self):
-		"""(C) post_stock_issue issues Settings' default straw for such a service."""
-		with resolver(mapped=False, default="DEFAULT"):
-			self.assertEqual(SIRE.sire_of(Svc()), "Semen Settings Default")
+	def test_an_unmapped_service_with_no_straw_reads_what_its_stock_entry_issued(self):
+		"""(C) It issued Settings' default at SERVICE time. The Stock Entry records
+		that; Settings today may name a different bull 280 days on."""
+		with resolver(mapped=False):
+			self.assertEqual(SIRE.sire_of(Svc(stock_entry="STE-1")), "Semen Settings Default")
 
-	def test_a_mapped_service_issues_no_default_so_records_none(self):
-		with resolver(mapped=True, default="DEFAULT"):
-			self.assertEqual(SIRE.sire_of(Svc()), "")
+	def test_a_cancelled_stock_entry_names_no_sire(self):
+		with resolver(mapped=False):
+			self.assertEqual(SIRE.sire_of(Svc(stock_entry="STE-X")), "")
+
+	def test_a_mapped_service_does_not_read_the_stock_entry(self):
+		with resolver(mapped=True):
+			self.assertEqual(SIRE.sire_of(Svc(stock_entry="STE-1")), "")
+
+	def test_a_typed_item_code_is_shown_as_the_item_name(self):
+		"""Kaitet has Services whose Sire box holds a code like 4040030327."""
+		with resolver(mapped=False):
+			self.assertEqual(SIRE.sire_of(Svc(sire="STRAW")), "Semen Delta Stormer")
+
+	def test_a_hand_typed_name_that_is_no_item_is_kept(self):
+		with resolver(mapped=False):
+			self.assertEqual(SIRE.sire_of(Svc(sire="Mazira")), "Mazira")
 
 	def test_it_is_the_name_not_the_code(self):
 		with resolver(mapped=False):
@@ -130,7 +153,7 @@ class Calving:
 
 
 class TestRecordBirthUsesTheResolver(unittest.TestCase):
-	"""Drives record_birth itself, so a disconnected call site fails here.
+	"""Drives record_birth itself, so a disconnected re-point fails here.
 
 	Still Birth outcome keeps record_calf_births out of it: only the Calving is
 	created, which is all the sire lands on.
@@ -184,26 +207,18 @@ class TestRecordBirthUsesTheResolver(unittest.TestCase):
 		self.assertNotIn("error", out, out)
 		return calving
 
-	def test_service_with_a_straw_and_no_typed_sire(self):
-		"""Call site 1. Source exercised: legacy `semen_item` (unmapped Service)."""
-		docs = {"SVC-1": Svc(semen_item="STRAW")}
-		calving = self._book(docs, "SVC-1")
-		self.assertEqual(calving.sire, "Semen Delta Stormer")
-		self.assertEqual(calving.custom_related_pregnancy, "SVC-1")
-
-	def test_service_on_the_items_table_via_a_diagnosis(self):
-		"""Call site 2. Source exercised: `drug_issues` row (mapped Service),
-		reached Diagnosis -> related_service -> Service.
-
-		The Calving must store the SERVICE, not the Diagnosis: the real
-		_validate_pregnancy_link throws on a Diagnosis, so this stub's no-op
-		insert() would otherwise hide a branch that can never succeed. The live
-		insert is exercised in test_livestock_event.
-		"""
-		svc = Svc(drug_issues=[Row(item_code="STRAW")])
+	def test_a_diagnosis_is_followed_to_the_service_it_confirmed(self):
+		"""The one thing record_birth still decides: the Calving must store the
+		SERVICE, because _validate_pregnancy_link throws on a Diagnosis. (The stub
+		insert() is a no-op, so the live test in test_livestock_event proves the
+		real insert; the sire itself is settled in validate(), tested there.)"""
+		svc = Svc(semen_item="STRAW")
 		diag = Svc()
 		diag.event_type = "Pregnancy Diagnosis"
 		diag.related_service = "SVC-1"
-		calving = self._book({"DIAG-1": diag, "SVC-1": svc}, "DIAG-1", mapped=True)
-		self.assertEqual(calving.sire, "Semen Delta Stormer")
+		calving = self._book({"DIAG-1": diag, "SVC-1": svc}, "DIAG-1")
+		self.assertEqual(calving.custom_related_pregnancy, "SVC-1")
+
+	def test_a_service_is_stored_as_given(self):
+		calving = self._book({"SVC-1": Svc(semen_item="STRAW")}, "SVC-1")
 		self.assertEqual(calving.custom_related_pregnancy, "SVC-1")
