@@ -46,6 +46,42 @@ def _calf_row(calf, outcome):
 	}
 
 
+def _sire_of(svc):
+	"""The bull behind a service, in the order the farm would answer it.
+
+	1. the Sire box, when somebody typed one: an explicit answer wins
+	2. the straw on the service's items table (a site where Service is mapped
+	   to an item group keeps its straw there)
+	3. the straw on the legacy `semen_item` field (a site where Service is
+	   unmapped, and services recorded before the table existed, keep it here)
+	4. blank
+
+	Both straw sources are needed because storage is per-site. Total: a service
+	with none of the three yields "", never None and never an exception.
+
+	The straw's ITEM NAME, not its code: `4040030118` on a calf's record tells
+	nobody anything, while "Semen Delta Stormer" is what the herdsman chose.
+	`sire` is a Data field, so there is no Link to satisfy.
+	"""
+	typed = (svc.get("sire") or "").strip()
+	if typed:
+		return typed
+
+	straw = None
+	for row in svc.get("drug_issues") or []:
+		if row.get("item_code"):
+			straw = row["item_code"]
+			break
+	straw = straw or svc.get("semen_item")
+	if not straw:
+		return ""
+
+	try:
+		return frappe.db.get_value("Item", straw, "item_name") or straw
+	except Exception:
+		return straw
+
+
 @frappe.whitelist()
 def record_birth(payload):
 	"""Record a calving: a Calving Livestock Event + (for live births) one Animal
@@ -85,10 +121,10 @@ def record_birth(payload):
 			try:
 				preg = frappe.get_doc("Livestock Event", related_pregnancy)
 				if preg.event_type == "Service":
-					sire = preg.sire or ""
+					sire = _sire_of(preg)
 				elif preg.related_service:
 					svc = frappe.get_doc("Livestock Event", preg.related_service)
-					sire = svc.sire or ""
+					sire = _sire_of(svc)
 			except Exception:
 				pass
 
