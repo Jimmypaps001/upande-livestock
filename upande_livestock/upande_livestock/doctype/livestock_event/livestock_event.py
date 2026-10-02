@@ -1250,7 +1250,30 @@ class LivestockEvent(Document):
 			return
 
 		rows, what = [], None
-		if event_items.consumes_items(self.event_type) or self._type_consumes_drugs():
+		if self.event_type == "Service" and not event_items.consumes_items("Service"):
+			# LOAD-BEARING ORDER: this is evaluated BEFORE the general branch. An
+			# unmapped Service whose `consumes_drugs` box is ticked would
+			# otherwise take the general branch, find no drug_issues rows and
+			# silently issue nothing. The mapping alone decides the path.
+			# The legacy straw fields are still READ: historical services hold
+			# their straw here and a calf's record must not lose its sire.
+			what = "Service"
+			item = self.semen_item or livestock_stock.default_semen_item()
+			if item:
+				rows.append(
+					{
+						"item_code": item,
+						# A Service with no straw count still consumes one straw.
+						"qty": flt(self.semen_qty) or 1,
+						# The store the operator picked, exactly as a drug row
+						# uses its own `source_warehouse`. The straws are spread
+						# across two stores on live and the settings name a
+						# third that holds none, so issuing every service from
+						# that one setting asked for stock that was never there.
+						"warehouse": self.semen_warehouse or livestock_stock.semen_warehouse(),
+					}
+				)
+		elif event_items.consumes_items(self.event_type) or self._type_consumes_drugs():
 			what = self.event_type
 			default_wh = livestock_stock.drug_warehouse()
 			for row in self.drug_issues or []:
@@ -1273,26 +1296,6 @@ class LivestockEvent(Document):
 					),
 					alert=True,
 					indicator="orange",
-				)
-		elif self.event_type == "Service" and not event_items.consumes_items("Service"):
-			# The legacy straw fields, for a site with no straws-only item group
-			# to map Service to. They are still READ: historical services hold
-			# their straw here and a calf's record must not lose its sire.
-			what = "Service"
-			item = self.semen_item or livestock_stock.default_semen_item()
-			if item:
-				rows.append(
-					{
-						"item_code": item,
-						# A Service with no straw count still consumes one straw.
-						"qty": flt(self.semen_qty) or 1,
-						# The store the operator picked, exactly as a drug row
-						# uses its own `source_warehouse`. The straws are spread
-						# across two stores on live and the settings name a
-						# third that holds none, so issuing every service from
-						# that one setting asked for stock that was never there.
-						"warehouse": self.semen_warehouse or livestock_stock.semen_warehouse(),
-					}
 				)
 
 		if not rows:
