@@ -47,7 +47,12 @@ export function useBatchPlans(
         setPlans({});
         return;
       }
-      setPlans(Object.fromEntries(r.lines.map((p) => [planKey(p.item_code, p.warehouse), p])));
+      // `lines` is the server's to send and ours to survive without: a success
+      // envelope that carries none means no plan for any row, which is the same
+      // answer as an empty list. Reading `.map` off it unguarded threw inside
+      // the promise, so it surfaced as an unhandled rejection the suite counted
+      // and no test failed on.
+      setPlans(Object.fromEntries((r.lines ?? []).map((p) => [planKey(p.item_code, p.warehouse), p])));
     });
     return () => {
       live = false;
