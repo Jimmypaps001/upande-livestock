@@ -26,6 +26,7 @@ from upande_livestock.serverscripts.common import stock as livestock_stock
 from upande_livestock.serverscripts.breeding.create_service_event import create_service_event
 from upande_livestock.serverscripts.health.create_health_case import create_health_case
 from upande_livestock.serverscripts.husbandry.create_husbandry_event import create_husbandry_event
+from upande_livestock.serverscripts.tests.mapping_fixtures import ServiceIsUnmapped
 from upande_livestock.serverscripts.tests.test_operations import _assert_ok, _employee, _make_cow, _purge, _purge_events_for
 
 
@@ -218,11 +219,17 @@ class TestTreatmentStockIssue(StockSeededTestCase):
 		self.assertFalse(res["drug_stock_entry"])
 
 
-class TestServiceStockIssue(IntegrationTestCase):
-	"""A Service issues a semen straw.
+class TestServiceStockIssue(ServiceIsUnmapped, IntegrationTestCase):
+	"""A Service issues a semen straw, on a site that has not mapped Service.
 
 	This reverses a rule that operations.py used to state as an invariant and enforce
 	with an assert. It is a deliberate reversal — an A.I. does consume a straw.
+
+	The mixin is load-bearing. Falling back to the Settings default straw is the
+	LEGACY branch; a site that maps `Service -> Dairy Semen` reads the general
+	items table instead and a payload naming no items issues nothing at all.
+	Unmapped is live's configuration and is still shipped — so the case declares
+	it rather than hoping the site it runs on agrees.
 	"""
 
 	@classmethod

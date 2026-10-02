@@ -35,6 +35,11 @@ from unittest.mock import patch
 import frappe
 
 from upande_livestock.serverscripts.breeding import breeding_options as BO
+from upande_livestock.serverscripts.tests.mapping_fixtures import (
+	SEMEN_GROUP,
+	ServiceIsMapped,
+	ServiceIsUnmapped,
+)
 
 
 class TestTheStrawListIsNotPinnedToOneStore(unittest.TestCase):
@@ -94,8 +99,13 @@ class TestTheEventCanRecordAStore(unittest.TestCase):
 		self.assertEqual(field.options, "Warehouse")
 
 
-class TestTheChosenStoreReachesTheIssue(unittest.TestCase):
+class TestTheChosenStoreReachesTheIssue(ServiceIsUnmapped, unittest.TestCase):
 	"""Picking a store has to change where the straw comes from.
+
+	UNMAPPED, declared: `semen_item` / `semen_qty` / `semen_warehouse` are the
+	legacy straw fields, read only where the farm has not mapped Service to an
+	item group. That is live. The mixin pins it so the case tests the branch it
+	names whatever kaitet.local is configured to do this week.
 
 	kaitet.local carries the live shape: the real straws sit in
 	`Drug/ Medicine store- old office - KR` while `semen_warehouse()` names
@@ -145,8 +155,11 @@ class TestTheChosenStoreReachesTheIssue(unittest.TestCase):
 		self.assertEqual(rows[0]["warehouse"], ST.semen_warehouse())
 
 
-class TestHowManyStrawsTheSessionUsed(unittest.TestCase):
+class TestHowManyStrawsTheSessionUsed(ServiceIsUnmapped, unittest.TestCase):
 	"""The count on the event is the count taken out of the store.
+
+	UNMAPPED, declared: `semen_qty` is the legacy count. Its mapped counterpart
+	is the items row's own `qty`, covered below.
 
 	`semen_qty` has existed on the DocType since the start and the posting has
 	always read it — but the Service form never rendered it, so it was always
@@ -185,3 +198,81 @@ class TestHowManyStrawsTheSessionUsed(unittest.TestCase):
 	def test_a_blank_count_still_takes_one(self):
 		"""A Service that says nothing used a straw all the same."""
 		self.assertEqual(self._qty_issued(0), 1)
+
+
+class TestAMappedSiteIssuesTheStrawOnTheTable(ServiceIsMapped, unittest.TestCase):
+	"""The same facts again, on the configuration kaitet.local now runs.
+
+	MAPPED: `Service -> Dairy Semen` exists, so the straw is an ordinary items
+	row — `drug_issues` — like a vaccination's drug, and the three legacy fields
+	are not read at all. Everything the unmapped case above defends has to hold
+	on this path too, because it is the path the farm is on: the straw the
+	operator chose, the store the operator chose, the count the operator typed.
+
+	`issue_items` is stubbed for the same reason as above: this is about the row
+	handed to it, and a real Material Issue per assertion would draw down shared
+	straws that other tests count.
+	"""
+
+	STRAW = "Semen Delta Stormer"
+	CHOSEN = "Drug/ Medicine store- old office - KR"
+	LEGACY_STORE = "Livestock Drug Store - KR"
+
+	def _rows_for(self, *, qty=1, warehouse=CHOSEN):
+		captured = []
+
+		def fake_issue(rows, **kw):
+			captured.extend(rows)
+			return None
+
+		doc = frappe.new_doc("Livestock Event")
+		doc.event_type = "Service"
+		doc.animal = "ZZ-NOT-SAVED"
+		doc.event_date = frappe.utils.today()
+		# The legacy fields are filled and must be ignored: a service entered on
+		# a site that mapped Service after the fact can carry both, and the row
+		# that is actually issued is the table's.
+		doc.semen_item = "ZZ-LEGACY-STRAW"
+		doc.semen_qty = 9
+		doc.semen_warehouse = self.LEGACY_STORE
+		doc.append(
+			"drug_issues",
+			{"item_code": self.STRAW, "qty": qty, "source_warehouse": warehouse, "uom": "Nos"},
+		)
+
+		from upande_livestock.upande_livestock.doctype.livestock_event import livestock_event as LE
+
+		with patch.object(LE.livestock_stock, "issue_items", side_effect=fake_issue):
+			doc.post_stock_issue()
+		return captured
+
+	def test_the_straw_on_the_table_is_the_straw_issued(self):
+		rows = self._rows_for()
+		self.assertEqual(len(rows), 1)
+		self.assertEqual(rows[0]["item_code"], self.STRAW)
+		self.assertNotEqual(
+			rows[0]["item_code"],
+			"ZZ-LEGACY-STRAW",
+			"a mapped Service must not fall back to the legacy straw field",
+		)
+
+	def test_the_straw_is_issued_from_the_store_the_operator_picked(self):
+		rows = self._rows_for()
+		self.assertEqual(rows[0]["warehouse"], self.CHOSEN)
+		self.assertNotEqual(rows[0]["warehouse"], self.LEGACY_STORE)
+
+	def test_two_straws_takes_two(self):
+		"""A double insemination in one session comes off the ledger twice."""
+		rows = self._rows_for(qty=2)
+		self.assertEqual(frappe.utils.flt(rows[0]["qty"]), 2)
+
+	def test_the_mapping_is_what_chose_this_path(self):
+		"""The three above are not reading a stubbed answer.
+
+		The mixin pins the mapping ROWS; the real `consumes_items` reads them and
+		the real branch in `post_stock_issue` follows. So what sent those rows
+		down the table is the farm's mapping, exactly as it is on the site."""
+		from upande_livestock.serverscripts.common import event_items as EI
+
+		self.assertTrue(EI.consumes_items("Service"))
+		self.assertEqual(EI.groups_for_event("Service"), [SEMEN_GROUP])
