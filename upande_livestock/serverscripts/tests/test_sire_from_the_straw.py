@@ -95,15 +95,35 @@ class TestRecordBirthUsesTheResolver(unittest.TestCase):
 		dam = Svc()
 		dam.current_herd = ""
 
-		def get_doc(doctype, name=None):
-			return dam if doctype == "Animal" else docs[name]
+		real_get_doc = RB.frappe.get_doc
+		real_get_value = RB.frappe.db.get_value
+
+		def get_value(doctype, *a, **kw):
+			# Only the straw's Item lookup is stubbed. Real get_doc reads
+			# DocType metadata through db.get_value and must not see the stub.
+			if doctype == "Item":
+				return "Semen Delta Stormer"
+			return real_get_value(doctype, *a, **kw)
+
+		def get_doc(doctype=None, name=None, *a, **kw):
+			# Only what this test booked is stubbed. Everything else (System
+			# Settings via today(), Error Log from the envelope, keyword-arg
+			# calls) must reach real Frappe, or the result depends on whether
+			# redis happens to have those documents cached.
+			if doctype == "Animal":
+				return dam
+			if name in docs:
+				return docs[name]
+			if name is None:
+				return real_get_doc(doctype, *a, **kw)
+			return real_get_doc(doctype, name, *a, **kw)
 
 		with patch.object(RB, "guard"), patch.object(
 			RB, "employee_or_throw", return_value="EMP-1"
 		), patch.object(RB, "append_items"), patch.object(
 			RB.frappe, "get_doc", side_effect=get_doc
 		), patch.object(RB.frappe, "new_doc", return_value=calving), patch.object(
-			RB.frappe.db, "get_value", return_value="Semen Delta Stormer"
+			RB.frappe.db, "get_value", side_effect=get_value
 		):
 			out = RB.record_birth(
 				{
