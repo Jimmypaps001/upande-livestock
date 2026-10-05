@@ -1266,6 +1266,11 @@ class LivestockEvent(Document):
 
 		if event_items.groups_for_event(self.event_type):
 			return True
+		# A farm that has written its mapping has said what consumes: a type it
+		# left out does not, whatever its old box says. The box only answers on
+		# a site with no mapping at all.
+		if event_items.has_mapping():
+			return False
 		return bool(frappe.db.get_value("Livestock Event Type", self.event_type, "consumes_drugs"))
 
 	def post_stock_issue(self):

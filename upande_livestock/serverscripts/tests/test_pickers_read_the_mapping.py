@@ -124,3 +124,27 @@ class TestForeignItemsAreRefused(unittest.TestCase):
 			"frappe.db.get_value", return_value="Vaccines"
 		):
 			_shared._refuse_foreign_items("Vaccination", [{"item_code": "FMD"}])
+
+
+class TestAWrittenMappingIsTheWholeAnswer(unittest.TestCase):
+	"""A type taken out of the mapping kept consuming drugs while its old
+	`consumes_drugs` box was ticked: the box answered per type, even on a farm
+	that had written its mapping. It now answers only where there is none."""
+
+	def _consumes(self, mapped_groups, mapping_exists, box):
+		from upande_livestock.serverscripts.husbandry import _shared
+
+		with unittest.mock.patch(
+			"upande_livestock.serverscripts.common.event_items.groups_for_event",
+			return_value=mapped_groups,
+		), unittest.mock.patch(
+			"upande_livestock.serverscripts.common.event_items.has_mapping",
+			return_value=mapping_exists,
+		), unittest.mock.patch("frappe.db.get_value", return_value=box):
+			return _shared._type_consumes_drugs("Drying Off")
+
+	def test_a_type_left_out_of_a_written_mapping_consumes_nothing(self):
+		self.assertFalse(self._consumes([], True, 1))
+
+	def test_a_site_with_no_mapping_still_follows_the_box(self):
+		self.assertTrue(self._consumes([], False, 1))
