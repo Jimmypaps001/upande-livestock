@@ -73,6 +73,7 @@ class TestLivestockSettingsEndpoints(IntegrationTestCase):
 				"custom_event_item_groups",
 				"feed_source_warehouses",
 				"growth_ladder",
+				"milking_herds",
 			],
 		)
 		for table in tables.values():
