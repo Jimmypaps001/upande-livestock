@@ -30,8 +30,8 @@ def resolve_calf_herd(sex=None):
 	ladder built for animals that will one day be milked.
 
 	Falling back through: the sex-specific herd, the old single Default Calf
-	Herd, the calf-rearing flag, the age bracket, Youngstock < 12m, and finally
-	the herd with the lowest min_age.
+	Herd, the calf-rearing flag, the age bracket, and finally the herd with the
+	lowest min_age.
 	"""
 	from upande_livestock.serverscripts.common import herd_movement
 
@@ -57,10 +57,6 @@ def resolve_calf_herd(sex=None):
 		bracketed = frappe.db.get_value("Herds", {"min_age": flt(min_age), "max_age": flt(max_age)}, "name")
 		if bracketed:
 			return bracketed
-
-	categorised = frappe.db.get_value("Herds", {"custom_herd_category": "Youngstock < 12m"}, "name")
-	if categorised:
-		return categorised
 
 	youngest = frappe.get_all("Herds", fields=["name"], order_by="min_age asc", limit=1)
 	return youngest[0].name if youngest else None
