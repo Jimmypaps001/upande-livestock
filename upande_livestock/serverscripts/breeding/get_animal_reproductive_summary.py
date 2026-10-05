@@ -6,6 +6,7 @@ on Livestock Event."""
 
 import frappe
 
+from upande_livestock.serverscripts.common.animal import service_record
 from upande_livestock.serverscripts.common.envelope import guard_read
 
 
@@ -82,19 +83,13 @@ def get_animal_reproductive_summary(animal=None):
 			frappe.utils.nowdate(), last_calving[0].event_date
 		)
 
-	# Get service performance
-	total_services = frappe.db.count(
-		"Livestock Event", {"animal": animal, "event_type": "Service", "docstatus": 1}
-	)
-
-	successful_services = frappe.db.count(
-		"Livestock Event",
-		{"animal": animal, "event_type": "Service", "service_status": "Successful", "docstatus": 1},
-	)
-
-	summary["total_services"] = total_services
-	summary["successful_services"] = successful_services
-	summary["conception_rate"] = (successful_services / total_services * 100) if total_services > 0 else 0
+	# Service performance, counted the same way the benchmarks and the cull
+	# case count it. This used to look for "Successful", a spelling the
+	# Select does not offer ("Successfull"), so every rate here read 0.
+	record = service_record([animal]).get(animal) or {}
+	summary["total_services"] = record.get("services", 0)
+	summary["successful_services"] = record.get("held", 0)
+	summary["conception_rate"] = record.get("conception_rate") or 0
 
 	# Set response
 	return summary

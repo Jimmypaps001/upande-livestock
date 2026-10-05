@@ -97,3 +97,9 @@ upande_livestock.patches.seed_event_item_groups
 # submittable though it is a master. Live holds most of these as Custom Field
 # records, which a DocType edit cannot remove.
 upande_livestock.patches.trim_unused_herd_fields
+
+# Animal carried eleven columns nothing kept: seven read by nothing, and four
+# (days in milk, services, conception rate, book value) read by the dashboard,
+# benchmarks and cull case but never written, so every reader saw 0. Those
+# readers now count the events or read the Asset.
+upande_livestock.patches.trim_unused_animal_fields

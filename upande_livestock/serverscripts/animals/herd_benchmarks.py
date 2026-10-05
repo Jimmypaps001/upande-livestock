@@ -6,7 +6,7 @@
 import frappe
 from frappe.utils import flt
 
-from upande_livestock.serverscripts.common.animal import RETIRED_STATUSES
+from upande_livestock.serverscripts.common.animal import RETIRED_STATUSES, service_record
 from upande_livestock.serverscripts.common.envelope import guard_read, run
 
 
@@ -41,15 +41,16 @@ def herd_benchmarks():
 				["disabled", "=", 0],
 				["sex", "=", "Female"],
 			],
-			fields=["name", "parity", "conception_rate"],
+			fields=["name", "parity"],
 			limit_page_length=0,
 		)
+		record = service_record([r.name for r in rows])
 		return {
 			"ok": True,
 			"cows": len(rows),
 			"parity": _median([flt(r.parity) for r in rows if flt(r.parity) > 0]),
 			"conception_rate": _median(
-				[flt(r.conception_rate) for r in rows if flt(r.conception_rate) > 0]
+				[s["conception_rate"] for s in record.values() if s["conception_rate"] is not None]
 			),
 		}
 
