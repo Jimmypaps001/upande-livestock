@@ -75,6 +75,9 @@ on the site and then migrated.
   Drugs" before) post stock from the drug item group with "Drug/ Medicine
   store- old office - KR" as their default store, and Service from the semen
   group; Milking Herds lists the three herds that were ticked as milking.
+- A Stock Entry Type "Livestock <event>" (Material Issue) for every event type that
+  posts stock — Livestock Vaccination, Livestock Treatment, ... New issues post under
+  these; old entries keep their old types (Vaccination, Animal Treatment, ...).
 - Every Livestock Event's drug rows show on the event (parentfield `drug_issues`).
 - The eight old weight rows are submitted Livestock Weight Records with an animal
   and a date.

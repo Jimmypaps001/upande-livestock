@@ -1262,12 +1262,19 @@ class LivestockEvent(Document):
 		"""
 		if not self.stock_entry or self.reference_doctype:
 			return
-		if frappe.db.get_value("Stock Entry", self.stock_entry, "docstatus") != 1:
+		status = frappe.db.get_value("Stock Entry", self.stock_entry, "docstatus")
+		if status not in (0, 1):
 			return
 		others = frappe.db.count(
 			"Livestock Event",
 			{"stock_entry": self.stock_entry, "docstatus": 1, "name": ["!=", self.name]},
 		)
+		if status == 0:
+			# A draft waiting for stock: nothing to put back, and nothing must
+			# post later for an event that no longer stands.
+			if not others:
+				livestock_stock.discard_draft(self.stock_entry)
+			return
 		if others:
 			frappe.msgprint(
 				_("{0} also covers {1} other event(s), so its stock was left as it is.").format(
@@ -1390,6 +1397,8 @@ class LivestockEvent(Document):
 			what=what,
 			posting_date=self.event_date,
 			employee=self.operator,
+			# Short today: the event stands and the issue waits as a draft.
+			draft_if_short=True,
 		)
 		if name:
 			self.db_set("stock_entry", name, update_modified=False)

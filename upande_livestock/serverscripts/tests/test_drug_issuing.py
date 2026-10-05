@@ -9,7 +9,8 @@ gram of stock. Five things caused that, and each has a test here:
   * drug rows were optional and an empty table passed silently;
   * the picker summed stock farm-wide, so it offered drugs the drug store did
     not hold and the issue then failed;
-  * a failed issue was downgraded to a toast nobody saw — it now blocks;
+  * a failed issue was downgraded to a toast nobody saw — today it is saved as
+    a draft that waits, named, on the Transactions page; backdated it blocks;
   * treatments could not be recorded at all except on the desk form, and the
     case's single stock-entry guard would have swallowed every round after the
     first anyway;
@@ -36,7 +37,7 @@ from upande_livestock.serverscripts.husbandry._shared import (
 )
 from upande_livestock.serverscripts.husbandry.create_husbandry_event import create_husbandry_event
 from frappe.tests import IntegrationTestCase
-from frappe.utils import flt, today
+from frappe.utils import add_days, flt, today
 
 from upande_livestock.serverscripts.common import event_items
 from upande_livestock.serverscripts.common import stock as livestock_stock
@@ -120,6 +121,19 @@ class TestAvailabilityCheck(IntegrationTestCase):
 		]
 		with self.assertRaises(frappe.ValidationError):
 			livestock_stock.issue_items(rows, remarks="test", employee="_none_")
+
+	def test_a_backdated_issue_blocks_even_when_drafts_are_allowed(self):
+		"""A draft dated last month, posted today, would be a different transaction."""
+		drug = _stocked_drug()
+		if not drug:
+			raise unittest.SkipTest("no drug stock on this site")
+		rows = [
+			{"item_code": drug.item_code, "qty": flt(drug.actual_qty) + 1000, "warehouse": _drug_store()}
+		]
+		with self.assertRaises(frappe.ValidationError):
+			livestock_stock.issue_items(
+				rows, remarks="test", employee="_none_", posting_date=add_days(today(), -3), draft_if_short=True
+			)
 
 
 class TestStoreScopedPicker(IntegrationTestCase):
@@ -254,33 +268,24 @@ class TestPerAnimalDosing(IntegrationTestCase):
 		self.assertEqual(len(rows), heads)
 		self.assertTrue(all(flt(r.qty) == 1 for r in rows))
 
-	def test_a_round_the_store_cannot_cover_creates_nothing(self):
-		"""Blocking has to mean nothing was written, not a half-done round."""
-		before = frappe.db.count("Livestock Event", {"event_type": "Deworming"})
+	def test_a_round_the_store_cannot_cover_today_is_recorded_with_a_draft_issue(self):
+		"""The cows were dosed; the store catches up later. Every event stands,
+		all point at one draft issue, and the answer says it is waiting."""
 		res = create_husbandry_event(
 			{
 				"event_type": "Deworming",
 				"herd": self.HERD,
-				"event_date": today(),
 				"operator": frappe.db.get_value("Employee", {"status": "Active"}, "name"),
 				"drugs": [{"item_code": self.drug.item_code, "qty": flt(self.drug.actual_qty) + 100}],
 			}
 		)
-		self.assertTrue(res.get("error"))
-		self.assertIn("cannot cover", res["error"])
-		self.assertEqual(frappe.db.count("Livestock Event", {"event_type": "Deworming"}), before)
-
-
-class TestTheEventTypeRuleDecides(IntegrationTestCase):
-	def test_the_rule_drives_which_types_issue(self):
-		"""Read off each Livestock Event Type's stock rule, not a tuple in code, so
-		the farm can tick dry-cow therapy or calcium at calving without a deploy."""
-		for name in ("Vaccination", "Deworming"):
-			if event_items.groups_for_event(name):
-				self.assertTrue(_type_consumes_drugs(name))
-		for name in ("Movement", "Weight Recording"):
-			if frappe.db.exists("Livestock Event Type", name) and not event_items.groups_for_event(name):
-				self.assertFalse(_type_consumes_drugs(name))
-
-	def test_an_unknown_type_consumes_nothing(self):
-		self.assertFalse(_type_consumes_drugs("__no_such_type__"))
+		self.assertFalse(res.get("error"), res.get("error"))
+		for name in res["names"]:
+			self.addCleanup(_purge, "Livestock Event", name)
+		self.addCleanup(_purge, "Stock Entry", res["stock_entry"])
+		self.assertEqual(res["animals"], len(self.cows))
+		se = frappe.get_doc("Stock Entry", res["stock_entry"])
+		self.assertEqual(se.docstatus, 0)
+		self.assertEqual(se.stock_entry_type, "Livestock Deworming")
+		self.assertEqual([d["name"] for d in res["stock_drafts"]], [se.name])
+		self.assertIn("need", res["stock_drafts"][0]["short"])

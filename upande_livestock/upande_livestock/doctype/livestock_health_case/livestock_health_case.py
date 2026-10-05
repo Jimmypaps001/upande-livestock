@@ -163,6 +163,7 @@ class LivestockHealthCase(Document):
 			# A case is one animal, so its herd is unambiguous. Charged there
 			# rather than to whatever the company default happens to be.
 			herd=livestock_cost_center.herd_of(self.animal),
+			draft_if_short=True,
 		)
 		if name:
 			for t in pending:

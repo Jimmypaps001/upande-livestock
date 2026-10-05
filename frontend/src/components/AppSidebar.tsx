@@ -28,6 +28,7 @@ import {
   Utensils,
   Warehouse,
   Wheat,
+  CalendarClock,
 } from "lucide-react";
 import {
   Sidebar,
@@ -76,6 +77,12 @@ const NAV: NavSection[] = [
       { view: "health", label: "Health", icon: HeartPulse },
       { view: "production", label: "Production", icon: Milk },
       { view: "reports", label: "Reports", icon: FileText },
+      {
+        view: "transactions",
+        label: "Transactions",
+        icon: CalendarClock,
+        hint: "Stock entries still in draft",
+      },
     ],
   },
   {
@@ -195,6 +202,7 @@ export const BUILT_VIEWS: ReadonlySet<View> = new Set<View>([
   "milking",
   "quality",
   "animals",
+  "transactions",
 ]);
 
 export function AppSidebar({

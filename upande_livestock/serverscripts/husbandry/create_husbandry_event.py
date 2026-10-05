@@ -22,8 +22,9 @@ def create_husbandry_event(payload):
 	the drug store. A drug row with no item or a non-positive qty is dropped rather
 	than rejected — a half-filled line should not cost the user the whole event.
 
-	The event records even when the issue cannot post; see
-	livestock_stock.try_issue_items for why that is the deliberate choice.
+	A round recorded today that the store cannot cover is still recorded; its
+	issue is saved as a draft and waits on the Transactions page (see
+	common/stock).
 	"""
 
 	def go():
@@ -74,6 +75,7 @@ def create_husbandry_event(payload):
 				employee=d.get("operator"),
 				# So the ledger says "Deworming", not "Material Issue".
 				what=event_type,
+				draft_if_short=True,
 				# Charged to the herd the round was for. A round spanning two
 				# herds gets None — see cost_center.herd_of for why one entry
 				# cannot honestly be split between them.

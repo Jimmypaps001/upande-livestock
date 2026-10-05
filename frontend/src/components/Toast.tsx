@@ -9,6 +9,7 @@ import {
 } from "react";
 import { AlertTriangle, CheckCircle2, Info, X } from "lucide-react";
 import { plainText } from "@/components/feeding/Notice";
+import { DRAFTS_EVENT, draftSentence, type DraftMade } from "@/lib/stock-drafts";
 import { cn } from "@/lib/utils";
 
 /**
@@ -103,6 +104,16 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     const running = timers.current;
     return () => running.forEach(clearTimeout);
   }, []);
+
+  // An endpoint saved a stock issue as a draft (lib/frappe.ts says so here),
+  // whichever page called it. A warning, not an error: the record stood.
+  useEffect(() => {
+    const hear = (e: Event) => {
+      for (const d of (e as CustomEvent<DraftMade[]>).detail ?? []) show(draftSentence(d), "warn");
+    };
+    window.addEventListener(DRAFTS_EVENT, hear);
+    return () => window.removeEventListener(DRAFTS_EVENT, hear);
+  }, [show]);
 
   const value = useMemo(() => show, [show]);
 
