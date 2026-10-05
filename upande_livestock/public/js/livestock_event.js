@@ -90,18 +90,8 @@ frappe.ui.form.on("Livestock Event", {
             if (!frm.doc.pregnancy_confirmation_date) {
                 frm.set_value("pregnancy_confirmation_date", frappe.datetime.get_today());
             }
-            frm.set_value("service_status", "Successfull");
         } else {
             frm.set_df_property("pregnancy_confirmation_date", "hidden", 1);
-            if (["Not Pregnant", "Aborted"].includes(frm.doc.pregnancy_confirmation_status)) {
-                frm.set_value("service_status", "Failed");
-            }
-        }
-    },
-
-    diagnosis_result: function(frm) {
-        if (frm.doc.event_type === "Pregnancy Diagnosis" && frm.doc.related_service) {
-            update_service_status(frm);
         }
     },
 
@@ -360,7 +350,6 @@ frappe.ui.form.on("Livestock Event", {
             frm.set_value("sire", null);
             frm.set_value("service_type", null);
             frm.set_value("service_date", null);
-            frm.set_value("service_status", null);
             frm.set_value("pregnancy_confirmation_status", null);
             frm.set_value("pregnancy_confirmation_date", null);
         }
@@ -372,7 +361,7 @@ frappe.ui.form.on("Livestock Event", {
             frm.set_value("related_service", null);
         }
         // Calving fields
-        if (!isCalving && !isBirth) {
+        if (!isCalving) {
             frm.set_value("custom_calving_outcome", null);
             frm.set_value("custom_no_of_calves", null);
             frm.set_value("custom_calf_sex", null);
@@ -415,7 +404,9 @@ function toggle_event_fields(frm) {
 
     // Group flags
     let needsDrug     = isVaccination || isDeworming || isDehorning;
-    let needsCalvInfo = isCalving || isBirth;
+    // A Birth records its own calf (calf_sex, is_stillborn); the calving
+    // summary fields belong to the Calving alone.
+    let needsCalvInfo = isCalving;
 
     // ── event_date: visible for ALL event types ──
     frm.set_df_property("event_date", "hidden", 0);
@@ -435,9 +426,7 @@ function toggle_event_fields(frm) {
     frm.set_df_property("service_type", "reqd", isService);
     frm.set_df_property("service_date", "hidden", !isService);
     frm.set_df_property("service_date", "reqd", isService);
-    frm.set_df_property("service_status", "hidden", !isService);
     frm.set_df_property("pregnancy_confirmation_status", "hidden", !isService);
-    frm.set_df_property("custom_status_after_test", "hidden", !isService);
     if (frm.doc.pregnancy_confirmation_status === "Confirmed" && isService) {
         frm.set_df_property("pregnancy_confirmation_date", "hidden", 0);
     } else {
@@ -477,40 +466,4 @@ function toggle_event_fields(frm) {
 
     // ── Remarks — always visible ──
     frm.set_df_property("remarks", "hidden", 0);
-}
-
-
-// ==================================================================
-// UPDATE SERVICE STATUS from Pregnancy Diagnosis result
-// ==================================================================
-function update_service_status(frm) {
-    if (frm.doc.diagnosis_result === "Confirmed") {
-        frappe.call({
-            method: "frappe.client.set_value",
-            args: {
-                doctype: "Livestock Event",
-                name: frm.doc.related_service,
-                fieldname: { pregnancy_confirmation_status: "Confirmed", service_status: "Successfull", pregnancy_confirmation_date: frm.doc.diagnosis_date }
-            },
-            callback: function(r) {
-                if (r.message) {
-                    frappe.show_alert({ message: __("Related Service updated to Confirmed"), indicator: "green" }, 3);
-                }
-            }
-        });
-    } else if (["Not Pregnant", "Aborted"].includes(frm.doc.diagnosis_result)) {
-        frappe.call({
-            method: "frappe.client.set_value",
-            args: {
-                doctype: "Livestock Event",
-                name: frm.doc.related_service,
-                fieldname: { pregnancy_confirmation_status: frm.doc.diagnosis_result, service_status: "Failed" }
-            },
-            callback: function(r) {
-                if (r.message) {
-                    frappe.show_alert({ message: __("Related Service updated to Failed"), indicator: "orange" }, 3);
-                }
-            }
-        });
-    }
 }

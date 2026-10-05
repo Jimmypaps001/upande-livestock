@@ -25,8 +25,6 @@
   "service_type",
   "service_date",
   "cb_service",
-  "service_status",
-  "custom_status_after_test",
   "pregnancy_confirmation_status",
   "pregnancy_confirmation_date",
   "sb_breeding",
@@ -181,7 +179,7 @@
    "fieldname": "service_type",
    "fieldtype": "Select",
    "label": "Service Type",
-   "options": "A.I.\nNatural"
+   "options": "\nA.I.\nNatural"
   },
   {
    "fieldname": "service_date",
@@ -193,24 +191,10 @@
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "service_status",
-   "fieldtype": "Select",
-   "label": "Service Status",
-   "options": "Pending\nSuccessfull\nFailed"
-  },
-  {
-   "allow_on_submit": 1,
-   "default": "Pending",
-   "fieldname": "custom_status_after_test",
-   "fieldtype": "Select",
-   "label": "Status after test",
-   "options": "Pending\nSuccessfull\nFailed"
-  },
-  {
    "fieldname": "pregnancy_confirmation_status",
    "fieldtype": "Select",
    "label": "Pregnancy Confirmation Status",
-   "options": "Pending\nConfirmed\nNot Pregnant"
+   "options": "\nPending\nConfirmed\nNot Pregnant"
   },
   {
    "fieldname": "pregnancy_confirmation_date",
@@ -304,7 +288,7 @@
    "fieldname": "custom_calving_outcome",
    "fieldtype": "Select",
    "label": "Calving outcome",
-   "options": "Live Birth\nStill Birth"
+   "options": "\nLive Birth\nStill Birth"
   },
   {
    "fieldname": "custom_no_of_calves",
@@ -328,7 +312,7 @@
    "fieldname": "custom_calf_sex",
    "fieldtype": "Select",
    "label": "Calf Sex",
-   "options": "Male\nFemale"
+   "options": "\nMale\nFemale"
   },
   {
    "fieldname": "custom_related_pregnancy",
@@ -491,7 +475,6 @@
    "options": "Item"
   },
   {
-   "default": "1",
    "depends_on": "eval:doc.event_type=='Service'",
    "fieldname": "semen_qty",
    "fieldtype": "Float",
@@ -569,7 +552,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-07-01 05:39:01.953667",
+ "modified": "2026-10-05 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Upande Livestock",
  "name": "Livestock Event",

@@ -103,3 +103,8 @@ upande_livestock.patches.trim_unused_herd_fields
 # benchmarks and cull case but never written, so every reader saw 0. Those
 # readers now count the events or read the Asset.
 upande_livestock.patches.trim_unused_animal_fields
+
+# A Service's outcome is pregnancy_confirmation_status; service_status and
+# custom_status_after_test shadowed it. And four Selects without a blank first
+# option stamped service and calving values on every Movement and Vaccination.
+upande_livestock.patches.trim_livestock_event_fields

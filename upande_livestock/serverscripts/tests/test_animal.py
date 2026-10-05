@@ -133,20 +133,22 @@ class TestServiceRecord(IntegrationTestCase):
 			"name": frappe.generate_hash(length=12),
 			"event_type": "Service",
 			"animal": self.cow,
-			"service_status": status,
+			"pregnancy_confirmation_status": status,
 			"docstatus": docstatus,
 		}).db_insert()
 
 	def test_rate_is_over_settled_services_only(self):
 		from upande_livestock.serverscripts.common.animal import service_record
 
-		self._service("Successfull")
-		self._service("Failed")
+		self._service("Confirmed")
+		self._service("Not Pregnant")
+		self._service("Aborted")
+		self._service("Confirmed")
 		self._service("Pending")
-		self._service("Successfull", docstatus=2)  # cancelled: not on file
+		self._service("Confirmed", docstatus=2)  # cancelled: not on file
 		got = service_record([self.cow])[self.cow]
-		self.assertEqual(got["services"], 3)
-		self.assertEqual(got["held"], 1)
+		self.assertEqual(got["services"], 5)
+		self.assertEqual(got["held"], 2)
 		self.assertEqual(got["conception_rate"], 50.0)
 
 	def test_a_cow_with_nothing_settled_has_no_rate(self):

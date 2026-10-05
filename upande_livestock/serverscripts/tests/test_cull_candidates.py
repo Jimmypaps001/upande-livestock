@@ -122,7 +122,7 @@ class TestServicesThatDoNotHoldPutHerForward(IntegrationTestCase):
 			service_date=add_days(today(), -580),
 			pregnancy_confirmation_status="Confirmed",
 		)
-		_event(self.animal, "Calving", add_days(today(), -300))
+		_event(self.animal, "Calving", add_days(today(), -300), custom_calving_outcome="Live Birth")
 		# Each answered "Not Pregnant" before the next: the doctype refuses a
 		# second service while one is still pending a diagnosis, which is the
 		# same order the farm works in. Four services, four negatives.
@@ -131,7 +131,6 @@ class TestServicesThatDoNotHoldPutHerForward(IntegrationTestCase):
 				self.animal, "Service", add_days(today(), -back),
 				service_date=add_days(today(), -back),
 				pregnancy_confirmation_status="Not Pregnant",
-				service_status="Failed",
 			)
 		self.addCleanup(_tidy, self.animal)
 

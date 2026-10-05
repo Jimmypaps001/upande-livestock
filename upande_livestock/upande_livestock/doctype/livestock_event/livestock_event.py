@@ -36,12 +36,13 @@ CHECK_DUE = heading("search", "Pregnancy check due")
 CALVING_SOON = heading("calendar", "Calving expected soon")
 READY_TO_BREED = heading("repeat", "Ready for re-breeding")
 
-#: What a service's own status becomes once its check comes back. Read off the
-#: doctype rather than typed: the Select's option is spelled "Successfull", and
-#: db_set does no validation — writing the correct spelling would leave the
-#: field holding a value it does not offer, which every report then misses.
-SERVICE_HELD = "Successfull"
-SERVICE_FAILED = "Failed"
+#: What a service's pregnancy_confirmation_status becomes once its check comes
+#: back. That one field is the service's outcome: it once had two shadows,
+#: `service_status` and `custom_status_after_test`, written alongside it and
+#: read by almost nothing, one of them in a spelling ("Successfull") its twin's
+#: writer never used.
+SERVICE_HELD = "Confirmed"
+SERVICE_FAILED = ("Not Pregnant", "Aborted")
 
 
 def warn_on_calving_mismatch(calving_name):
@@ -667,8 +668,10 @@ class LivestockEvent(Document):
 			if not self.pregnancy_confirmation_status:
 				self.pregnancy_confirmation_status = "Pending"
 
-			if not self.service_status:
-				self.service_status = "Pending"
+			# The Select starts blank so other event types stop reading "A.I.";
+			# a Service booked without one keeps the default it always had.
+			if not self.service_type:
+				self.service_type = "A.I."
 
 		# ============================================================
 		# VALIDATION FOR PREGNANCY DIAGNOSIS
@@ -1017,10 +1020,7 @@ class LivestockEvent(Document):
 			return
 
 		service = frappe.get_doc("Livestock Event", self.custom_related_pregnancy)
-		service.db_set("service_status", "Failed", update_modified=False)
 		service.db_set("pregnancy_confirmation_status", "Aborted", update_modified=False)
-		if service.meta.has_field("custom_status_after_test"):
-			service.db_set("custom_status_after_test", "Failed", update_modified=False)
 		service.add_comment("Info", text=f"Pregnancy lost — recorded by Abortion event {self.name}")
 
 	def settle_related_service(self):
@@ -1046,11 +1046,8 @@ class LivestockEvent(Document):
 		service = frappe.get_doc("Livestock Event", self.related_service)
 
 		if self.diagnosis_result == "Confirmed":
-			service.db_set("pregnancy_confirmation_status", "Confirmed", update_modified=False)
-			service.db_set("service_status", SERVICE_HELD, update_modified=False)
+			service.db_set("pregnancy_confirmation_status", SERVICE_HELD, update_modified=False)
 			service.db_set("pregnancy_confirmation_date", self.diagnosis_date, update_modified=False)
-			if service.meta.has_field("custom_status_after_test"):
-				service.db_set("custom_status_after_test", "Successful", update_modified=False)
 
 			# Update animal to pregnant
 			if animal.meta.has_field("repro_status"):
@@ -1103,9 +1100,6 @@ class LivestockEvent(Document):
 			service.db_set(
 				"pregnancy_confirmation_status", self.diagnosis_result, update_modified=False
 			)
-			service.db_set("service_status", SERVICE_FAILED, update_modified=False)
-			if service.meta.has_field("custom_status_after_test"):
-				service.db_set("custom_status_after_test", "Failed", update_modified=False)
 
 			# Update animal to open
 			if animal.meta.has_field("repro_status"):

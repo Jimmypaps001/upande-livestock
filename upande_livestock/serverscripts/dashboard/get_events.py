@@ -24,7 +24,6 @@ def get_events() -> dict:
 				"event_type",
 				"event_date",
 				"service_type",
-				"service_status",
 				"pregnancy_confirmation_status",
 				"diagnosis_result",
 				"custom_is_backdated",

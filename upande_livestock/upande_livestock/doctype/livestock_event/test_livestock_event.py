@@ -1359,7 +1359,6 @@ class TestLivestockEventAbortion(IntegrationTestCase):
 		service = self._confirm_pregnancy(service_date="2026-01-10", diagnosis_date="2026-01-20")
 		self._abortion("2026-05-10")
 		service.reload()
-		self.assertEqual(service.service_status, "Failed")
 		self.assertEqual(service.pregnancy_confirmation_status, "Aborted")
 
 	def test_gestation_days_at_loss_is_computed(self):
