@@ -5,6 +5,7 @@ from frappe.model.document import Document
 from frappe.utils import flt
 
 from upande_livestock.serverscripts.common import backdate
+from upande_livestock.serverscripts.common import cost_center as livestock_cost_center
 from upande_livestock.serverscripts.common import stock as livestock_stock
 from upande_livestock.serverscripts.common.event_link import cancel_event_for, sync_event_for
 
@@ -26,6 +27,8 @@ class LivestockDiagnosis(Document):
 
 	def on_cancel(self):
 		cancel_event_for(self)
+		# Its drugs go back on the shelf; only the timeline event was cancelled.
+		livestock_stock.cancel_issues({self.stock_entry})
 
 	def post_drug_issue(self):
 		"""Issue anything given at the check out of the drug store.
@@ -66,6 +69,10 @@ class LivestockDiagnosis(Document):
 			what="Check Up",
 			posting_date=self.diagnosis_date,
 			employee=self.operator,
+			# The animal's company and herd, as a health case already charged —
+			# not Livestock Settings' default company and the fallback centre.
+			company=self.company,
+			herd=livestock_cost_center.herd_of(self.animal),
 		)
 		if name:
 			self.db_set("stock_entry", name, update_modified=False)

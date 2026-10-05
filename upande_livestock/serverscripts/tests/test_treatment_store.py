@@ -68,6 +68,10 @@ class Case:
 		self.animal = "ZZ-NOT-SAVED"
 		self.name = "CASE-TEST"
 		self.opened_by = None
+		self.company = "ZZ Test Company"
+		self.custom_is_backdated = 0
+
+	_issue_round = LHC.LivestockHealthCase._issue_round
 
 	def get(self, key, default=None):
 		return getattr(self, key, default)
@@ -135,3 +139,62 @@ class TestTheEndpointsCarryTheStore(unittest.TestCase):
 		src = inspect.getsource(A)
 		self.assertIn("treatment_row", src,
 		              "add_case_treatment must build its rows through the shared builder")
+
+
+class TestEachRoundPostsOnItsOwnDay(unittest.TestCase):
+	"""Rows saved together posted as one issue on the latest date, under
+	Livestock Settings' company; and a backdated case swallowed today's rounds."""
+
+	def _calls(self, treatments, backdated=0):
+		calls = []
+
+		def fake_issue(rows, **kw):
+			calls.append(kw)
+			return None
+
+		case = Case(treatments)
+		case.custom_is_backdated = backdated
+		with patch.object(LHC.livestock_stock, "issue_items", side_effect=fake_issue), \
+		     patch.object(LHC.livestock_stock, "drug_warehouse", return_value="STORE"), \
+		     patch.object(LHC.livestock_cost_center, "herd_of", return_value=None):
+			LHC.LivestockHealthCase.post_drug_issue(case)
+		return calls
+
+	def _row(self, on):
+		return Row(drug_item="LSK-SEMEN-TEST", qty=1, stock_entry_ref=None,
+		           treatment_date=on, batch_no=None, source_warehouse=None)
+
+	def test_two_days_post_as_two_issues_each_on_its_day(self):
+		calls = self._calls([self._row("2026-10-01"), self._row("2026-10-05")])
+		self.assertEqual([str(c["posting_date"]) for c in calls], ["2026-10-01", "2026-10-05"])
+
+	def test_the_issue_is_under_the_cases_company(self):
+		calls = self._calls([self._row("2026-10-01")])
+		self.assertEqual(calls[0]["company"], "ZZ Test Company")
+
+	def test_a_backdated_case_still_issues_todays_round(self):
+		from frappe.utils import today
+
+		calls = self._calls([self._row("2026-01-10"), self._row(today())], backdated=1)
+		self.assertEqual([str(c["posting_date"]) for c in calls], [today()])
+
+
+class TestTheMilkSafeDate(unittest.TestCase):
+	def test_it_is_the_latest_treatment_plus_its_withdrawal(self):
+		case = Case([
+			Row(treatment_date="2026-10-01", withdrawal_period_days=7),
+			Row(treatment_date="2026-10-03", withdrawal_period_days=3),
+			Row(treatment_date="2026-10-04", withdrawal_period_days=None),
+		])
+		LHC.LivestockHealthCase.recompute_milk_safe_date(case)
+		self.assertEqual(str(case.milk_safe_date), "2026-10-08")
+
+
+class TestCancellingGivesTheDrugsBack(unittest.TestCase):
+	def test_every_issue_the_case_made_is_cancelled(self):
+		case = Case([Row(stock_entry_ref="SE-1"), Row(stock_entry_ref="SE-2"), Row(stock_entry_ref=None)])
+		case.drug_stock_entry = "SE-2"
+		with patch.object(LHC, "cancel_event_for"), \
+		     patch.object(LHC.livestock_stock, "cancel_issues") as cancel:
+			LHC.LivestockHealthCase.on_cancel(case)
+		self.assertEqual({n for n in cancel.call_args.args[0] if n}, {"SE-1", "SE-2"})

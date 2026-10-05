@@ -38,9 +38,12 @@ def get_reports() -> dict:
 		active = _active_animal_count()
 
 		open_cases = flt(
-			frappe.db.count("Livestock Health Case", {"case_status": ["in", list(_OPEN_CASE_STATUS)]})
+			frappe.db.count(
+				"Livestock Health Case",
+				{"case_status": ["in", list(_OPEN_CASE_STATUS)], "docstatus": 1},
+			)
 		)
-		cases_month = flt(frappe.db.count("Livestock Health Case", {"opened_date": [">=", this_start]}))
+		cases_month = flt(frappe.db.count("Livestock Health Case", {"opened_date": [">=", this_start], "docstatus": 1}))
 
 		def _repro(like):
 			return flt(

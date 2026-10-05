@@ -27,7 +27,6 @@
   "temperature_c",
   "respiration_rate",
   "heart_rate",
-  "rumen_fill",
   "tab_findings",
   "sb_checks",
   "system_checks",
@@ -51,8 +50,6 @@
   "drug_issues",
   "stock_entry",
   "cb_action",
-  "confirmed_by_vet",
-  "vet_name",
   "follow_up_date",
   "related_case",
   "sb_amend",
@@ -187,11 +184,6 @@
    "label": "Heart Rate (bpm)"
   },
   {
-   "fieldname": "rumen_fill",
-   "fieldtype": "Data",
-   "label": "Rumen Fill"
-  },
-  {
    "fieldname": "tab_findings",
    "fieldtype": "Tab Break",
    "label": "Findings"
@@ -322,22 +314,12 @@
    "fieldtype": "Link",
    "label": "Stock Entry",
    "options": "Stock Entry",
-   "read_only": 1
+   "read_only": 1,
+   "no_copy": 1
   },
   {
    "fieldname": "cb_action",
    "fieldtype": "Column Break"
-  },
-  {
-   "default": "0",
-   "fieldname": "confirmed_by_vet",
-   "fieldtype": "Check",
-   "label": "Confirmed by Vet"
-  },
-  {
-   "fieldname": "vet_name",
-   "fieldtype": "Data",
-   "label": "Vet Name"
   },
   {
    "fieldname": "follow_up_date",
@@ -382,7 +364,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-08-13 00:00:00.000000",
+ "modified": "2026-10-05 14:30:00.000000",
  "modified_by": "Administrator",
  "module": "Upande Livestock",
  "name": "Livestock Diagnosis",
