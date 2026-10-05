@@ -5,9 +5,9 @@
 
 import frappe
 from frappe import _
-from frappe.utils import flt, today
+from frappe.utils import flt
 
-from upande_livestock.serverscripts.common import culling
+from upande_livestock.serverscripts.common import backdate, culling
 from upande_livestock.serverscripts.common.envelope import as_dict, guard, run
 from upande_livestock.serverscripts.culling.cull_evidence import cull_evidence
 
@@ -58,7 +58,13 @@ def raise_cull(payload):
 		doc = frappe.new_doc("Livestock Disposal")
 		doc.animal = animal
 		doc.animal_name = evidence["name"]
-		doc.disposal_date = d.get("disposal_date") or today()
+		# The same backdating gate record_disposal applies: a past-dated case
+		# posts a real sale or write-off, so it may only be raised while the
+		# window is open, and is marked so its postings wait.
+		disposal_date, is_backdated = backdate.resolve(d, "disposal_date")
+		backdate.assert_allowed(is_backdated)
+		doc.disposal_date = disposal_date
+		backdate.stamp(doc, is_backdated)
 		doc.disposal_type = _disposal_type(flow, d.get("death_cause"))
 		doc.custom_cull_flow = flow
 		doc.custom_review_status = culling.FIRST_GATE[flow]

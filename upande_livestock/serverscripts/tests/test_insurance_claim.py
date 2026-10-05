@@ -206,3 +206,42 @@ class TestSettlingAClaim(IntegrationTestCase):
 	def test_an_unknown_status_is_refused(self):
 		got = settle_insurance_claim({"claim": self.claim, "status": "Maybe"})
 		self.assertIn("Submitted, Paid or Rejected", got.get("error", ""))
+
+
+class TestAClaimNeedsADeathOnTheBooks(IntegrationTestCase):
+	"""A claim was drafted against any disposal — a draft, a sale, a cancelled
+	one — and a rejected claim could be marked paid."""
+
+	def setUp(self):
+		_tidy(ANIMAL)
+		_drop_policies(ANIMAL)
+		_make_cow(ANIMAL, herd="Lactating group 1")
+		self.policy = _policy(ANIMAL)
+		self.addCleanup(_drop_policies, ANIMAL)
+		self.addCleanup(_tidy, ANIMAL)
+
+	def test_the_policy_total_is_the_animals_it_covers(self):
+		self.assertEqual(self.policy.total_insured_value, 100000)
+
+	def test_a_draft_disposal_is_not_claimed_on(self):
+		draft = frappe.get_doc({
+			"doctype": "Livestock Disposal", "animal": ANIMAL, "disposal_date": today(),
+			"disposal_type": "Died — Disease",
+		}).insert(ignore_permissions=True)
+		got = raise_insurance_claim({"disposal": draft.name})
+		self.assertFalse(got.get("ok"), "a claim was drafted for an animal still standing")
+
+	def test_a_rejected_claim_cannot_be_marked_paid(self):
+		claim = frappe.get_doc({
+			"doctype": "Livestock Insurance Claim", "animal": ANIMAL, "policy": self.policy.name,
+			"claim_date": today(), "claimed_amount": 80000, "status": "Rejected",
+		}).insert(ignore_permissions=True)
+		# Committed: the endpoint rolls back on refusal, which would take an
+		# uncommitted claim with it and prove nothing.
+		frappe.db.commit()
+		self.addCleanup(frappe.db.commit)
+		self.addCleanup(frappe.delete_doc, "Livestock Insurance Claim", claim.name,
+		                force=True, ignore_permissions=True)
+		got = settle_insurance_claim({"claim": claim.name, "status": "Paid", "payout_amount": 80000})
+		self.assertFalse(got.get("ok"))
+		self.assertEqual(frappe.db.get_value("Livestock Insurance Claim", claim.name, "status"), "Rejected")

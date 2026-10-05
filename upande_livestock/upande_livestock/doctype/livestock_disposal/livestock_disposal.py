@@ -20,9 +20,12 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 
-from upande_livestock.serverscripts.common import backdate
-from upande_livestock.serverscripts.common.animal import retire_animal
-from upande_livestock.serverscripts.disposal.scrap_livestock_asset import _scrap_livestock_asset
+from upande_livestock.serverscripts.common import backdate, culling
+from upande_livestock.serverscripts.common.animal import recompute_herd_count, retire_animal
+from upande_livestock.serverscripts.disposal.scrap_livestock_asset import (
+	_scrap_livestock_asset,
+	restore_scrapped_asset,
+)
 from upande_livestock.serverscripts.disposal.sell_livestock_asset import _sell_livestock_asset
 
 SALE_TYPES = ("Sold",)
@@ -37,9 +40,70 @@ class LivestockDisposal(Document):
 		backdate.assert_not_future(self.disposal_date, "Disposal Date")
 		backdate.sanitise(self, "disposal_date")
 
+	def before_submit(self):
+		# A cull case is submitted by post_cull once it is Approved. Submitting
+		# one from the form while it waits on the vet or the manager retired the
+		# animal and posted, and skipped both the review and the move to the
+		# cull herd. A direct disposal (record_disposal) is Draft, and stays free.
+		status = self.get("custom_review_status") or culling.DRAFT
+		if status in (culling.AWAITING_VET, culling.AWAITING_APPROVAL, culling.REJECTED):
+			frappe.throw(
+				_("This cull case is {0}. It is posted from the Culling screen once approved.").format(status)
+			)
+		if self.disposal_type in SALE_TYPES and self.sale_price and not self.customer:
+			# A buyer typed by name has no Customer to invoice, so the sale used to
+			# post nothing and report success.
+			frappe.throw(_("Choose the Customer the sale is invoiced to."))
+
 	def on_submit(self):
 		self.post_asset_disposal()
 		retire_animal(self.animal, self.disposal_type)
+
+	def on_cancel(self):
+		"""Undo the disposal: postings first, then the animal.
+
+		There was no on_cancel, and nothing links back to a disposal that would
+		have stopped the cancel, so cancelling one left the animal retired and
+		disabled, her herd count short, the write-off posted and the Asset
+		Scrapped, the draft invoice standing, her move into the cull herd in
+		place and the insurance claim open.
+		"""
+		self.reverse_asset_disposal()
+		self.withdraw_draft_claims()
+		self.undo_cull_herd_move()
+		frappe.db.set_value("Animal", self.animal, {"status": "Active", "disabled": 0}, update_modified=False)
+		recompute_herd_count(frappe.db.get_value("Animal", self.animal, "current_herd"))
+
+	def reverse_asset_disposal(self):
+		if self.sales_invoice and frappe.db.exists("Sales Invoice", self.sales_invoice):
+			invoice = frappe.get_doc("Sales Invoice", self.sales_invoice)
+			invoice.flags.ignore_permissions = True
+			if invoice.docstatus == 0:
+				invoice.delete(ignore_permissions=True)
+				self.db_set("sales_invoice", None, update_modified=False)
+			elif invoice.docstatus == 1:
+				# ERPNext puts a sold fixed asset back in service when its invoice
+				# is cancelled.
+				invoice.cancel()
+		asset = frappe.db.get_value("Animal", self.animal, "asset_link")
+		if asset and self.writeoff_journal_entry:
+			restore_scrapped_asset(asset)
+
+	def withdraw_draft_claims(self):
+		for name in frappe.get_all(
+			"Livestock Insurance Claim", filters={"disposal": self.name, "docstatus": 0}, pluck="name"
+		):
+			frappe.delete_doc("Livestock Insurance Claim", name, ignore_permissions=True)
+
+	def undo_cull_herd_move(self):
+		"""Cancel the Movement post_cull made into the cull herd; it moves her back."""
+		filters = {"animal": self.animal, "event_type": "Movement", "docstatus": 1,
+		           "event_date": self.disposal_date, "new_herd": culling.CULL_HERD}
+		for name in frappe.get_all("Livestock Event", filters=filters, pluck="name",
+		                           order_by="creation desc", limit=1):
+			move = frappe.get_doc("Livestock Event", name)
+			move.flags.ignore_permissions = True
+			move.cancel()
 
 	def post_asset_disposal(self):
 		"""Scrap or sell the linked Asset. Warn rather than throw on failure.

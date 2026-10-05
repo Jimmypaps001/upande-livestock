@@ -18,7 +18,6 @@
   "sb_valuation",
   "book_value",
   "sale_price",
-  "gain_loss",
   "cb_valuation",
   "customer",
   "buyer_name",
@@ -26,9 +25,6 @@
   "gifted_to",
   "gift_destination",
   "sb_accounting",
-  "income_account",
-  "disposal_account",
-  "cost_center",
   "cb_accounting",
   "sales_invoice",
   "writeoff_journal_entry",
@@ -94,7 +90,7 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Disposal Type",
-   "options": "Sold\nGifted\nCulled (Farm Use)\nDied \u2014 Natural Causes\nDied \u2014 Disease\nDied \u2014 Accident\nCondemned\nSlaughtered",
+   "options": "\nSold\nGifted\nCulled (Farm Use)\nDied — Natural Causes\nDied — Disease\nDied — Accident\nCondemned\nSlaughtered",
    "reqd": 1,
    "search_index": 1
   },
@@ -114,13 +110,6 @@
    "fieldname": "sale_price",
    "fieldtype": "Currency",
    "label": "Sale / Salvage Price (KES)"
-  },
-  {
-   "description": "Auto-calculated: Sale Price minus Book Value. Positive = gain, negative = loss.",
-   "fieldname": "gain_loss",
-   "fieldtype": "Currency",
-   "label": "Gain / Loss on Disposal (KES)",
-   "read_only": 1
   },
   {
    "fieldname": "cb_valuation",
@@ -162,28 +151,6 @@
    "fieldname": "sb_accounting",
    "fieldtype": "Section Break",
    "label": "Accounting Entries"
-  },
-  {
-   "description": "Account credited with sale proceeds. Pulled from Livestock Settings \u2014 animal_sale_income_account.",
-   "fieldname": "income_account",
-   "fieldtype": "Link",
-   "label": "Income / Gain Account",
-   "options": "Account"
-  },
-  {
-   "description": "Account debited to write off book value. Pulled from Livestock Settings \u2014 disposal_account.",
-   "fieldname": "disposal_account",
-   "fieldtype": "Link",
-   "label": "Asset Write-off Account",
-   "options": "Account"
-  },
-  {
-   "description": "Pulled from Animal\u2019s current herd cost centre.",
-   "fieldname": "cost_center",
-   "fieldtype": "Link",
-   "label": "Cost Center",
-   "options": "Cost Center",
-   "read_only": 1
   },
   {
    "fieldname": "cb_accounting",
@@ -271,7 +238,7 @@
   },
   {
    "allow_on_submit": 1,
-   "description": "Her figures against the herd as they stood when she was raised. Frozen on purpose \u2014 a cow marked when she was bottom of the herd should not stop being marked because two worse ones were bought in.",
+   "description": "Her figures against the herd as they stood when she was raised. Frozen on purpose — a cow marked when she was bottom of the herd should not stop being marked because two worse ones were bought in.",
    "fieldname": "custom_evidence",
    "fieldtype": "Small Text",
    "label": "The Case",
@@ -296,7 +263,7 @@
    "fieldname": "custom_death_cause",
    "fieldtype": "Select",
    "label": "Cause Of Death",
-   "options": "\nDisease \u2014 mastitis\nDisease \u2014 East Coast Fever\nDisease \u2014 other tick-borne\nDisease \u2014 other\nCalving complications\nMetabolic (milk fever, ketosis, bloat)\nInjury / accident\nPredation\nPoisoning\nOld age\nUnknown"
+   "options": "\nDisease — mastitis\nDisease — East Coast Fever\nDisease — other tick-borne\nDisease — other\nCalving complications\nMetabolic (milk fever, ketosis, bloat)\nInjury / accident\nPredation\nPoisoning\nOld age\nUnknown"
   },
   {
    "allow_on_submit": 1,
@@ -366,7 +333,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-07-01 05:39:01.583125",
+ "modified": "2026-10-05 14:00:00.000000",
  "modified_by": "Administrator",
  "module": "Upande Livestock",
  "name": "Livestock Disposal",

@@ -112,6 +112,11 @@ def _sell_livestock_asset(
 			"doctype": "Sales Invoice",
 			"customer": customer,
 			"company": company,
+			# Without set_posting_time ERPNext resets posting_date to today on
+			# insert, and the due date (the disposal date) then falls before it:
+			# "Due Date cannot be before Posting Date". A cull approved a day
+			# after it was raised never got its invoice.
+			"set_posting_time": 1,
 			"posting_date": posting_date,
 			"due_date": posting_date,
 			"naming_series": "SINV-.YYYY.-",

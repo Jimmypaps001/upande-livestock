@@ -31,8 +31,13 @@ def settle_insurance_claim(payload):
 			frappe.throw(_("{0} is not a claim.").format(name))
 
 		claim = frappe.get_doc("Livestock Insurance Claim", name)
-		if claim.status == "Paid" and status != "Paid":
+		# Settled is settled: a paid claim is not paid again over its own payout,
+		# and a rejected one is not turned into a payment without being raised
+		# again.
+		if claim.status == "Paid":
 			frappe.throw(_("{0} has already been paid.").format(name))
+		if claim.status == "Rejected" and status == "Paid":
+			frappe.throw(_("{0} was rejected; it cannot be marked paid.").format(name))
 
 		claim.status = status
 		if status == "Paid":
