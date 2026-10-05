@@ -117,6 +117,7 @@ class TestTheDamActuallyMoves(IntegrationTestCase):
 		doc.event_date = when or today()
 		doc.operator = self.employee
 		doc.custom_no_of_calves = 1
+		doc.custom_calving_outcome = "Live Birth"
 		doc.insert(ignore_permissions=True)
 		doc.submit()
 		return doc

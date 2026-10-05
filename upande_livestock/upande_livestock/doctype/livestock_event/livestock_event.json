@@ -46,7 +46,6 @@
   "custom_no_of_calves",
   "births_recorded",
   "cb_calving",
-  "custom_calf_sex",
   "custom_related_pregnancy",
   "sb_calf",
   "calf_tag_number",
@@ -309,12 +308,6 @@
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "custom_calf_sex",
-   "fieldtype": "Select",
-   "label": "Calf Sex",
-   "options": "\nMale\nFemale"
-  },
-  {
    "fieldname": "custom_related_pregnancy",
    "fieldtype": "Link",
    "label": "Related Pregnancy",
@@ -552,7 +545,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-10-05 12:00:00.000000",
+ "modified": "2026-10-05 13:00:00.000000",
  "modified_by": "Administrator",
  "module": "Upande Livestock",
  "name": "Livestock Event",

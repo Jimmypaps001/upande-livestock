@@ -278,13 +278,14 @@ class TestThePerCompanySetting(unittest.TestCase):
 
 
 class TestTheHerdFieldCanActuallyBeSet(unittest.TestCase):
-	"""Herds is submittable and nine of eleven live herds are submitted, so
-	every field without `allow_on_submit` is frozen on the form. The cost
-	centre was one of them: the farm could see it and could not change it."""
+	"""Herds used to be submittable, and a submitted herd froze every field
+	without `allow_on_submit` — the cost centre among them: the farm could see
+	it and could not change it. A herd is a master and is no longer submitted,
+	so nothing on it freezes."""
 
-	def test_the_cost_centre_is_editable_after_submit(self):
-		f = frappe.get_meta("Herds").get_field("cost_center")
-		self.assertTrue(f.allow_on_submit, "a submitted herd's cost centre must stay settable")
+	def test_a_herd_is_never_frozen_by_submission(self):
+		self.assertFalse(frappe.get_meta("Herds").is_submittable,
+		                 "a submitted herd's cost centre could not be changed")
 
 	def test_it_is_a_link_to_cost_center(self):
 		f = frappe.get_meta("Herds").get_field("cost_center")

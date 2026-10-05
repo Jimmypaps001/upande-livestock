@@ -95,8 +95,6 @@ def record_birth(payload):
 		calving.custom_no_of_calves = len(calves)
 		calving.operator = operator
 		calving.remarks = remarks
-		if len(calves) == 1 and calves[0].get("sex"):
-			calving.custom_calf_sex = calves[0].get("sex")
 		if related_pregnancy:
 			calving.custom_related_pregnancy = related_pregnancy
 		append_items(calving, d)
