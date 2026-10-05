@@ -5,6 +5,7 @@ deploy doesn't fail link validation.
 """
 
 import frappe
+from frappe import _
 
 from upande_livestock.serverscripts.common.timings import ALL_TIMING_DEFAULTS, read_setting
 
@@ -143,6 +144,38 @@ def ensure_livestock_timing_defaults():
 			frappe.db.set_single_value("Livestock Settings", fieldname, default)
 
 	frappe.db.commit()
+
+
+#: The first, desk-built design's doctypes. A site holding any of them has
+#: livestock history that only this app's patches carry across.
+LEGACY_DOCTYPES = ("Animal Event", "Animal Disposal", "Animal Health Case", "Animal Diagnosis")
+
+
+def legacy_livestock_on_site():
+	"""The first design's doctypes present on this site, if any."""
+	return [dt for dt in LEGACY_DOCTYPES if frappe.db.exists("DocType", dt)]
+
+
+def before_install():
+	"""Refuse a plain install over the first design's livestock records.
+
+	`install-app` syncs the doctypes and then marks every patch of the app as
+	already run. On a site that kept its livestock in the desk-built doctypes
+	(Animal Event, Animal Disposal, ...) that means the rename and every data
+	migration are skipped: the app creates empty Livestock Event / Disposal /
+	Health Case tables beside the old ones and the history is stranded. Such a
+	site takes the app through `bench migrate`, which runs them — see
+	docs/deploy/install-over-the-desk-livestock-doctypes.md.
+	"""
+	found = legacy_livestock_on_site()
+	if found:
+		frappe.throw(
+			_("This site keeps livestock records in {0}. Installing would skip the patches "
+			  "that carry them across. Register the app and run bench migrate instead: see "
+			  "docs/deploy/install-over-the-desk-livestock-doctypes.md in upande_livestock.")
+			.format(", ".join(found)),
+			title=_("Use bench migrate on this site"),
+		)
 
 
 def after_install():
