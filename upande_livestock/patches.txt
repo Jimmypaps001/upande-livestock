@@ -108,3 +108,6 @@ upande_livestock.patches.trim_unused_animal_fields
 # custom_status_after_test shadowed it. And four Selects without a blank first
 # option stamped service and calving values on every Movement and Vaccination.
 upande_livestock.patches.trim_livestock_event_fields
+# Must run after trim_livestock_event_fields, which clears the sex it stamped on
+# non-calvings; what is left is a real answer, kept in remarks where no Birth has it.
+upande_livestock.patches.fold_calving_calf_sex

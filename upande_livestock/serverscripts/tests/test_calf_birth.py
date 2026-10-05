@@ -105,6 +105,7 @@ class TestBirthOutcomes(IntegrationTestCase):
 		self.calving.event_date = today()
 		self.calving.operator = self.employee
 		self.calving.custom_no_of_calves = 3
+		self.calving.custom_calving_outcome = "Live Birth"
 		self.calving.insert(ignore_permissions=True)
 		self.calving.submit()
 
