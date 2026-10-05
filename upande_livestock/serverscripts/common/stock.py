@@ -111,9 +111,15 @@ def ensure_event_stock_entry_types():
 	frappe.db.commit()
 
 
+# What the events posted under before each had its own type. Nothing posts
+# under these now, but their entries are still the farm's livestock stock.
+LEGACY_EVENT_TYPES = ("Vaccination", "Deworming", "Animal Treatment", "Animal Health Check", "Semen Issue")
+
+
 def livestock_stock_entry_types():
-	"""Every type this app posts under: the events' and the named flows'."""
-	names = set(STOCK_ENTRY_TYPES.values())
+	"""Every type this app posts or posted under: the events', the named
+	flows' and the events' old ones."""
+	names = set(STOCK_ENTRY_TYPES.values()) | set(LEGACY_EVENT_TYPES)
 	names.update(
 		frappe.get_all("Stock Entry Type", filters={"name": ["like", f"{EVENT_TYPE_PREFIX}%"]}, pluck="name")
 	)

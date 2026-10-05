@@ -1,11 +1,13 @@
 # Copyright (c) 2026, Upande and contributors
 # For license information, please see license.txt
 
-"""The livestock stock issues still in draft, and what each is waiting for.
+"""The livestock stock entries, and what each draft is waiting for.
 
 An event recorded today when the store could not cover it saves its issue as a
-draft (common/stock). These are those drafts: what was used, by which record,
-and whether the store can cover it now.
+draft (common/stock). The Transactions page shows those drafts, a calendar of
+which days have drafts and which only posted entries, and any one day's
+entries: what was used, by which record, and — for a draft — whether the store
+can cover it now.
 """
 
 import frappe
@@ -48,12 +50,13 @@ def is_livestock_draft(name):
 	return bool(row) and row.docstatus == 0 and row.stock_entry_type in livestock_stock.livestock_stock_entry_types()
 
 
-def draft_rows():
+def entry_rows(filters):
+	"""The livestock Stock Entries matching `filters` (drafts and posted)."""
 	types = livestock_stock.livestock_stock_entry_types()
 	entries = frappe.get_all(
 		"Stock Entry",
-		filters={"docstatus": 0, "stock_entry_type": ["in", types]},
-		fields=["name", "posting_date", "stock_entry_type", "remarks", "owner", "creation"],
+		filters={"docstatus": ["<", 2], **filters, "stock_entry_type": ["in", types]},
+		fields=["name", "docstatus", "posting_date", "stock_entry_type", "remarks", "owner", "creation"],
 		order_by="posting_date desc, creation desc",
 		limit_page_length=500,
 	)
@@ -73,12 +76,19 @@ def draft_rows():
 	out = []
 	for e in entries:
 		rows = items.get(e.name, [])
-		short = livestock_stock.check_availability(
-			[{"item_code": r.item_code, "warehouse": r.s_warehouse, "qty": r.qty} for r in rows]
+		draft = e.docstatus == 0
+		# Only a draft is waiting on the store; a posted entry already took it.
+		short = (
+			livestock_stock.check_availability(
+				[{"item_code": r.item_code, "warehouse": r.s_warehouse, "qty": r.qty} for r in rows]
+			)
+			if draft
+			else []
 		)
 		out.append(
 			{
 				"name": e.name,
+				"status": "Draft" if draft else "Posted",
 				"posting_date": str(e.posting_date),
 				"stock_entry_type": e.stock_entry_type,
 				"remarks": e.remarks,
@@ -94,8 +104,30 @@ def draft_rows():
 					}
 					for r in rows
 				],
-				"can_post": not short,
+				"can_post": draft and not short,
 				"short": livestock_stock.shortage_message(short) if short else None,
 			}
 		)
 	return out
+
+
+def draft_rows():
+	return entry_rows({"docstatus": 0})
+
+
+def day_counts(from_date, to_date):
+	"""{date: {"draft": n, "posted": n}} for the days in range with any entry."""
+	types = livestock_stock.livestock_stock_entry_types()
+	rows = frappe.db.sql(
+		"""SELECT posting_date, docstatus, COUNT(*) AS n FROM `tabStock Entry`
+		   WHERE docstatus < 2 AND stock_entry_type IN %(types)s
+		     AND posting_date BETWEEN %(from)s AND %(to)s
+		   GROUP BY posting_date, docstatus""",
+		{"types": types, "from": from_date, "to": to_date},
+		as_dict=True,
+	)
+	days = {}
+	for r in rows:
+		day = days.setdefault(str(r.posting_date), {"draft": 0, "posted": 0})
+		day["draft" if r.docstatus == 0 else "posted"] += r.n
+	return days
