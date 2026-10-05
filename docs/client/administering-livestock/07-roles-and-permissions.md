@@ -50,7 +50,6 @@ naming.
 | Livestock Diagnosis | RWCDSX | RWCS | — | — | — | — |
 | Livestock Disease | RWCDSX | RWC | — | — | — | — |
 | Breed | RWCDSX | — | RWC | — | — | — |
-| Breeders | RWCDSX | — | RWC | — | — | — |
 | Livestock Disposal | RWCDSX | — | — | — | — | — |
 | Livestock Insurance Policy | RWCDSX | — | — | — | — | — |
 | Livestock Settings | RWCDSX | — | — | — | — | — |

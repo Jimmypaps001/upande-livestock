@@ -104,7 +104,6 @@ Nothing else hangs off it; it is a controlled vocabulary for `Animal.breed`.
 A calf's breed can be set explicitly on the calving form and overrides the dam's,
 since a calf by a different sire is not necessarily its mother's breed.
 
-**Breeders** is not livestock data: it holds the rose breeders (KORDES,
-DUMMEN, …) another app uses, and nothing here links to it.
+**Breeders** (the rose-breeder list) is not livestock data and now ships with `upande_scp`.
 
-Only **Livestock Breeder** and **Livestock Manager** can create either.
+Only **Livestock Breeder** and **Livestock Manager** can create a Breed.
