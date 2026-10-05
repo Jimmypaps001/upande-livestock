@@ -96,11 +96,9 @@ export interface CaseFile {
     herd: string | null;
     opened_by: string | null;
     body_systems: string | null;
-    vet_visit_date: string | null;
     milk_safe_date: string | null;
     treatment_cost: number;
     outcome_notes: string | null;
-    linked_disposal: string | null;
   };
   entries: CaseEntry[];
   drugs: { drug: string; qty: number; times: number; uom: string | null }[];

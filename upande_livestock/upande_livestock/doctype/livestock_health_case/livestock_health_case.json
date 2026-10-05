@@ -28,16 +28,12 @@
   "sb_vet",
   "vet_called",
   "vet_name",
-  "vet_visit_date",
   "cb_vet",
-  "lab_test_done",
-  "lab_results",
   "tab_treatment",
   "sb_treatlog",
   "treatments",
   "sb_cost",
   "total_treatment_cost",
-  "treatment_journal_entry",
   "cb_cost",
   "drug_stock_entry",
   "tab_outcome",
@@ -47,16 +43,13 @@
   "duration_days",
   "cb_outcome",
   "milk_safe_date",
-  "linked_disposal",
   "sb_prodloss",
   "production_loss_kg",
   "cb_prodloss",
-  "production_loss_value",
   "sb_flags",
   "is_zoonotic",
   "is_notifiable",
   "cb_flags",
-  "notification_reference",
   "sb_amend",
   "amended_from",
   "custom_is_backdated"
@@ -178,13 +171,12 @@
    "allow_on_submit": 1
   },
   {
-   "default": "Moderate",
    "fieldname": "severity",
    "fieldtype": "Select",
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Severity",
-   "options": "Mild\nModerate\nSevere\nCritical",
+   "options": "\nMild\nModerate\nSevere\nCritical",
    "allow_on_submit": 1
   },
   {
@@ -207,31 +199,8 @@
    "allow_on_submit": 1
   },
   {
-   "depends_on": "eval:doc.vet_called == 1",
-   "fieldname": "vet_visit_date",
-   "fieldtype": "Date",
-   "label": "Vet Visit Date",
-   "allow_on_submit": 1
-  },
-  {
    "fieldname": "cb_vet",
    "fieldtype": "Column Break"
-  },
-  {
-   "default": "0",
-   "description": "Bacterial culture, blood test, faecal egg count etc.",
-   "fieldname": "lab_test_done",
-   "fieldtype": "Check",
-   "label": "Lab Test Done",
-   "allow_on_submit": 1
-  },
-  {
-   "depends_on": "eval:doc.lab_test_done == 1",
-   "description": "Pathogen identified, sensitivity, parameters etc.",
-   "fieldname": "lab_results",
-   "fieldtype": "Long Text",
-   "label": "Lab Results",
-   "allow_on_submit": 1
   },
   {
    "fieldname": "tab_treatment",
@@ -265,14 +234,6 @@
    "allow_on_submit": 1
   },
   {
-   "description": "Auto-created Journal Entry for total_treatment_cost",
-   "fieldname": "treatment_journal_entry",
-   "fieldtype": "Link",
-   "label": "Treatment Cost JE",
-   "options": "Journal Entry",
-   "read_only": 1
-  },
-  {
    "fieldname": "cb_cost",
    "fieldtype": "Column Break"
   },
@@ -283,7 +244,8 @@
    "label": "Drug Issue Stock Entry",
    "options": "Stock Entry",
    "read_only": 1,
-   "allow_on_submit": 1
+   "allow_on_submit": 1,
+   "no_copy": 1
   },
   {
    "fieldname": "tab_outcome",
@@ -330,16 +292,6 @@
    "allow_on_submit": 1
   },
   {
-   "depends_on": "eval:['Died','Culled'].includes(doc.case_status)",
-   "description": "Auto-created on submit when case closes with Died or Culled. Operator must complete and submit the disposal record separately.",
-   "fieldname": "linked_disposal",
-   "fieldtype": "Link",
-   "label": "Linked Livestock Disposal",
-   "options": "Livestock Disposal",
-   "read_only": 1,
-   "allow_on_submit": 1
-  },
-  {
    "fieldname": "sb_prodloss",
    "fieldtype": "Section Break",
    "label": "Production Loss"
@@ -354,14 +306,6 @@
   {
    "fieldname": "cb_prodloss",
    "fieldtype": "Column Break"
-  },
-  {
-   "description": "Auto-calculated from production_loss_kg × milk price in Livestock Settings",
-   "fieldname": "production_loss_value",
-   "fieldtype": "Currency",
-   "label": "Production Loss Value (KES)",
-   "read_only": 1,
-   "allow_on_submit": 1
   },
   {
    "fieldname": "sb_flags",
@@ -389,14 +333,6 @@
   {
    "fieldname": "cb_flags",
    "fieldtype": "Column Break"
-  },
-  {
-   "depends_on": "eval:doc.is_notifiable == 1",
-   "description": "Reference number from Veterinary Officer or DOAS",
-   "fieldname": "notification_reference",
-   "fieldtype": "Data",
-   "label": "Notification Reference",
-   "allow_on_submit": 1
   },
   {
    "fieldname": "sb_amend",
@@ -432,7 +368,7 @@
    "link_fieldname": "related_case"
   }
  ],
- "modified": "2026-07-01 05:39:02.297321",
+ "modified": "2026-10-05 14:30:00.000000",
  "modified_by": "Administrator",
  "module": "Upande Livestock",
  "name": "Livestock Health Case",

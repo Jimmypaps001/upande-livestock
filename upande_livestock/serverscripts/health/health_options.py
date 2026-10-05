@@ -36,7 +36,10 @@ def health_options():
 			"diseases": [
 				r.name
 				for r in frappe.get_all(
-					"Livestock Disease", fields=["name"], order_by="name asc", limit_page_length=500
+					# Retired diseases stay on old cases but are not offered again;
+					# `is_active` was a box that changed nothing.
+					"Livestock Disease", filters={"is_active": 1}, fields=["name"],
+					order_by="name asc", limit_page_length=500,
 				)
 			],
 			"abortion_causes": select_options("Livestock Event", "abortion_cause"),

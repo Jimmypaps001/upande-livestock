@@ -117,3 +117,6 @@ upande_livestock.patches.drop_milk_discard_warehouse
 
 # Four Disposal fields nothing set; the postings resolve their own accounts.
 upande_livestock.patches.trim_disposal_fields
+
+# Health fields nothing kept; every case's milk-safe date from its treatments.
+upande_livestock.patches.trim_health_fields

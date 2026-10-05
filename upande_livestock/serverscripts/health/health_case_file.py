@@ -110,12 +110,10 @@ def health_case_file(payload=None):
 			"severity": doc.severity,
 			"vet_called": bool(doc.vet_called),
 			"vet_name": doc.vet_name,
-			"vet_visit_date": str(doc.vet_visit_date) if doc.vet_visit_date else None,
 			"milk_safe_date": str(doc.milk_safe_date) if doc.milk_safe_date else None,
 			"production_loss_kg": flt(doc.production_loss_kg),
 			"treatment_cost": flt(doc.total_treatment_cost),
 			"outcome_notes": doc.outcome_notes,
-			"linked_disposal": doc.linked_disposal,
 		}
 		case["days_open"] = days_open(case)
 		last_on = entries[-1]["on"] if entries else None

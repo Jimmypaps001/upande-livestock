@@ -2,13 +2,12 @@
 
 import frappe
 from frappe import _
-from frappe.utils import flt, today
 
 from upande_livestock.serverscripts.common import backdate
 from upande_livestock.serverscripts.common.company import company_or_throw
 from upande_livestock.serverscripts.common.employee import current_employee
 from upande_livestock.serverscripts.common.envelope import as_dict, guard, run
-from upande_livestock.serverscripts.common.health_case import open_case_for
+from upande_livestock.serverscripts.common.health_case import open_case_for, treatment_row
 
 
 @frappe.whitelist()
@@ -68,20 +67,10 @@ def create_health_case(payload):
 		for t in d.get("treatments") or []:
 			if not (t.get("drug_item") or t.get("drug_name_text")):
 				continue
-			doc.append(
-				"treatments",
-				{
-					"treatment_date": t.get("treatment_date") or today(),
-					"drug_item": t.get("drug_item") or None,
-					"drug_name_text": t.get("drug_name_text"),
-					"dosage": t.get("dosage"),
-					"qty": flt(t.get("qty")) or 1,
-					"route": t.get("route") or None,
-					"withdrawal_period_days": int(flt(t.get("withdrawal_period_days"))) or None,
-					"administered_by": t.get("administered_by") or current_employee(),
-					"notes": t.get("notes"),
-				},
-			)
+			# The shared builder, as treat_animal and add_case_treatment use. This
+			# hand-written copy dropped the store, the batch and the cost, so a
+			# case's opening drugs came off the default store and cost nothing.
+			doc.append("treatments", treatment_row(t))
 		doc.insert()
 		doc.submit()
 		doc.reload()

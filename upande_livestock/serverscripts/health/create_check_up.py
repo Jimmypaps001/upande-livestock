@@ -118,6 +118,9 @@ def create_check_up(payload):
 					"severity": d.get("severity"),
 				}, opened_from=_("a check-up")).name
 				opened = True
+			# The check-up says which case it was escalated into. related_case was
+			# never written, so the link only ran one way.
+			doc.db_set("related_case", case, update_modified=False)
 
 		return {
 			"ok": True,

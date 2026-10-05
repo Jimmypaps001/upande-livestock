@@ -31,6 +31,9 @@ def get_health() -> dict:
 				"is_notifiable",
 				"custom_is_backdated",
 			],
+			# Submitted only: a draft is somebody still typing and a cancelled
+			# case never happened, and both were counted open.
+			filters={"docstatus": 1},
 			order_by="opened_date desc",
 			limit_page_length=300,
 		)

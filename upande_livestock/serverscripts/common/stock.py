@@ -317,3 +317,18 @@ def try_issue_items(rows, remarks, what, **kwargs):
 			indicator="orange",
 		)
 		return None
+
+
+def cancel_issues(names):
+	"""Cancel the submitted Material Issues among `names`, putting the stock back.
+
+	A health case or a check-up cancelled used to leave its drug issue posted:
+	the Stock Entry does not link back to the document that made it, so Frappe
+	never asked. Blank names and entries already cancelled are passed over.
+	"""
+	for name in {n for n in names or () if n}:
+		if frappe.db.get_value("Stock Entry", name, "docstatus") != 1:
+			continue
+		issue = frappe.get_doc("Stock Entry", name)
+		issue.flags.ignore_permissions = True
+		issue.cancel()

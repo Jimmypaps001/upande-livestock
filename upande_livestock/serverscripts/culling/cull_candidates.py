@@ -147,7 +147,7 @@ def _facts(names):
 		"""SELECT animal, opened_date, closed_date, case_status,
 		          duration_days, production_loss_kg
 		   FROM `tabLivestock Health Case`
-		   WHERE docstatus < 2 AND opened_date IS NOT NULL""",
+		   WHERE docstatus = 1 AND opened_date IS NOT NULL""",
 		as_dict=True,
 	):
 		f = facts.get(row.animal)

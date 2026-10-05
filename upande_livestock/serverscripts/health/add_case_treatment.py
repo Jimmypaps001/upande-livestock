@@ -4,7 +4,7 @@ import frappe
 from frappe import _
 
 from upande_livestock.serverscripts.common.envelope import as_dict, guard, run
-from upande_livestock.serverscripts.common.health_case import treatment_row
+from upande_livestock.serverscripts.common.health_case import TREATING_STATUSES, treatment_row
 
 
 @frappe.whitelist()
@@ -31,6 +31,11 @@ def add_case_treatment(payload):
 		doc = frappe.get_doc("Livestock Health Case", d["case"])
 		if doc.docstatus != 1:
 			frappe.throw(_("Case {0} is not submitted.").format(doc.name))
+		# As treat_animal refuses: a treatment on a Recovered or Died case is
+		# a treatment on a file that has been closed.
+		if doc.case_status not in TREATING_STATUSES:
+			frappe.throw(_("Case {0} is {1}; open a new case to treat her again.").format(
+				doc.name, doc.case_status))
 
 		before = {t.name for t in doc.treatments or []}
 		for t in treatments:

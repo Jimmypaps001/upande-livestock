@@ -16,7 +16,6 @@
   "batch_no",
   "sb_schedule",
   "withdrawal_days",
-  "milk_safe_date",
   "next_due_date",
   "dosage",
   "stock_entry_ref"
@@ -82,12 +81,6 @@
    "label": "Withdrawal (days)"
   },
   {
-   "fieldname": "milk_safe_date",
-   "fieldtype": "Date",
-   "in_list_view": 1,
-   "label": "Milk Safe From"
-  },
-  {
    "fieldname": "next_due_date",
    "fieldtype": "Date",
    "label": "Next Due Date"
@@ -102,14 +95,15 @@
    "fieldtype": "Link",
    "label": "Stock Issue Ref",
    "options": "Stock Entry",
-   "read_only": 1
+   "read_only": 1,
+   "no_copy": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-05-25 00:38:42.786310",
+ "modified": "2026-10-05 14:30:00.000000",
  "modified_by": "judah@upande.com",
  "module": "Upande Livestock",
  "name": "Livestock Drug Issue",

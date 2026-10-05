@@ -2,7 +2,7 @@
 # For license information, please see license.txt
 
 from frappe.model.document import Document
-from frappe.utils import flt, getdate, today
+from frappe.utils import add_days, flt, getdate, today
 
 from upande_livestock.serverscripts.common import backdate
 from upande_livestock.serverscripts.common import cost_center as livestock_cost_center
@@ -19,6 +19,7 @@ class LivestockHealthCase(Document):
 		backdate.assert_not_future(self.opened_date, "Opened Date")
 		backdate.sanitise(self, "opened_date")
 		self.recompute_treatment_cost()
+		self.recompute_milk_safe_date()
 
 	def recompute_treatment_cost(self):
 		"""The case has cost the sum of its treatments, and nothing else.
@@ -51,6 +52,21 @@ class LivestockHealthCase(Document):
 		assignment would never reach the row.
 		"""
 		self.recompute_treatment_cost()
+		self.recompute_milk_safe_date()
+
+	def recompute_milk_safe_date(self):
+		"""The first day her milk may be sold again, from the drugs she was given.
+
+		Each treatment carries its drug's withdrawal period, and nothing ever
+		turned them into a date: the case file showed "—" and staff counted
+		forward by hand. The latest treatment date plus its withdrawal wins.
+		"""
+		ends = [
+			add_days(getdate(t.treatment_date), int(t.withdrawal_period_days))
+			for t in (self.treatments or [])
+			if t.get("treatment_date") and t.get("withdrawal_period_days")
+		]
+		self.milk_safe_date = max(ends) if ends else None
 
 	def on_update_after_submit(self):
 		# A case is treated over days, not once. Treatments are allow_on_submit so
@@ -60,6 +76,10 @@ class LivestockHealthCase(Document):
 
 	def on_cancel(self):
 		cancel_event_for(self)
+		# The drugs go back on the shelf. Only the timeline event was cancelled,
+		# so a cancelled case kept the store short of everything it issued.
+		entries = {self.drug_stock_entry} | {t.stock_entry_ref for t in self.treatments or []}
+		livestock_stock.cancel_issues(entries)
 
 	def post_drug_issue(self):
 		"""Issue the drugs recorded against this case's treatments.
@@ -82,10 +102,6 @@ class LivestockHealthCase(Document):
 		and their quantities stay on the case for a later reconciliation, but the
 		store's balance is not rewritten for a treatment given months ago.
 		"""
-		if self.get("custom_is_backdated"):
-			self.db_set("drug_stock_entry", None, update_modified=False)
-			return
-
 		# The store each treatment names, not one for the whole case. On live
 		# `drug_warehouse()` is `Livestock Drug Store - KR`, which holds nothing
 		# — so every treatment asked an empty shelf while the drugs sat in
@@ -93,9 +109,20 @@ class LivestockHealthCase(Document):
 		# Store Karen. The fallback stays for rows recorded before this.
 		default_wh = livestock_stock.drug_warehouse()
 		pending = [t for t in (self.treatments or []) if t.drug_item and not t.stock_entry_ref]
-		if not pending:
-			return
+		# A backdated case records its old treatments without moving stock, but
+		# only the old ones: a round added today to a case opened late is given
+		# today and is issued like any other.
+		if self.get("custom_is_backdated"):
+			pending = [t for t in pending if t.treatment_date and getdate(t.treatment_date) >= getdate(today())]
+		# One issue per day given. Rows from Oct 1 and Oct 5 saved together used
+		# to post as one entry, both on Oct 5.
+		by_day = {}
+		for t in pending:
+			by_day.setdefault(getdate(t.treatment_date or today()), []).append(t)
+		for given, rows_of_day in sorted(by_day.items()):
+			self._issue_round(rows_of_day, given, default_wh)
 
+	def _issue_round(self, pending, given, default_wh):
 		rows = [
 			{
 				"item_code": t.drug_item,
@@ -105,18 +132,15 @@ class LivestockHealthCase(Document):
 			}
 			for t in pending
 		]
-		# Post on the day the treatment was given, not the day the case opened. A
-		# case opened before its drug was even delivered would otherwise back-date
-		# the issue into a period where the store held none of it.
-		given = max(
-			[getdate(t.treatment_date) for t in pending if t.treatment_date] or [getdate(today())]
-		)
+		# Posted on the day the treatment was given, not the day the case opened,
+		# and under the animal's company rather than Livestock Settings' default.
 		name = livestock_stock.issue_items(
 			rows,
 			remarks=f"Livestock Treatment - {self.animal} - {self.name}",
 			what="Treatment",
 			posting_date=given,
 			employee=self.opened_by,
+			company=self.company,
 			# A case is one animal, so its herd is unambiguous. Charged there
 			# rather than to whatever the company default happens to be.
 			herd=livestock_cost_center.herd_of(self.animal),

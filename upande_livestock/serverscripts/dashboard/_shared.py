@@ -13,9 +13,12 @@ from frappe.utils import add_days, flt, today
 
 from upande_livestock.serverscripts.common.animal import live_herd_count
 from upande_livestock.serverscripts.common.choices import RETIRED_STATUSES
+from upande_livestock.serverscripts.common.health_case import TREATING_STATUSES
 from upande_livestock.serverscripts.common.herd_movement import milking_herds
 
-_OPEN_CASE_STATUS = ("Open", "Under Treatment", "Chronic")
+# Chronic is a way a case ENDS (common.health_case.CLOSED_STATUSES); counting it
+# open kept every case closed as Chronic on the dashboard for good.
+_OPEN_CASE_STATUS = TREATING_STATUSES
 
 
 def _active_animal_count() -> float:
@@ -77,7 +80,9 @@ def _build() -> dict:
 
 	# ---- KPI: health events this week ------------------------------------
 	week_ago = add_days(today(), -7)
-	k["health_events"] = flt(frappe.db.count("Livestock Health Case", {"opened_date": [">=", week_ago]}))
+	k["health_events"] = flt(
+		frappe.db.count("Livestock Health Case", {"opened_date": [">=", week_ago], "docstatus": 1})
+	)
 
 	# ---- KPI: births this month ------------------------------------------
 	month_start = today()[:8] + "01"
