@@ -239,7 +239,22 @@ class MilkRecording(Document):
 			)
 
 		# 2. Revenue JE (best-effort — skipped unless an income account is configured)
-		if revenue > 0 and income_acct and credit_acct:
+		# The credit account is one site-wide setting, and the record's company
+		# need not own it: live's is a Westwood account while its milk is entered
+		# under Kaitet Group too. Said plainly and skipped, rather than left to
+		# fail inside ERPNext and surface as its message.
+		foreign = [
+			acct for acct in (income_acct, credit_acct)
+			if acct and frappe.db.get_value("Account", acct, "company") != company
+		]
+		if revenue > 0 and foreign:
+			frappe.msgprint(
+				f"The milk was posted but its revenue was not: {', '.join(foreign)} "
+				f"does not belong to {company}. Set accounts of {company} in Livestock Settings.",
+				alert=True,
+				indicator="orange",
+			)
+		elif revenue > 0 and income_acct and credit_acct:
 			try:
 				je = frappe.new_doc("Journal Entry")
 				je.company = company

@@ -57,14 +57,13 @@ from upande_livestock.serverscripts.common import cost_center as livestock_cost_
 
 from upande_livestock.serverscripts.common import backdate
 from upande_livestock.serverscripts.common import stock as livestock_stock
+from upande_livestock.serverscripts.common.company import default_company
 
 # _availability imports resolve_requirement from this module, so this cannot be
 # a top-level import without a circular import (confirmed empirically: bench
 # console raises ImportError: cannot import name 'resolve_requirement' from
 # partially initialized module). manufacture_herd_feed imports it lazily
 # instead, at the one call site that needs it.
-
-DEFAULT_FEED_STORE = "Concentrate Mixing Store - KR"
 
 # The clock time a backdated feed run is stamped with. `posting_date` alone
 # means `set_posting_time = 1` with no `posting_time` set — harmless today,
@@ -135,12 +134,20 @@ def _run_posting_time(runs_before):
 
 
 def _feed_store():
+	"""Livestock Settings' feed store. It fell back to one site's warehouse
+	("Concentrate Mixing Store - KR"), which on any other site is a store of
+	another company or no store at all; both sites set it, so unset is a
+	configuration gap to name, not to paper over."""
 	store = frappe.db.get_single_value("Livestock Settings", "custom_feed_wip_warehouse")
-	return store or DEFAULT_FEED_STORE
+	if not store:
+		frappe.throw(_("Set the Feed Store (custom_feed_wip_warehouse) in Livestock Settings."))
+	return store
 
 
 def _company():
-	return frappe.db.get_single_value("Livestock Settings", "custom_default_company")
+	# The one reading of the default company, with its fallbacks; this read the
+	# raw setting and had none.
+	return default_company()
 
 
 def _feed_source_warehouses():

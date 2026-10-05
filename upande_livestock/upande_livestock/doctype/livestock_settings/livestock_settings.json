@@ -82,7 +82,6 @@
   "growth_ladder",
   "sb_first_pregnancy",
   "incalf_heifer_herd",
-  "incalf_general_days",
   "cb_first_pregnancy",
   "heifer_dry_off_before_calving_days",
   "sb_lactation",
@@ -395,7 +394,7 @@
    "label": "Bought-in Concentrates"
   },
   {
-   "description": "Concentrates the farm buys ready-packed. A concentrate that is mixed on the farm is recognised by its BOM and does not belong here \u2014 list only the ones that arrive already made, so the feeding programme flags them as concentrate rather than plain raw material.",
+   "description": "Concentrates the farm buys ready-packed. A concentrate that is mixed on the farm is recognised by its BOM and does not belong here — list only the ones that arrive already made, so the feeding programme flags them as concentrate rather than plain raw material.",
    "fieldname": "bought_in_concentrates",
    "fieldtype": "Table",
    "label": "Bought-in Concentrates",
@@ -414,28 +413,28 @@
    "options": "Warehouse"
   },
   {
-   "description": "The item group this farm keeps its feed in \u2014 raw materials, mixed concentrate and bought-in alike. The Stock page shows this group and nothing else, and a new ration or concentrate is created in it. Left blank it uses \u201cDAIRY\u201d.",
+   "description": "The item group this farm keeps its feed in — raw materials, mixed concentrate and bought-in alike. The Stock page shows this group and nothing else, and a new ration or concentrate is created in it. Left blank it uses “DAIRY”.",
    "fieldname": "custom_feed_item_group",
    "fieldtype": "Link",
    "label": "Feed Item Group",
    "options": "Item Group"
   },
   {
-   "description": "The item group this farm keeps its veterinary drugs in. The picker offers stock from this group and nothing else. Left blank it uses \u201cDRUGS\u201d, which is what this group's older sites call it \u2014 on a site that calls it something else, say so here or the picker comes back empty.",
+   "description": "The item group this farm keeps its veterinary drugs in. The picker offers stock from this group and nothing else. Left blank it uses “DRUGS”, which is what this group's older sites call it — on a site that calls it something else, say so here or the picker comes back empty.",
    "fieldname": "custom_drug_item_group",
    "fieldtype": "Link",
    "label": "Drug Item Group",
    "options": "Item Group"
   },
   {
-   "description": "The item group semen straws are in. Left blank it uses \u201cDAIRY\u201d.",
+   "description": "The item group semen straws are in. Left blank it uses “DAIRY”.",
    "fieldname": "custom_semen_item_group",
    "fieldtype": "Link",
    "label": "Semen Item Group",
    "options": "Item Group"
   },
   {
-   "description": "Every store the drug and semen pickers look in, in the order they are searched \u2014 the same idea as the feed source warehouses above. A farm's drugs sit across the stores it actually uses; one store named alone offers stock the issue cannot find. The single Drug Warehouse above is searched last.",
+   "description": "Every store the drug and semen pickers look in, in the order they are searched — the same idea as the feed source warehouses above. A farm's drugs sit across the stores it actually uses; one store named alone offers stock the issue cannot find. The single Drug Warehouse above is searched last.",
    "fieldname": "custom_drug_warehouses",
    "fieldtype": "Table",
    "label": "Drug & Semen Stores Searched",
@@ -446,7 +445,7 @@
    "fieldtype": "Table",
    "options": "Livestock Event Item Group",
    "label": "What Each Event May Consume",
-   "description": "Which item groups each event type draws its items from. Add as many rows per event as the farm needs \u2014 an event with no row consumes nothing and shows no items list."
+   "description": "Which item groups each event type draws its items from. Add as many rows per event as the farm needs — an event with no row consumes nothing and shows no items list."
   },
   {
    "description": "Fallback store for a Service that names none. The straw picker itself searches the Drug & Semen Stores Searched list below. Falls back to the Drug Store when unset.",
@@ -484,14 +483,14 @@
    "options": "Account"
   },
   {
-   "description": "Where a CONCENTRATE mix books to. A mix has no herd \u2014 it is made for the store and eaten by several herds \u2014 so the herd's own cost centre cannot answer for it. Left blank it falls to the per-company row below, which is the answer for everything herdless.",
+   "description": "Where a CONCENTRATE mix books to. A mix has no herd — it is made for the store and eaten by several herds — so the herd's own cost centre cannot answer for it. Left blank it falls to the per-company row below, which is the answer for everything herdless.",
    "fieldname": "custom_concentrate_cost_center",
    "fieldtype": "Link",
    "label": "Concentrate Cost Center",
    "options": "Cost Center"
   },
   {
-   "description": "Charged for feed, milk, drug and husbandry stock movements when the herd names no cost centre of its own. One row per company \u2014 the dairy and the flower side do not share a centre. ERPNext refuses a stock entry outright when the item's expense account is a P&amp;L one and no cost centre can be found.",
+   "description": "Charged for feed, milk, drug and husbandry stock movements when the herd names no cost centre of its own. One row per company — the dairy and the flower side do not share a centre. ERPNext refuses a stock entry outright when the item's expense account is a P&amp;L one and no cost centre can be found.",
    "fieldname": "custom_company_cost_centers",
    "fieldtype": "Table",
    "label": "Default Cost Centres by Company",
@@ -506,7 +505,7 @@
    "description": "Which herd a newborn enters. A calf's sex decides this and nothing else does.",
    "fieldname": "sb_calf_intake",
    "fieldtype": "Section Break",
-   "label": "A \u00b7 Calf Intake"
+   "label": "A · Calf Intake"
   },
   {
    "description": "Normally the first rung of the growth ladder below.",
@@ -562,7 +561,7 @@
    "description": "The herds a heifer climbs before she is old enough to serve, in order. The first row is where female calves land; the last should be marked 'exits on service'.",
    "fieldname": "sb_growth_ladder",
    "fieldtype": "Section Break",
-   "label": "B \u00b7 Growth Ladder"
+   "label": "B · Growth Ladder"
   },
   {
    "fieldname": "growth_ladder",
@@ -574,7 +573,7 @@
    "description": "Where a served heifer waits out her first pregnancy. She gives no milk yet, which is why this herd is separate from the lactation groups.",
    "fieldname": "sb_first_pregnancy",
    "fieldtype": "Section Break",
-   "label": "C \u00b7 First Pregnancy"
+   "label": "C · First Pregnancy"
   },
   {
    "description": "Entered on a CONFIRMED pregnancy, never on the service alone.",
@@ -582,13 +581,6 @@
    "fieldtype": "Link",
    "label": "Incalf Heifer Herd",
    "options": "Herds"
-  },
-  {
-   "default": "180",
-   "description": "A heifer that repeatedly fails to conceive should not sit here indefinitely; past this she is flagged for a decision.",
-   "fieldname": "incalf_general_days",
-   "fieldtype": "Int",
-   "label": "General Time (days)"
   },
   {
    "fieldname": "cb_first_pregnancy",
@@ -605,7 +597,7 @@
    "description": "After her first calving a cow never returns to the growth ladder. She cycles between these herds for the rest of her productive life.",
    "fieldname": "sb_lactation",
    "fieldtype": "Section Break",
-   "label": "D \u00b7 Lactation Cycle"
+   "label": "D · Lactation Cycle"
   },
   {
    "fieldname": "high_yield_herd",
@@ -646,23 +638,23 @@
   },
   {
    "default": "60",
-   "description": "2 months. Fixed \u2014 it does not vary with yield or anything else.",
+   "description": "2 months. Fixed — it does not vary with yield or anything else.",
    "fieldname": "low_yield_days",
    "fieldtype": "Int",
    "label": "Days in Low Yield Herd"
   },
   {
-   "description": "Two streams meet here, and how long an animal stays depends on which one it came from \u2014 so the duration belongs to the route, not to the herd.",
+   "description": "Two streams meet here, and how long an animal stays depends on which one it came from — so the duration belongs to the route, not to the herd.",
    "fieldname": "sb_steamers",
    "fieldtype": "Section Break",
-   "label": "Steamers \u00b7 the dry herd"
+   "label": "Steamers · the dry herd"
   },
   {
    "fieldname": "drying_off_herd",
    "fieldtype": "Link",
    "label": "Drying Off Herd",
    "options": "Herds",
-   "description": "Where a cow goes when she is dried off. Offered as the destination on the drying-off screen, and a different choice is warned about rather than refused \u2014 a farm moves a cow somewhere else for reasons the app does not know. Left empty, the Steamer Herd below is used."
+   "description": "Where a cow goes when she is dried off. Offered as the destination on the drying-off screen, and a different choice is warned about rather than refused — a farm moves a cow somewhere else for reasons the app does not know. Left empty, the Steamer Herd below is used."
   },
   {
    "fieldname": "steamer_herd",
@@ -675,7 +667,7 @@
    "description": "A first-time heifer arrives with 3 months to calving.",
    "fieldname": "steamer_days_from_heifers",
    "fieldtype": "Int",
-   "label": "Dry Days \u00b7 arriving from Incalf Heifers"
+   "label": "Dry Days · arriving from Incalf Heifers"
   },
   {
    "fieldname": "cb_steamers",
@@ -686,7 +678,7 @@
    "description": "A cow arrives with 2 months to calving.",
    "fieldname": "steamer_days_from_lactation",
    "fieldtype": "Int",
-   "label": "Dry Days \u00b7 arriving from Low Yield"
+   "label": "Dry Days · arriving from Low Yield"
   },
   {
    "fieldname": "sb_backdating",
@@ -715,7 +707,7 @@
   },
   {
    "depends_on": "eval:doc.custom_milk_quality_capture=='At milking'",
-   "description": "Refuse a milking recorded from the desk with no lab figures. The handset is never blocked \u2014 it flags the recording as awaiting quality instead.",
+   "description": "Refuse a milking recorded from the desk with no lab figures. The handset is never blocked — it flags the recording as awaiting quality instead.",
    "fieldname": "custom_quality_required_at_milking",
    "fieldtype": "Check",
    "label": "Quality Required At Milking"
@@ -736,11 +728,11 @@
    "description": "Above this a reading is called out on the Quality page. 0 turns the check off.",
    "fieldname": "custom_quality_scc_ceiling",
    "fieldtype": "Float",
-   "label": "Bulk Tank SCC Ceiling (\u00d7 1000)"
+   "label": "Bulk Tank SCC Ceiling (× 1000)"
   },
   {
    "default": "7",
-   "description": "Warn when a concentrate has fewer days of cover than this. 7 suits a farm that mixes weekly \u2014 below a week, the next mix cannot wait for the next mixing day. 0 turns the check off.",
+   "description": "Warn when a concentrate has fewer days of cover than this. 7 suits a farm that mixes weekly — below a week, the next mix cannot wait for the next mixing day. 0 turns the check off.",
    "fieldname": "custom_concentrate_cover_days",
    "fieldtype": "Float",
    "label": "Concentrate Cover Warning (days)"
@@ -772,14 +764,14 @@
    "fieldtype": "Int",
    "label": "Untouched For (days)",
    "default": "7",
-   "description": "An open case with no treatment recorded for this long is stale \u2014 nobody has written anything down, whatever is or is not happening in the shed. 0 turns the check off."
+   "description": "An open case with no treatment recorded for this long is stale — nobody has written anything down, whatever is or is not happening in the shed. 0 turns the check off."
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-07-01 05:39:04.260263",
+ "modified": "2026-10-05 15:00:00.000000",
  "modified_by": "Administrator",
  "module": "Upande Livestock",
  "name": "Livestock Settings",

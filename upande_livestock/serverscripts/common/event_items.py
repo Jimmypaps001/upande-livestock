@@ -82,8 +82,12 @@ def consumes_items(event_type):
 
 
 def _default_company():
+	# common.company.default_company: the setting, then the user's and the
+	# site's default. The raw setting alone left a site without it with none.
+	from upande_livestock.serverscripts.common.company import default_company
+
 	try:
-		return frappe.db.get_single_value(SETTINGS, "custom_default_company")
+		return default_company()
 	except Exception:
 		return None
 

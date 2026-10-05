@@ -82,7 +82,6 @@ TIMING_DEFAULTS = {
 	# set, and the values match the DocType's own defaults so a seeded site and
 	# a fresh install agree.
 	"bull_cull_max_days": 14,
-	"incalf_general_days": 180,
 	"heifer_dry_off_before_calving_days": 90,
 	"high_yield_days_from_conception": 120,
 	"low_yield_days": 60,
