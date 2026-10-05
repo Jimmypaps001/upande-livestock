@@ -104,21 +104,7 @@ Nothing else hangs off it; it is a controlled vocabulary for `Animal.breed`.
 A calf's breed can be set explicitly on the calving form and overrides the dam's,
 since a calf by a different sire is not necessarily its mother's breed.
 
-**Breeders** is likewise a single-field master, used for the breeder/sire
-vocabulary.
+**Breeders** is not livestock data: it holds the rose breeders (KORDES,
+DUMMEN, …) another app uses, and nothing here links to it.
 
 Only **Livestock Breeder** and **Livestock Manager** can create either.
-
-## Calf Rearing
-
-A per-calf rearing record — `CALF-YYYY-#####` — for farms tracking early
-nutrition against growth:
-
-- colostrum litres given, and whether within 6 hours
-- feeding type (whole milk / replacer / both) and the replacer item
-- daily milk litres
-- weaning date and weight
-- average vs target daily gain, and a growth status of On/Below/Above Target
-
-It is optional and stands apart from the event timeline. **Livestock Attendant**
-can read it; **Livestock Breeder** can create and submit.

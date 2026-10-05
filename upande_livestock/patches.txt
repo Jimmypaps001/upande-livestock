@@ -123,3 +123,9 @@ upande_livestock.patches.trim_health_fields
 
 # A Livestock Settings knob nothing read.
 upande_livestock.patches.drop_incalf_general_days
+
+# Nothing ever closed an alert; settles the backlog once, delivering nothing.
+upande_livestock.patches.settle_open_alerts
+
+# A doctype nothing used; the live site's five rows are test entries.
+upande_livestock.patches.retire_calf_rearing

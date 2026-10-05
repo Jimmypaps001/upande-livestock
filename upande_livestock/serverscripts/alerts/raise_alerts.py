@@ -198,6 +198,59 @@ def already_open(kind, animal, item=None):
 	})
 
 
+#: The kinds `collect()` decides. Its sweep is the whole truth about these, so
+#: an open one it no longer reports has stopped being true.
+SWEPT_KINDS = (
+	"Bull Cull Due", "Move Due", "Move Overdue", "Cow Open Too Long", "Calving Due",
+	"Concentrate Low", "Concentrate Out",
+)
+
+
+def alert_key(kind, animal=None, item=None):
+	"""What an alert is about — its kind and its animal, or its item for feed."""
+	return (kind, item or animal)
+
+
+def settle_open_alerts(kinds, current):
+	"""Bring the open alerts of `kinds` into line with what is due today.
+
+	`current` maps alert_key -> the alert as `collect()` would raise it now.
+	Nothing ever closed an alert: a cow that calved kept her "Calving Due", a
+	moved one her "Move Due", and a pregnancy alert outlived the diagnosis it
+	asked for — and because one open alert suppresses the next of its kind,
+	that cow was never alerted again. Each sweep now:
+
+	  * dismisses an open alert that is no longer due, saying so;
+	  * dismisses older copies of one that is (rows from before the
+	    one-open-per-kind rule);
+	  * refreshes the severity, message and detail of one that has moved on —
+	    a bull cull that went from Due to Overdue kept saying "approaching".
+	"""
+	seen = set()
+	for row in frappe.get_all(
+		"Livestock Alert",
+		filters={"status": "Open", "alert_kind": ["in", list(kinds)]},
+		fields=["name", "alert_kind", "animal", "item", "severity", "message"],
+		order_by="creation desc",
+	):
+		key = alert_key(row.alert_kind, row.animal, row.item)
+		now = current.get(key)
+		if now is None or key in seen:
+			frappe.db.set_value("Livestock Alert", row.name, {
+				"status": "Dismissed",
+				"action_notes": "Cleared automatically on {}: {}.".format(
+					today(), "no longer due" if now is None else "a newer copy is open"),
+			}, update_modified=False)
+			continue
+		seen.add(key)
+		if (now["severity"], now["message"]) != (row.severity, row.message):
+			frappe.db.set_value("Livestock Alert", row.name, {
+				"severity": now["severity"],
+				"message": now["message"],
+				"detail": frappe.as_json(now["detail"]),
+			}, update_modified=False)
+
+
 def raise_alerts():
 	"""Record today's alerts, then deliver whatever is still open.
 
@@ -207,7 +260,9 @@ def raise_alerts():
 	send. An alert repeated nightly is an alert people learn to skip.
 	"""
 	raised = skipped = 0
-	for a in collect():
+	alerts = collect()
+	settle_open_alerts(SWEPT_KINDS, {alert_key(a["kind"], a.get("animal"), a.get("item")): a for a in alerts})
+	for a in alerts:
 		if already_open(a["kind"], a.get("animal"), a.get("item")):
 			skipped += 1
 			continue
