@@ -811,7 +811,12 @@ def manufacture_herd_feed(
 		run_posting_time = _run_posting_time(runs_before)
 		_availability.assert_can_cover_on(bom.name, total_qty, posting_date, run_posting_time)
 	else:
-		_assert_can_cover(bom.item, bom.name, total_qty, frappe.parse_json(allow_shortage))
+		# Against the store the run will draw from: judged against the default
+		# store, a run from a near-empty pit passed here and died in ERPNext.
+		_assert_can_cover(
+			bom.item, bom.name, total_qty, frappe.parse_json(allow_shortage),
+			source_warehouse=source_warehouse,
+		)
 	employee = _operator_or_throw(employee)
 
 	res = _run_manufacture(

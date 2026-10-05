@@ -173,3 +173,37 @@ class TestManualFeed(IntegrationTestCase):
 			"the tuned BOM is machinery authorized by the Work Order/Stock "
 			"Entry guards, not by a BOM permission of its own",
 		)
+
+
+class TestCancellingAFeeding(IntegrationTestCase):
+	"""A cancelled Feeding used to leave its Material Issue posted: the store
+	stayed short of feed nobody gave, and the day still read as fed."""
+
+	setUp = TestManualFeed.setUp
+	tearDown = TestManualFeed.tearDown
+
+	def _feed(self):
+		res = manual_feed(
+			{"herd": self.herd, "lines": self.lines, "heads": 2, "employee": self.employee}
+		)
+		self.assertNotIn("error", res, res.get("error"))
+		return frappe.get_doc("Livestock Event", res["livestock_event"]), res["issue_stock_entry"]
+
+	def test_cancelling_the_feeding_puts_the_feed_back(self):
+		event, issue = self._feed()
+		event.cancel()
+		self.assertEqual(frappe.db.get_value("Stock Entry", issue, "docstatus"), 2)
+
+	def test_an_issue_shared_with_another_event_stays(self):
+		"""A batch issue is stamped on every event it covers; one cancellation
+		must not take back the others' stock."""
+		event, issue = self._feed()
+		frappe.get_doc({
+			"doctype": "Livestock Event",
+			"name": frappe.generate_hash(length=12),
+			"event_type": "Feeding",
+			"stock_entry": issue,
+			"docstatus": 1,
+		}).db_insert()
+		event.cancel()
+		self.assertEqual(frappe.db.get_value("Stock Entry", issue, "docstatus"), 1)
