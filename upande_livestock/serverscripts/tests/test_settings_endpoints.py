@@ -3,8 +3,8 @@
 
 """The two endpoints behind the Settings page.
 
-Livestock Settings is a Single with fifty editable scalars and three child
-tables. Until now nothing read it whole: the handset asked for one field at a
+Livestock Settings is a Single with fifty editable scalars and a handful of
+child tables. Until now nothing read it whole: the handset asked for one field at a
 time through `frappe.client.get_single_value`, which is fine for the two or
 three values a screen needs and absurd for a settings page.
 
@@ -29,6 +29,8 @@ from upande_livestock.serverscripts.settings.save_livestock_settings import save
 DOCTYPE = "Livestock Settings"
 LAYOUT = {"Tab Break", "Section Break", "Column Break"}
 TABLES = {"Table", "Table MultiSelect"}
+# Decoration with no stored value (e.g. the Stock tab's `stock_rules_note`).
+DISPLAY = {"HTML", "Heading", "Button", "Image"}
 
 
 def _scalar_fieldnames():
@@ -37,7 +39,7 @@ def _scalar_fieldnames():
 	return {
 		df.fieldname
 		for df in frappe.get_meta(DOCTYPE).fields
-		if df.fieldtype not in LAYOUT and df.fieldtype not in TABLES
+		if df.fieldtype not in LAYOUT and df.fieldtype not in TABLES and df.fieldtype not in DISPLAY
 	}
 
 
@@ -69,8 +71,6 @@ class TestLivestockSettingsEndpoints(IntegrationTestCase):
 			[
 				"bought_in_concentrates",
 				"custom_company_cost_centers",
-				"custom_drug_warehouses",
-				"custom_event_item_groups",
 				"feed_source_warehouses",
 				"growth_ladder",
 				"milking_herds",
@@ -79,6 +79,15 @@ class TestLivestockSettingsEndpoints(IntegrationTestCase):
 		for table in tables.values():
 			self.assertIn("rows", table)
 			self.assertTrue(table["columns"], f"{table['fieldname']} has no columns to show")
+
+	def test_the_stock_rules_note_is_display_only(self):
+		"""An HTML field holds no value: it is neither offered as a control nor
+		writable. The rules it points to live on each Livestock Event Type."""
+		from upande_livestock.serverscripts.settings._shared import editable_fieldnames
+
+		self.assertEqual(frappe.get_meta(DOCTYPE).get_field("stock_rules_note").fieldtype, "HTML")
+		self.assertNotIn("stock_rules_note", editable_fieldnames())
+		self.assertNotIn("stock_rules_note", livestock_settings()["values"])
 
 	def test_an_unknown_fieldname_is_refused(self):
 		"""A dict handed straight to set_value would write this. It must not."""
@@ -146,6 +155,6 @@ class TestLivestockSettingsEndpoints(IntegrationTestCase):
 	def test_a_link_that_names_nothing_is_refused(self):
 		"""These fields post stock and journal entries. A warehouse that does not
 		exist is not a typo the operator finds out about later."""
-		result = save_livestock_settings({"drug_warehouse": "No Such Warehouse - ZZ"})
+		result = save_livestock_settings({"custom_milk_target_warehouse": "No Such Warehouse - ZZ"})
 		self.assertIn("error", result)
 		self.assertIn("No Such Warehouse - ZZ", result["error"])

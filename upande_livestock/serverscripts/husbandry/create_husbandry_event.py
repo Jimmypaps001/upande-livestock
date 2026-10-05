@@ -8,6 +8,7 @@ from upande_livestock.serverscripts.common.envelope import as_dict, guard, run
 from upande_livestock.serverscripts.common.events import new_livestock_event
 from upande_livestock.serverscripts.common import backdate
 from upande_livestock.serverscripts.common import cost_center as livestock_cost_center
+from upande_livestock.serverscripts.common import event_items
 from upande_livestock.serverscripts.common import stock as livestock_stock
 from upande_livestock.serverscripts.husbandry._shared import HUSBANDRY_TYPES, _clean_drug_rows, _refuse_foreign_items, _husbandry_targets, _type_consumes_drugs
 
@@ -38,7 +39,7 @@ def create_husbandry_event(payload):
 
 		animals = _husbandry_targets(d)
 		consumes = _type_consumes_drugs(event_type)
-		default_wh = d.get("source_warehouse") or livestock_stock.drug_warehouse()
+		default_wh = d.get("source_warehouse") or event_items.default_store(event_type)
 		drugs = _clean_drug_rows(d.get("drugs"), default_wh) if consumes else []
 		_refuse_foreign_items(event_type, drugs)
 

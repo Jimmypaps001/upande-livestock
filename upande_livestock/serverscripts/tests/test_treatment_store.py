@@ -4,7 +4,9 @@
 `Livestock Health Treatment` carried neither, so every treatment on the live
 site issued from `drug_warehouse()` — `Livestock Drug Store - KR`, a warehouse
 with zero stocked bins. The picker offers 46 drugs and the issue then asks a
-shelf holding none of them.
+shelf holding none of them. A row that names no store now falls back to the
+Treatment event type's Default Store, and nothing is issued at all unless the
+Treatment event type is set to post stock.
 """
 
 import unittest
@@ -33,7 +35,7 @@ class TestTheTreatmentRowCarriesItsStore(unittest.TestCase):
 		self.assertEqual(row["batch_no"], "DAIR-2026-00277")
 
 	def test_a_row_that_names_no_store_leaves_it_blank(self):
-		"""Blank means "wherever the settings say" — the posting falls back."""
+		"""Blank means "the Treatment type's Default Store" — the posting falls back."""
 		row = treatment_row({"drug_item": "LSK-SEMEN-TEST", "qty": 1})
 		self.assertIsNone(row["source_warehouse"])
 		self.assertIsNone(row["batch_no"])
@@ -83,7 +85,7 @@ class Case:
 class TestTheIssueUsesTheRowsStore(unittest.TestCase):
 	"""The live breakage: every treatment came off one global store."""
 
-	def _rows_posted(self, treatment):
+	def _rows_posted(self, treatment, consumes=True):
 		captured = []
 
 		def fake_issue(rows, **kw):
@@ -92,7 +94,8 @@ class TestTheIssueUsesTheRowsStore(unittest.TestCase):
 
 		case = Case([treatment])
 		with patch.object(LHC.livestock_stock, "issue_items", side_effect=fake_issue), \
-		     patch.object(LHC.livestock_stock, "drug_warehouse",
+		     patch.object(LHC.event_items, "consumes_items", return_value=consumes), \
+		     patch.object(LHC.event_items, "default_store",
 		                  return_value="Livestock Drug Store - KR"), \
 		     patch.object(LHC.livestock_cost_center, "herd_of", return_value=None):
 			LHC.LivestockHealthCase.post_drug_issue(case)
@@ -107,13 +110,22 @@ class TestTheIssueUsesTheRowsStore(unittest.TestCase):
 		self.assertEqual(len(rows), 1)
 		self.assertEqual(rows[0]["warehouse"], "Drug/ Medicine store- old office - KR")
 
-	def test_a_row_with_no_store_still_falls_back(self):
+	def test_a_row_with_no_store_falls_back_to_the_types_default_store(self):
 		"""Treatments recorded before this change have no store and must post."""
 		rows = self._rows_posted(
 			Row(drug_item="LSK-SEMEN-TEST", qty=1, stock_entry_ref=None,
 			    treatment_date=None, batch_no=None, source_warehouse=None)
 		)
 		self.assertEqual(rows[0]["warehouse"], "Livestock Drug Store - KR")
+
+	def test_nothing_is_issued_when_treatment_does_not_post_stock(self):
+		rows = self._rows_posted(
+			Row(drug_item="LSK-SEMEN-TEST", qty=1, stock_entry_ref=None,
+			    treatment_date=None, batch_no=None,
+			    source_warehouse="Drug/ Medicine store- old office - KR"),
+			consumes=False,
+		)
+		self.assertEqual(rows, [])
 
 	def test_the_batch_travels_with_the_row(self):
 		rows = self._rows_posted(
@@ -155,7 +167,8 @@ class TestEachRoundPostsOnItsOwnDay(unittest.TestCase):
 		case = Case(treatments)
 		case.custom_is_backdated = backdated
 		with patch.object(LHC.livestock_stock, "issue_items", side_effect=fake_issue), \
-		     patch.object(LHC.livestock_stock, "drug_warehouse", return_value="STORE"), \
+		     patch.object(LHC.event_items, "consumes_items", return_value=True), \
+		     patch.object(LHC.event_items, "default_store", return_value="STORE"), \
 		     patch.object(LHC.livestock_cost_center, "herd_of", return_value=None):
 			LHC.LivestockHealthCase.post_drug_issue(case)
 		return calls

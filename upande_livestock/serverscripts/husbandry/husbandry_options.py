@@ -4,11 +4,20 @@ Read-guarded on Livestock Event."""
 
 import frappe
 
-from upande_livestock.serverscripts.common.choices import active_animals, animal_choices, herd_choices, herd_label_map
+from upande_livestock.serverscripts.common.choices import (
+	active_animals,
+	animal_choices,
+	herd_choices,
+	herd_label_map,
+)
 from upande_livestock.serverscripts.common.employee import current_employee
 from upande_livestock.serverscripts.common.envelope import guard_read, run
-from upande_livestock.serverscripts.common import stock as livestock_stock
-from upande_livestock.serverscripts.husbandry._shared import HUSBANDRY_TYPES, _type_consumes_drugs, husbandry_drug_items, husbandry_items_mapped
+from upande_livestock.serverscripts.husbandry._shared import (
+	HUSBANDRY_TYPES,
+	_type_consumes_drugs,
+	husbandry_drug_items,
+	husbandry_items_mapped,
+)
 
 
 @frappe.whitelist()
@@ -28,7 +37,6 @@ def husbandry_options():
 			"drug_items": husbandry_drug_items(),
 			# [] above is unmapped OR unstocked; this says which.
 			"drug_items_mapped": husbandry_items_mapped(),
-			"drug_warehouse": livestock_stock.drug_warehouse(),
 			"herds": herd_choices(),
 			"warehouses": [
 				w.name

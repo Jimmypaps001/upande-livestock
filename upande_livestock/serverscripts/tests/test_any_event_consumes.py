@@ -2,7 +2,8 @@
 
 `consumes_drugs` was a checkbox on a fixture, set on Check Up, Deworming,
 Drying Off and Vaccination. A Calving that uses lubricant, gloves and a calcium
-bolus had nowhere to record any of it.
+bolus had nowhere to record any of it. The box is gone; any event type whose
+rule (Posts Stock Entry + item groups) is set issues what it used.
 """
 
 import unittest
@@ -41,7 +42,7 @@ class Doc:
 		self.operator = None
 		self.semen_item = None
 
-	# The REAL method, so the gate's fallback is exercised, not stubbed.
+	# The REAL method, so the gate is exercised, not stubbed.
 	_type_consumes_drugs = LE.LivestockEvent._type_consumes_drugs
 
 	def get(self, key, default=None):
@@ -63,7 +64,7 @@ class TestAMappedEventIssuesItsItems(unittest.TestCase):
 		                           source_warehouse="General Store Karen - KR",
 		                           batch_no=None)])
 		with patch.object(LE.livestock_stock, "issue_items", side_effect=fake_issue), \
-		     patch.object(LE.livestock_stock, "drug_warehouse", return_value="Fallback - KR"), \
+		     patch.object(LE.event_items, "default_store", return_value="Fallback - KR"), \
 		     patch.object(LE.event_items, "groups_for_event",
 		                  return_value=["Drugs"] if consumes else []), \
 		     patch.object(LE.frappe.db, "get_value", return_value=0), \

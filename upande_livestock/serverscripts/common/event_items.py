@@ -29,37 +29,72 @@ not 20 anywhere, and an issue drawn on 20 fails at the shelf.
 import frappe
 from frappe.utils import flt
 
-SETTINGS = "Livestock Settings"
-TABLE = "custom_event_item_groups"
+
+
+EVENT_TYPE = "Livestock Event Type"
+GROUPS_TABLE = "Livestock Event Type Item Group"
+
+
+def _rules():
+	"""Each event type's stock rule, keyed by event type.
+
+	{type: {"posts": bool, "groups": [..], "default_store": str|None,
+	        "must_name_item": bool}}
+
+	The rule lives on the Livestock Event Type itself — Posts Stock Entry, its
+	Item Groups, a Default Store, Must Name an Item — edited there or on the
+	Settings screen's Stock tab. It replaced a Settings table of one row per
+	(event, group), which repeated the event for every group it drew on, and
+	the scattered drug/semen group and store settings beside it.
+
+	Read defensively: a site running this code before its migrate has none of
+	these columns, and an event form must not go down for it.
+	"""
+	try:
+		meta = frappe.get_meta(EVENT_TYPE)
+		if not meta.has_field("posts_stock_entry"):
+			return {}
+		rows = frappe.get_all(
+			EVENT_TYPE,
+			filters={"posts_stock_entry": 1},
+			fields=["name", "default_store", "must_name_item"],
+		)
+		groups = {}
+		for g in frappe.get_all(
+			GROUPS_TABLE,
+			filters={"parenttype": EVENT_TYPE, "parentfield": "stock_item_groups"},
+			fields=["parent", "item_group"],
+			order_by="idx asc",
+		):
+			groups.setdefault(g.parent, []).append(g.item_group)
+	except Exception:
+		return {}
+	return {
+		r.name: {
+			"posts": True,
+			"groups": list(dict.fromkeys(g for g in groups.get(r.name, []) if g)),
+			"default_store": r.default_store or None,
+			"must_name_item": bool(r.must_name_item),
+		}
+		for r in rows
+	}
 
 
 def _mapping_rows():
-	"""Every (event_type, item_group) row, in grid order.
+	"""Every (event_type, item_group) pair the rules allow.
 
-	Asked for by name rather than read off the Single: a site running this code
-	before its migrate has no such table, and reading it raises rather than
-	returning nothing. A deploy that lands before its migrate must fall back,
-	not take every event form down.
+	The shape the old Settings table had, kept so `groups_for_event` and every
+	test that pins the mapping read it the same way.
 	"""
-	try:
-		if not frappe.get_meta(SETTINGS).has_field(TABLE):
-			return []
-		return frappe.get_all(
-			"Livestock Event Item Group",
-			filters={"parenttype": SETTINGS, "parentfield": TABLE},
-			fields=["event_type", "item_group"],
-			order_by="idx asc",
-		)
-	except Exception:
-		return []
+	return [
+		{"event_type": t, "item_group": g}
+		for t, rule in _rules().items()
+		for g in rule["groups"]
+	]
 
 
 def groups_for_event(event_type):
-	"""The item groups this event type draws on, in grid order, deduplicated.
-
-	Two rows naming the same group is a typo, not a doubling — the union is
-	what the picker wants either way.
-	"""
+	"""The item groups this event type draws on, in order, deduplicated."""
 	if not event_type:
 		return []
 	out = []
@@ -73,22 +108,23 @@ def groups_for_event(event_type):
 
 
 def has_mapping():
-	"""Has this farm written its event-to-item-group mapping at all?
-
-	Once it has, the mapping is the whole answer to what an event consumes. A
-	site that has not (no rows, or no table before its migrate) still falls
-	back to the old per-type flag, so its drug-consuming events keep issuing.
-	"""
+	"""Has any event type been set to post stock?"""
 	return bool(_mapping_rows())
 
 
 def consumes_items(event_type):
-	"""Whether this event type consumes anything at all.
-
-	Replaces the `consumes_drugs` checkbox: what an event may consume stopped
-	being a flag a developer sets and became a list the farm writes.
-	"""
+	"""Whether this event type posts stock: ticked, and drawing on some group."""
 	return bool(groups_for_event(event_type))
+
+
+def default_store(event_type):
+	"""The store this event type issues from when a line names none."""
+	return (_rules().get(event_type) or {}).get("default_store")
+
+
+def must_name_item(event_type):
+	"""Whether an event of this type must say what it used."""
+	return bool((_rules().get(event_type) or {}).get("must_name_item"))
 
 
 def _default_company():
@@ -164,11 +200,15 @@ def items_for_event(event_type, company=None):
 		)
 		entry["locations"].append({"warehouse": r["warehouse"], "qty": flt(r["qty"])})
 
+	preferred = default_store(event_type)
 	out = []
 	for item_code, entry in held.items():
-		# Most-stocked first, so `locations[0]` is the store to go to and a short
-		# line has somewhere obvious to try next.
-		entry["locations"].sort(key=lambda loc: (-loc["qty"], loc["warehouse"]))
+		# The event type's default store first when it holds the item, then the
+		# most-stocked, so `locations[0]` is the store to go to and a short line
+		# has somewhere obvious to try next.
+		entry["locations"].sort(
+			key=lambda loc: (loc["warehouse"] != preferred, -loc["qty"], loc["warehouse"])
+		)
 		best = entry["locations"][0]
 		out.append(
 			{

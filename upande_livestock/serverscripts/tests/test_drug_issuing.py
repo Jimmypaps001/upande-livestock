@@ -16,8 +16,10 @@ gram of stock. Five things caused that, and each has a test here:
   * dosing had no notion of a herd, so a whole-herd round had to be entered one
     cow at a time or not at all.
 
-Read-only where it can be. The tests that post stock skip when the drug store
-has nothing to draw on, because an unseeded site is a missing fixture rather
+The "drug store" is the Deworming event type's Default Store and its drugs are
+the groups that type's stock rule draws on (Livestock Event Type, Settings →
+Stock). Read-only where it can be. The tests that post stock skip when that
+store has nothing to draw on, because an unseeded site is a missing fixture rather
 than a broken feature:
 
     bench --site <site> execute upande_livestock.demo.seed_test_stock.run
@@ -27,7 +29,6 @@ import unittest
 
 import frappe
 from upande_livestock.serverscripts.common.choices import RETIRED_STATUSES
-from upande_livestock.serverscripts.common.stock_items import stock_items
 from upande_livestock.serverscripts.husbandry._shared import (
 	_animals_in_herd,
 	_husbandry_targets,
@@ -37,12 +38,17 @@ from upande_livestock.serverscripts.husbandry.create_husbandry_event import crea
 from frappe.tests import IntegrationTestCase
 from frappe.utils import flt, today
 
+from upande_livestock.serverscripts.common import event_items
 from upande_livestock.serverscripts.common import stock as livestock_stock
 from upande_livestock.serverscripts.tests.test_operations import _make_cow, _purge, _purge_events_for
 
 
+#: The type these tests dose with; its stock rule names the store and groups.
+DOSING_TYPE = "Deworming"
+
+
 def _drug_store():
-	return livestock_stock.drug_warehouse()
+	return event_items.default_store(DOSING_TYPE)
 
 
 def _stocked_drug(min_qty=1):
@@ -52,7 +58,8 @@ def _stocked_drug(min_qty=1):
 	it can dose rather than skipping.
 	"""
 	warehouse = _drug_store()
-	if not warehouse:
+	groups = event_items.groups_for_event(DOSING_TYPE)
+	if not warehouse or not groups:
 		return None
 	rows = frappe.get_all(
 		"Bin",
@@ -62,7 +69,7 @@ def _stocked_drug(min_qty=1):
 		limit=50,
 	)
 	for r in rows:
-		if frappe.db.get_value("Item", r.item_code, "item_group") == "DRUGS":
+		if frappe.db.get_value("Item", r.item_code, "item_group") in groups:
 			return r
 	return None
 
@@ -116,23 +123,23 @@ class TestAvailabilityCheck(IntegrationTestCase):
 
 
 class TestStoreScopedPicker(IntegrationTestCase):
-	def test_the_picker_reports_the_chosen_store_not_the_farm(self):
-		"""Summing every warehouse offered drugs the drug store did not have."""
-		warehouse = _drug_store()
-		if not warehouse:
-			raise unittest.SkipTest("no drug store configured")
-		scoped = stock_items("drug", warehouse)
-		if not scoped:
+	def test_each_store_the_picker_names_holds_what_it_says(self):
+		"""Summing every warehouse offered drugs the drug store did not have; each
+		location now reports that one store's own balance."""
+		offered = event_items.items_for_event(DOSING_TYPE)
+		if not offered:
 			raise unittest.SkipTest("no drug stock on this site")
-		for row in scoped:
-			self.assertAlmostEqual(
-				row["qty"],
-				flt(frappe.db.get_value("Bin", {"item_code": row["value"], "warehouse": warehouse}, "actual_qty")),
-				places=4,
-			)
+		for row in offered[:25]:
+			for loc in row["locations"]:
+				self.assertAlmostEqual(
+					loc["qty"],
+					flt(frappe.db.get_value("Bin", {"item_code": row["value"], "warehouse": loc["warehouse"]}, "actual_qty")),
+					places=4,
+				)
+			self.assertEqual(row["qty"], row["locations"][0]["qty"])
 
-	def test_an_empty_store_offers_nothing(self):
-		self.assertEqual(stock_items("drug", "__no_such_warehouse__"), [])
+	def test_a_company_with_no_stores_offers_nothing(self):
+		self.assertEqual(event_items.items_for_event(DOSING_TYPE, company="__no_such_company__"), [])
 
 
 class TestHerdTargeting(IntegrationTestCase):
@@ -264,16 +271,16 @@ class TestPerAnimalDosing(IntegrationTestCase):
 		self.assertEqual(frappe.db.count("Livestock Event", {"event_type": "Deworming"}), before)
 
 
-class TestConsumesDrugsFlag(IntegrationTestCase):
-	def test_the_flag_drives_which_types_issue(self):
-		"""Read off Livestock Event Type, not a tuple in code, so the farm can flag
-		dry-cow therapy or calcium at calving without a deploy."""
+class TestTheEventTypeRuleDecides(IntegrationTestCase):
+	def test_the_rule_drives_which_types_issue(self):
+		"""Read off each Livestock Event Type's stock rule, not a tuple in code, so
+		the farm can tick dry-cow therapy or calcium at calving without a deploy."""
 		for name in ("Vaccination", "Deworming"):
-			if frappe.db.exists("Livestock Event Type", name):
+			if event_items.groups_for_event(name):
 				self.assertTrue(_type_consumes_drugs(name))
 		for name in ("Movement", "Weight Recording"):
-			if frappe.db.exists("Livestock Event Type", name):
+			if frappe.db.exists("Livestock Event Type", name) and not event_items.groups_for_event(name):
 				self.assertFalse(_type_consumes_drugs(name))
 
-	def test_an_unknown_type_falls_back_to_the_old_tuple(self):
+	def test_an_unknown_type_consumes_nothing(self):
 		self.assertFalse(_type_consumes_drugs("__no_such_type__"))

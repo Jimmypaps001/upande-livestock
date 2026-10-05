@@ -4,13 +4,17 @@ Read-guarded on Animal."""
 
 import frappe
 
-from upande_livestock.serverscripts.common.choices import active_animals, animal_choices, herd_label_map, select_options
+from upande_livestock.serverscripts.common import herd_movement
+from upande_livestock.serverscripts.common import stock as livestock_stock
+from upande_livestock.serverscripts.common.choices import (
+	active_animals,
+	animal_choices,
+	herd_label_map,
+	select_options,
+)
 from upande_livestock.serverscripts.common.employee import current_employee
 from upande_livestock.serverscripts.common.envelope import guard_read, run
 from upande_livestock.serverscripts.common.event_items import consumes_items, items_for_event
-from upande_livestock.serverscripts.common.stock_items import stock_items
-from upande_livestock.serverscripts.common import stock as livestock_stock
-from upande_livestock.serverscripts.common import herd_movement
 
 
 @frappe.whitelist()
@@ -57,15 +61,11 @@ def breeding_options():
 			"diagnosis_results": select_options("Livestock Event", "diagnosis_result")
 			or ["Confirmed", "Not Pregnant", "Aborted"],
 			"sires": sires,
-			# Every configured store, NOT `semen_warehouse()`. Pinning the
-			# lookup to that one setting is what emptied this picker on live:
-			# it names `Livestock Drug Store - KR`, a warehouse with zero
-			# stocked bins, while the 361 straws sit in Drug/Medicine Store -
-			# Old Office and Westwood Dairy Store. The drug picker was emptied
-			# by the same line and fixed the same way; semen was left behind.
-			# Each choice carries its own `warehouse` and `locations`, so the
-			# form can offer the store alongside the straw.
-			"semen_items": stock_items("semen"),
+			# Service's own rule (Settings → Stock): its item groups, searched in
+			# every store of the company, its Default Store first. Each choice
+			# carries its `warehouse` and `locations`, so the form offers the
+			# store alongside the straw.
+			"semen_items": items_for_event("Service"),
 			"default_semen_item": livestock_stock.default_semen_item(),
 			# What each of this screen's event types may use, by type. One
 			# endpoint serves several screens, so a bare list could not say whose.

@@ -4,10 +4,12 @@ Service had three bespoke fields and its own branch in `post_stock_issue`. They
 carried exactly what the general table carries — item, quantity, store — plus a
 batch they never had.
 
-WHICH PATH A SITE TAKES IS THE MAPPING'S ANSWER, not a release's. Service uses
-the general table when it has a mapped item group, and the legacy straw fields
-when it has none. Live has no straws-only group yet, so Service there keeps the
-straw picker exactly as it works today.
+WHETHER A SERVICE POSTS IS ITS EVENT TYPE'S RULE, like every other type. A
+ticked Service (Posts Stock Entry, with a straws group) issues its table rows,
+a line with no store coming off the type's Default Store. An unticked Service
+still stores what the creator wrote on the legacy straw fields — a calf's
+record reads its sire there — but posts nothing: the separate legacy straw
+issue is gone.
 """
 
 import unittest
@@ -22,7 +24,7 @@ from upande_livestock.upande_livestock.doctype.livestock_event import (
 
 
 class TestWhichPathAServiceTakes(unittest.TestCase):
-	def _rows_posted(self, *, mapped, legacy_item=None, table_rows=None, drugs_flag=False):
+	def _rows_posted(self, *, mapped, legacy_item=None, table_rows=None):
 		captured = []
 
 		def fake_issue(rows, **kw):
@@ -33,17 +35,15 @@ class TestWhichPathAServiceTakes(unittest.TestCase):
 		doc.semen_item = legacy_item
 		doc.semen_qty = 2
 		doc.semen_warehouse = "Legacy Store - KR"
-		doc._type_consumes_drugs = lambda: drugs_flag
 		with patch.object(LE.livestock_stock, "issue_items", side_effect=fake_issue), \
-		     patch.object(LE.livestock_stock, "drug_warehouse", return_value="Fallback - KR"), \
-		     patch.object(LE.livestock_stock, "semen_warehouse", return_value="Legacy Store - KR"), \
-		     patch.object(LE.livestock_stock, "default_semen_item", return_value=None), \
+		     patch.object(LE.event_items, "default_store", return_value="Default Store - KR"), \
+		     patch.object(LE.livestock_stock, "default_semen_item", return_value="DEFAULT-STRAW"), \
 		     patch.object(LE.event_items, "consumes_items", return_value=mapped), \
 		     patch.object(LE.backdate, "suppresses_stock", return_value=False):
 			LE.LivestockEvent.post_stock_issue(doc)
 		return captured
 
-	def test_a_mapped_site_issues_through_the_table(self):
+	def test_a_ticked_service_issues_through_the_table(self):
 		rows = self._rows_posted(
 			mapped=True,
 			legacy_item="LEGACY-STRAW",
@@ -56,26 +56,24 @@ class TestWhichPathAServiceTakes(unittest.TestCase):
 		self.assertEqual(rows[0]["qty"], 3)
 		self.assertEqual(rows[0]["warehouse"], "Drug/Medicine Store - Old Office - KR")
 
-	def test_a_mapped_service_with_no_item_rows_issues_nothing_not_the_legacy_straw(self):
-		"""Mapped but nothing ticked: the table is empty, and the straw fields
-		must not quietly step in."""
+	def test_a_ticked_service_line_with_no_store_uses_the_default_store(self):
+		rows = self._rows_posted(
+			mapped=True,
+			table_rows=[Row(item_code="SEMEN-A", qty=1, uom="Nos", source_warehouse=None, batch_no=None)],
+		)
+		self.assertEqual([r["warehouse"] for r in rows], ["Default Store - KR"])
+
+	def test_a_ticked_service_with_no_item_rows_issues_nothing_not_the_legacy_straw(self):
+		"""Ticked but no line: the table is empty, and the straw fields must not
+		quietly step in."""
 		rows = self._rows_posted(mapped=True, legacy_item="LEGACY-STRAW", table_rows=[])
 		self.assertEqual(rows, [])
 
-	def test_an_unmapped_service_with_the_drugs_flag_still_issues_its_straw(self):
-		"""The consumes_drugs checkbox must not send an unmapped Service down the
-		general branch, where it has no rows and silently issues nothing."""
-		rows = self._rows_posted(mapped=False, legacy_item="LSK-SEMEN-TEST", drugs_flag=True)
-		self.assertEqual(len(rows), 1)
-		self.assertEqual(rows[0]["item_code"], "LSK-SEMEN-TEST")
-
-	def test_an_unmapped_site_still_issues_the_legacy_straw(self):
-		"""Live has no straws-only group yet and must keep working."""
-		rows = self._rows_posted(mapped=False, legacy_item="LSK-SEMEN-TEST")
-		self.assertEqual(len(rows), 1)
-		self.assertEqual(rows[0]["item_code"], "LSK-SEMEN-TEST")
-		self.assertEqual(rows[0]["qty"], 2)
-		self.assertEqual(rows[0]["warehouse"], "Legacy Store - KR")
+	def test_an_unticked_service_issues_nothing_even_with_a_legacy_straw(self):
+		"""The legacy straw path is gone: not ticked, nothing leaves the store —
+		not the straw on the event, nor the Settings' default straw."""
+		self.assertEqual(self._rows_posted(mapped=False, legacy_item="LSK-SEMEN-TEST"), [])
+		self.assertEqual(self._rows_posted(mapped=False), [])
 
 
 class FakeEvent:

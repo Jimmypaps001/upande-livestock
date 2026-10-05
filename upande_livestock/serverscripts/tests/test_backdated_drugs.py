@@ -2,7 +2,7 @@ import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import add_days, add_months, flt, today
 
-from upande_livestock.serverscripts.common import stock as livestock_stock
+from upande_livestock.serverscripts.common import event_items
 from upande_livestock.serverscripts.husbandry.create_husbandry_event import create_husbandry_event
 
 
@@ -18,11 +18,13 @@ class TestBackdatedDrugs(IntegrationTestCase):
 	def setUp(self):
 		self.addCleanup(_set_window, 0)
 		_set_window(1)
-		self.warehouse = livestock_stock.drug_warehouse()
-		row = frappe.db.sql(
-			"""SELECT item_code FROM `tabBin`
-			   WHERE warehouse = %s AND actual_qty > 10 LIMIT 1""",
-			(self.warehouse,),
+		# The Deworming type's default store, and an item in a group it draws on.
+		self.warehouse = event_items.default_store("Deworming")
+		groups = event_items.groups_for_event("Deworming")
+		row = self.warehouse and groups and frappe.db.sql(
+			"""SELECT b.item_code FROM `tabBin` b JOIN `tabItem` i ON i.name = b.item_code
+			   WHERE b.warehouse = %s AND b.actual_qty > 10 AND i.item_group IN %s LIMIT 1""",
+			(self.warehouse, groups),
 			as_dict=True,
 		)
 		if not row:

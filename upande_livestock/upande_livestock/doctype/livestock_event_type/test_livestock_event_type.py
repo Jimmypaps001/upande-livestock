@@ -6,6 +6,10 @@ from frappe.tests import IntegrationTestCase
 
 from upande_livestock.install import SEED_EVENT_TYPES, ensure_livestock_event_types
 
+# default_store links a Warehouse, whose ERPNext test records walk into a
+# Department fixture this site does not have; the item group row likewise.
+IGNORE_TEST_RECORD_DEPENDENCIES = ["Warehouse", "Item Group", "Livestock Event Type Item Group"]
+
 
 class TestLivestockEventType(IntegrationTestCase):
 	@staticmethod

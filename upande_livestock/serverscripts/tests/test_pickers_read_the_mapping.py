@@ -4,6 +4,9 @@ The drug picker searched `drug_source_warehouses()` â€” a list somebody typed â€
 and on live that list was empty while `drug_warehouse` named a store with zero
 stocked bins, so it returned 0 drugs on three screens while 74 stocked drug
 bins sat elsewhere. The item already knows where it is.
+
+`stock_items` (the two-kind lookup) and the `consumes_drugs` box are gone too:
+whether a type consumes is its Livestock Event Type rule alone.
 """
 
 import inspect
@@ -53,14 +56,21 @@ class TestWhetherATypeConsumes(unittest.TestCase):
 
 
 EI = "upande_livestock.serverscripts.common.event_items.items_for_event"
-OLD = "upande_livestock.serverscripts.common.stock_items.stock_items"
+
+
+class TestTheOldLookupIsGone(unittest.TestCase):
+	def test_stock_items_module_no_longer_exists(self):
+		import importlib
+
+		with self.assertRaises(ImportError):
+			importlib.import_module("upande_livestock.serverscripts.common.stock_items")
 
 
 class TestTheEndpointsReallyCallTheMapping(unittest.TestCase):
 	def _call(self, fn):
-		with unittest.mock.patch(EI, return_value=[]) as new, unittest.mock.patch(OLD, return_value=[]) as old:
+		with unittest.mock.patch(EI, return_value=[]) as new:
 			fn()
-		return new, old
+		return new
 
 	def test_open_health_cases_asks_for_treatment(self):
 		from upande_livestock.serverscripts.health.open_health_cases import open_health_cases
@@ -68,19 +78,17 @@ class TestTheEndpointsReallyCallTheMapping(unittest.TestCase):
 		# The endpoint binds the name at import, so patch it where it is used.
 		with unittest.mock.patch(
 			"upande_livestock.serverscripts.health.open_health_cases.items_for_event", return_value=[]
-		) as new, unittest.mock.patch(OLD, return_value=[]) as old:
+		) as new:
 			open_health_cases()
 		new.assert_any_call("Treatment")
-		old.assert_not_called()
 
 	def test_husbandry_options_and_drugs_in_store_ask_the_mapping(self):
 		from upande_livestock.serverscripts.husbandry.drugs_in_store import drugs_in_store
 		from upande_livestock.serverscripts.husbandry.husbandry_options import husbandry_options
 
 		for fn in (husbandry_options, drugs_in_store):
-			new, old = self._call(fn)
+			new = self._call(fn)
 			self.assertTrue(new.called, fn.__name__)
-			old.assert_not_called()
 
 	def test_drug_consuming_types_follow_the_mapping(self):
 		from upande_livestock.serverscripts.husbandry import husbandry_options as ho
@@ -126,12 +134,12 @@ class TestForeignItemsAreRefused(unittest.TestCase):
 			_shared._refuse_foreign_items("Vaccination", [{"item_code": "FMD"}])
 
 
-class TestAWrittenMappingIsTheWholeAnswer(unittest.TestCase):
+class TestTheRuleIsTheWholeAnswer(unittest.TestCase):
 	"""A type taken out of the mapping kept consuming drugs while its old
-	`consumes_drugs` box was ticked: the box answered per type, even on a farm
-	that had written its mapping. It now answers only where there is none."""
+	`consumes_drugs` box was ticked. The box is gone: a type consumes exactly
+	when its event type rule draws on some group, whatever else the site says."""
 
-	def _consumes(self, mapped_groups, mapping_exists, box):
+	def _consumes(self, mapped_groups, mapping_exists):
 		from upande_livestock.serverscripts.husbandry import _shared
 
 		with unittest.mock.patch(
@@ -140,11 +148,17 @@ class TestAWrittenMappingIsTheWholeAnswer(unittest.TestCase):
 		), unittest.mock.patch(
 			"upande_livestock.serverscripts.common.event_items.has_mapping",
 			return_value=mapping_exists,
-		), unittest.mock.patch("frappe.db.get_value", return_value=box):
-			return _shared._type_consumes_drugs("Drying Off")
+		), unittest.mock.patch("frappe.db.get_value", return_value=1) as gv:
+			out = _shared._type_consumes_drugs("Drying Off")
+		gv.assert_not_called()  # no per-type box is consulted
+		return out
 
-	def test_a_type_left_out_of_a_written_mapping_consumes_nothing(self):
-		self.assertFalse(self._consumes([], True, 1))
+	def test_a_type_with_no_groups_consumes_nothing(self):
+		self.assertFalse(self._consumes([], True))
 
-	def test_a_site_with_no_mapping_still_follows_the_box(self):
-		self.assertTrue(self._consumes([], False, 1))
+	def test_a_site_with_no_rules_at_all_consumes_nothing(self):
+		"""No fallback any more: DRUG_CONSUMING_TYPES and the box are gone."""
+		self.assertFalse(self._consumes([], False))
+
+	def test_a_type_with_groups_consumes(self):
+		self.assertTrue(self._consumes(["DRUGS"], True))

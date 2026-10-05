@@ -1,9 +1,8 @@
 """The husbandry vocabulary, shared by this package's four endpoints.
 
-Which routine event types exist, which of them draw drugs from the store, and
-how a whole-herd event fans out to its animals. Kept together because they are
-one vocabulary: a type added to HUSBANDRY_TYPES without a matching decision in
-DRUG_CONSUMING_TYPES is the bug this grouping makes obvious.
+Which routine event types exist, and how a whole-herd event fans out to its
+animals. Which of them draw from the store is each event type's own rule
+(Settings → Stock), not a list here.
 """
 
 import frappe
@@ -19,30 +18,13 @@ from upande_livestock.serverscripts.common.choices import (
 HUSBANDRY_TYPES = ("Vaccination", "Deworming", "Dehorning", "Hoof Trimming")
 
 
-DRUG_CONSUMING_TYPES = ("Vaccination", "Deworming")
-
 
 def _type_consumes_drugs(event_type):
-	"""Whether this event type consumes anything, per the farm's mapping.
-
-	It used to read a `consumes_drugs` checkbox on Livestock Event Type, so the
-	farm could flag a new drug-consuming type without a deploy. What an event may
-	consume is a list the farm writes now; the mapping is asked first. The
-	checkbox stays as the fallback for a site running this code before its
-	migrate, and DRUG_CONSUMING_TYPES for a site whose event types predate the
-	flag.
-	"""
+	"""Whether this event type posts stock, per its Livestock Event Type rule
+	(Settings → Stock). See common.event_items."""
 	from upande_livestock.serverscripts.common import event_items
 
-	if event_items.groups_for_event(event_type):
-		return True
-	# The mapping, once written, is the whole answer; see event_items.has_mapping.
-	if event_items.has_mapping():
-		return False
-	flagged = frappe.db.get_value("Livestock Event Type", event_type, "consumes_drugs")
-	if flagged is None:
-		return event_type in DRUG_CONSUMING_TYPES
-	return bool(flagged)
+	return event_items.consumes_items(event_type)
 
 
 def husbandry_drug_items():

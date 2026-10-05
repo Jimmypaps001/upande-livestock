@@ -5,8 +5,10 @@ item group through a constant in the source. A Calving that uses gloves,
 lubricant, a bolus and an antiseptic had nowhere to say so, and the farm could
 not add one without a deploy.
 
-The mapping is unbounded in both directions: an event type may have no rows,
-one, four or seven, and rows are added and removed freely.
+The list is unbounded: an event type may draw on no groups, one, four or seven.
+It lives on the Livestock Event Type itself (Posts Stock Entry, Item Groups,
+Default Store, Must Name an Item) — it replaced a Settings table of one row per
+(event, group). `_mapping_rows` still hands callers the (event, group) pairs.
 """
 
 import unittest
@@ -14,32 +16,35 @@ import unittest
 import frappe
 
 
-class TestTheMappingExists(unittest.TestCase):
-	def test_livestock_settings_carries_the_table(self):
-		meta = frappe.get_meta("Livestock Settings")
-		field = meta.get_field("custom_event_item_groups")
-		self.assertTrue(field, "the farm has nowhere to map groups to an event")
-		self.assertEqual(field.fieldtype, "Table")
-		self.assertEqual(field.options, "Livestock Event Item Group")
+class TestTheRuleLivesOnTheEventType(unittest.TestCase):
+	def test_the_event_type_carries_the_rule_fields(self):
+		meta = frappe.get_meta("Livestock Event Type")
+		expected = {
+			"posts_stock_entry": ("Check", None),
+			"stock_item_groups": ("Table MultiSelect", "Livestock Event Type Item Group"),
+			"default_store": ("Link", "Warehouse"),
+			"must_name_item": ("Check", None),
+		}
+		for fieldname, (fieldtype, options) in expected.items():
+			field = meta.get_field(fieldname)
+			self.assertTrue(field, f"Livestock Event Type has no {fieldname}")
+			self.assertEqual(field.fieldtype, fieldtype, fieldname)
+			if options:
+				self.assertEqual(field.options, options, fieldname)
 
-	def test_a_row_names_an_event_type_and_an_item_group(self):
-		meta = frappe.get_meta("Livestock Event Item Group")
+	def test_a_group_row_names_an_item_group(self):
+		meta = frappe.get_meta("Livestock Event Type Item Group")
 		self.assertTrue(meta.istable)
-		event = meta.get_field("event_type")
 		group = meta.get_field("item_group")
-		self.assertEqual((event.fieldtype, event.options), ("Link", "Livestock Event Type"))
 		self.assertEqual((group.fieldtype, group.options), ("Link", "Item Group"))
-		self.assertTrue(event.reqd and group.reqd, "half a mapping maps nothing")
 
-	def test_the_settings_page_offers_it_as_an_editable_list(self):
-		"""The generic settings editor renders every Table field; this checks the
-		page actually gets it, not merely that the DocType has it."""
-		from upande_livestock.serverscripts.settings.livestock_settings import (
-			livestock_settings,
-		)
-
-		tables = {t["fieldname"] for t in livestock_settings()["tables"]}
-		self.assertIn("custom_event_item_groups", tables)
+	def test_the_settings_no_longer_carry_the_old_table(self):
+		"""One source of truth: the Settings table it replaced is gone."""
+		meta = frappe.get_meta("Livestock Settings")
+		for gone in ("custom_event_item_groups", "custom_drug_item_group",
+		             "custom_semen_item_group", "custom_drug_warehouses",
+		             "drug_warehouse", "semen_warehouse"):
+			self.assertFalse(meta.has_field(gone), gone)
 
 
 from unittest.mock import patch
@@ -169,40 +174,48 @@ class TestWhereTheItemsComeFrom(unittest.TestCase):
 class TestMappingFallsBackBeforeMigrate(unittest.TestCase):
 	"""A deploy that lands before its migrate must not take event forms down."""
 
-	def test_a_settings_meta_without_the_table_gives_nothing(self):
+	def test_an_event_type_meta_without_the_rule_gives_nothing(self):
 		meta = type("M", (), {"has_field": lambda self, f: False})()
 		with patch.object(frappe, "get_meta", return_value=meta), \
 		     patch.object(frappe, "get_all") as ga:
+			self.assertEqual(EI._rules(), {})
 			self.assertEqual(EI._mapping_rows(), [])
 			ga.assert_not_called()
 
 	def test_a_failing_query_gives_nothing(self):
 		with patch.object(frappe, "get_all", side_effect=Exception("no table")):
+			self.assertEqual(EI._rules(), {})
 			self.assertEqual(EI._mapping_rows(), [])
 
-	def test_the_real_query_runs_with_the_right_filters(self):
-		if not frappe.get_meta("Livestock Settings").has_field("custom_event_item_groups"):
-			self.skipTest("this site has not migrated the mapping table yet")
-		outcome = {}
+	def test_the_real_queries_run_with_the_right_filters(self):
+		outcome = {"errors": []}
 		original = frappe.get_all
 
 		def real_get_all(*args, **kwargs):
-			# _mapping_rows swallows errors, so record whether the real call worked.
+			# _rules swallows errors, so record whether the real calls worked.
 			try:
-				outcome["rows"] = original(*args, **kwargs)
+				return original(*args, **kwargs)
 			except Exception as e:
-				outcome["error"] = e
+				outcome["errors"].append(e)
 				raise
-			return outcome["rows"]
 
 		with patch.object(frappe, "get_all", side_effect=real_get_all) as ga:
-			EI._mapping_rows()
-		ga.assert_called_once()
-		self.assertNotIn("error", outcome)
-		self.assertIsInstance(outcome["rows"], list)
-		kwargs = ga.call_args.kwargs
-		self.assertEqual(kwargs["filters"], {"parenttype": "Livestock Settings", "parentfield": "custom_event_item_groups"})
-		self.assertEqual(kwargs["order_by"], "idx asc")
+			rules = EI._rules()
+		self.assertEqual(outcome["errors"], [])
+		self.assertIsInstance(rules, dict)
+		# Only the two rule queries (get_meta may itself call get_all on a cold cache).
+		ours = [c for c in ga.call_args_list
+		        if c.args and c.args[0] in ("Livestock Event Type", "Livestock Event Type Item Group")]
+		self.assertEqual(len(ours), 2)
+		types_call, groups_call = ours
+		self.assertEqual(types_call.args[0], "Livestock Event Type")
+		self.assertEqual(types_call.kwargs["filters"], {"posts_stock_entry": 1})
+		self.assertEqual(groups_call.args[0], "Livestock Event Type Item Group")
+		self.assertEqual(
+			groups_call.kwargs["filters"],
+			{"parenttype": "Livestock Event Type", "parentfield": "stock_item_groups"},
+		)
+		self.assertEqual(groups_call.kwargs["order_by"], "idx asc")
 
 
 def _companies_with_leaf_warehouses():

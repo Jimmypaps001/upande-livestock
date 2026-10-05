@@ -128,8 +128,8 @@ export function Husbandry() {
       event_date: when,
       operator: who.value,
       remarks: remarks.trim() || undefined,
-      // Still sent, as the fallback for a drug the picker could not place.
-      source_warehouse: options?.drug_warehouse || undefined,
+      // A line the picker could not place falls back, on the server, to the
+      // event type's Default Store (Settings → Stock).
       // Each line is drawn from the store the operator saw it in (the one
       // holding the most unless they moved it). One warehouse for the whole
       // round meant issuing off a shelf the picker never claimed it was on.

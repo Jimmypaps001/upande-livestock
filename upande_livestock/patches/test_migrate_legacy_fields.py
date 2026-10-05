@@ -122,9 +122,16 @@ class TestTheLegacyWeightRowsAndSettingsAreCarriedAcross(IntegrationTestCase):
 			           %s, %s, 'weight_history', 'Animal', 'AE-OLD-1')""",
 			(self.row, add_days(today(), -15), self.animal),
 		)
-		self.drug_store = frappe.db.get_single_value("Livestock Settings", "drug_warehouse")
+		# `drug_warehouse` is no longer a field of the doctype (the stock rules
+		# moved onto Livestock Event Type), but this patch still copies the
+		# legacy value into its tabSingles row, which stock_rules_onto_event_types
+		# then reads. So it is read and restored as a raw tabSingles row.
+		self.drug_store_rows = frappe.db.sql(
+			"""SELECT `value` FROM `tabSingles`
+			   WHERE doctype = 'Livestock Settings' AND field = 'drug_warehouse'"""
+		)
 		self.addCleanup(self._restore_settings)
-		frappe.db.set_single_value("Livestock Settings", "drug_warehouse", None)
+		frappe.db.delete("Singles", {"doctype": "Livestock Settings", "field": "drug_warehouse"})
 		frappe.db.sql("""INSERT INTO `tabSingles` (doctype, field, value)
 		                 VALUES ('Livestock Settings', 'custom_drug_warehouse', 'Legacy Drug Store - KR')""")
 		frappe.db.commit()
@@ -136,9 +143,13 @@ class TestTheLegacyWeightRowsAndSettingsAreCarriedAcross(IntegrationTestCase):
 		frappe.db.commit()
 
 	def _restore_settings(self):
-		frappe.db.delete("Singles", {"doctype": "Livestock Settings", "field": "custom_drug_warehouse"})
-		frappe.db.set_single_value("Livestock Settings", "drug_warehouse", self.drug_store)
+		frappe.db.delete("Singles", {"doctype": "Livestock Settings",
+		                             "field": ("in", ("custom_drug_warehouse", "drug_warehouse"))})
+		for (value,) in self.drug_store_rows:
+			frappe.db.sql("""INSERT INTO `tabSingles` (doctype, field, value)
+			                 VALUES ('Livestock Settings', 'drug_warehouse', %s)""", (value,))
 		frappe.db.commit()
+		frappe.clear_cache(doctype="Livestock Settings")
 
 	def test_the_weight_row_becomes_her_submitted_record(self):
 		row = frappe.db.get_value("Livestock Weight Record", self.row,
@@ -149,7 +160,10 @@ class TestTheLegacyWeightRowsAndSettingsAreCarriedAcross(IntegrationTestCase):
 		self.assertFalse(column_exists("Livestock Weight Record", "recording_date"))
 
 	def test_the_drug_store_is_read_by_its_new_name(self):
-		self.assertEqual(frappe.db.get_single_value("Livestock Settings", "drug_warehouse"),
-		                 "Legacy Drug Store - KR")
+		self.assertEqual(
+			frappe.db.sql("""SELECT `value` FROM `tabSingles`
+			                 WHERE doctype = 'Livestock Settings' AND field = 'drug_warehouse'"""),
+			(("Legacy Drug Store - KR",),),
+		)
 		self.assertFalse(frappe.db.exists("Singles", {"doctype": "Livestock Settings",
 		                                              "field": "custom_drug_warehouse"}))

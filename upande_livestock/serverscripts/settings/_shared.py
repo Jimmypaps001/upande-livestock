@@ -57,8 +57,6 @@ POSTING_LINKS = frozenset(
 		"custom_milk_discard_warehouse",
 		"custom_milk_item",
 		"custom_milking_stock_entry_type",
-		"drug_warehouse",
-		"semen_warehouse",
 		"semen_item",
 		"custom_default_company",
 		"custom_default_credit_account",

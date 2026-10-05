@@ -1,13 +1,19 @@
 # Copyright (c) 2026, Upande and contributors
 # For license information, please see license.txt
 
+import frappe
+from frappe import _
 from frappe.model.document import Document
 from frappe.utils import add_days, flt, getdate, today
 
 from upande_livestock.serverscripts.common import backdate
 from upande_livestock.serverscripts.common import cost_center as livestock_cost_center
+from upande_livestock.serverscripts.common import event_items
 from upande_livestock.serverscripts.common import stock as livestock_stock
 from upande_livestock.serverscripts.common.event_link import cancel_event_for, stamp_stock_entry, sync_event_for
+
+#: The event type whose stock rule a case's treatments follow.
+TREATMENT = "Treatment"
 
 
 class LivestockHealthCase(Document):
@@ -20,6 +26,7 @@ class LivestockHealthCase(Document):
 		backdate.sanitise(self, "opened_date")
 		self.recompute_treatment_cost()
 		self.recompute_milk_safe_date()
+		self.require_named_drugs()
 
 	def recompute_treatment_cost(self):
 		"""The case has cost the sum of its treatments, and nothing else.
@@ -53,6 +60,16 @@ class LivestockHealthCase(Document):
 		"""
 		self.recompute_treatment_cost()
 		self.recompute_milk_safe_date()
+		self.require_named_drugs()
+
+	def require_named_drugs(self):
+		"""Each treatment names its drug, where the Treatment event type says it
+		must. A drug typed only as text cannot be issued or costed."""
+		if not event_items.must_name_item(TREATMENT) or self.get("custom_is_backdated"):
+			return
+		if any(not t.drug_item for t in self.treatments or []):
+			frappe.throw(_("Each treatment must name the drug it used, picked from the store."),
+			             title=_("Drug required"))
 
 	def recompute_milk_safe_date(self):
 		"""The first day her milk may be sold again, from the drugs she was given.
@@ -107,7 +124,9 @@ class LivestockHealthCase(Document):
 		# — so every treatment asked an empty shelf while the drugs sat in
 		# Drug/Medicine Store - Old Office, Westwood Dairy Store and General
 		# Store Karen. The fallback stays for rows recorded before this.
-		default_wh = livestock_stock.drug_warehouse()
+		if not event_items.consumes_items(TREATMENT):
+			return
+		default_wh = event_items.default_store(TREATMENT)
 		pending = [t for t in (self.treatments or []) if t.drug_item and not t.stock_entry_ref]
 		# A backdated case records its old treatments without moving stock, but
 		# only the old ones: a round added today to a case opened late is given

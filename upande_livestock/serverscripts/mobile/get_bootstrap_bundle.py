@@ -23,19 +23,25 @@ farm's settings — not something an arbitrary logged-in user should collect.
 import frappe
 
 from upande_livestock.serverscripts.common import herd_movement
-from upande_livestock.serverscripts.common import stock as livestock_stock
 from upande_livestock.serverscripts.common.choices import herd_label_map, select_options
 from upande_livestock.serverscripts.common.company import default_company
 from upande_livestock.serverscripts.common.employee import current_employee
 from upande_livestock.serverscripts.common.envelope import guard_read, run
-from upande_livestock.serverscripts.common.stock_items import stock_items
+from upande_livestock.serverscripts.common.event_items import (
+	consumes_items,
+	default_store,
+	groups_for_event,
+	items_for_event,
+	must_name_item,
+)
+from upande_livestock.serverscripts.husbandry._shared import husbandry_drug_items
 from upande_livestock.serverscripts.mobile._shared import digest, unchanged
 
 # The doctypes whose state this payload reflects. A change to any of them must
 # change the version, or the phone will keep serving a stale form.
 # Livestock Milking Herd: which herds are milking comes from Settings now, and a
 # herd added to or removed from that table must change what the phone holds.
-_SOURCES = ["Herds", "Livestock Milking Herd", "Livestock Event Type", "Employee", "Bin", "Item"]
+_SOURCES = ["Herds", "Livestock Milking Herd", "Livestock Event Type", "Livestock Event Type Item Group", "Employee", "Bin", "Item"]
 
 
 def herd_category(h, milking=(), dry=()):
@@ -65,8 +71,6 @@ def get_bootstrap_bundle(version=None):
 		if unchanged(version, current):
 			return {"ok": True, "unchanged": True, "version": current}
 
-		drug_wh = livestock_stock.drug_warehouse()
-		semen_wh = livestock_stock.semen_warehouse()
 		labels = herd_label_map()
 
 		herds = frappe.get_all(
@@ -89,7 +93,8 @@ def get_bootstrap_bundle(version=None):
 			"version": current,
 			"operator": current_employee(),
 			"company": default_company(),
-			"warehouses": {"drug": drug_wh, "semen": semen_wh},
+			"warehouses": {"drug": default_store("Vaccination") or default_store("Treatment"),
+			               "semen": default_store("Service")},
 			"herds": [
 				{
 					"name": h.name,
@@ -113,8 +118,16 @@ def get_bootstrap_bundle(version=None):
 			),
 			# The N+1 this bundle exists to remove: every issuable item with its
 			# on-hand quantity, for the store the issue will actually draw from.
-			"drugs": stock_items("drug"),
-			"semen": stock_items("semen", semen_wh),
+			# Each from its event types' rules (Settings → Stock).
+			"drugs": husbandry_drug_items(),
+			"semen": items_for_event("Service"),
+			# What each event type posts, so the phone follows the same rules.
+			"stock_rules": {
+				t: {"groups": groups_for_event(t), "default_store": default_store(t),
+				    "must_name_item": must_name_item(t)}
+				for t in frappe.get_all("Livestock Event Type", filters={"is_active": 1}, pluck="name")
+				if consumes_items(t)
+			},
 			"options": {
 				"service_types": select_options("Livestock Event", "service_type"),
 				"diagnosis_results": select_options("Livestock Event", "diagnosis_result"),
