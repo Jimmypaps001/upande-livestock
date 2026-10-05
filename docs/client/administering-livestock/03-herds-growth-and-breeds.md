@@ -15,11 +15,9 @@ order: 4
 | `herd_name` | The identity |
 | `min_age` / `max_age` | Age bracket in months, used when placing calves |
 | `number_of_animals` | Head count — **maintained by the app** |
-| `custom_herd_category` | Milking / Dry / Youngstock > 12m / Youngstock < 12m |
 | `custom_is_milking`, `custom_is_dry`, `custom_is_calf_rearing` | Role flags |
-| `custom_production_group` | Group 1/2/3 for split milking herds |
-| `ration_items`, `bom` | What this herd is fed |
-| `cost_center`, `custom_feed_account`, `custom_vet_account`, `custom_cost_center` | Where its costs land |
+| `bom` | What this herd is fed — its standing ration |
+| `cost_center` | Where its costs land |
 
 ### The head count is derived — do not edit it
 

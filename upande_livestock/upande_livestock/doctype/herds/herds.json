@@ -14,21 +14,13 @@
   "number_of_animals",
   "sb_class",
   "custom_is_milking",
-  "custom_production_group",
   "custom_is_calf_rearing",
   "cb_class",
   "custom_is_dry",
-  "custom_herd_category",
   "section_break_69rv",
-  "ration_items",
   "bom",
   "sb_acct",
-  "cost_center",
-  "custom_feed_account",
-  "cb_acct",
-  "custom_vet_account",
-  "sb_amend",
-  "amended_from"
+  "cost_center"
  ],
  "fields": [
   {
@@ -75,14 +67,6 @@
    "label": "Is Milking Herd"
   },
   {
-   "depends_on": "eval:doc.custom_is_milking",
-   "description": "Maps this herd to a production group for KPI tracking (matches Excel tracker Group 1/2/3)",
-   "fieldname": "custom_production_group",
-   "fieldtype": "Select",
-   "label": "Production Group",
-   "options": "\nGroup 1\nGroup 2\nGroup 3"
-  },
-  {
    "default": "0",
    "description": "Tick if this herd contains calves on milk feeding (e.g. 0-2 months). Calf Feeding events validate that the calf's current herd has this flag set.",
    "fieldname": "custom_is_calf_rearing",
@@ -101,26 +85,11 @@
    "label": "Is Dry / Pre-calving Herd"
   },
   {
-   "description": "Herd category for KPI grouping: Milking, Dry, Youngstock",
-   "fieldname": "custom_herd_category",
-   "fieldtype": "Select",
-   "label": "Herd Category",
-   "options": "\nMilking\nDry\nYoungstock > 12m\nYoungstock < 12m"
-  },
-  {
    "fieldname": "section_break_69rv",
    "fieldtype": "Section Break",
-   "label": "Feed & BOM"
+   "label": "Feed"
   },
   {
-   "allow_on_submit": 1,
-   "fieldname": "ration_items",
-   "fieldtype": "Table",
-   "label": "Ration Items",
-   "options": "Feeding Ration Item"
-  },
-  {
-   "allow_on_submit": 1,
    "fieldname": "bom",
    "fieldtype": "Link",
    "label": "BOM",
@@ -136,48 +105,13 @@
    "fieldtype": "Link",
    "label": "Cost Center",
    "options": "Cost Center",
-   "allow_on_submit": 1,
-   "description": "Charged for every stock movement this herd causes \u2014 feed, milk, drugs and husbandry. Falls back to Livestock Settings > Default Cost Centres by Company, which says so when it is used. Must be a leaf cost centre of the company the movement posts under."
-  },
-  {
-   "description": "Expense account for feed costs for this herd. Overrides the global setting in Livestock Settings.",
-   "fieldname": "custom_feed_account",
-   "fieldtype": "Link",
-   "label": "Feed Expense Account (override)",
-   "options": "Account"
-  },
-  {
-   "fieldname": "cb_acct",
-   "fieldtype": "Column Break"
-  },
-  {
-   "description": "Expense account for vet/drug costs for this herd. Overrides the global setting.",
-   "fieldname": "custom_vet_account",
-   "fieldtype": "Link",
-   "label": "Vet / Drug Expense Account (override)",
-   "options": "Account"
-  },
-  {
-   "fieldname": "sb_amend",
-   "fieldtype": "Section Break",
-   "label": "Amended From"
-  },
-  {
-   "fieldname": "amended_from",
-   "fieldtype": "Link",
-   "label": "Amended From",
-   "no_copy": 1,
-   "options": "Herds",
-   "print_hide": 1,
-   "read_only": 1,
-   "search_index": 1
+   "description": "Charged for every stock movement this herd causes — feed, milk, drugs and husbandry. Falls back to Livestock Settings > Default Cost Centres by Company, which says so when it is used. Must be a leaf cost centre of the company the movement posts under."
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
- "is_submittable": 1,
  "links": [],
- "modified": "2026-07-01 05:39:03.554957",
+ "modified": "2026-10-05 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Upande Livestock",
  "name": "Herds",
@@ -192,9 +126,6 @@
    "write": 1,
    "create": 1,
    "delete": 1,
-   "submit": 1,
-   "cancel": 1,
-   "amend": 1,
    "report": 1,
    "export": 1,
    "print": 1,
@@ -209,9 +140,6 @@
    "write": 1,
    "create": 1,
    "delete": 1,
-   "submit": 1,
-   "cancel": 1,
-   "amend": 1,
    "report": 1,
    "export": 1,
    "print": 1,

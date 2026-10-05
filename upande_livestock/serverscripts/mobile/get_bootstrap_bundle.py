@@ -35,6 +35,24 @@ from upande_livestock.serverscripts.mobile._shared import digest, unchanged
 _SOURCES = ["Herds", "Livestock Event Type", "Employee", "Bin", "Item"]
 
 
+def herd_category(h):
+	"""The herd's category, read off its role flags and age bracket.
+
+	Herds once carried a `custom_herd_category` select that only repeated the
+	flags. The field is gone; the phone still reads `category`, so it is
+	worked out here rather than stored twice.
+	"""
+	if h.custom_is_milking:
+		return "Milking"
+	if h.custom_is_dry:
+		return "Dry"
+	if h.custom_is_calf_rearing or 0 < (h.max_age or 0) <= 12:
+		return "Youngstock < 12m"
+	if (h.max_age or 0) > 12:
+		return "Youngstock > 12m"
+	return None
+
+
 @frappe.whitelist()
 def get_bootstrap_bundle(version=None):
 	def go():
@@ -54,7 +72,6 @@ def get_bootstrap_bundle(version=None):
 				"herd_name",
 				"number_of_animals",
 				"bom",
-				"custom_herd_category",
 				"custom_is_milking",
 				"custom_is_dry",
 				"custom_is_calf_rearing",
@@ -74,7 +91,7 @@ def get_bootstrap_bundle(version=None):
 					"name": h.name,
 					"label": labels.get(h.name, h.name),
 					"heads": int(h.number_of_animals or 0),
-					"category": h.custom_herd_category,
+					"category": herd_category(h),
 					"is_milking": bool(h.custom_is_milking),
 					"is_dry": bool(h.custom_is_dry),
 					"is_calf_rearing": bool(h.custom_is_calf_rearing),

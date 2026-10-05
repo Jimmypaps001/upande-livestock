@@ -90,11 +90,9 @@ calf-rearing group, youngstock. The herd's name is the record's name.
 | Herd name | The identity of the herd |
 | Min age / Max age | The age bracket this herd covers, used when placing calves |
 | Number of animals | The head count. Maintained by the app |
-| Herd category | Milking, Dry, Youngstock and so on |
 | Is milking / Is dry / Is calf rearing | Flags that mark a herd's role |
-| Production group | Group 1/2/3, for farms that split milking herds |
-| Ration items, BOM | What this herd is fed — see [Feeding](06-feeding.md) |
-| Cost center, Feed account, Vet account | Where this herd's costs land in the accounts |
+| BOM | What this herd is fed — see [Feeding](06-feeding.md) |
+| Cost center | Where this herd's costs land in the accounts |
 
 **The head count is maintained for you.** It is recomputed whenever an animal
 moves in, is born into the herd, or is disposed of, and it counts only animals

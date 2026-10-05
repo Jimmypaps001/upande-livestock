@@ -91,3 +91,9 @@ upande_livestock.patches.call_it_livestock_on_the_desk
 # including 63 straws). Service is mapped by hand, per site, once that site has
 # a group holding straws alone.
 upande_livestock.patches.seed_event_item_groups
+
+# Herds carried a category that repeated its flags, two expense accounts and a
+# production group nothing read, a ration table the BOM replaced, and was
+# submittable though it is a master. Live holds most of these as Custom Field
+# records, which a DocType edit cannot remove.
+upande_livestock.patches.trim_unused_herd_fields
