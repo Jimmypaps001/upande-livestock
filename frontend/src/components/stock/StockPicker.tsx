@@ -45,7 +45,7 @@ const COLUMNS = "grid-cols-[2.25rem_minmax(14rem,2.4fr)_5.5rem_4.5rem_minmax(11r
 const HEAD = "px-2 py-2 text-[11px] font-medium uppercase tracking-[0.06em] text-[var(--sd-quiet)]";
 const CELL = "flex items-center border-l border-[var(--sd-line)] px-1 py-1";
 // Controls sit flush in their cell, the way a grid's cells do.
-const FLUSH = "h-8 border-0 bg-transparent shadow-none focus-visible:ring-1";
+const FLUSH = "h-8 border-0 bg-transparent shadow-none hover:bg-transparent focus-visible:ring-1";
 
 export function StockPicker({
   choices,
@@ -102,9 +102,9 @@ export function StockPicker({
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="overflow-x-auto rounded-md border border-[var(--sd-line)]">
+      <div className="overflow-x-auto rounded-md border border-[var(--sd-line)] bg-[var(--sd-card)]">
         <div role="table" aria-label="Items used" className="min-w-[46rem]">
-          <div role="row" className={cn("grid bg-[var(--sd-bg-soft)]", COLUMNS)}>
+          <div role="row" className={cn("grid", COLUMNS)}>
             <span role="columnheader" className={cn(HEAD, "text-center")}>No.</span>
             <span role="columnheader" className={HEAD}>Item</span>
             <span role="columnheader" className={cn(HEAD, "text-right")}>Qty</span>
@@ -123,7 +123,7 @@ export function StockPicker({
               <div
                 role="row"
                 key={r.key}
-                className={cn("grid border-t border-[var(--sd-line)] bg-[var(--sd-bg)]", COLUMNS)}
+                className={cn("grid border-t border-[var(--sd-line)]", COLUMNS)}
               >
                 <span role="cell" className="flex items-center justify-center text-[12px] text-[var(--sd-quiet)] tabular-nums">
                   {i + 1}
@@ -197,7 +197,7 @@ export function StockPicker({
                     aria-label={`Remove row ${i + 1}`}
                     title="Remove"
                     onClick={() => drop(r.key)}
-                    className="flex h-7 w-7 items-center justify-center rounded-md text-[var(--sd-quiet)] hover:bg-[var(--sd-bg-soft)] hover:text-[var(--sd-ink)]"
+                    className="flex h-7 w-7 items-center justify-center rounded-md text-[var(--sd-quiet)] hover:text-[var(--sd-ink)]"
                   >
                     <X className="h-3.5 w-3.5" />
                   </button>
@@ -212,6 +212,7 @@ export function StockPicker({
           type="button"
           variant="outline"
           size="sm"
+          className="bg-[var(--sd-card)] hover:bg-[var(--sd-card)]"
           onClick={() => onChange([...rows, blankRow(defaultQty)])}
         >
           <Plus /> Add item
