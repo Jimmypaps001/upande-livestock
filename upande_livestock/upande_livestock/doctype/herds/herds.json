@@ -13,10 +13,7 @@
   "max_age",
   "number_of_animals",
   "sb_class",
-  "custom_is_milking",
   "custom_is_calf_rearing",
-  "cb_class",
-  "custom_is_dry",
   "section_break_69rv",
   "bom",
   "sb_acct",
@@ -61,28 +58,10 @@
   },
   {
    "default": "0",
-   "description": "Check if this herd contains milking cows (lactating groups)",
-   "fieldname": "custom_is_milking",
-   "fieldtype": "Check",
-   "label": "Is Milking Herd"
-  },
-  {
-   "default": "0",
    "description": "Tick if this herd contains calves on milk feeding (e.g. 0-2 months). Calf Feeding events validate that the calf's current herd has this flag set.",
    "fieldname": "custom_is_calf_rearing",
    "fieldtype": "Check",
    "label": "Is Calf-Rearing Herd"
-  },
-  {
-   "fieldname": "cb_class",
-   "fieldtype": "Column Break"
-  },
-  {
-   "default": "0",
-   "description": "Tick if this herd contains dry cows or steaming-up cows. Excluded from milk recording.",
-   "fieldname": "custom_is_dry",
-   "fieldtype": "Check",
-   "label": "Is Dry / Pre-calving Herd"
   },
   {
    "fieldname": "section_break_69rv",
@@ -111,7 +90,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-10-05 12:00:00.000000",
+ "modified": "2026-10-05 17:00:00.000000",
  "modified_by": "Administrator",
  "module": "Upande Livestock",
  "name": "Herds",

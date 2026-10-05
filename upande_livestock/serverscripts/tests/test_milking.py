@@ -19,6 +19,7 @@ import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import today
 
+from upande_livestock.serverscripts.common import herd_movement
 from upande_livestock.serverscripts.milking.create_milk_recording import create_milk_recording
 
 
@@ -35,7 +36,7 @@ class TestMilkRecordingTime(IntegrationTestCase):
 	MARKER = "TEST-MILKTIME"
 
 	def setUp(self):
-		self.herd = frappe.db.get_value("Herds", {"custom_is_milking": 1}, "name")
+		self.herd = (herd_movement.milking_herds() or [None])[0]
 		if not self.herd:
 			self.skipTest("no milking herd on this site")
 		_purge(self.MARKER)

@@ -858,6 +858,7 @@ def manufacture_herd_feed(
 		# `_run_manufacture` already resolved. Passing the source through keeps
 		# the two halves of one run in the same place.
 		source_warehouse=res.get("store"),
+		work_order=res.get("work_order"),
 	)
 	res.update(
 		{
@@ -944,7 +945,7 @@ def feed_herd(herd, qty, employee=None, posting_date=None, source_warehouse=None
 
 def _issue_feed(
 	herd, bom, qty, employee, posting_date=None, feed_mode="System",
-	posting_time=FEED_RUN_TIME, source_warehouse=None,
+	posting_time=FEED_RUN_TIME, source_warehouse=None, work_order=None,
 ):
 	"""Post the Material Issue and put the feeding on the herd's timeline.
 
@@ -997,7 +998,8 @@ def _issue_feed(
 	# The request (or the caller) owns the commit.
 
 	event = _record_feeding_event(
-		herd, item, qty, bom.uom, employee, se.name, event_date=posting_date, feed_mode=feed_mode
+		herd, item, qty, bom.uom, employee, se.name, event_date=posting_date, feed_mode=feed_mode,
+		work_order=work_order,
 	)
 
 	return {
@@ -1012,7 +1014,8 @@ def _issue_feed(
 	}
 
 
-def _record_feeding_event(herd, item, qty, uom, employee, stock_entry, event_date=None, feed_mode="System"):
+def _record_feeding_event(herd, item, qty, uom, employee, stock_entry, event_date=None, feed_mode="System",
+                          work_order=None):
 	"""Put the feeding on the herd's timeline as a Feeding Livestock Event.
 
 	Herd-level, with no animal: feed goes to a trough, not to one cow, and
@@ -1035,6 +1038,9 @@ def _record_feeding_event(herd, item, qty, uom, employee, stock_entry, event_dat
 		doc.current_herd = herd
 		doc.operator = employee
 		doc.stock_entry = stock_entry
+		# The mix this feeding gave out, so cancelling the feeding can take the
+		# mixing back too rather than leave a batch made for nobody.
+		doc.feed_work_order = work_order
 		doc.custom_feed_mode = feed_mode
 		backdate.stamp(doc, getdate(event_date) < getdate(today()))
 		doc.remarks = "Feed issued: {0} {1} of {2}".format(qty, uom or "", item)

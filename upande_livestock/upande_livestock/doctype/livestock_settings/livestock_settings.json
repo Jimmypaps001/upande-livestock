@@ -68,6 +68,33 @@
   "custom_default_credit_account",
   "custom_concentrate_cost_center",
   "custom_company_cost_centers",
+  "sb_business",
+  "custom_farm",
+  "custom_si_farm",
+  "custom_disposal_farm",
+  "cb_business",
+  "custom_milk_business_unit",
+  "custom_disposal_business_unit",
+  "custom_animal_sale_item",
+  "sb_account_mapping",
+  "custom_animal_asset_account",
+  "custom_animal_sale_income_account",
+  "custom_disposal_account",
+  "cb_account_mapping",
+  "custom_vet_expense_account",
+  "custom_feed_expense_account",
+  "custom_milk_income_account",
+  "sb_insurance",
+  "custom_insurance_receivable_account",
+  "custom_insurance_income_account",
+  "cb_insurance",
+  "custom_default_payout_percent",
+  "sb_milk_price",
+  "custom_default_milk_price",
+  "custom_milk_price_per_kg",
+  "cb_milk_price",
+  "custom_colostrum_item",
+  "custom_colostrum_warehouse",
   "tab_herd_movement",
   "sb_calf_intake",
   "female_calf_herd",
@@ -85,6 +112,7 @@
   "cb_first_pregnancy",
   "heifer_dry_off_before_calving_days",
   "sb_lactation",
+  "milking_herds",
   "high_yield_herd",
   "post_calving_herd",
   "high_yield_days_from_conception",
@@ -107,6 +135,34 @@
   "custom_quality_required_in_lab",
   "custom_quality_scc_ceiling",
   "custom_concentrate_cover_days",
+  "tab_targets",
+  "sb_production_targets",
+  "custom_target_prod_group1",
+  "custom_target_prod_group2",
+  "custom_target_prod_group3",
+  "custom_target_prod_average",
+  "cb_production_targets",
+  "custom_target_mafc_group1",
+  "custom_target_mafc_group2",
+  "custom_target_mafc_group3",
+  "sb_fertility_targets",
+  "custom_target_dim",
+  "custom_target_calving_interval",
+  "custom_target_first_insem",
+  "custom_target_days_open",
+  "cb_fertility_targets",
+  "custom_target_straws_per_preg",
+  "custom_target_preg_100dim",
+  "custom_target_not_preg_200dim",
+  "sb_youngstock_targets",
+  "custom_target_growth_gday",
+  "sb_calf_feeding",
+  "custom_colostrum_day1_pct_of_birth_weight",
+  "custom_colostrum_days2to5_pct_of_body_weight",
+  "custom_milk_feeding_pct_of_body_weight",
+  "cb_calf_feeding",
+  "custom_weaning_start_day",
+  "custom_weaning_complete_day",
   "tab_health",
   "sb_health_cases",
   "health_case_concern_days",
@@ -765,13 +821,309 @@
    "label": "Untouched For (days)",
    "default": "7",
    "description": "An open case with no treatment recorded for this long is stale — nobody has written anything down, whatever is or is not happening in the shed. 0 turns the check off."
+  },
+  {
+   "fieldname": "sb_business",
+   "fieldtype": "Section Break",
+   "label": "Business & Farm",
+   "description": "Where livestock sales and milk are booked."
+  },
+  {
+   "fieldname": "custom_farm",
+   "fieldtype": "Link",
+   "label": "Farm",
+   "options": "Farm"
+  },
+  {
+   "fieldname": "custom_si_farm",
+   "fieldtype": "Data",
+   "label": "Farm (for Sales Invoice)"
+  },
+  {
+   "fieldname": "custom_disposal_farm",
+   "fieldtype": "Link",
+   "label": "Disposal Farm",
+   "options": "Farm",
+   "description": "Farm for Sales Invoice on animal disposals."
+  },
+  {
+   "fieldname": "cb_business",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "custom_milk_business_unit",
+   "fieldtype": "Link",
+   "label": "Milk Business Unit",
+   "options": "Business Unit"
+  },
+  {
+   "fieldname": "custom_disposal_business_unit",
+   "fieldtype": "Link",
+   "label": "Disposal Business Unit",
+   "options": "Business Unit",
+   "description": "Business Unit for Sales Invoice on animal disposals."
+  },
+  {
+   "fieldname": "custom_animal_sale_item",
+   "fieldtype": "Link",
+   "label": "Animal Sale Item",
+   "options": "Item",
+   "description": "Item used on Sales Invoices when an animal is sold."
+  },
+  {
+   "fieldname": "sb_account_mapping",
+   "fieldtype": "Section Break",
+   "label": "Account Mapping"
+  },
+  {
+   "fieldname": "custom_animal_asset_account",
+   "fieldtype": "Link",
+   "label": "Animal Asset Account (Fixed Asset)",
+   "options": "Account"
+  },
+  {
+   "fieldname": "custom_animal_sale_income_account",
+   "fieldtype": "Link",
+   "label": "Animal Sale Income Account",
+   "options": "Account"
+  },
+  {
+   "fieldname": "custom_disposal_account",
+   "fieldtype": "Link",
+   "label": "Asset Disposal Account",
+   "options": "Account"
+  },
+  {
+   "fieldname": "cb_account_mapping",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "custom_vet_expense_account",
+   "fieldtype": "Link",
+   "label": "Veterinary / Drug Expense Account",
+   "options": "Account"
+  },
+  {
+   "fieldname": "custom_feed_expense_account",
+   "fieldtype": "Link",
+   "label": "Feed Expense Account",
+   "options": "Account"
+  },
+  {
+   "fieldname": "custom_milk_income_account",
+   "fieldtype": "Link",
+   "label": "Milk Income Account",
+   "options": "Account"
+  },
+  {
+   "fieldname": "sb_insurance",
+   "fieldtype": "Section Break",
+   "label": "Insurance & Claims"
+  },
+  {
+   "fieldname": "custom_insurance_receivable_account",
+   "fieldtype": "Link",
+   "label": "Insurance Claims Receivable Account",
+   "options": "Account"
+  },
+  {
+   "fieldname": "custom_insurance_income_account",
+   "fieldtype": "Link",
+   "label": "Insurance Claim Income Account",
+   "options": "Account"
+  },
+  {
+   "fieldname": "cb_insurance",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "custom_default_payout_percent",
+   "fieldtype": "Percent",
+   "label": "Default Insurance Payout %",
+   "description": "Used for a claim when its policy names no payout percentage."
+  },
+  {
+   "fieldname": "sb_milk_price",
+   "fieldtype": "Section Break",
+   "label": "Milk Price & Colostrum"
+  },
+  {
+   "fieldname": "custom_default_milk_price",
+   "fieldtype": "Currency",
+   "label": "Default Milk Price (KES/kg)"
+  },
+  {
+   "fieldname": "custom_milk_price_per_kg",
+   "fieldtype": "Currency",
+   "label": "Milk Price per kg (KES)",
+   "description": "For revenue in KPI figures."
+  },
+  {
+   "fieldname": "cb_milk_price",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "custom_colostrum_item",
+   "fieldtype": "Link",
+   "label": "Colostrum Item",
+   "options": "Item"
+  },
+  {
+   "fieldname": "custom_colostrum_warehouse",
+   "fieldtype": "Link",
+   "label": "Colostrum Warehouse",
+   "options": "Warehouse"
+  },
+  {
+   "fieldname": "tab_targets",
+   "fieldtype": "Tab Break",
+   "label": "Targets"
+  },
+  {
+   "fieldname": "sb_production_targets",
+   "fieldtype": "Section Break",
+   "label": "Production Targets (kg/cow/day)"
+  },
+  {
+   "fieldname": "custom_target_prod_group1",
+   "fieldtype": "Float",
+   "label": "Group 1 Target (kg/cow/day)"
+  },
+  {
+   "fieldname": "custom_target_prod_group2",
+   "fieldtype": "Float",
+   "label": "Group 2 Target (kg/cow/day)"
+  },
+  {
+   "fieldname": "custom_target_prod_group3",
+   "fieldtype": "Float",
+   "label": "Group 3 Target (kg/cow/day)"
+  },
+  {
+   "fieldname": "custom_target_prod_average",
+   "fieldtype": "Float",
+   "label": "Average Target (kg/cow/day)"
+  },
+  {
+   "fieldname": "cb_production_targets",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "custom_target_mafc_group1",
+   "fieldtype": "Currency",
+   "label": "MAFC Group 1 Target (KES)"
+  },
+  {
+   "fieldname": "custom_target_mafc_group2",
+   "fieldtype": "Currency",
+   "label": "MAFC Group 2 Target (KES)"
+  },
+  {
+   "fieldname": "custom_target_mafc_group3",
+   "fieldtype": "Currency",
+   "label": "MAFC Group 3 Target (KES)"
+  },
+  {
+   "fieldname": "sb_fertility_targets",
+   "fieldtype": "Section Break",
+   "label": "Fertility Targets"
+  },
+  {
+   "fieldname": "custom_target_dim",
+   "fieldtype": "Int",
+   "label": "DIM Target (days)"
+  },
+  {
+   "fieldname": "custom_target_calving_interval",
+   "fieldtype": "Int",
+   "label": "Calving Interval Target (days)"
+  },
+  {
+   "fieldname": "custom_target_first_insem",
+   "fieldtype": "Int",
+   "label": "Interval to 1st Insemination Target (days)"
+  },
+  {
+   "fieldname": "custom_target_days_open",
+   "fieldtype": "Int",
+   "label": "Days Open Target (days)"
+  },
+  {
+   "fieldname": "cb_fertility_targets",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "custom_target_straws_per_preg",
+   "fieldtype": "Float",
+   "label": "Straws per Pregnancy Target"
+  },
+  {
+   "fieldname": "custom_target_preg_100dim",
+   "fieldtype": "Percent",
+   "label": "% Pregnant at 100 DIM Target"
+  },
+  {
+   "fieldname": "custom_target_not_preg_200dim",
+   "fieldtype": "Percent",
+   "label": "% Not Pregnant at 200 DIM Target"
+  },
+  {
+   "fieldname": "sb_youngstock_targets",
+   "fieldtype": "Section Break",
+   "label": "Youngstock Targets"
+  },
+  {
+   "fieldname": "custom_target_growth_gday",
+   "fieldtype": "Int",
+   "label": "Growth Target (grams/day)"
+  },
+  {
+   "fieldname": "sb_calf_feeding",
+   "fieldtype": "Section Break",
+   "label": "Calf Feeding"
+  },
+  {
+   "fieldname": "custom_colostrum_day1_pct_of_birth_weight",
+   "fieldtype": "Float",
+   "label": "Colostrum Day 1 (% of birth weight)"
+  },
+  {
+   "fieldname": "custom_colostrum_days2to5_pct_of_body_weight",
+   "fieldtype": "Float",
+   "label": "Transitional Milk Days 2-5 (% of body weight per day)"
+  },
+  {
+   "fieldname": "custom_milk_feeding_pct_of_body_weight",
+   "fieldtype": "Float",
+   "label": "Whole Milk Days 6+ (% of body weight per day)"
+  },
+  {
+   "fieldname": "cb_calf_feeding",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "custom_weaning_start_day",
+   "fieldtype": "Int",
+   "label": "Weaning Start (days)"
+  },
+  {
+   "fieldname": "custom_weaning_complete_day",
+   "fieldtype": "Int",
+   "label": "Weaning Complete (days)"
+  },
+  {
+   "fieldname": "milking_herds",
+   "fieldtype": "Table",
+   "label": "Milking Herds",
+   "options": "Livestock Milking Herd",
+   "description": "The herds that are milked. The milking screens offer these herds and their cows, and the mobile app marks them as milking herds."
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-10-05 15:00:00.000000",
+ "modified": "2026-10-05 17:00:00.000000",
  "modified_by": "Administrator",
  "module": "Upande Livestock",
  "name": "Livestock Settings",

@@ -15,7 +15,7 @@ order: 4
 | `herd_name` | The identity |
 | `min_age` / `max_age` | Age bracket in months, used when placing calves |
 | `number_of_animals` | Head count — **maintained by the app** |
-| `custom_is_milking`, `custom_is_dry`, `custom_is_calf_rearing` | Role flags |
+| `custom_is_calf_rearing` | Marks the calf-rearing herd. Which herds are milked is set in **Livestock Settings → Milking Herds**; the dry herds are Settings' drying-off and steamer herds |
 | `bom` | What this herd is fed — its standing ration |
 | `cost_center` | Where its costs land |
 

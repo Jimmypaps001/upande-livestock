@@ -9,6 +9,7 @@ from upande_livestock.install import ensure_livestock_event_types, ensure_livest
 from upande_livestock.serverscripts.common.timings import (
 	ALL_TIMING_DEFAULTS,
 	FLOAT_TIMING_DEFAULTS,
+	NOT_TIMINGS,
 	TIMING_DEFAULTS,
 	get_timing,
 	read_setting,
@@ -70,7 +71,10 @@ class TestLivestockTimings(ResetsLivestockTimings, IntegrationTestCase):
 		occurrence instead of only re-verifying the four already known.
 		"""
 		meta = frappe.get_meta("Livestock Settings")
-		numeric_fields = {f.fieldname: f for f in meta.fields if f.fieldtype in ("Int", "Float")}
+		numeric_fields = {
+			f.fieldname: f for f in meta.fields
+			if f.fieldtype in ("Int", "Float") and f.fieldname not in NOT_TIMINGS
+		}
 
 		meta_fieldnames = set(numeric_fields)
 		covered_fieldnames = set(ALL_TIMING_DEFAULTS)

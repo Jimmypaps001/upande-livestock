@@ -19,7 +19,7 @@ import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import nowtime, today
 
-from upande_livestock.serverscripts.common import quality
+from upande_livestock.serverscripts.common import herd_movement, quality
 from upande_livestock.serverscripts.milking.create_milk_recording import create_milk_recording
 from upande_livestock.serverscripts.quality.quality_options import quality_options
 from upande_livestock.serverscripts.quality.record_milk_quality import record_milk_quality
@@ -31,7 +31,7 @@ def _employee():
 
 def _milking_herd():
 	return (
-		frappe.db.get_value("Herds", {"custom_is_milking": 1}, "name")
+		(herd_movement.milking_herds() or [None])[0]
 		or frappe.db.get_value("Herds", {}, "name")
 	)
 

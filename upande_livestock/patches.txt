@@ -144,3 +144,10 @@ upande_livestock.patches.migrate_legacy_event_fields
 # reads (the drug store above all), the child-table weight rows made records,
 # orphans kept in notes and dropped. A no-op where none exist.
 upande_livestock.patches.migrate_legacy_custom_fields
+
+# Milking herds become a table on Livestock Settings, filled from the herds
+# ticked "Is Milking" (live: three) and the high/low-yield herds; the Herd boxes go.
+upande_livestock.patches.milking_herds_into_settings
+
+# Insured value lives on the policy row; animal-only values kept in remarks.
+upande_livestock.patches.insured_value_on_the_policy_only

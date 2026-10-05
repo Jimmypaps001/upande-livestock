@@ -44,7 +44,11 @@ def claim_amount(policy, book_value=0.0):
 	than a claim of zero that nobody chases.
 	"""
 	base = flt(policy.get("insured_value")) or flt(book_value)
-	percent = flt(policy.get("payout_percent"))
+	# The policy's own terms, else the farm's default payout from Livestock
+	# Settings (live: 90%); a policy and a farm silent on it pay in full.
+	percent = flt(policy.get("payout_percent")) or flt(
+		frappe.db.get_single_value("Livestock Settings", "custom_default_payout_percent")
+	)
 	return flt(base * percent / 100.0) if percent else flt(base)
 
 
