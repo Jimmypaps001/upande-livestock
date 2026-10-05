@@ -22,6 +22,8 @@ sit in the table indefinitely, looking like data.
 
 import frappe
 
+from upande_livestock.patches._fold import fold_into_notes
+
 DROPPED = (
 	"coat_colour",
 	"in_treatment",
@@ -37,7 +39,22 @@ DROPPED = (
 )
 
 
+#: Facts with no other home, kept in the animal's remarks before their column
+#: goes. The live site holds vaccination and deworming dates on most animals.
+#: The derived figures (days in milk, services, conception rate, book value)
+#: are recomputed from the record, so they are not kept.
+FOLDED = {
+	"coat_colour": "Coat colour",
+	"last_vaccination_date": "Last vaccination",
+	"last_deworming_date": "Last deworming",
+	"next_due_event": "Next due",
+	"last_service_sire": "Last service sire",
+	"milk_safe_date": "Milk safe from",
+}
+
+
 def execute():
+	fold_into_notes("Animal", FOLDED, "remarks")
 	frappe.db.delete("Property Setter", {"doc_type": "Animal", "field_name": ("in", DROPPED)})
 	frappe.clear_cache(doctype="Animal")
 	for column in DROPPED:

@@ -2,6 +2,10 @@
 # Patches added in this section will be executed before doctypes are migrated
 # Read docs to understand patches: https://frappeframework.com/docs/v14/user/en/database-migrations
 upande_livestock.patches.rename_livestock_doctypes
+# Straight after the rename and before model sync: the live site's Animal had a
+# `weight_history` table onto "Animal Weight Record", which the rename makes a
+# submittable document. Its rows are turned into records post-sync.
+upande_livestock.patches.drop_animal_weight_history_field
 upande_livestock.patches.preserve_event_activity_cost
 # Must run BEFORE model sync: sync_all imports workspace/livestock/livestock.json,
 # and a rename run after that import would be renaming the old workspace onto the
@@ -129,3 +133,14 @@ upande_livestock.patches.settle_open_alerts
 
 # A doctype nothing used; the live site's five rows are test entries.
 upande_livestock.patches.retire_calf_rearing
+
+# The live site's first event design left ~35 Custom Fields on Animal Event,
+# carried onto Livestock Event by the rename, holding real history. Each value
+# goes to its current home (a standard field, a Weight Record, the drugs
+# table, or remarks), then the fields are removed. A no-op where none exist.
+upande_livestock.patches.migrate_legacy_event_fields
+# The live site's leftover Custom Fields on Settings, Weight Record, Disposal,
+# Milk Recording and Insurance Policy: settings carried to the names the code
+# reads (the drug store above all), the child-table weight rows made records,
+# orphans kept in notes and dropped. A no-op where none exist.
+upande_livestock.patches.migrate_legacy_custom_fields
