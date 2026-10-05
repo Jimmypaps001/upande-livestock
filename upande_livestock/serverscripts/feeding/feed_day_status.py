@@ -53,7 +53,9 @@ def _issues_on(item_code, herd, day):
 		     AND DATE(se.posting_date) = %(day)s
 		     AND se.remarks LIKE %(herd)s
 		   GROUP BY se.name""",
-		{"item": item_code, "day": day, "herd": f"%{herd}%"},
+		# The whole herd, as _engine._issue_feed writes it: a bare substring let
+		# herd "0-2" count herd "10-2"'s runs.
+		{"item": item_code, "day": day, "herd": f"Animal feeding - {herd} - %"},
 		as_dict=True,
 	)
 

@@ -1174,6 +1174,39 @@ class LivestockEvent(Document):
 	def on_cancel(self):
 		self.refresh_calving_birth_count()
 		self.undo_movement()
+		self.cancel_own_stock_issue()
+
+	def cancel_own_stock_issue(self):
+		"""Take back the Material Issue this event posted.
+
+		Cancelling an event used to leave its issue standing — a cancelled
+		Feeding kept the store short of feed nobody gave, and the day still read
+		as fed. The Stock Entry does not link back here, so Frappe never asked.
+
+		Only the event's OWN issue. A batch issue (a whole herd's deworming) is
+		stamped on every event it covers, so while another of them stands the
+		issue stays, and the user is told it did. A mirror event owns no stock.
+		"""
+		if not self.stock_entry or self.reference_doctype:
+			return
+		if frappe.db.get_value("Stock Entry", self.stock_entry, "docstatus") != 1:
+			return
+		others = frappe.db.count(
+			"Livestock Event",
+			{"stock_entry": self.stock_entry, "docstatus": 1, "name": ["!=", self.name]},
+		)
+		if others:
+			frappe.msgprint(
+				_("{0} also covers {1} other event(s), so its stock was left as it is.").format(
+					self.stock_entry, others
+				),
+				indicator="orange",
+				alert=True,
+			)
+			return
+		issue = frappe.get_doc("Stock Entry", self.stock_entry)
+		issue.flags.ignore_permissions = True
+		issue.cancel()
 
 	def undo_movement(self):
 		"""Put the animal back where a cancelled Movement took her from.

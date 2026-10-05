@@ -16,6 +16,8 @@ And the plan has to be read off the herds rather than typed in. The last time
 it was carried by hand, the weaner herd was asking for forty-five tonnes a day.
 """
 
+import unittest
+
 import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import flt
@@ -168,3 +170,18 @@ class TestConcentratePlanCarriesTheRecipeLines(IntegrationTestCase):
 				checked += 1
 		if not checked:
 			self.skipTest("no concentrate recipe on this site has a mixed-UOM line")
+
+
+class TestRunsAreCountedForTheirOwnHerd(unittest.TestCase):
+	"""Runs were found with `remarks LIKE '%herd%'`, so herd "0-2" also counted
+	herd "10-2"'s runs, and a backdated run was staggered for feed another herd
+	ate. The issue's remarks always open "Animal feeding - <herd> - "."""
+
+	def test_the_herd_is_matched_whole(self):
+		from unittest.mock import patch
+
+		from upande_livestock.serverscripts.feeding import feed_day_status
+
+		with patch.object(feed_day_status.frappe.db, "sql", return_value=[]) as sql:
+			feed_day_status._issues_on("RATION", "0-2", "2026-10-05")
+		self.assertEqual(sql.call_args.args[1]["herd"], "Animal feeding - 0-2 - %")

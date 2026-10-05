@@ -337,3 +337,23 @@ class TestTheFullestStoreIsTheDefault(unittest.TestCase):
 
 	def test_no_warehouses_at_all_is_not_a_crash(self):
 		self.assertEqual(_engine._pick_source("Silage", 5, []), (None, 0.0, 0.0))
+
+
+class TestTheShortageCheckLooksWhereTheRunDraws(unittest.TestCase):
+	"""The live pre-check judged the default stores, then the run drew from the
+	one the operator named: a run from a near-empty pit passed the check and
+	died in ERPNext, with ERPNext's message instead of the shortage."""
+
+	def test_the_named_store_is_the_one_checked(self):
+		from types import SimpleNamespace
+
+		class Checked(Exception):
+			pass
+
+		bom = SimpleNamespace(name="BOM-T", item="RATION-T", quantity=1, uom="Kg")
+		with patch.object(_engine, "_herd_bom", return_value=(None, bom, 10)), \
+		     patch.object(_engine, "_is_backdated", return_value=False), \
+		     patch.object(_engine, "_assert_can_cover", side_effect=Checked) as cover:
+			with self.assertRaises(Checked):
+				_engine.manufacture_herd_feed("HERD-T", source_warehouse="Silage Pit 2")
+		self.assertEqual(cover.call_args.kwargs.get("source_warehouse"), "Silage Pit 2")
