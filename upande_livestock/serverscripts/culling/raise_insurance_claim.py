@@ -7,6 +7,7 @@ import frappe
 from frappe import _
 from frappe.utils import flt, getdate, today
 
+from upande_livestock.serverscripts.common.animal import STATUS_BY_DISPOSAL_TYPE
 from upande_livestock.serverscripts.common.envelope import as_dict, guard, run
 
 
@@ -93,6 +94,13 @@ def raise_insurance_claim(payload):
 		if not frappe.db.exists("Livestock Disposal", name):
 			frappe.throw(_("{0} is not a disposal.").format(name))
 		doc = frappe.get_doc("Livestock Disposal", name)
+		# A claim is owed on a recorded death. Raised on a draft, a sale or a
+		# cancelled disposal, it claimed for an animal still standing.
+		if doc.docstatus != 1:
+			frappe.throw(_("{0} has not been posted, so there is no loss to claim.").format(name))
+		if STATUS_BY_DISPOSAL_TYPE.get(doc.disposal_type) != "Dead":
+			frappe.throw(_("{0} is a {1}, not a death; a policy pays on a death.").format(
+				name, doc.disposal_type))
 		claim = draft_claim(doc)
 		if not claim:
 			frappe.throw(

@@ -123,17 +123,13 @@ def _book_value(asset):
 
 
 def _open_policy(animal):
-	"""A live policy covering her, if there is one.
+	"""A policy covering her today, if there is one.
 
 	Read at the moment of raising rather than at the moment of death, so the
 	person proposing knows there is a claim to make before they choose a flow.
+	By its dates, the way the claim itself is judged: nothing ever marks a
+	policy Expired, so `status = Active` alone showed lapsed cover as live.
 	"""
-	rows = frappe.db.sql(
-		"""SELECT p.name, p.insurer, p.payout_percent, p.end_date, a.insured_value
-		   FROM `tabLivestock Insurance Policy` p
-		   JOIN `tabLivestock Insurance Policy Animal` a ON a.parent = p.name
-		   WHERE a.animal = %s AND p.status = 'Active'
-		   ORDER BY p.end_date DESC LIMIT 1""",
-		(animal,), as_dict=True,
-	)
-	return rows[0] if rows else None
+	from upande_livestock.serverscripts.culling.raise_insurance_claim import covering_policy
+
+	return covering_policy(animal, None)

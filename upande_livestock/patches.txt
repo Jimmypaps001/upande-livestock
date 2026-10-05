@@ -114,3 +114,6 @@ upande_livestock.patches.fold_calving_calf_sex
 
 # The per-record milk discard store was never set on any site; Settings' store is it.
 upande_livestock.patches.drop_milk_discard_warehouse
+
+# Four Disposal fields nothing set; the postings resolve their own accounts.
+upande_livestock.patches.trim_disposal_fields
