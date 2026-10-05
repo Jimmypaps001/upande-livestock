@@ -22,6 +22,7 @@ farm's settings — not something an arbitrary logged-in user should collect.
 
 import frappe
 
+from upande_livestock.serverscripts.common import herd_movement
 from upande_livestock.serverscripts.common import stock as livestock_stock
 from upande_livestock.serverscripts.common.choices import herd_label_map, select_options
 from upande_livestock.serverscripts.common.company import default_company
@@ -32,19 +33,22 @@ from upande_livestock.serverscripts.mobile._shared import digest, unchanged
 
 # The doctypes whose state this payload reflects. A change to any of them must
 # change the version, or the phone will keep serving a stale form.
-_SOURCES = ["Herds", "Livestock Event Type", "Employee", "Bin", "Item"]
+# Livestock Milking Herd: which herds are milking comes from Settings now, and a
+# herd added to or removed from that table must change what the phone holds.
+_SOURCES = ["Herds", "Livestock Milking Herd", "Livestock Event Type", "Employee", "Bin", "Item"]
 
 
-def herd_category(h):
-	"""The herd's category, read off its role flags and age bracket.
+def herd_category(h, milking=(), dry=()):
+	"""The herd's category, worked out rather than stored.
 
-	Herds once carried a `custom_herd_category` select that only repeated the
-	flags. The field is gone; the phone still reads `category`, so it is
-	worked out here rather than stored twice.
+	Herds once carried a category select and "Is Milking" / "Is Dry" boxes,
+	all saying what Livestock Settings already says. Milking and dry come
+	from the settings now (herd_movement.milking_herds / dry_herds); the
+	phone still reads `category`, `is_milking` and `is_dry`.
 	"""
-	if h.custom_is_milking:
+	if h.name in milking:
 		return "Milking"
-	if h.custom_is_dry:
+	if h.name in dry:
 		return "Dry"
 	if h.custom_is_calf_rearing or 0 < (h.max_age or 0) <= 12:
 		return "Youngstock < 12m"
@@ -72,14 +76,14 @@ def get_bootstrap_bundle(version=None):
 				"herd_name",
 				"number_of_animals",
 				"bom",
-				"custom_is_milking",
-				"custom_is_dry",
 				"custom_is_calf_rearing",
 				"min_age",
 				"max_age",
 			],
 			order_by="herd_name asc",
 		)
+		milking = set(herd_movement.milking_herds())
+		dry = set(herd_movement.dry_herds())
 		return {
 			"ok": True,
 			"version": current,
@@ -91,9 +95,9 @@ def get_bootstrap_bundle(version=None):
 					"name": h.name,
 					"label": labels.get(h.name, h.name),
 					"heads": int(h.number_of_animals or 0),
-					"category": herd_category(h),
-					"is_milking": bool(h.custom_is_milking),
-					"is_dry": bool(h.custom_is_dry),
+					"category": herd_category(h, milking, dry),
+					"is_milking": h.name in milking,
+					"is_dry": h.name in dry,
 					"is_calf_rearing": bool(h.custom_is_calf_rearing),
 					"min_age": h.min_age,
 					"max_age": h.max_age,

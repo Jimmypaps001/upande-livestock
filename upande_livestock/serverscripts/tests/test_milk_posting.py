@@ -13,6 +13,7 @@ import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import today
 
+from upande_livestock.serverscripts.common import herd_movement
 from upande_livestock.serverscripts.milking.create_milk_recording import create_milk_recording
 from upande_livestock.serverscripts.tests.test_milking import _purge
 
@@ -21,7 +22,7 @@ MARKER = "TEST-MILKPOST"
 
 class TestMilkPosting(IntegrationTestCase):
 	def setUp(self):
-		self.herd = frappe.db.get_value("Herds", {"custom_is_milking": 1}, "name")
+		self.herd = (herd_movement.milking_herds() or [None])[0]
 		self.company = frappe.db.get_single_value("Livestock Settings", "custom_default_company")
 		self.warehouse = frappe.db.get_single_value("Livestock Settings", "custom_milk_target_warehouse")
 		if not (self.herd and self.company and self.warehouse):

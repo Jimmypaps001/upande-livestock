@@ -45,6 +45,28 @@ both dicts (as these four once did) fails loudly instead of shipping unseeded.
 import frappe
 from frappe.utils import cint
 
+#: Numeric Livestock Settings that are not timings and are not seeded: the
+#: farm's production, fertility and youngstock targets and its calf-feeding
+#: rules, carried from the live site's first settings design. A blank target is
+#: "no target", not a default to invent.
+NOT_TIMINGS = (
+	"custom_target_prod_group1",
+	"custom_target_prod_group2",
+	"custom_target_prod_group3",
+	"custom_target_prod_average",
+	"custom_target_dim",
+	"custom_target_calving_interval",
+	"custom_target_first_insem",
+	"custom_target_days_open",
+	"custom_target_straws_per_preg",
+	"custom_target_growth_gday",
+	"custom_colostrum_day1_pct_of_birth_weight",
+	"custom_colostrum_days2to5_pct_of_body_weight",
+	"custom_milk_feeding_pct_of_body_weight",
+	"custom_weaning_start_day",
+	"custom_weaning_complete_day",
+)
+
 TIMING_DEFAULTS = {
 	"post_calving_min_service_days": 45,
 	"post_calving_optimal_service_days": 60,

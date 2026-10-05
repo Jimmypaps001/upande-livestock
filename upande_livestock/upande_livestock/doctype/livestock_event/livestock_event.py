@@ -1193,6 +1193,34 @@ class LivestockEvent(Document):
 		self.refresh_calving_birth_count()
 		self.undo_movement()
 		self.cancel_own_stock_issue()
+		self.undo_feed_mixing()
+
+	def undo_feed_mixing(self):
+		"""Take back the mixing a cancelled feeding gave out.
+
+		A feed run mixes a batch (Work Order, a transfer of the ingredients, a
+		manufacture) and issues all of it. Cancelling the feeding put the batch
+		back on the shelf but left it made: the ingredients stayed consumed for
+		a mix nobody fed. Undone in reverse: the manufacture, then the transfer,
+		then the Work Order. Runs after the issue is cancelled, so the batch is
+		back in the store for the manufacture to be reversed against.
+		"""
+		if self.event_type != "Feeding" or not self.get("feed_work_order"):
+			return
+		order = {"Manufacture": 0, "Material Transfer for Manufacture": 1}
+		entries = frappe.get_all(
+			"Stock Entry",
+			filters={"work_order": self.feed_work_order, "docstatus": 1},
+			fields=["name", "purpose"],
+		)
+		for row in sorted(entries, key=lambda r: order.get(r.purpose, 2)):
+			entry = frappe.get_doc("Stock Entry", row.name)
+			entry.flags.ignore_permissions = True
+			entry.cancel()
+		if frappe.db.get_value("Work Order", self.feed_work_order, "docstatus") == 1:
+			wo = frappe.get_doc("Work Order", self.feed_work_order)
+			wo.flags.ignore_permissions = True
+			wo.cancel()
 
 	def cancel_own_stock_issue(self):
 		"""Take back the Material Issue this event posted.

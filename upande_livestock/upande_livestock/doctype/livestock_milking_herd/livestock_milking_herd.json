@@ -1,0 +1,31 @@
+{
+ "actions": [],
+ "creation": "2026-10-05 17:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "herd"
+ ],
+ "fields": [
+  {
+   "fieldname": "herd",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Herd",
+   "options": "Herds",
+   "reqd": 1
+  }
+ ],
+ "istable": 1,
+ "links": [],
+ "modified": "2026-10-05 17:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Upande Livestock",
+ "name": "Livestock Milking Herd",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

@@ -18,15 +18,16 @@ Named `LIP-####`.
 | `policy_number`, `insurer` | Both required |
 | `status` | Active / Expired / Cancelled |
 | `start_date`, `end_date` | Both required |
-| `payout_percent` | Proportion of insured value paid on a claim |
-| `total_insured_value`, `total_premium` | |
+| `payout_percent` | Proportion of insured value paid on a claim. Blank uses Livestock Settings' Default Insurance Payout % |
+| `total_insured_value` | The sum of the animals' insured values, worked out on save |
+| `total_premium` | |
 | `company` | Required |
 | `animals` | Child table of covered animals |
 | `remarks` | |
 
-The `animals` child table is what ties a policy to the herd. An animal also
-carries its own `insured_value` field, so the policy total and the sum of the
-animals can disagree — the app does not reconcile them for you.
+The `animals` child table is what ties a policy to the herd, and each row's
+insured value is the one a claim uses. An animal has no insured value of its
+own; a cover is read by its dates, so a lapsed policy no longer shows as live.
 
 Policies are inert: nothing in the app acts on expiry, and no alert fires when
 `end_date` passes. Renewal is a diary job.

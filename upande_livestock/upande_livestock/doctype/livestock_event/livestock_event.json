@@ -73,6 +73,7 @@
   "drug_issues",
   "sb_event_stock",
   "stock_entry",
+  "feed_work_order",
   "tab_more",
   "sb_amended",
   "amended_from",
@@ -545,13 +546,23 @@
    "label": "Feed Mode",
    "options": "\nSystem\nManual",
    "read_only": 1
+  },
+  {
+   "depends_on": "eval:doc.event_type=='Feeding'",
+   "fieldname": "feed_work_order",
+   "fieldtype": "Link",
+   "label": "Feed Work Order",
+   "no_copy": 1,
+   "options": "Work Order",
+   "read_only": 1,
+   "description": "The mixing run this feeding gave out. Cancelling the feeding takes it back too."
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-10-05 16:00:00.000000",
+ "modified": "2026-10-05 17:30:00.000000",
  "modified_by": "Administrator",
  "module": "Upande Livestock",
  "name": "Livestock Event",

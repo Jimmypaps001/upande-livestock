@@ -194,6 +194,16 @@ class TestCancellingAFeeding(IntegrationTestCase):
 		event.cancel()
 		self.assertEqual(frappe.db.get_value("Stock Entry", issue, "docstatus"), 2)
 
+	def test_cancelling_the_feeding_takes_the_mixing_back_too(self):
+		"""The batch was mixed for this feeding; cancelled, it must not stay made."""
+		event, _issue = self._feed()
+		wo = event.feed_work_order
+		self.assertTrue(wo, "the feeding does not name the mixing it gave out")
+		event.cancel()
+		self.assertEqual(frappe.db.get_value("Work Order", wo, "docstatus"), 2)
+		self.assertFalse(frappe.db.exists("Stock Entry", {"work_order": wo, "docstatus": 1}),
+		                 "a manufacture or transfer for the cancelled feeding is still posted")
+
 	def test_an_issue_shared_with_another_event_stays(self):
 		"""A batch issue is stamped on every event it covers; one cancellation
 		must not take back the others' stock."""

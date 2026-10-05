@@ -20,6 +20,7 @@ import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import add_days, flt, today
 
+from upande_livestock.serverscripts.common import herd_movement
 from upande_livestock.serverscripts.milking.create_milk_recording import create_milk_recording
 from upande_livestock.serverscripts.milking.replay_deferred_milk import replay_deferred_milk
 from upande_livestock.upande_livestock.doctype.milk_recording.milk_recording import MilkRecording
@@ -41,7 +42,7 @@ class TestReplayDeferredMilk(IntegrationTestCase):
 		self.warehouse = frappe.db.get_single_value("Livestock Settings", "custom_milk_target_warehouse")
 		if not (self.item and self.warehouse):
 			self.skipTest("no milk item / target warehouse configured on this site")
-		self.herd = frappe.db.get_value("Herds", {"custom_is_milking": 1}, "name") or frappe.db.get_value(
+		self.herd = (herd_movement.milking_herds() or [None])[0] or frappe.db.get_value(
 			"Herds", {}, "name"
 		)
 		if not self.herd:

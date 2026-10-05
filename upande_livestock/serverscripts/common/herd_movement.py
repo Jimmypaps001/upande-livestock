@@ -249,9 +249,25 @@ def bull_cull_status(animal):
 
 
 def milking_herds():
-	"""Only the lactation groups are ever in milk."""
+	"""The herds that are milked: Livestock Settings' Milking Herds table.
+
+	A farm can milk more herds than the two the lactation ladder moves cows
+	between (the live site milks three), so the list is the farm's to write.
+	It replaced a "Is Milking Herd" box ticked on each Herd, which disagreed
+	with the settings the moment a herd was renamed or added. Until the table
+	is filled in, the high- and low-yield herds stand in for it, as before.
+	"""
 	s = settings()
+	listed = [r.herd for r in (s.get("milking_herds") or []) if r.herd]
+	if listed:
+		return list(dict.fromkeys(listed))
 	return [h for h in (s.get("high_yield_herd"), s.get("low_yield_herd")) if h]
+
+
+def dry_herds():
+	"""The herds cows stand in between drying off and calving."""
+	s = settings()
+	return [h for h in dict.fromkeys((s.get("drying_off_herd"), s.get("steamer_herd"))) if h]
 
 
 def service_herds():

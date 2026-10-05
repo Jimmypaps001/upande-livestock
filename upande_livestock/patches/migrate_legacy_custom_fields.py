@@ -10,10 +10,11 @@ copied across where the new one is empty — the drug store above all: live
 keeps its drugs in "Drug/ Medicine store- old office - KR" under
 `custom_drug_warehouse`, and the code reads `drug_warehouse`, so without this
 every issue on live would look for drugs in no store at all. Seven fields the
-doctype now declares itself lose their duplicate Custom Field record, keeping
-their value. The other 38 (production and fertility targets, colostrum and
-weaning, accounts, farm and business unit) have no home in the current design
-and are NOT touched: whether that configuration is kept is the farm's call.
+doctype already declared, and the 37 the farm chose to keep (accounts,
+business units, farm, production and fertility targets, milk price,
+colostrum and weaning — now fields of the doctype), lose only their duplicate
+Custom Field record; every value stays. The Journal Entry box, which drove
+activity-cost entries that no longer exist, is dropped.
 
 Livestock Weight Record. On live this was a child table of Animal: its eight
 rows name their animal as `parent` and their date as `recording_date`. Each
@@ -45,10 +46,70 @@ DECLARED = {
 		"custom_default_company", "custom_default_credit_account", "custom_milk_item",
 		"custom_milk_target_warehouse", "custom_milk_discard_warehouse",
 		"custom_milking_stock_entry_type", "custom_feed_wip_warehouse",
+		# Kept at the farm's request: accounts, business units, farm, targets,
+		# milk price, colostrum and weaning. Now declared by the doctype.
+		"custom_farm",
+		"custom_si_farm",
+		"custom_disposal_farm",
+		"custom_disposal_business_unit",
+		"custom_animal_sale_item",
+		"custom_insurance_receivable_account",
+		"custom_insurance_income_account",
+		"custom_disposal_account",
+		"custom_default_payout_percent",
+		"custom_default_milk_price",
+		"custom_colostrum_item",
+		"custom_milk_price_per_kg",
+		"custom_colostrum_warehouse",
+		"custom_milk_business_unit",
+		"custom_colostrum_day1_pct_of_birth_weight",
+		"custom_colostrum_days2to5_pct_of_body_weight",
+		"custom_milk_feeding_pct_of_body_weight",
+		"custom_weaning_start_day",
+		"custom_weaning_complete_day",
+		"custom_target_prod_group1",
+		"custom_target_prod_group2",
+		"custom_target_prod_group3",
+		"custom_target_prod_average",
+		"custom_target_mafc_group1",
+		"custom_target_mafc_group2",
+		"custom_target_mafc_group3",
+		"custom_target_dim",
+		"custom_target_calving_interval",
+		"custom_target_first_insem",
+		"custom_target_days_open",
+		"custom_target_straws_per_preg",
+		"custom_target_preg_100dim",
+		"custom_target_not_preg_200dim",
+		"custom_target_growth_gday",
+		"custom_animal_asset_account",
+		"custom_animal_sale_income_account",
+		"custom_vet_expense_account",
+		"custom_feed_expense_account",
+		"custom_milk_income_account",
 	),
 	"Livestock Disposal": ("sales_invoice",),
 	"Livestock Weight Record": ("weight_kg", "bcs"),
 }
+
+#: Settings dropped outright. The Journal Entry box drove the activity-cost
+#: entries, which no longer exist; the layout breaks belonged to the old form.
+SETTINGS_DROPPED = ("custom_auto_create_journal_entry",) + (
+	"custom_accounting_tab",
+	"custom_defaults_section",
+	"custom_col_break_accounting",
+	"custom_insurance_section",
+	"custom_col_break_insurance",
+	"custom_livestock_accounts_section",
+	"custom_milk_production_section",
+	"custom_col_break_milk",
+	"custom_kpi_targets_tab",
+	"custom_production_targets_section",
+	"custom_col_break_prod_targets",
+	"custom_fertility_targets_section",
+	"custom_col_break_fertility",
+	"custom_youngstock_targets_section",
+)
 
 #: doctype -> (notes field, {column: label}, where) for the orphans folded then dropped
 FOLDED = {
@@ -84,7 +145,7 @@ def execute():
 	fold_into_notes(*PAYOUT)
 	for doctype, fields in DECLARED.items():
 		frappe.db.delete("Custom Field", {"dt": doctype, "fieldname": ("in", fields)})
-	drop(SETTINGS, list(SETTING_RENAMES), single=True)
+	drop(SETTINGS, list(SETTING_RENAMES) + list(SETTINGS_DROPPED), single=True)
 	for doctype, (_notes, labels, _where) in FOLDED.items():
 		extra = ["payout_percent"] if doctype == "Livestock Disposal" else []
 		extra += list(WEIGHT_CHILD_COLUMNS) if doctype == "Livestock Weight Record" else []

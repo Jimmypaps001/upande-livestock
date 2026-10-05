@@ -27,6 +27,7 @@ import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import add_days, add_months, flt, today
 
+from upande_livestock.serverscripts.common import herd_movement
 from upande_livestock.serverscripts.disposal.record_disposal import record_disposal
 from upande_livestock.serverscripts.milking.create_milk_recording import create_milk_recording
 
@@ -63,7 +64,7 @@ class TestBackdatedMilkRecording(IntegrationTestCase):
 		)
 		if not (self.item and self.warehouse):
 			self.skipTest("no milk item / target warehouse configured on this site")
-		self.herd = frappe.db.get_value("Herds", {"custom_is_milking": 1}, "name") or frappe.db.get_value(
+		self.herd = (herd_movement.milking_herds() or [None])[0] or frappe.db.get_value(
 			"Herds", {}, "name"
 		)
 		if not self.herd:
