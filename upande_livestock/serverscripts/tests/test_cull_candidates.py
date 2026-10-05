@@ -176,7 +176,7 @@ class TestDaysUnderTreatmentPutHerForward(IntegrationTestCase):
 			"case_status": "Open",
 			"presenting_symptoms": "Off her feed",
 			**kw,
-		}).insert(ignore_permissions=True)
+		}).insert(ignore_permissions=True).submit()  # as create_health_case does; a draft is not a case
 
 	def test_a_long_illness_is_a_reason(self):
 		self._case(60)
