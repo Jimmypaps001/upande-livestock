@@ -18,6 +18,8 @@ showing "—" for every case already open.
 import frappe
 from frappe.utils import add_days, getdate
 
+from upande_livestock.patches._fold import append_lines, fold_into_notes, note_lines
+
 DROPPED = {
 	"Livestock Health Case": (
 		"lab_test_done", "lab_results", "treatment_journal_entry", "production_loss_value",
@@ -28,7 +30,41 @@ DROPPED = {
 }
 
 
+#: Where each doctype keeps what a dropped column said (live holds a lab
+#: result, a vet visit date and a rumen-fill reading among them).
+NOTES = {"Livestock Health Case": "outcome_notes", "Livestock Diagnosis": "action_notes"}
+LABELS = {
+	"lab_test_done": "Lab test done", "lab_results": "Lab results",
+	"treatment_journal_entry": "Treatment journal entry",
+	"production_loss_value": "Production loss value",
+	"notification_reference": "Notification reference", "vet_visit_date": "Vet visit",
+	"linked_disposal": "Disposal", "rumen_fill": "Rumen fill",
+	"confirmed_by_vet": "Confirmed by vet", "vet_name": "Vet",
+}
+#: A drug row's milk-safe date goes onto its parent's notes.
+PARENT_NOTES = {"Livestock Event": "remarks", "Livestock Diagnosis": "action_notes"}
+
+
+def fold_drug_row_dates():
+	if not frappe.db.has_column("Livestock Drug Issue", "milk_safe_date"):
+		return
+	for row in frappe.db.sql(
+		"""SELECT parent, parenttype, item_code, milk_safe_date
+		   FROM `tabLivestock Drug Issue` WHERE milk_safe_date IS NOT NULL""",
+		as_dict=True,
+	):
+		field = PARENT_NOTES.get(row.parenttype)
+		if not field or not frappe.db.exists(row.parenttype, row.parent):
+			continue
+		current = frappe.db.get_value(row.parenttype, row.parent, field)
+		line = note_lines({"d": row.milk_safe_date}, {"d": f"Milk safe from ({row.item_code})"})
+		append_lines(row.parenttype, row.parent, field, current, line)
+
+
 def execute():
+	for doctype, field in NOTES.items():
+		fold_into_notes(doctype, {c: LABELS[c] for c in DROPPED[doctype]}, field)
+	fold_drug_row_dates()
 	for doctype, fields in DROPPED.items():
 		frappe.db.delete("Property Setter", {"doc_type": doctype, "field_name": ("in", fields)})
 		frappe.clear_cache(doctype=doctype)
