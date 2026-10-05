@@ -183,7 +183,10 @@
   {
    "fieldname": "service_date",
    "fieldtype": "Date",
-   "label": "Service Date"
+   "label": "Service Date",
+   "hidden": 1,
+   "read_only": 1,
+   "description": "Copied from Event Date on save."
   },
   {
    "fieldname": "cb_service",
@@ -266,7 +269,10 @@
   {
    "fieldname": "diagnosis_date",
    "fieldtype": "Date",
-   "label": "Diagnosis date"
+   "label": "Diagnosis date",
+   "hidden": 1,
+   "read_only": 1,
+   "description": "Copied from Event Date on save."
   },
   {
    "fieldname": "diagnosis_remarks",
@@ -545,7 +551,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-10-05 13:00:00.000000",
+ "modified": "2026-10-05 16:00:00.000000",
  "modified_by": "Administrator",
  "module": "Upande Livestock",
  "name": "Livestock Event",

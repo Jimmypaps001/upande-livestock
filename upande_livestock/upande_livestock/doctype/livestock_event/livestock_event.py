@@ -355,6 +355,23 @@ class LivestockEvent(Document):
 		# Commit all changes
 		pass
 
+	def one_date(self):
+		"""`event_date` is the date. A Service's `service_date` and a Pregnancy
+		Diagnosis's `diagnosis_date` are copies of it, kept for the queries that
+		read them.
+
+		They were separate fields, both on the form, and nothing kept them in
+		step: a date corrected in one left the other where it was, and
+		align_event_date_with_type_date had to repair rows after the fact. A
+		caller that still sends only the type date has it taken as the date.
+		"""
+		twin = {"Service": "service_date", "Pregnancy Diagnosis": "diagnosis_date"}.get(self.event_type)
+		if not twin:
+			return
+		if not self.event_date and self.get(twin):
+			self.event_date = self.get(twin)
+		self.set(twin, self.event_date)
+
 	def validate(self):
 		# ============================================================
 		# THE DATE, BEFORE ANYTHING TRUSTS IT
@@ -366,6 +383,7 @@ class LivestockEvent(Document):
 		# post_stock_issue() below, which does not consult the backdating window at
 		# all. Clear a claim the date does not support. The flag is still STORED,
 		# never derived: this only unsets one that is false.
+		self.one_date()
 		backdate.assert_not_future(self.event_date, _("Event Date"))
 		backdate.sanitise(self, "event_date")
 

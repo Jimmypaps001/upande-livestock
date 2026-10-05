@@ -131,7 +131,7 @@ frappe.ui.form.on("Livestock Event", {
                     callback: function(r) {
                         if (!r.message) {
                             frappe.throw("Selected Service event not found.");
-                        } else if (frm.doc.diagnosis_date && frm.doc.diagnosis_date < r.message.service_date) {
+                        } else if (frm.doc.event_date && frm.doc.event_date < r.message.service_date) {
                             frappe.throw("Diagnosis Date cannot be before Service Date (" + r.message.service_date + ").");
                         }
                     }
@@ -423,8 +423,7 @@ function toggle_event_fields(frm) {
     frm.set_df_property("sire", "reqd", isService);
     frm.set_df_property("service_type", "hidden", !isService);
     frm.set_df_property("service_type", "reqd", isService);
-    frm.set_df_property("service_date", "hidden", !isService);
-    frm.set_df_property("service_date", "reqd", isService);
+    // service_date is a copy of event_date, set on save; the date is entered once.
     frm.set_df_property("pregnancy_confirmation_status", "hidden", !isService);
     if (frm.doc.pregnancy_confirmation_status === "Confirmed" && isService) {
         frm.set_df_property("pregnancy_confirmation_date", "hidden", 0);
@@ -433,8 +432,7 @@ function toggle_event_fields(frm) {
     }
 
     // ── Pregnancy Diagnosis fields ──
-    frm.set_df_property("diagnosis_date", "hidden", !isDiagnosis);
-    frm.set_df_property("diagnosis_date", "reqd", isDiagnosis);
+    // diagnosis_date likewise copies event_date on save.
     frm.set_df_property("diagnosis_result", "hidden", !isDiagnosis);
     frm.set_df_property("diagnosis_result", "reqd", isDiagnosis);
     frm.set_df_property("diagnosis_remarks", "hidden", !isDiagnosis);
