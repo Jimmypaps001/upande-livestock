@@ -30,7 +30,6 @@
   "section_stock",
   "stock_entry",
   "target_warehouse",
-  "discard_warehouse",
   "col_break_stock",
   "journal_entry",
   "income_account",
@@ -178,13 +177,6 @@
    "options": "Warehouse"
   },
   {
-   "description": "Discard warehouse from Livestock Settings.",
-   "fieldname": "discard_warehouse",
-   "fieldtype": "Link",
-   "label": "Discard Warehouse",
-   "options": "Warehouse"
-  },
-  {
    "fieldname": "col_break_stock",
    "fieldtype": "Column Break"
   },
@@ -232,7 +224,6 @@
    "description": "Not recorded at milking. Kept because two existing recordings hold a value and deleting the field would destroy it.",
    "fieldname": "fat_percent",
    "fieldtype": "Float",
-   "hidden": 1,
    "label": "Fat %"
   },
   {
@@ -301,7 +292,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-07-01 05:39:04.581484",
+ "modified": "2026-10-05 13:00:00.000000",
  "modified_by": "Administrator",
  "module": "Upande Livestock",
  "name": "Milk Recording",
