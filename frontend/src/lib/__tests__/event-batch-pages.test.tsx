@@ -172,7 +172,7 @@ describe("the plan belongs to the item AND the store", () => {
     wrap(<Husbandry />);
     await waitFor(() => expect(screen.getAllByLabelText("Item").length).toBe(1));
     await pickAlpha(0);
-    fireEvent.click(screen.getByText("Another item"));
+    fireEvent.click(screen.getByText("Add item"));
     await waitFor(() => expect(screen.getAllByLabelText("Item").length).toBe(2));
     await pickAlpha(1);
     await moveToStoreB(1);
