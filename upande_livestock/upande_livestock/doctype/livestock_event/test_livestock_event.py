@@ -31,6 +31,9 @@ IGNORE_TEST_RECORD_DEPENDENCIES = [
 	"Warehouse",
 	"Department",
 	"Livestock Drug Issue",
+	# feed_work_order: a Work Order's test records walk BOM -> Employee ->
+	# Department into the fixture this site lacks, as the others above do.
+	"Work Order",
 ]
 
 
