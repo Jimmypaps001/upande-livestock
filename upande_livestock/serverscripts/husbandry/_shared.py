@@ -36,6 +36,9 @@ def _type_consumes_drugs(event_type):
 
 	if event_items.groups_for_event(event_type):
 		return True
+	# The mapping, once written, is the whole answer; see event_items.has_mapping.
+	if event_items.has_mapping():
+		return False
 	flagged = frappe.db.get_value("Livestock Event Type", event_type, "consumes_drugs")
 	if flagged is None:
 		return event_type in DRUG_CONSUMING_TYPES

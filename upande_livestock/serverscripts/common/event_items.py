@@ -72,6 +72,16 @@ def groups_for_event(event_type):
 	return out
 
 
+def has_mapping():
+	"""Has this farm written its event-to-item-group mapping at all?
+
+	Once it has, the mapping is the whole answer to what an event consumes. A
+	site that has not (no rows, or no table before its migrate) still falls
+	back to the old per-type flag, so its drug-consuming events keep issuing.
+	"""
+	return bool(_mapping_rows())
+
+
 def consumes_items(event_type):
 	"""Whether this event type consumes anything at all.
 
