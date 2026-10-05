@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Syringe } from "lucide-react";
 import { DatePicker } from "@/components/DatePicker";
+import { EventDate } from "@/components/EventDate";
 import { Notice } from "@/components/feeding/Notice";
 import { ItemsUsed, blankRow, type ItemRow } from "@/components/events/ItemsUsed";
 import { OperatorField } from "@/components/events/OperatorField";
@@ -195,7 +196,7 @@ export function Husbandry() {
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="h-when">Done on</Label>
-              <DatePicker id="h-when" value={when} max={todayISO()} onChange={setWhen} />
+              <EventDate id="h-when" value={when} onChange={setWhen} />
             </div>
             {who.mustAsk && (
               <OperatorField operator={who.operator} onChange={who.setOperator} />

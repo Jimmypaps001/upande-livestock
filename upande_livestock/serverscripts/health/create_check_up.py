@@ -76,7 +76,7 @@ def create_check_up(payload):
 		# Built once: the guard below and the rows share a definition of what
 		# counts as issuing a drug, and two calls could only drift apart.
 		drugs = _clean_drug_rows(
-			d.get("drugs"), d.get("source_warehouse") or event_items.default_store("Check Up")
+			d.get("items") or d.get("drugs"), d.get("source_warehouse") or event_items.default_store("Check Up")
 		)
 
 		# Treating a cow is issuing stock to her, and that belongs in a file.

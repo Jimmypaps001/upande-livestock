@@ -150,7 +150,9 @@ export function Milking() {
   }, [form.herd, loadRecent]);
 
   /** Live mode always posts today, whatever the field last held. */
-  const effectiveDate = backdating ? postDate : todayISO();
+  // Live sends no date: the server dates it by its own today, which a browser
+  // in another time zone does not share.
+  const effectiveDate = backdating ? postDate : "";
   const net = formNet(form);
   const money = formRevenue(form);
   const discarded = parseFloat(form.discardedKg) > 0;
@@ -178,9 +180,9 @@ export function Milking() {
       ? ` Stock Entry ${r.stock_entry}.`
       : " No stock was posted — a backdated recording defers its Stock Entry until it is replayed.";
     setSuccess(
-      `Recorded ${r.name} — ${fmt(r.net_yield_kg)} kg net from ${herdLabel} on ${effectiveDate}.${posted}`,
+      `Recorded ${r.name} — ${fmt(r.net_yield_kg)} kg net from ${herdLabel} on ${effectiveDate || "today"}.${posted}`,
     );
-    setLastMode(effectiveDate !== todayISO() ? "Backdated" : null);
+    setLastMode(backdating ? "Backdated" : null);
     // Keep the herd and the posting day; a parlour records the second milking
     // straight after the first, and retyping the herd is how the wrong one
     // gets picked.
@@ -411,9 +413,9 @@ export function Milking() {
             <Button onClick={submit} disabled={busy}>
               {busy ? "Recording…" : "Record & submit"}
             </Button>
-            {effectiveDate !== todayISO() && <Mark>Backdated · {effectiveDate}</Mark>}
+            {backdating && <Mark>Backdated · {effectiveDate}</Mark>}
             <span className="text-[12px] text-[var(--sd-quiet)]">
-              {effectiveDate !== todayISO()
+              {backdating
                 ? "This recording will be stamped backdated and will not post milk into stock."
                 : "This posts the milk into stock and a revenue journal entry."}
             </span>

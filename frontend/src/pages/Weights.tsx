@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Scale } from "lucide-react";
 import { DatePicker } from "@/components/DatePicker";
+import { EventDate } from "@/components/EventDate";
 import { Notice } from "@/components/feeding/Notice";
 import { STICKY_HEAD, ScrollTable } from "@/components/ScrollTable";
 import { OperatorField } from "@/components/events/OperatorField";
@@ -205,7 +206,7 @@ export function Weights() {
           <div className="flex flex-wrap items-end gap-4">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="w-when">Weighed on</Label>
-              <DatePicker id="w-when" value={when} max={todayISO()} onChange={setWhen} />
+              <EventDate id="w-when" value={when} onChange={setWhen} />
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="w-method">How</Label>

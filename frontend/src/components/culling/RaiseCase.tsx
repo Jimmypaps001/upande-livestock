@@ -4,6 +4,7 @@ import { AnimalSearch } from "@/components/animals/AnimalSearch";
 import { Notice } from "@/components/feeding/Notice";
 import { OperatorField } from "@/components/events/OperatorField";
 import { DatePicker } from "@/components/DatePicker";
+import { EventDate } from "@/components/EventDate";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -240,7 +241,7 @@ export function RaiseCase({
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="cull-when">{flow === "Mortality" ? "Date of death" : "Date"}</Label>
-          <DatePicker id="cull-when" value={when} max={todayISO()} onChange={setWhen} />
+          <EventDate id="cull-when" value={when} onChange={setWhen} />
         </div>
 
         {flow === "Mortality" && (

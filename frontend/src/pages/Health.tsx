@@ -54,10 +54,11 @@ export function CheckUp() {
           { name: "differential_notes", label: "Differential / notes", kind: "notes",
             placeholder: "Could be ketosis; check urine before treating." },
           { name: "action_taken", label: "What was done", kind: "select", options: o.actions },
-          { name: "follow_up_date", label: "Look again on", kind: "date" },
+          { name: "follow_up_date", label: "Look again on", kind: "date", planned: true },
           { name: "action_notes", label: "Notes", kind: "notes" },
         ]}
         operatorOf={(o) => o.employee}
+        eventType="Check Up"
         submitLabel="Record the check up"
         submit={createCheckUp}
         // A CHECK-UP IS WHERE A FILE COMES FROM, so the answer says whether one

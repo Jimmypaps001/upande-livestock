@@ -225,3 +225,15 @@ def items_for_event(event_type, company=None):
 		)
 	out.sort(key=lambda i: (i["item_name"] or "").lower())
 	return out
+
+
+def items_by_event(company=None):
+	"""{event type: its in-stock items} for every event type that posts stock.
+
+	Sent with each screen's options, so a page has the picker list for whatever
+	event it records the moment it loads — filtered by the type's item groups,
+	searched in the browser, no call per keystroke. A type that posts no stock
+	has no key: absent means "not set to post stock", [] means "set, nothing
+	in stock".
+	"""
+	return {t: items_for_event(t, company) for t in _rules() if consumes_items(t)}

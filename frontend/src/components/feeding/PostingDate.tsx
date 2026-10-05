@@ -2,6 +2,7 @@ import { AmberNotice } from "@/components/feeding/Notice";
 import { DatePicker } from "@/components/DatePicker";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { usePostingDay } from "@/lib/posting-day";
 import { cn, todayISO } from "@/lib/utils";
 
 export const BACKDATE_WARNING =
@@ -51,7 +52,11 @@ export function PostingDate({
   /** What this page posts, singular — "run", "recording". */
   noun?: string;
 }) {
-  const today = todayISO();
+  const day = usePostingDay();
+  // The server's today, not the browser's; and no backdating at all while
+  // Livestock Settings has it closed.
+  const today = day?.today ?? todayISO();
+  const closed = day !== null && !day.backdating_open;
 
   return (
     <div className="flex flex-col gap-3">
@@ -76,6 +81,7 @@ export function PostingDate({
           </span>
           <Switch
             checked={backdating}
+            disabled={closed && !backdating}
             onCheckedChange={(checked) => {
               onBackdatingChange(checked);
               if (!checked) onDateChange(today);
@@ -117,7 +123,9 @@ export function PostingDate({
         <span className="text-[12px] text-[var(--sd-quiet)]">
           {backdating
             ? `Every ${noun} on this page posts on the date above.`
-            : `Every ${noun} on this page posts today.`}
+            : closed
+              ? `Every ${noun} on this page posts today. Backdating is closed in Livestock Settings.`
+              : `Every ${noun} on this page posts today.`}
         </span>
       </div>
       {backdating && <AmberNotice>{BACKDATE_WARNING}</AmberNotice>}

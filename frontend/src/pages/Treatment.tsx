@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { FileText, FolderOpen, Syringe } from "lucide-react";
 import { AnimalSearch } from "@/components/animals/AnimalSearch";
 import { DatePicker } from "@/components/DatePicker";
+import { EventDate } from "@/components/EventDate";
 import { Notice } from "@/components/feeding/Notice";
 import { ItemsUsed, blankRow, type ItemRow } from "@/components/events/ItemsUsed";
 import { OperatorField } from "@/components/events/OperatorField";
@@ -370,7 +371,7 @@ export function Treatment() {
               <div className="flex flex-wrap items-end gap-4">
                 <div className="flex flex-col gap-1.5">
                   <Label htmlFor="tx-when">Given on</Label>
-                  <DatePicker id="tx-when" value={when} max={todayISO()} onChange={setWhen} />
+                  <EventDate id="tx-when" value={when} onChange={setWhen} />
                 </div>
                 {who.mustAsk && (
                   <OperatorField operator={who.operator} onChange={who.setOperator} />

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AlertTriangle, ArrowRight, Clock, Search } from "lucide-react";
 import { DatePicker } from "@/components/DatePicker";
+import { EventDate } from "@/components/EventDate";
 import { Figure, FigureRow } from "@/components/Figure";
 import { Notice } from "@/components/feeding/Notice";
 import { RowsSkeleton } from "@/components/Loading";
@@ -165,7 +166,7 @@ export function Movement() {
       <div className="flex flex-wrap items-end gap-4">
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="mv-when">Moved on</Label>
-          <DatePicker id="mv-when" value={when} max={todayISO()} onChange={setWhen} />
+          <EventDate id="mv-when" value={when} onChange={setWhen} />
         </div>
         <div className="flex min-w-[240px] flex-1 flex-col gap-1.5">
           <Label htmlFor="mv-why">Why (optional)</Label>

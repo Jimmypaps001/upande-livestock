@@ -2,6 +2,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Picker } from "@/components/ui/picker";
+import { SearchPicker } from "@/components/ui/search-picker";
 import { Notice } from "@/components/feeding/Notice";
 import type { StockChoice } from "@/lib/events";
 import type { BatchPlan } from "@/lib/feeding";
@@ -76,8 +77,8 @@ export function ItemsUsed({
       </Notice>
     ) : (
       <Notice tone="info">
-        No items are mapped to this event, so it cannot use anything from the
-        store. Set that in Settings, &ldquo;What Each Event May Consume&rdquo;.
+        This event is not set to post stock, so it cannot use anything from the
+        store. Set that in Settings &rarr; Stock.
       </Notice>
     );
 
@@ -99,16 +100,17 @@ export function ItemsUsed({
           <div key={r.key} className="grid gap-3 sm:grid-cols-[2fr_0.6fr_1.4fr_1.4fr_auto]">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor={`item-${r.key}`}>Item</Label>
-              <Picker
+              <SearchPicker
                 id={`item-${r.key}`}
                 value={r.item}
-                // Choosing the item chooses the store it is mostly in.
+                // Choosing the item chooses the store it is mostly in (the
+                // event type's default store first, when it holds any).
                 onChange={(next) =>
                   set(r.key, { item: next, store: where.get(next)?.warehouse ?? "", batch: "" })
                 }
                 options={choices.map((c) => ({ value: c.value, label: c.label }))}
                 label="Item"
-                placeholder="From the store…"
+                placeholder="Search the store…"
               />
             </div>
             <div className="flex flex-col gap-1.5">

@@ -219,6 +219,7 @@ export function DryingOff() {
           { name: "remarks", label: "Notes", kind: "notes" },
         ]}
         operatorOf={(o) => o.employee}
+        eventType="Drying Off"
         submitLabel="Dry her off"
         submit={createDryingOffEvent}
         // The server repeats the deviation it recorded, so the confirmation
