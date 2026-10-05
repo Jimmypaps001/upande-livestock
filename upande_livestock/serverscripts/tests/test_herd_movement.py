@@ -227,3 +227,21 @@ class TestGestation(IntegrationTestCase):
 
 	def test_no_conception_no_date(self):
 		self.assertIsNone(hm.expected_calving_date(None))
+
+
+class TestAnUnsetTimingIsItsDefaultNotOff(unittest.TestCase):
+	"""herd_movement read its timings as `int(s.get(key) or 0)`, so a setting
+	never filled in switched its rule off (min service age 0, no open-days
+	limit) instead of taking the documented default, and gestation fell back to
+	270 days where the defaults say 280."""
+
+	def test_unset_settings_read_as_their_defaults(self):
+		from unittest.mock import patch
+
+		from upande_livestock.serverscripts.common import herd_movement as HM
+		from upande_livestock.serverscripts.common import timings
+
+		with patch.object(timings, "read_setting", return_value=None):
+			self.assertEqual(HM.service_wait_days(), timings.TIMING_DEFAULTS["post_calving_optimal_service_days"])
+			self.assertEqual(HM.get_timing("min_service_age_months"), 15)
+			self.assertEqual(HM.get_timing("gestation_period_days"), 280)

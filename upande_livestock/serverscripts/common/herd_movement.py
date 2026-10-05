@@ -24,6 +24,7 @@ from frappe import _
 from frappe.utils import add_days, date_diff, flt, getdate, today
 
 from upande_livestock.serverscripts.common.animal import RETIRED_STATUSES
+from upande_livestock.serverscripts.common.timings import get_timing
 
 SETTINGS = "Livestock Settings"
 
@@ -215,7 +216,7 @@ def bull_cull_status(animal):
 	s = settings()
 	if not s.get("cull_bulls_after_birth"):
 		return None
-	window = int(s.get("bull_cull_max_days") or 0)
+	window = get_timing("bull_cull_max_days")
 	if window <= 0:
 		return None
 	row = frappe.db.get_value(
@@ -272,9 +273,7 @@ def service_wait_days():
 	puts cows in front of the breeder three weeks before anybody would serve
 	them; the floor stays where it is, guarding a deliberate override.
 	"""
-	s = settings()
-	return int(s.get("post_calving_optimal_service_days")
-	           or s.get("post_calving_min_service_days") or 0)
+	return get_timing("post_calving_optimal_service_days") or get_timing("post_calving_min_service_days")
 
 
 def is_milkable(animal):
@@ -392,7 +391,7 @@ def open_days(animal):
 def open_too_long(animal):
 	"""A cow that has not conceived within the farm's limit has expired from the
 	high-yield herd on productivity grounds."""
-	limit = int(settings().get("max_open_days") or 0)
+	limit = get_timing("max_open_days")
 	if not limit:
 		return None
 	days = open_days(animal)
@@ -415,13 +414,13 @@ def steamer_days_for(previous_herd):
 	"""
 	s = settings()
 	if previous_herd and previous_herd == s.get("incalf_heifer_herd"):
-		return int(s.get("steamer_days_from_heifers") or 0)
-	return int(s.get("steamer_days_from_lactation") or 0)
+		return get_timing("steamer_days_from_heifers")
+	return get_timing("steamer_days_from_lactation")
 
 
 def expected_calving_date(conception_date):
 	"""Conception plus gestation. Nine months, from settings."""
-	days = int(settings().get("gestation_period_days") or 0) or 270
+	days = get_timing("gestation_period_days")
 	return add_days(getdate(conception_date), days) if conception_date else None
 
 
@@ -511,7 +510,7 @@ def bull_cull_warnings():
 
 def open_cow_warnings():
 	"""Cows that have gone too long without conceiving."""
-	limit = int(settings().get("max_open_days") or 0)
+	limit = get_timing("max_open_days")
 	if not limit:
 		return []
 	out = []
@@ -589,7 +588,7 @@ def lactation_move_due(animal):
 	to_calving = date_diff(getdate(calving), today()) if calving else None
 
 	if herd == high and low:
-		limit = int(s.get("high_yield_days_from_conception") or 0)
+		limit = get_timing("high_yield_days_from_conception")
 		return _lactation_row(animal, herd, low, days, limit, to_calving,
 		                      f"{days} days in calf") if limit else None
 
@@ -598,7 +597,7 @@ def lactation_move_due(animal):
 		# number rather than as a second offset from conception — so it is read
 		# as one, from the day she arrived.
 		in_herd = days_in_current_herd(animal)
-		limit = int(s.get("low_yield_days") or 0)
+		limit = get_timing("low_yield_days")
 		if not limit or in_herd is None:
 			return None
 		return _lactation_row(animal, herd, steamers, in_herd, limit, to_calving,
@@ -607,7 +606,7 @@ def lactation_move_due(animal):
 	if herd == incalf and steamers:
 		# A heifer is due out when calving is close, not when she has waited
 		# long enough — she arrived already carrying.
-		lead = int(s.get("steamer_days_from_heifers") or 0)
+		lead = get_timing("steamer_days_from_heifers")
 		if not lead or to_calving is None:
 			return None
 		return _lactation_row(
@@ -706,10 +705,8 @@ def dry_off_window_days(previous_herd=None):
 	"""
 	s = settings()
 	if previous_herd and previous_herd == s.get("incalf_heifer_herd"):
-		return int(s.get("heifer_dry_off_before_calving_days")
-		           or s.get("steamer_days_from_heifers") or 0)
-	return int(s.get("steamer_days_from_lactation")
-	           or s.get("heifer_dry_off_before_calving_days") or 0)
+		return get_timing("heifer_dry_off_before_calving_days") or get_timing("steamer_days_from_heifers")
+	return get_timing("steamer_days_from_lactation") or get_timing("heifer_dry_off_before_calving_days")
 
 
 def _carrying_rows():
@@ -817,7 +814,7 @@ def calving_candidates():
 	from Settings. A cow past her date is still here, and first: overdue is the
 	one state on this list that needs somebody to look at her today.
 	"""
-	lead = int(settings().get("calving_alert_lead_days") or 0)
+	lead = get_timing("calving_alert_lead_days")
 	out = []
 	for animal, row in _carrying_rows().items():
 		conceived = conception_date(animal) or row.get("served")
@@ -844,7 +841,7 @@ def calving_candidates():
 
 def service_age_months():
 	"""How old a heifer must be before anybody serves her. From Settings."""
-	return int(settings().get("min_service_age_months") or 0)
+	return get_timing("min_service_age_months")
 
 
 def heat_candidates():
