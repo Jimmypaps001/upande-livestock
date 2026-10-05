@@ -63,6 +63,46 @@ class MilkRecording(Document):
 		# the flag stays stored, never derived, so this only ever unsets a false one.
 		backdate.assert_not_future(self.recording_date, "Recording Date")
 		backdate.sanitise(self, "recording_date")
+		self._assert_stores_belong_to_company()
+
+	def _milk_stores(self):
+		"""(milk store, discard store) — the record's own, else Livestock Settings'."""
+		target = self.target_warehouse or frappe.db.get_single_value(
+			"Livestock Settings", "custom_milk_target_warehouse"
+		)
+		discard = frappe.db.get_single_value("Livestock Settings", "custom_milk_discard_warehouse")
+		return target, discard
+
+	def _assert_stores_belong_to_company(self):
+		"""The milk posts under this record's company, into stores of that company.
+
+		Posting used to take Livestock Settings' company and ignore this one, so
+		milk entered under Kaitet Group was received as Karen Roses'. A store of
+		another company now stops the save, where it can be put right, instead
+		of posting the milk somewhere the record does not say.
+		"""
+		if not self.company:
+			return
+		for store in self._milk_stores():
+			owner = store and frappe.db.get_value("Warehouse", store, "company")
+			if owner and owner != self.company:
+				frappe.throw(
+					f"{store} belongs to {owner}, not {self.company}. Record the milking "
+					f"under {owner}, or name a {self.company} milk store."
+				)
+
+	def on_cancel(self):
+		"""Take back what on_submit posted.
+
+		There was no on_cancel, so a cancelled recording left its milk in stock
+		and its revenue booked. Neither posting links back here, so Frappe's own
+		linked-document check never asked.
+		"""
+		for doctype, name in (("Journal Entry", self.journal_entry), ("Stock Entry", self.stock_entry)):
+			if name and frappe.db.get_value(doctype, name, "docstatus") == 1:
+				posting = frappe.get_doc(doctype, name)
+				posting.flags.ignore_permissions = True
+				posting.cancel()
 
 	def on_submit(self):
 		"""Post the milk into stock (+ a best-effort revenue Journal Entry) — unless
@@ -105,11 +145,9 @@ class MilkRecording(Document):
 		the same set exactly, because the only route that fills `stock_entry` is
 		this one, whether it runs from `on_submit` or from the replay endpoint.
 		"""
-		company = frappe.db.get_single_value("Livestock Settings", "custom_default_company")
+		company = self.company or frappe.db.get_single_value("Livestock Settings", "custom_default_company")
 		milk_item = frappe.db.get_single_value("Livestock Settings", "custom_milk_item")
-		target_wh = self.target_warehouse or frappe.db.get_single_value(
-			"Livestock Settings", "custom_milk_target_warehouse"
-		)
+		target_wh, discard_wh = self._milk_stores()
 		se_type = (
 			frappe.db.get_single_value("Livestock Settings", "custom_milking_stock_entry_type") or "Milking"
 		)
@@ -124,9 +162,6 @@ class MilkRecording(Document):
 		net_yield = flt(self.net_yield_kg)
 		discarded = flt(self.discarded_kg)
 		revenue = flt(self.milk_revenue)
-		discard_wh = self.discard_warehouse or frappe.db.get_single_value(
-			"Livestock Settings", "custom_milk_discard_warehouse"
-		)
 
 		if not milk_item:
 			frappe.throw("Milk item not set in Livestock Settings (custom_milk_item).")
