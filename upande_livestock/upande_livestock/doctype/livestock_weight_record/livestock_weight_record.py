@@ -106,7 +106,20 @@ class LivestockWeightRecord(Document):
 		if not latest:
 			return
 
-		values = {"last_weight_kg": flt(latest[0].weight_kg)}
-		if latest[0].bcs:
-			values["last_bcs"] = flt(latest[0].bcs)
+		# BCS is scored less often than she is weighed, so it is the latest
+		# submitted record that HAS a score. Taken only from the latest record,
+		# a score could outlive the record it came from: cancel the one scored
+		# weighing and the animal kept a BCS no submitted record carried.
+		scored = frappe.db.sql(
+			"""SELECT bcs
+			   FROM `tabLivestock Weight Record`
+			   WHERE animal = %(animal)s AND docstatus = 1 AND IFNULL(bcs, 0) > 0
+			   ORDER BY weight_date DESC, creation DESC
+			   LIMIT 1""",
+			{"animal": self.animal},
+		)
+		values = {
+			"last_weight_kg": flt(latest[0].weight_kg),
+			"last_bcs": flt(scored[0][0]) if scored else 0,
+		}
 		frappe.db.set_value("Animal", self.animal, values, update_modified=False)

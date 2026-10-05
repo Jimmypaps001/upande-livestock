@@ -86,7 +86,6 @@ class TestLivestockRolePermissions(IntegrationTestCase):
 
 	def test_the_breeder_works_reproduction(self):
 		self.assertTrue(self._can("Livestock Breeder", "Livestock Event"))
-		self.assertTrue(self._can("Livestock Breeder", "Calf Rearing"))
 		self.assertFalse(self._can("Livestock Breeder", "Milk Recording"))
 		self.assertFalse(self._can("Livestock Breeder", "Livestock Disposal"))
 

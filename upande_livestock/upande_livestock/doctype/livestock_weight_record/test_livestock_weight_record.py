@@ -153,6 +153,18 @@ class TestLivestockWeightRecord(IntegrationTestCase):
 		only.cancel()
 		self.assertEqual(frappe.db.get_value("Animal", self.animal, "last_weight_kg"), 300.0)
 
+	def test_a_cancelled_score_does_not_outlive_its_record(self):
+		self._record(300.0, "2026-04-01")
+		scored = self._record(310.0, "2026-05-01", bcs=3.5)
+		self.assertEqual(frappe.db.get_value("Animal", self.animal, "last_bcs"), 3.5)
+		scored.cancel()
+		self.assertFalse(frappe.db.get_value("Animal", self.animal, "last_bcs"))
+
+	def test_an_unscored_weighing_keeps_the_last_score(self):
+		self._record(300.0, "2026-04-01", bcs=3.0)
+		self._record(310.0, "2026-05-01")
+		self.assertEqual(frappe.db.get_value("Animal", self.animal, "last_bcs"), 3.0)
+
 	def test_non_positive_weight_throws(self):
 		with self.assertRaises(frappe.exceptions.ValidationError):
 			self._record(0, "2026-04-02", submit=False)

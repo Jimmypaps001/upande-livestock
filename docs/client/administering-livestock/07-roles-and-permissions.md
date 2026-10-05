@@ -51,7 +51,6 @@ naming.
 | Livestock Disease | RWCDSX | RWC | — | — | — | — |
 | Breed | RWCDSX | — | RWC | — | — | — |
 | Breeders | RWCDSX | — | RWC | — | — | — |
-| Calf Rearing | RWCDSX | — | RWCS | R | — | — |
 | Livestock Disposal | RWCDSX | — | — | — | — | — |
 | Livestock Insurance Policy | RWCDSX | — | — | — | — | — |
 | Livestock Settings | RWCDSX | — | — | — | — | — |

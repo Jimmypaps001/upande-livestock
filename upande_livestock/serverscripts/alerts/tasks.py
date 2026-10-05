@@ -38,15 +38,12 @@ def pregnancy_check_days():
 	return int(configured or 0) or DEFAULT_PREGNANCY_CHECK_DAYS
 
 
-def raise_pregnancy_check_alerts():
-	"""Record a `Pregnancy Check Overdue` alert per service still undiagnosed.
+PREGNANCY_CHECK = "Pregnancy Check Overdue"
 
-	Deliberately NOT reusing the ToDo query above it. That one excludes anything
-	that already has a ToDo raised today, which is the right dedupe for a ToDo
-	and the wrong one for an alert: an alert is deduplicated on whether one is
-	still open (`herd_alerts.already_open`), so that a check overdue for a month
-	is one row and one notification rather than thirty of each.
-	"""
+
+def pregnancy_checks_due():
+	"""alert_key -> the Pregnancy Check Overdue alert each overdue service is owed."""
+	kind = PREGNANCY_CHECK
 	due_after = pregnancy_check_days()
 	overdue = frappe.db.sql(
 		"""
@@ -66,28 +63,55 @@ def raise_pregnancy_check_alerts():
 		as_dict=True,
 	)
 
-	raised = 0
+	due = {}
 	for r in overdue:
-		if herd_alerts.already_open("Pregnancy Check Overdue", r.animal):
-			continue
 		label = r.tag_number or r.burn_name or r.animal
 		days = int(r.days_since or 0)
+		due[herd_alerts.alert_key(kind, r.animal)] = {
+			"animal": r.animal,
+			"herd": r.current_herd,
+			"severity": "Overdue",
+			"message": (
+				f"{label} was served {days} days ago and still has no pregnancy diagnosis "
+				f"— {days - due_after} days past the {due_after}-day check."
+			),
+			"detail": {
+				"service": r.service,
+				"service_date": str(r.service_date),
+				"days_since": days,
+				"check_due_after_days": due_after,
+			},
+		}
+	return due
+
+
+def raise_pregnancy_check_alerts():
+	"""Record a `Pregnancy Check Overdue` alert per service still undiagnosed.
+
+	Deliberately NOT reusing the ToDo query above it. That one excludes anything
+	that already has a ToDo raised today, which is the right dedupe for a ToDo
+	and the wrong one for an alert: an alert is deduplicated on whether one is
+	still open (`herd_alerts.already_open`), so that a check overdue for a month
+	is one row and one notification rather than thirty of each.
+	"""
+	kind = PREGNANCY_CHECK
+	due = pregnancy_checks_due()
+	# An alert whose service has since been diagnosed is cleared here; it used
+	# to stay open and block the alert for her next undiagnosed service.
+	herd_alerts.settle_open_alerts((kind,), due)
+
+	raised = 0
+	for a in due.values():
+		if herd_alerts.already_open(kind, a["animal"]):
+			continue
 		doc = frappe.new_doc("Livestock Alert")
-		doc.alert_kind = "Pregnancy Check Overdue"
+		doc.alert_kind = kind
 		doc.alert_date = frappe.utils.nowdate()
-		doc.animal = r.animal
-		doc.herd = r.current_herd
-		doc.severity = "Overdue"
-		doc.message = (
-			f"{label} was served {days} days ago and still has no pregnancy diagnosis "
-			f"— {days - due_after} days past the {due_after}-day check."
-		)
-		doc.detail = frappe.as_json({
-			"service": r.service,
-			"service_date": str(r.service_date),
-			"days_since": days,
-			"check_due_after_days": due_after,
-		})
+		doc.animal = a["animal"]
+		doc.herd = a["herd"]
+		doc.severity = a["severity"]
+		doc.message = a["message"]
+		doc.detail = frappe.as_json(a["detail"])
 		doc.insert(ignore_permissions=True)
 		raised += 1
 	return raised
