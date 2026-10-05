@@ -68,3 +68,16 @@ def cancel_event_for(doc):
 	if event.docstatus == 1:
 		event.flags.ignore_permissions = True
 		event.cancel()
+
+
+def stamp_stock_entry(doc, stock_entry):
+	"""Show the issue a detail document posted on its timeline event.
+
+	The mirror event owns no stock — its source posts the issue and cancels it —
+	but the event is where the animal's history is read, and its Connections
+	tab showed nothing. The latest issue is written onto it; a case treated
+	over several days lists every one of them on its own Connections tab.
+	"""
+	name = _existing_event(doc)
+	if name and stock_entry:
+		frappe.db.set_value("Livestock Event", name, "stock_entry", stock_entry, update_modified=False)

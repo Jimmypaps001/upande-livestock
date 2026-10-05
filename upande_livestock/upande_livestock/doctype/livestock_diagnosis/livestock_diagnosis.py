@@ -7,7 +7,7 @@ from frappe.utils import flt
 from upande_livestock.serverscripts.common import backdate
 from upande_livestock.serverscripts.common import cost_center as livestock_cost_center
 from upande_livestock.serverscripts.common import stock as livestock_stock
-from upande_livestock.serverscripts.common.event_link import cancel_event_for, sync_event_for
+from upande_livestock.serverscripts.common.event_link import cancel_event_for, stamp_stock_entry, sync_event_for
 
 
 class LivestockDiagnosis(Document):
@@ -76,6 +76,7 @@ class LivestockDiagnosis(Document):
 		)
 		if name:
 			self.db_set("stock_entry", name, update_modified=False)
+			stamp_stock_entry(self, name)
 			for row in self.drug_issues or []:
 				if row.item_code:
 					row.db_set("stock_entry_ref", name, update_modified=False)
