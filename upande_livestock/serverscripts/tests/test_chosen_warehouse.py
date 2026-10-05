@@ -353,7 +353,7 @@ class TestTheShortageCheckLooksWhereTheRunDraws(unittest.TestCase):
 		bom = SimpleNamespace(name="BOM-T", item="RATION-T", quantity=1, uom="Kg")
 		with patch.object(_engine, "_herd_bom", return_value=(None, bom, 10)), \
 		     patch.object(_engine, "_is_backdated", return_value=False), \
-		     patch.object(_engine, "_assert_can_cover", side_effect=Checked) as cover:
+		     patch.object(_engine, "resolve_requirement", side_effect=Checked) as cover:
 			with self.assertRaises(Checked):
 				_engine.manufacture_herd_feed("HERD-T", source_warehouse="Silage Pit 2")
 		self.assertEqual(cover.call_args.kwargs.get("source_warehouse"), "Silage Pit 2")

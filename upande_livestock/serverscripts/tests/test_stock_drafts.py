@@ -128,6 +128,7 @@ class TestShortTodayLeavesADraft(IntegrationTestCase):
 		se = frappe.get_doc("Stock Entry", res["stock_entry"])
 		self.assertEqual(se.docstatus, 1)
 		self.assertEqual(str(se.posting_date), today())
+		self.assertFalse(any(d.allow_zero_valuation_rate for d in se.items))
 
 	def test_only_a_livestock_draft_can_be_posted_here(self):
 		out = post_stock_draft({"name": "ZZ-NO-SUCH-ENTRY"})

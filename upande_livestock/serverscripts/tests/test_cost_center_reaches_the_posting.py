@@ -122,7 +122,9 @@ class TestFeedingChargesTheHerd(unittest.TestCase):
 	def test_the_material_issue_passes_its_herd(self):
 		from upande_livestock.serverscripts.feeding import _engine
 
-		self.assertIn("herd=herd", _stamp_calls(_engine, "_issue_feed"))
+		# The issue is posted by `_post_feed_issue`, which `_issue_feed` and a
+		# run that waited for stock (`complete_feed_run`) both go through.
+		self.assertIn("herd=herd", _stamp_calls(_engine, "_post_feed_issue"))
 
 
 def _stamp_calls(module, func_name):

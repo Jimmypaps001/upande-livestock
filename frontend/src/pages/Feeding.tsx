@@ -51,6 +51,15 @@ import {
 import { usePostingDay } from "@/lib/posting-day";
 import { fmt, num, todayISO } from "@/lib/utils";
 
+/** What the page says when a run was fed but the stores could not cover it. */
+function waitingSentence(r: { produced_qty: number; uom: string; work_order: string; transfer_stock_entry?: string; waiting_for?: string }, herd: string) {
+  return `Fed ${fmt(r.produced_qty)} ${r.uom || ""} to ${herd} and recorded. ${
+    r.waiting_for ?? "The stores are short"
+  } — so the stock waits as a draft on Transactions (Work Order ${r.work_order}, ${
+    r.transfer_stock_entry ?? ""
+  }) and is mixed and issued once the feed is in.`;
+}
+
 export function Feeding() {
   const [herds, setHerds] = useState<HerdOption[]>([]);
   const [herd, setHerd] = useState("");
@@ -296,6 +305,12 @@ export function Feeding() {
     }
     const recipeNote =
       !usingStandingRecipe && selectedRecipe ? ` using ${selectedRecipe.item_name}` : "";
+    if (r.pending) {
+      setSuccess(waitingSentence(r, program.herd_label || program.herd));
+      setLastRunMode(null);
+      load(program.herd, false);
+      return;
+    }
     setSuccess(
       `Manufactured and issued ${fmt(r.produced_qty)} ${r.uom || ""} to ${
         program.herd_label || program.herd
@@ -336,6 +351,13 @@ export function Feeding() {
     setManualBusy(false);
     if (isError(r)) {
       setFailure(r.error);
+      return;
+    }
+    if (r.pending) {
+      setSuccess(waitingSentence(r, program.herd_label || program.herd));
+      setLastRunMode("Manual");
+      setManualHerd(null);
+      load(program.herd, false);
       return;
     }
     setSuccess(
@@ -543,14 +565,19 @@ export function Feeding() {
                   <div className="flex flex-wrap items-center gap-3">
                     <Button
                       onClick={mixAndFeed}
-                      disabled={mixing || (usingStandingRecipe && !program.can_manufacture)}
+                      // Short TODAY still records the feeding — its stock
+                      // waits as a draft. Only a backdated run must be covered:
+                      // a draft dated last month would be a different run.
+                      disabled={mixing || (backdating && usingStandingRecipe && !program.can_manufacture)}
                     >
                       {mixing ? "Mixing…" : "Mix & feed"}
                     </Button>
                     {backdating && <Mark>Backdated · {effectiveDate}</Mark>}
                     {usingStandingRecipe && !program.can_manufacture && (
                       <span className="text-[12px] text-[var(--sd-quiet)]">
-                        A short line has to be covered before this run can post.
+                        {backdating
+                          ? "A short line has to be covered before a backdated run can post."
+                          : "Short: the feeding is still recorded, and its stock waits as a draft on Transactions until the feed is in."}
                       </span>
                     )}
                   </div>

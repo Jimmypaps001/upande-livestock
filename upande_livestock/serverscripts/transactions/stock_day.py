@@ -18,6 +18,6 @@ def stock_day(payload=None):
 		day = as_dict(payload).get("date")
 		if not day:
 			frappe.throw(_("Say which day to show."))
-		return {"ok": True, "date": str(getdate(day)), "entries": entry_rows({"posting_date": getdate(day)})}
+		return {"ok": True, "date": str(getdate(day)), "entries": entry_rows("AND se.posting_date = %(day)s", {"day": getdate(day)})}
 
 	return run(go, "livestock stock_day failed")

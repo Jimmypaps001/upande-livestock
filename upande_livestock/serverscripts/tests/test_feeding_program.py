@@ -110,19 +110,21 @@ class TestFeedingProgram(IntegrationTestCase):
 			)
 		self.assertEqual(p["can_manufacture"], not p["shortages"])
 
-	def test_manufacture_refuses_when_short(self):
-		"""A short run must not post — the transfer would go negative.
-
-		The message is asserted, not just the exception type: the operator guard
-		raises ValidationError too, so a bare assertRaises would pass on a site
-		where the test user has no Employee and prove nothing about shortages.
-		"""
+	def test_a_short_run_today_is_not_refused_it_waits(self):
+		"""A short run must not POST — the transfer would go negative — but the
+		herd was fed, so it is recorded and its transfer waits as a draft
+		(test_feed_drafts covers the run end to end)."""
 		p = feeding.get_herd_feeding_program(self.herd.name)
 		if p["can_manufacture"]:
-			raise unittest.SkipTest("this herd is not short; nothing to refuse")
-		with self.assertRaises(frappe.ValidationError) as caught:
-			feeding.manufacture_herd_feed(self.herd.name)
-		self.assertIn("Not enough stock", str(caught.exception))
+			raise unittest.SkipTest("this herd is not short")
+		employee = frappe.db.get_value("Employee", {"status": "Active"}, "name")
+		if not employee:
+			raise unittest.SkipTest("no active Employee on this site")
+		res = feeding.manufacture_herd_feed(self.herd.name, employee=employee)
+		if res.get("livestock_event"):
+			self.addCleanup(lambda: frappe.get_doc("Livestock Event", res["livestock_event"]).cancel())
+		self.assertTrue(res["pending"])
+		self.assertEqual(frappe.db.get_value("Stock Entry", res["transfer_stock_entry"], "docstatus"), 0)
 
 
 class TestManufactureIssuesItsBatch(IntegrationTestCase):

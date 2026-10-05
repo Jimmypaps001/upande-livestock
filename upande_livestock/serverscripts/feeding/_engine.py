@@ -49,7 +49,7 @@ from datetime import datetime, timedelta
 
 import frappe
 from frappe import _
-from frappe.utils import cint, flt, getdate, today
+from frappe.utils import cint, flt, getdate, nowtime, today
 from erpnext.manufacturing.doctype.work_order.work_order import make_stock_entry
 
 from upande_livestock.serverscripts.common import batches as livestock_batches
@@ -549,8 +549,14 @@ def _run_manufacture(
 	target_warehouse=None,
 	source_by_item=None,
 	batch_by_item=None,
+	pending=None,
 ):
 	"""Work Order -> Material Transfer for Manufacture -> Manufacture.
+
+	`pending` (a sentence naming what is short) is a run fed TODAY that the
+	stores cannot cover: the Work Order is made and its transfer is saved as a
+	DRAFT, and nothing else is written — no mix, no issue. The Transactions page
+	finishes it once the feed is in (`complete_feed_run`). See common/stock.
 
 	One route for both stages. WIP and FG are both the feed store; each required
 	item is sourced from the warehouse ``_pick_source`` chose, which is the same
@@ -650,6 +656,9 @@ def _run_manufacture(
 		return stock_entry
 
 	transfer = _dated(frappe.get_doc(make_stock_entry(wo.name, "Material Transfer for Manufacture", qty)))
+	if pending:
+		return _leave_transfer_in_draft(wo, transfer, production_item, bom_no, qty, store, herd, company, what,
+		                                pending, batch_by_item)
 	# 105 Dairy Feed items are batch tracked, so this will not submit until
 	# every outgoing row names a batch — and there is no draft here for anyone
 	# to name one on, because the mix is issued in the same call. The rule
@@ -697,6 +706,35 @@ def _run_manufacture(
 		"posting_date": posting_date or today(),
 		"transfer_stock_entry": transfer.name,
 		"manufacture_stock_entry": manufacture.name,
+	}
+
+
+def _leave_transfer_in_draft(wo, transfer, production_item, bom_no, qty, store, herd, company, what,
+                             pending, batch_by_item):
+	"""The pending half of `_run_manufacture`: the transfer, saved as a draft.
+
+	Its date is pinned to the day fed (`set_posting_time`), so it stays on that
+	day until it is posted. Batches are not assigned: what is on the shelf when
+	it posts is what it will take, and the rule picks then. One the operator
+	chose is kept as a preference.
+	"""
+	transfer.set_posting_time = 1
+	transfer.posting_date = transfer.posting_date or today()
+	_stamp_chosen_batches(transfer, batch_by_item)
+	livestock_cost_center.stamp(transfer, company, herd=herd, concentrate=what == CONCENTRATE_MANUFACTURE)
+	livestock_stock.hold_valuation(transfer)
+	transfer.insert(ignore_permissions=True)
+	livestock_stock.note_draft_message(transfer, pending, label="Feed run")
+	return {
+		"work_order": wo.name,
+		"production_item": production_item,
+		"bom_no": bom_no,
+		"produced_qty": qty,
+		"store": store,
+		"posting_date": str(transfer.posting_date),
+		"transfer_stock_entry": transfer.name,
+		"manufacture_stock_entry": "",
+		"pending": True,
 	}
 
 
@@ -790,6 +828,7 @@ def manufacture_herd_feed(
 	if portion <= 0:
 		frappe.throw(_("A feeding run has to be for more than nothing."))
 	total_qty = manufacture_qty(per_head, heads, portion)
+	pending = None
 
 	# Availability first — it writes nothing, and a shortage is the more useful
 	# thing to be told about. The operator is then resolved before anything
@@ -820,10 +859,12 @@ def manufacture_herd_feed(
 	else:
 		# Against the store the run will draw from: judged against the default
 		# store, a run from a near-empty pit passed here and died in ERPNext.
-		_assert_can_cover(
-			bom.item, bom.name, total_qty, frappe.parse_json(allow_shortage),
-			source_warehouse=source_warehouse,
-		)
+		# Short TODAY no longer refuses: the herd was fed, so the run is
+		# recorded and its stock waits as a draft (see `_run_manufacture`).
+		_bom, lines = resolve_requirement(bom.name, total_qty, source_warehouse=source_warehouse)
+		short = [ln for ln in lines if ln["short_qty"] > 0]
+		if short and not frappe.parse_json(allow_shortage):
+			pending = _("Not enough to mix {0}: {1}").format(bom.item, _shortage_message(short))
 	employee = _operator_or_throw(employee)
 
 	res = _run_manufacture(
@@ -845,7 +886,30 @@ def manufacture_herd_feed(
 		source_warehouse=source_warehouse,
 		source_by_item=source_by_item,
 		batch_by_item=batch_by_item,
+		pending=pending,
 	)
+	if pending:
+		# Fed, not yet issued: the herd's timeline says so now, and points at
+		# the draft until the run is posted.
+		event = _record_feeding_event(
+			herd, bom.item, total_qty, bom.uom, employee, res["transfer_stock_entry"], feed_mode=feed_mode,
+			work_order=res["work_order"], waiting=True,
+		)
+		res.update(
+			{
+				"heads": heads,
+				"per_head_qty": per_head,
+				"portion": portion,
+				"uom": bom.uom,
+				"feed_mode": feed_mode,
+				"issued_qty": 0,
+				"issue_stock_entry": "",
+				"livestock_event": event,
+				"employee": employee,
+				"waiting_for": pending,
+			}
+		)
+		return res
 	issue = _issue_feed(
 		herd,
 		bom,
@@ -955,8 +1019,39 @@ def _issue_feed(
 	bought-in stock somewhere else, has to be able to say so.
 	"""
 	store = (source_warehouse or "").strip() or _feed_store()
-	company = _company()
 	item = bom.item
+	se = _post_feed_issue(herd, item, qty, bom.uom, employee, store, posting_date=posting_date,
+	                      posting_time=posting_time)
+	# No frappe.db.commit() here: it stranded the Stock Entry when the Livestock
+	# Event below failed, and defeats the rollback envelope.run() relies on.
+	# The request (or the caller) owns the commit.
+
+	event = _record_feeding_event(
+		herd, item, qty, bom.uom, employee, se.name, event_date=posting_date, feed_mode=feed_mode,
+		work_order=work_order,
+	)
+
+	return {
+		"stock_entry": se.name,
+		"livestock_event": event,
+		"herd": herd,
+		"production_item": item,
+		"issued_qty": qty,
+		"uom": bom.uom,
+		"store": store,
+		"employee": employee,
+	}
+
+
+def _post_feed_issue(herd, item, qty, uom, employee, store, posting_date=None, posting_time=FEED_RUN_TIME,
+                     fed_on=None):
+	"""The Material Issue of a mixed batch to a herd; returns the submitted entry.
+
+	`fed_on` is the day the herd ate it, when that is not the day it posts — a
+	run that waited for stock. The remark carries it, so the feed day screen
+	(`feed_day_status._issues_on`) counts the feed on the day it was eaten.
+	"""
+	company = _company()
 	emp_name = frappe.db.get_value("Employee", employee, "employee_name")
 
 	se = frappe.new_doc("Stock Entry")
@@ -985,7 +1080,9 @@ def _issue_feed(
 	row.item_code = item
 	row.qty = qty
 	row.s_warehouse = store
-	se.remarks = "Animal feeding - {0} - {1} - {2} {3}".format(herd, item, qty, bom.uom or "")
+	se.remarks = "Animal feeding - {0} - {1} - {2} {3}".format(herd, item, qty, uom or "")
+	if fed_on:
+		se.remarks += f" - fed {fed_on}"
 	# The mix leaving the store for the trough is charged to the herd that ate
 	# it, exactly as the transfer and manufacture above were. This issue had no
 	# cost centre of its own and rode on whatever the item default happened to
@@ -993,29 +1090,11 @@ def _issue_feed(
 	livestock_cost_center.stamp(se, company, herd=herd)
 	se.insert(ignore_permissions=True)
 	se.submit()
-	# No frappe.db.commit() here: it stranded the Stock Entry when the Livestock
-	# Event below failed, and defeats the rollback envelope.run() relies on.
-	# The request (or the caller) owns the commit.
-
-	event = _record_feeding_event(
-		herd, item, qty, bom.uom, employee, se.name, event_date=posting_date, feed_mode=feed_mode,
-		work_order=work_order,
-	)
-
-	return {
-		"stock_entry": se.name,
-		"livestock_event": event,
-		"herd": herd,
-		"production_item": item,
-		"issued_qty": qty,
-		"uom": bom.uom,
-		"store": store,
-		"employee": employee,
-	}
+	return se
 
 
 def _record_feeding_event(herd, item, qty, uom, employee, stock_entry, event_date=None, feed_mode="System",
-                          work_order=None):
+                          work_order=None, waiting=False):
 	"""Put the feeding on the herd's timeline as a Feeding Livestock Event.
 
 	Herd-level, with no animal: feed goes to a trough, not to one cow, and
@@ -1043,7 +1122,9 @@ def _record_feeding_event(herd, item, qty, uom, employee, stock_entry, event_dat
 		doc.feed_work_order = work_order
 		doc.custom_feed_mode = feed_mode
 		backdate.stamp(doc, getdate(event_date) < getdate(today()))
-		doc.remarks = "Feed issued: {0} {1} of {2}".format(qty, uom or "", item)
+		doc.remarks = ("Fed, waiting for stock: {0} {1} of {2}" if waiting else "Feed issued: {0} {1} of {2}").format(
+			qty, uom or "", item
+		)
 		doc.flags.ignore_permissions = True
 		doc.insert(ignore_permissions=True)
 		doc.submit()
@@ -1056,3 +1137,68 @@ def _record_feeding_event(herd, item, qty, uom, employee, stock_entry, event_dat
 			indicator="orange",
 		)
 		return None
+
+
+def is_pending_feed_transfer(name):
+	"""A draft transfer a short feed run left (`_leave_transfer_in_draft`)."""
+	row = frappe.db.get_value("Stock Entry", name, ["docstatus", "purpose", "work_order"], as_dict=True)
+	if not row or row.docstatus != 0 or row.purpose != "Material Transfer for Manufacture" or not row.work_order:
+		return False
+	if frappe.db.count("Stock Entry", {"work_order": row.work_order, "purpose": "Manufacture", "docstatus": 1}):
+		return False
+	return bool(frappe.db.exists("Livestock Event", {"feed_work_order": row.work_order, "docstatus": 1}))
+
+
+def complete_feed_run(transfer_name):
+	"""Post a feed run that waited for stock: the transfer, the mix, the issue.
+
+	All dated today — the feed was not in the store on the day it was eaten,
+	which is why it waited. The issue carries the day fed in its remark so the
+	feed day screen still counts it on that day, and the Feeding event, which
+	pointed at the draft, now points at the issue.
+	"""
+	transfer = frappe.get_doc("Stock Entry", transfer_name)
+	wo = frappe.get_doc("Work Order", transfer.work_order)
+	event_name = frappe.db.get_value(
+		"Livestock Event", {"feed_work_order": wo.name, "docstatus": 1}, "name"
+	)
+	event = frappe.get_doc("Livestock Event", event_name)
+	fed_on = str(transfer.posting_date)
+	herd = wo.get("custom_herd") or event.current_herd
+	is_mix = not wo.get("custom_herd")
+	company = wo.company
+
+	transfer.set_posting_time = 1
+	transfer.posting_date = today()
+	transfer.posting_time = nowtime()
+	livestock_stock.release_valuation(transfer)
+	livestock_batches.assign_batches(transfer)
+	transfer.flags.ignore_permissions = True
+	transfer.save()
+	transfer.submit()
+
+	manufacture = frappe.get_doc(make_stock_entry(wo.name, "Manufacture", wo.qty))
+	manufacture.stock_entry_type = livestock_stock.stock_entry_type_for(
+		CONCENTRATE_MANUFACTURE if is_mix else RATION_MANUFACTURE
+	)
+	livestock_cost_center.stamp(manufacture, company, herd=herd, concentrate=is_mix)
+	manufacture.insert(ignore_permissions=True)
+	manufacture.submit()
+
+	uom = frappe.db.get_value("Item", wo.production_item, "stock_uom")
+	issue = _post_feed_issue(
+		herd, wo.production_item, wo.qty, uom, event.operator, wo.fg_warehouse,
+		fed_on=fed_on if fed_on != today() else None,
+	)
+	event.db_set("stock_entry", issue.name, update_modified=False)
+	event.db_set(
+		"remarks", "Feed issued: {0} {1} of {2} (posted {3})".format(wo.qty, uom or "", wo.production_item, today()),
+		update_modified=False,
+	)
+	return {
+		"name": transfer.name,
+		"work_order": wo.name,
+		"manufacture_stock_entry": manufacture.name,
+		"issue_stock_entry": issue.name,
+		"livestock_event": event.name,
+	}

@@ -31,33 +31,57 @@ RUNS_PER_DAY = 2
 
 
 def _issues_on(item_code, herd, day):
-	"""Material Issue runs against this herd's ration item on `day`, one row
-	per Stock Entry, from the stock ledger.
+	"""Feed runs against this herd's ration item eaten on `day`, one row per
+	Stock Entry, from the stock ledger.
 
 	Matched on the ration item and the day, not on the Livestock Event: the
 	event is written after the issue and a failure between the two would make
 	the feed look un-issued when the store had already given it out.
+
+	A run fed when the store was short counts on the day it was eaten: while it
+	waits, by its draft transfer (dated that day, with the Work Order's
+	quantity); once posted on a later day, by the issue's "- fed <day>" remark
+	(`_engine._post_feed_issue`) — and not on the day it happened to post.
 
 	Shared by `_issued_today` (sums the qty, for today's screen) and
 	`runs_already_posted` (counts the rows, for `_engine`'s same-day stagger)
 	so the two questions are always answered from the same set of runs — they
 	can never disagree about what already happened on a given day.
 	"""
-	return frappe.db.sql(
+	day = getdate(day)
+	# The whole herd, as _engine._issue_feed writes it: a bare substring let
+	# herd "0-2" count herd "10-2"'s runs.
+	args = {"item": item_code, "day": day, "herd": f"Animal feeding - {herd} - %", "fed": f"% - fed {day}"}
+	issued = frappe.db.sql(
 		"""SELECT se.name, IFNULL(SUM(sed.qty), 0) AS qty
 		   FROM `tabStock Entry Detail` sed
 		   JOIN `tabStock Entry` se ON se.name = sed.parent
 		   WHERE se.docstatus = 1
 		     AND se.purpose = 'Material Issue'
 		     AND sed.item_code = %(item)s
-		     AND DATE(se.posting_date) = %(day)s
 		     AND se.remarks LIKE %(herd)s
+		     AND ((DATE(se.posting_date) = %(day)s AND se.remarks NOT LIKE '%% - fed %%')
+		          OR se.remarks LIKE %(fed)s)
 		   GROUP BY se.name""",
-		# The whole herd, as _engine._issue_feed writes it: a bare substring let
-		# herd "0-2" count herd "10-2"'s runs.
-		{"item": item_code, "day": day, "herd": f"Animal feeding - {herd} - %"},
+		args,
 		as_dict=True,
 	)
+	# Work Order.custom_herd is this app's own field (common/custom_fields),
+	# made on every migrate.
+	waiting = frappe.db.sql(
+		"""SELECT t.name, wo.qty AS qty
+		   FROM `tabStock Entry` t
+		   JOIN `tabWork Order` wo ON wo.name = t.work_order
+		   WHERE t.docstatus = 0
+		     AND t.purpose = 'Material Transfer for Manufacture'
+		     AND wo.docstatus = 1
+		     AND wo.custom_herd = %(herd_name)s
+		     AND wo.production_item = %(item)s
+		     AND DATE(t.posting_date) = %(day)s""",
+		dict(args, herd_name=herd),
+		as_dict=True,
+	)
+	return list(issued) + list(waiting)
 
 
 def _issued_today(item_code, herd):

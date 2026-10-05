@@ -92,11 +92,11 @@ function EntryRow({
           />
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-[14px] font-semibold text-[var(--sd-ink)]">{entry.stock_entry_type}</span>
+              <span className="text-[14px] font-semibold text-[var(--sd-ink)]">{entry.label ?? entry.stock_entry_type}</span>
               <StatusBadge entry={entry} />
             </div>
             <div className="mt-0.5 text-[12.5px] text-[var(--sd-muted)]">
-              {entry.source?.animal ? `${entry.source.animal} · ` : ""}
+              {entry.source?.animal || entry.source?.herd ? `${entry.source.animal || entry.source.herd} · ` : ""}
               {entry.source?.name ?? "record no longer found"} · {dayLabel(entry.posting_date)} · {entry.made_by}
             </div>
           </div>
