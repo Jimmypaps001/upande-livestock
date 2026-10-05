@@ -1,6 +1,8 @@
 [pre_model_sync]
 # Patches added in this section will be executed before doctypes are migrated
 # Read docs to understand patches: https://frappeframework.com/docs/v14/user/en/database-migrations
+# First of all: a site whose module was made in the desk names "frappe" as its app.
+upande_livestock.patches.claim_livestock_module
 upande_livestock.patches.rename_livestock_doctypes
 # Straight after the rename and before model sync: the live site's Animal had a
 # `weight_history` table onto "Animal Weight Record", which the rename makes a

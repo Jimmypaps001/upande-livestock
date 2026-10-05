@@ -147,7 +147,7 @@ fixtures = [
 # Installation
 # ------------
 
-# before_install = "upande_livestock.install.before_install"
+before_install = "upande_livestock.install.before_install"
 after_install = "upande_livestock.install.after_install"
 
 # Migration
