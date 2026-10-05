@@ -151,3 +151,8 @@ upande_livestock.patches.milking_herds_into_settings
 
 # Insured value lives on the policy row; animal-only values kept in remarks.
 upande_livestock.patches.insured_value_on_the_policy_only
+
+# Submitted disposals agree with their animals: asset-named disposals and claims
+# repointed to the Animal, animals still active behind a submitted disposal
+# retired, and what still lacks an invoice or write-off listed for the accountant.
+upande_livestock.patches.settle_disposals
