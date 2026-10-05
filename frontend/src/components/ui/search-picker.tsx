@@ -8,6 +8,9 @@ import { cn } from "@/lib/utils";
 export interface SearchOption {
   value: string;
   label: string;
+  /** What the closed picker shows once this is chosen, when the label carries
+   *  more than the box has room for (an item's stock, which its row shows). */
+  short?: string;
 }
 
 /**
@@ -69,7 +72,7 @@ export function SearchPicker({
           className={cn("h-9 w-full justify-between gap-2 px-3 font-normal", className)}
         >
           <span className={cn("truncate text-left", !chosen && "text-[var(--sd-quiet)]")}>
-            {chosen ? chosen.label : placeholder}
+            {chosen ? chosen.short ?? chosen.label : placeholder}
           </span>
           <ChevronDown className="h-3.5 w-3.5 shrink-0 text-[var(--sd-quiet)]" />
         </Button>

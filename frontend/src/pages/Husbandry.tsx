@@ -3,7 +3,7 @@ import { Syringe } from "lucide-react";
 import { DatePicker } from "@/components/DatePicker";
 import { EventDate } from "@/components/EventDate";
 import { Notice } from "@/components/feeding/Notice";
-import { ItemsUsed, blankRow, type ItemRow } from "@/components/events/ItemsUsed";
+import { StockPicker, blankRow, type ItemRow } from "@/components/stock/StockPicker";
 import { OperatorField } from "@/components/events/OperatorField";
 import { Page, PageHeading } from "@/components/PageShell";
 import { RefreshButton } from "@/components/RefreshButton";
@@ -217,7 +217,7 @@ export function Husbandry() {
                 Quantities are per animal. The basket underneath is what actually
                 leaves the store.
               </p>
-              <ItemsUsed choices={options?.drug_items} mapped={options?.drug_items_mapped} rows={drugs} onChange={setDrugs} defaultQty="" plans={plans} />
+              <StockPicker choices={options?.drug_items} mapped={options?.drug_items_mapped} rows={drugs} onChange={setDrugs} defaultQty="" plans={plans} />
               <div className="flex flex-col gap-1">
                 {drugs.map((d) => {
                   const item = options?.drug_items.find((x) => x.value === d.item);

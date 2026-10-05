@@ -25,7 +25,7 @@ import {
   type MovementOptions,
 } from "@/lib/events";
 import { OperatorField } from "@/components/events/OperatorField";
-import { ItemsUsed, blankRow, type ItemRow } from "@/components/events/ItemsUsed";
+import { StockPicker, blankRow, type ItemRow } from "@/components/stock/StockPicker";
 import { useBatchPlans } from "@/lib/use-batch-plans";
 import { useOperator } from "@/lib/operator";
 import { cn, todayISO } from "@/lib/utils";
@@ -383,7 +383,7 @@ export function Calving() {
                   {/* `undefined` while the options have not named a list: nothing
                       is shown, because "nothing is mapped" is only for an
                       explicit empty one. */}
-                  <ItemsUsed
+                  <StockPicker
                     choices={options?.items_by_event?.["Calving"]}
                     rows={itemRows}
                     onChange={setItemRows}

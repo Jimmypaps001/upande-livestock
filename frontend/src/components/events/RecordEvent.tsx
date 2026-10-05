@@ -18,7 +18,7 @@ import { Label } from "@/components/ui/label";
 import { Picker, type PickerOption } from "@/components/ui/picker";
 import { Textarea } from "@/components/ui/textarea";
 import { OperatorField } from "@/components/events/OperatorField";
-import { ItemsUsed, blankRow, type ItemRow } from "@/components/events/ItemsUsed";
+import { StockPicker, blankRow, type ItemRow } from "@/components/stock/StockPicker";
 import { EventDate } from "@/components/EventDate";
 import { useToast } from "@/components/Toast";
 import { useSaveShortcut } from "@/lib/use-save-shortcut";
@@ -366,7 +366,7 @@ export function RecordEvent<O>({
                 ))}
               </div>
               {itemsOf && options && (
-                <ItemsUsed
+                <StockPicker
                   choices={itemsOf(options)}
                   rows={itemRows}
                   onChange={setItemRows}

@@ -4,7 +4,7 @@ import { AnimalSearch } from "@/components/animals/AnimalSearch";
 import { DatePicker } from "@/components/DatePicker";
 import { EventDate } from "@/components/EventDate";
 import { Notice } from "@/components/feeding/Notice";
-import { ItemsUsed, blankRow, type ItemRow } from "@/components/events/ItemsUsed";
+import { StockPicker, blankRow, type ItemRow } from "@/components/stock/StockPicker";
 import { OperatorField } from "@/components/events/OperatorField";
 import { Page, PageHeading } from "@/components/PageShell";
 import { RefreshButton } from "@/components/RefreshButton";
@@ -384,7 +384,7 @@ export function Treatment() {
                   yet. {itemsFailure}
                 </Notice>
               )}
-              <ItemsUsed choices={store?.drug_items} mapped={store?.drug_items_mapped} rows={doses} onChange={changeDoses} plans={plans} />
+              <StockPicker choices={store?.drug_items} mapped={store?.drug_items_mapped} rows={doses} onChange={changeDoses} plans={plans} />
 
               {doses
                 .filter((d) => d.item)
