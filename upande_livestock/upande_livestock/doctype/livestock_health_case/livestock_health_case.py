@@ -7,7 +7,7 @@ from frappe.utils import add_days, flt, getdate, today
 from upande_livestock.serverscripts.common import backdate
 from upande_livestock.serverscripts.common import cost_center as livestock_cost_center
 from upande_livestock.serverscripts.common import stock as livestock_stock
-from upande_livestock.serverscripts.common.event_link import cancel_event_for, sync_event_for
+from upande_livestock.serverscripts.common.event_link import cancel_event_for, stamp_stock_entry, sync_event_for
 
 
 class LivestockHealthCase(Document):
@@ -149,3 +149,4 @@ class LivestockHealthCase(Document):
 			for t in pending:
 				t.db_set("stock_entry_ref", name, update_modified=False)
 			self.db_set("drug_stock_entry", name, update_modified=False)
+			stamp_stock_entry(self, name)

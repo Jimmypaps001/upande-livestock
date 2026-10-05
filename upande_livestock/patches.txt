@@ -158,3 +158,6 @@ upande_livestock.patches.insured_value_on_the_policy_only
 # repointed to the Animal, animals still active behind a submitted disposal
 # retired, and what still lacks an invoice or write-off listed for the accountant.
 upande_livestock.patches.settle_disposals
+
+# A health case's and check-up's timeline event shows the issue its source posted.
+upande_livestock.patches.stamp_mirror_event_stock_entries
