@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ArrowRight, Baby, Plus, X } from "lucide-react";
 import { DatePicker } from "@/components/DatePicker";
+import { EventDate } from "@/components/EventDate";
 import { Notice } from "@/components/feeding/Notice";
 import { Page, PageHeading } from "@/components/PageShell";
 import { RefreshButton } from "@/components/RefreshButton";
@@ -286,7 +287,7 @@ export function Calving() {
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="flex flex-col gap-1.5">
                       <Label htmlFor="c-when">Calved on</Label>
-                      <DatePicker id="c-when" value={when} max={todayISO()} onChange={setWhen} />
+                      <EventDate id="c-when" value={when} onChange={setWhen} />
                     </div>
                   </div>
 

@@ -257,7 +257,7 @@ describe("Husbandry tells unmapped from out of stock", () => {
     state.unmapped = true;
     wrap(<Husbandry />);
     fireEvent.click(await screen.findByText("Daisy"));
-    expect(await screen.findByText(/No items are mapped to this event/)).toBeTruthy();
+    expect(await screen.findByText(/not set to post stock/)).toBeTruthy();
     expect(screen.queryByText(/in stock right now/)).toBeNull();
   });
 });

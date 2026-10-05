@@ -14,7 +14,7 @@ from upande_livestock.serverscripts.common.choices import (
 )
 from upande_livestock.serverscripts.common.employee import current_employee
 from upande_livestock.serverscripts.common.envelope import guard_read, run
-from upande_livestock.serverscripts.common.event_items import consumes_items, items_for_event
+from upande_livestock.serverscripts.common.event_items import items_by_event, items_for_event
 
 
 @frappe.whitelist()
@@ -40,6 +40,8 @@ def breeding_options():
 				if r.sire
 			}
 		)
+		# Read once: inside the comprehension's filter it re-ran per animal.
+		diagnosable = {r["animal"] for r in herd_movement.diagnosable_animals()}
 		return {
 			"ok": True,
 			"animals": animal_choices(animals, labels),
@@ -48,8 +50,7 @@ def breeding_options():
 			# Only animals with an open service can be diagnosed — the form's
 			# animal list for diagnosis is not the same as the one for service.
 			"diagnosis_animals": animal_choices(
-				[a for a in active_animals()
-				 if a.name in {r["animal"] for r in herd_movement.diagnosable_animals()}],
+				[a for a in active_animals() if a.name in diagnosable],
 				labels,
 			),
 			# Heat is a wider list than service on purpose: a cow served three
@@ -71,7 +72,7 @@ def breeding_options():
 			# endpoint serves several screens, so a bare list could not say whose.
 			# A type the farm mapped nothing to has NO key: absent means "not
 			# configured, show nothing", while [] means "mapped, nothing in stock".
-			"items_by_event": {t: items_for_event(t) for t in ('Service', 'Heat Detection', 'Pregnancy Diagnosis') if consumes_items(t)},
+			"items_by_event": items_by_event(),
 			"employee": current_employee(),
 		}
 

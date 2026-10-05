@@ -20,8 +20,14 @@ from upande_livestock.upande_livestock.doctype.livestock_settings.livestock_sett
 # "Parent Department: All Departments" fixture this site does not have (same
 # root cause documented in livestock_event/test_livestock_event.py). None of
 # the tests below touch any of these fields, so all are safe to drop from the
-# walk.
-IGNORE_TEST_RECORD_DEPENDENCIES = ["Herds", "Warehouse", "Item", "Stock Entry Type", "Company", "Account"]
+# walk. The same holds for the accounting dimensions (Cost Center, Business
+# Unit, Farm) and the settings' own child tables, whose rows link the same way.
+IGNORE_TEST_RECORD_DEPENDENCIES = [
+	"Herds", "Warehouse", "Item", "Item Group", "Stock Entry Type", "Company", "Account",
+	"Cost Center", "Business Unit", "Farm", "Herd Growth Stage",
+	"Livestock Bought In Concentrate", "Livestock Cost Center Default",
+	"Livestock Feed Warehouse", "Livestock Milking Herd",
+]
 
 
 class TestLivestockSettings(ResetsLivestockTimings, IntegrationTestCase):

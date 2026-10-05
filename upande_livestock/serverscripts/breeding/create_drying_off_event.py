@@ -46,7 +46,7 @@ def create_drying_off_event(payload):
 		# flags it drug-consuming. The rows were being read off the payload by
 		# nothing at all, which left the teat sealant on the shelf while the
 		# ledger said the cow was dry.
-		for drug in _clean_drug_rows(d.get("drugs"), d.get("source_warehouse") or event_items.default_store("Drying Off")):
+		for drug in _clean_drug_rows(d.get("items") or d.get("drugs"), d.get("source_warehouse") or event_items.default_store("Drying Off")):
 			doc.append("drug_issues", drug)
 		doc.insert()
 		doc.submit()  # LivestockEvent.on_submit posts the issue as "Animal Treatment"

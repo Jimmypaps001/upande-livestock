@@ -1,65 +1,63 @@
-"""The options an event screen loads carry what each of ITS event types may use.
+"""The options an event screen loads carry what each event type may use.
 
-One endpoint serves several screens (breeding: service, diagnosis, heat), so a
-single `items` key cannot say which screen's list it is. The map is keyed by
-event type, and is built by the lookup every other picker uses.
+One endpoint serves several screens (breeding: service, diagnosis, heat, drying
+off), so a single `items` key cannot say which screen's list it is. The map is
+keyed by event type and covers every type set to post stock, so a page has its
+picker list the moment it loads; it is built by the lookup every other picker
+uses.
 """
 
 import unittest
 from unittest.mock import patch
 
 from upande_livestock.serverscripts.breeding import breeding_options as BO
+from upande_livestock.serverscripts.common import event_items as EI
 from upande_livestock.serverscripts.health import health_options as HO
 from upande_livestock.serverscripts.movement import event_options as EO
+
+TYPES = ("Service", "Heat Detection", "Pregnancy Diagnosis", "Drying Off", "Abortion", "Calving", "Check Up")
+SCREENS = ((BO, "breeding_options"), (HO, "health_options"), (EO, "event_options"))
 
 
 def _fake(event_type, company=None):
 	return [{"value": f"ITEM-{event_type}", "item_name": event_type}]
 
 
-class TestOptionsCarryItemsByEvent(unittest.TestCase):
-	def _items(self, mod, fn):
-		with patch.object(mod, "items_for_event", side_effect=_fake, create=True), \
-		     patch.object(mod, "consumes_items", return_value=True, create=True):
-			out = getattr(mod, fn)()
-		self.assertTrue(out.get("ok"), out)
-		return out["items_by_event"]
+def _map(mod, fn, items=_fake, consumes=lambda t: True):
+	with patch.object(EI, "_rules", return_value={t: {"posts": True, "groups": [], "default_store": None, "must_name_item": False} for t in TYPES}), \
+	     patch.object(EI, "items_for_event", side_effect=items), \
+	     patch.object(EI, "consumes_items", side_effect=consumes):
+		out = getattr(mod, fn)()
+	assert out.get("ok"), out
+	return out["items_by_event"]
 
-	def test_breeding_carries_heat_and_diagnosis(self):
-		m = self._items(BO, "breeding_options")
-		self.assertEqual(m["Heat Detection"][0]["value"], "ITEM-Heat Detection")
+
+class TestOptionsCarryItemsByEvent(unittest.TestCase):
+	def test_every_screen_carries_every_posting_type(self):
+		for mod, fn in SCREENS:
+			m = _map(mod, fn)
+			self.assertEqual(set(m), set(TYPES), fn)
+			self.assertEqual(m["Drying Off"][0]["value"], "ITEM-Drying Off", fn)
+
+	def test_breeding_carries_drying_off_and_diagnosis(self):
+		m = _map(BO, "breeding_options")
+		self.assertEqual(m["Drying Off"][0]["value"], "ITEM-Drying Off")
 		self.assertEqual(m["Pregnancy Diagnosis"][0]["value"], "ITEM-Pregnancy Diagnosis")
 
-	def test_health_carries_abortion(self):
-		m = self._items(HO, "health_options")
-		self.assertEqual(m["Abortion"][0]["value"], "ITEM-Abortion")
-
-	def test_movement_options_carry_calving(self):
-		m = self._items(EO, "event_options")
-		self.assertEqual(m["Calving"][0]["value"], "ITEM-Calving")
+	def test_health_carries_check_up(self):
+		self.assertEqual(_map(HO, "health_options")["Check Up"][0]["value"], "ITEM-Check Up")
 
 	def test_an_unmapped_type_has_no_key_at_all(self):
-		"""Absent, not []: the screen reads absent as "not configured, show
-		nothing", and [] as "mapped, but nothing in stock"."""
-		for mod, fn in ((BO, "breeding_options"), (HO, "health_options"), (EO, "event_options")):
-			with patch.object(mod, "items_for_event", return_value=[], create=True), \
-			     patch.object(mod, "consumes_items", return_value=False, create=True):
-				m = getattr(mod, fn)()["items_by_event"]
-			self.assertEqual(m, {}, fn)
+		"""Absent, not []: the screen reads absent as "not set to post stock",
+		and [] as "set, but nothing in stock"."""
+		for mod, fn in SCREENS:
+			self.assertEqual(_map(mod, fn, items=lambda t, c=None: [], consumes=lambda t: False), {}, fn)
 
 	def test_a_mapped_type_with_nothing_in_stock_keeps_an_empty_list(self):
-		with patch.object(BO, "items_for_event", return_value=[], create=True), \
-		     patch.object(BO, "consumes_items", side_effect=lambda t: t == "Heat Detection", create=True):
-			m = BO.breeding_options()["items_by_event"]
+		m = _map(BO, "breeding_options", items=lambda t, c=None: [], consumes=lambda t: t == "Heat Detection")
 		self.assertEqual(m, {"Heat Detection": []})
 
-	def test_breeding_carries_service_when_mapped_and_omits_it_when_not(self):
+	def test_service_is_omitted_when_it_posts_nothing(self):
 		"""Absent Service key is what keeps the legacy straw picker on screen."""
-		with patch.object(BO, "items_for_event", side_effect=_fake, create=True), \
-		     patch.object(BO, "consumes_items", side_effect=lambda t: t == "Service", create=True):
-			m = BO.breeding_options()["items_by_event"]
-		self.assertEqual(list(m), ["Service"])
-		with patch.object(BO, "items_for_event", side_effect=_fake, create=True), \
-		     patch.object(BO, "consumes_items", side_effect=lambda t: t != "Service", create=True):
-			m = BO.breeding_options()["items_by_event"]
-		self.assertNotIn("Service", m)
+		self.assertEqual(list(_map(BO, "breeding_options", consumes=lambda t: t == "Service")), ["Service"])
+		self.assertNotIn("Service", _map(BO, "breeding_options", consumes=lambda t: t != "Service"))

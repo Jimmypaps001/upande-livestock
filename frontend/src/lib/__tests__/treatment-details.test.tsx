@@ -81,8 +81,8 @@ describe("treatment details follow the drug", () => {
     state.gate = null;
     state.fail = false;
     draw();
-    await waitFor(() => expect(screen.getByText(/No items are mapped to this event/)).toBeTruthy());
-    expect(screen.getByText(/What Each Event May Consume/)).toBeTruthy();
+    await waitFor(() => expect(screen.getByText(/not set to post stock/)).toBeTruthy());
+    expect(screen.getByText(/Settings → Stock/)).toBeTruthy();
     expect(screen.queryByText(/in stock right now/)).toBeNull();
     state.mapped = true;
   });
@@ -96,7 +96,7 @@ describe("treatment details follow the drug", () => {
     await waitFor(() =>
       expect(screen.getByText(/Nothing mapped to this event is in stock right now/)).toBeTruthy(),
     );
-    expect(screen.queryByText(/No items are mapped/)).toBeNull();
+    expect(screen.queryByText(/not set to post stock/)).toBeNull();
     expect(screen.queryByText(/Settings/)).toBeNull();
   });
 

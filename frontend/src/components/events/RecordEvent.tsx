@@ -19,6 +19,7 @@ import { Picker, type PickerOption } from "@/components/ui/picker";
 import { Textarea } from "@/components/ui/textarea";
 import { OperatorField } from "@/components/events/OperatorField";
 import { ItemsUsed, blankRow, type ItemRow } from "@/components/events/ItemsUsed";
+import { EventDate } from "@/components/EventDate";
 import { useToast } from "@/components/Toast";
 import { useSaveShortcut } from "@/lib/use-save-shortcut";
 import { isError, type Envelope } from "@/lib/frappe";
@@ -70,6 +71,10 @@ export interface FieldSpec {
   required?: boolean;
   /** Sent even when blank — for a date the server keys its guards on. */
   always?: boolean;
+  /** A date in the future — a follow-up, not when the record happened. Starts
+   *  blank and runs from today on. Every other date is the record's own date
+   *  (EventDate): today, read-only, while backdating is closed. */
+  planned?: boolean;
   min?: number;
   step?: string;
   /** Start on the first option, and move when the options change underneath.
@@ -113,6 +118,10 @@ export interface RecordEventProps<O> {
    *  Absent: no table. `undefined` returned: not loaded or not mapped, renders nothing.
    *  An explicit `[]` says it is mapped but nothing is in stock. */
   itemsOf?: (options: O) => StockChoice[] | undefined;
+  /** The event type this screen records. When its type posts stock (Settings →
+   *  Stock) the items table appears on its own, offering the type's in-stock
+   *  items from the options payload's `items_by_event` — no per-page wiring. */
+  eventType?: string;
 }
 
 export function RecordEvent<O>({
@@ -130,8 +139,14 @@ export function RecordEvent<O>({
   said,
   aside,
   operatorOf,
-  itemsOf,
+  itemsOf: itemsOfProp,
+  eventType,
 }: RecordEventProps<O>) {
+  const itemsOf =
+    itemsOfProp ??
+    (eventType
+      ? (o: O) => (o as { items_by_event?: Record<string, StockChoice[]> }).items_by_event?.[eventType]
+      : undefined);
   const [options, setOptions] = useState<O | null>(null);
   const [loading, setLoading] = useState(true);
   const [failure, setFailure] = useState<string | null>(null);
@@ -177,7 +192,7 @@ export function RecordEvent<O>({
     const seed: Record<string, string> = {};
     for (const f of fieldsOf(options, {})) {
       if (f.value) seed[f.name] = f.value;
-      else if (f.kind === "date") seed[f.name] = todayISO();
+      else if (f.kind === "date" && !f.planned) seed[f.name] = todayISO();
       else if (f.kind === "select" && f.options?.length === 1)
         seed[f.name] = optionValues(f)[0];
     }
@@ -403,8 +418,10 @@ function Field({
           clearable={!spec.required}
           placeholder="—"
         />
+      ) : spec.kind === "date" && spec.planned ? (
+        <DatePicker id={id} value={value} min={todayISO()} onChange={onChange} />
       ) : spec.kind === "date" ? (
-        <DatePicker id={id} value={value} max={todayISO()} onChange={onChange} />
+        <EventDate id={id} value={value} onChange={onChange} />
       ) : spec.kind === "notes" ? (
         <Textarea
           id={id}

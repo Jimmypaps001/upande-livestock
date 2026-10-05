@@ -146,7 +146,7 @@ describe("each screen reads its own event type's list", () => {
     fireEvent.click(await screen.findByText("Daisy"));
     await screen.findByRole("button", { name: "Record the heat" });
     expect(screen.queryByLabelText("Item")).toBeNull();
-    expect(screen.queryByText(/in stock right now|No items are mapped/)).toBeNull();
+    expect(screen.queryByText(/in stock right now|not set to post stock/)).toBeNull();
   });
 
   it("an event type absent from the payload shows nothing, not 'nothing is mapped'", async () => {
@@ -155,7 +155,7 @@ describe("each screen reads its own event type's list", () => {
     fireEvent.click(await screen.findByText("Daisy"));
     await screen.findByRole("button", { name: "Record the heat" });
     expect(screen.queryByLabelText("Item")).toBeNull();
-    expect(screen.queryByText(/No items are mapped/)).toBeNull();
+    expect(screen.queryByText(/not set to post stock/)).toBeNull();
   });
 
   it("a mapped type with nothing in stock says exactly that", async () => {

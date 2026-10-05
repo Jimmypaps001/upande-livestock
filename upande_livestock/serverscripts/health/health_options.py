@@ -14,7 +14,7 @@ from upande_livestock.serverscripts.common.choices import (
 from upande_livestock.serverscripts.common.company import default_company
 from upande_livestock.serverscripts.common.employee import current_employee
 from upande_livestock.serverscripts.common.envelope import guard_read, run
-from upande_livestock.serverscripts.common.event_items import consumes_items, items_for_event
+from upande_livestock.serverscripts.common.event_items import items_by_event
 
 
 @frappe.whitelist()
@@ -22,15 +22,17 @@ def health_options():
 	def go():
 		guard_read("Livestock Health Case")
 		labels = herd_label_map()
+		animals = active_animals()
+		# Read once: inside the comprehension's filter it re-ran per animal.
+		carrying = {r["animal"] for r in herd_movement.carrying_animals()}
 		return {
 			"ok": True,
-			"animals": animal_choices(active_animals(), labels),
+			"animals": animal_choices(animals, labels),
 			# An abortion can only happen to a cow who was carrying. Offering
 			# the whole herd invites a loss recorded against one who never was
 			# — and there is then nothing for it to close.
 			"carrying": animal_choices(
-				[a for a in active_animals()
-				 if a.name in {r["animal"] for r in herd_movement.carrying_animals()}],
+				[a for a in animals if a.name in carrying],
 				labels,
 			),
 			"diseases": [
@@ -57,7 +59,7 @@ def health_options():
 			# endpoint serves several screens, so a bare list could not say whose.
 			# A type the farm mapped nothing to has NO key: absent means "not
 			# configured, show nothing", while [] means "mapped, nothing in stock".
-			"items_by_event": {t: items_for_event(t) for t in ('Abortion',) if consumes_items(t)},
+			"items_by_event": items_by_event(),
 			"employee": current_employee(),
 			"company": default_company(),
 		}

@@ -10,11 +10,16 @@ nobody able to say why a cow had gone missing from it."""
 
 import frappe
 
-from upande_livestock.serverscripts.common.choices import active_animals, animal_choices, herd_label_map, select_options
+from upande_livestock.serverscripts.common import herd_movement
+from upande_livestock.serverscripts.common.choices import (
+	active_animals,
+	animal_choices,
+	herd_label_map,
+	select_options,
+)
 from upande_livestock.serverscripts.common.employee import current_employee
 from upande_livestock.serverscripts.common.envelope import guard_read, run
-from upande_livestock.serverscripts.common.event_items import consumes_items, items_for_event
-from upande_livestock.serverscripts.common import herd_movement
+from upande_livestock.serverscripts.common.event_items import items_by_event
 
 
 @frappe.whitelist()
@@ -60,7 +65,7 @@ def event_options():
 			# endpoint serves several screens, so a bare list could not say whose.
 			# A type the farm mapped nothing to has NO key: absent means "not
 			# configured, show nothing", while [] means "mapped, nothing in stock".
-			"items_by_event": {t: items_for_event(t) for t in ('Calving',) if consumes_items(t)},
+			"items_by_event": items_by_event(),
 			"employee": current_employee(),
 		}
 

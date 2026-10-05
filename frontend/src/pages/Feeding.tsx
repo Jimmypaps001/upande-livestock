@@ -48,6 +48,7 @@ import {
   type ManualRow,
   type Recipe,
 } from "@/lib/feeding";
+import { usePostingDay } from "@/lib/posting-day";
 import { fmt, num, todayISO } from "@/lib/utils";
 
 export function Feeding() {
@@ -189,7 +190,12 @@ export function Feeding() {
   }
 
   /** Live mode always posts today, whatever the field last held. */
-  const effectiveDate = backdating ? postDate : todayISO();
+  // Live sends no date: the server dates it by its own today, which a browser
+  // in another time zone does not share.
+  const effectiveDate = backdating ? postDate : "";
+  // For showing which day's figures these are; never sent.
+  const postingDay = usePostingDay();
+  const shownDate = effectiveDate || postingDay?.today || todayISO();
 
   const selectedRecipe = recipes.find((r) => r.bom_no === selectedBom) || null;
   const usingStandingRecipe = !selectedBom || selectedBom === standingBom;
@@ -295,7 +301,7 @@ export function Feeding() {
         program.herd_label || program.herd
       }${recipeNote} — Work Order ${r.work_order}, issued on ${r.issue_stock_entry}.`,
     );
-    setLastRunMode(effectiveDate !== todayISO() ? "Backdated" : null);
+    setLastRunMode(backdating ? "Backdated" : null);
     load(program.herd, false);
   }
 
@@ -337,7 +343,7 @@ export function Feeding() {
         r.work_order
       }, issued on ${r.issue_stock_entry}.`,
     );
-    setLastRunMode(effectiveDate !== todayISO() ? "Manual · Backdated" : "Manual");
+    setLastRunMode(backdating ? "Manual · Backdated" : "Manual");
     // Reseed from the fresh programme (and the possibly-just-minted recipe
     // list) next time this herd is chosen.
     setManualHerd(null);
@@ -541,7 +547,7 @@ export function Feeding() {
                     >
                       {mixing ? "Mixing…" : "Mix & feed"}
                     </Button>
-                    {effectiveDate !== todayISO() && <Mark>Backdated · {effectiveDate}</Mark>}
+                    {backdating && <Mark>Backdated · {effectiveDate}</Mark>}
                     {usingStandingRecipe && !program.can_manufacture && (
                       <span className="text-[12px] text-[var(--sd-quiet)]">
                         A short line has to be covered before this run can post.
@@ -563,7 +569,7 @@ export function Feeding() {
                   onRowsChange={setManualRows}
                   heads={manualHeads}
                   onHeadsChange={setManualHeads}
-                  date={effectiveDate}
+                  date={shownDate}
                   onSubmit={submitManual}
                   busy={manualBusy}
                   disabledReason={manualDisabled}

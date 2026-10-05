@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { ArrowLeft, CheckCircle2, FileText, Stethoscope } from "lucide-react";
 import { CaseTimeline } from "@/components/health/CaseTimeline";
 import { DatePicker } from "@/components/DatePicker";
+import { EventDate } from "@/components/EventDate";
 import { Notice } from "@/components/feeding/Notice";
 import { RowsSkeleton } from "@/components/Loading";
 import { useToast } from "@/components/Toast";
@@ -258,7 +259,7 @@ export function CaseFile({
               </div>
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="cf-when">On</Label>
-                <DatePicker id="cf-when" value={closedOn} max={todayISO()} onChange={setClosedOn} />
+                <EventDate id="cf-when" value={closedOn} onChange={setClosedOn} />
               </div>
             </div>
             <div className="flex flex-col gap-1.5">
