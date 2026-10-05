@@ -39,35 +39,21 @@
   "cb_placement",
   "repro_status",
   "parity",
-  "days_in_milk",
   "sb_repro",
   "last_calving_date",
   "expected_calving_date",
   "last_service_date",
-  "cb_repro",
-  "last_service_sire",
-  "total_services",
-  "conception_rate",
   "tab_physical",
   "sb_body",
-  "coat_colour",
   "last_weight_kg",
   "cb_body",
   "last_bcs",
-  "sb_health",
-  "in_treatment",
-  "milk_safe_date",
-  "last_vaccination_date",
-  "cb_health",
-  "last_deworming_date",
-  "next_due_event",
   "tab_asset",
   "sb_accounting",
   "is_capitalised",
   "asset_link",
   "cb_accounting",
   "purchase_value",
-  "current_book_value",
   "insured_value",
   "tab_more",
   "sb_notes",
@@ -271,12 +257,6 @@
    "label": "Parity (No. of Calvings)"
   },
   {
-   "fieldname": "days_in_milk",
-   "fieldtype": "Int",
-   "label": "Days in Milk (DIM)",
-   "read_only": 1
-  },
-  {
    "fieldname": "sb_repro",
    "fieldtype": "Section Break",
    "label": "Reproduction"
@@ -299,28 +279,6 @@
    "read_only": 1
   },
   {
-   "fieldname": "cb_repro",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "last_service_sire",
-   "fieldtype": "Data",
-   "label": "Last Service Sire",
-   "read_only": 1
-  },
-  {
-   "fieldname": "total_services",
-   "fieldtype": "Int",
-   "label": "Total Services (all time)",
-   "read_only": 1
-  },
-  {
-   "fieldname": "conception_rate",
-   "fieldtype": "Percent",
-   "label": "Conception Rate (%)",
-   "read_only": 1
-  },
-  {
    "fieldname": "tab_physical",
    "fieldtype": "Tab Break",
    "label": "Physical"
@@ -329,11 +287,6 @@
    "fieldname": "sb_body",
    "fieldtype": "Section Break",
    "label": "Body & Condition"
-  },
-  {
-   "fieldname": "coat_colour",
-   "fieldtype": "Data",
-   "label": "Coat Colour"
   },
   {
    "fieldname": "last_weight_kg",
@@ -349,45 +302,6 @@
    "fieldname": "last_bcs",
    "fieldtype": "Float",
    "label": "Last BCS (Body Condition Score)",
-   "read_only": 1
-  },
-  {
-   "fieldname": "sb_health",
-   "fieldtype": "Section Break",
-   "label": "Health Summary"
-  },
-  {
-   "default": "0",
-   "fieldname": "in_treatment",
-   "fieldtype": "Check",
-   "label": "In Treatment / Withdrawal"
-  },
-  {
-   "description": "Auto-set when drug with withdrawal period administered. Excluded from milking until this date.",
-   "fieldname": "milk_safe_date",
-   "fieldtype": "Date",
-   "label": "Milk Safe From Date"
-  },
-  {
-   "fieldname": "last_vaccination_date",
-   "fieldtype": "Date",
-   "label": "Last Vaccination Date",
-   "read_only": 1
-  },
-  {
-   "fieldname": "cb_health",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "last_deworming_date",
-   "fieldtype": "Date",
-   "label": "Last Deworming Date",
-   "read_only": 1
-  },
-  {
-   "fieldname": "next_due_event",
-   "fieldtype": "Data",
-   "label": "Next Due Event (summary)",
    "read_only": 1
   },
   {
@@ -423,12 +337,6 @@
    "fieldname": "purchase_value",
    "fieldtype": "Currency",
    "label": "Purchase / Capitalisation Value (KES)"
-  },
-  {
-   "fieldname": "current_book_value",
-   "fieldtype": "Currency",
-   "label": "Current Book Value (KES)",
-   "read_only": 1
   },
   {
    "fieldname": "insured_value",
@@ -513,7 +421,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-07-01 05:39:00.351099",
+ "modified": "2026-10-05 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Upande Livestock",
  "name": "Animal",

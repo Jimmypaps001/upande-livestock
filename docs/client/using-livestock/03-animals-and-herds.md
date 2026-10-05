@@ -23,18 +23,18 @@ Fields you fill in yourself:
 |---|---|
 | Tag number, Burn name | Required. The tag is the identity |
 | Sex | Female or Male. Required — and for a calf, it decides which herd the calf joins |
-| Breed, Species, Coat colour | Species defaults to Cattle |
+| Breed, Species | Species defaults to Cattle |
 | Date of birth, Origin, Acquisition date | Origin is Born on Farm, Purchased or Transferred In |
 | Dam, Sire name | The dam links to another Animal |
 | Current herd | Which herd the animal is in today |
 | Status, Reproductive status | See below |
 | Remarks | Anything else |
 
-Fields the app maintains for you, which appear read-only on the form: days in
-milk, last calving date, last service date and sire, total services, conception
-rate, last weight and body condition score, last vaccination and deworming
-dates, and the next due event. These are derived from the events you record —
-do not try to keep them by hand.
+Fields the app maintains for you, which appear read-only on the form: last
+calving date, last service date, last weight and body condition score. These
+are derived from the events you record — do not try to keep them by hand.
+Services and conception rate are counted from her Service events whenever a
+screen shows them, so they are never stored on the animal.
 
 ### Status and retirement
 

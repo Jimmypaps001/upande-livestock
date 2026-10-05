@@ -11,8 +11,9 @@ data-entry dropdowns cannot drift apart.
 import frappe
 from frappe.utils import add_days, flt, today
 
+from upande_livestock.serverscripts.common.animal import live_herd_count
 from upande_livestock.serverscripts.common.choices import RETIRED_STATUSES
-
+from upande_livestock.serverscripts.common.herd_movement import milking_herds
 
 _OPEN_CASE_STATUS = ("Open", "Under Treatment", "Chronic")
 
@@ -131,19 +132,14 @@ def _build() -> dict:
 			as_dict=True,
 		)
 	}
+	# In milk = standing in a lactation group (Herd Movement settings). The old
+	# test matched "lact" against statuses that offer no such word, or a
+	# days_in_milk nothing ever set, so every tile read 0 milkers.
+	milking = set(milking_herds())
 	for h in herds:
 		hid = h["name"]
-		animals = flt(frappe.db.count("Animal", {"current_herd": hid}))
-		milkers = flt(
-			frappe.db.sql(
-				"""SELECT COUNT(*) FROM `tabAnimal`
-				   WHERE current_herd = %s
-				     AND (LOWER(IFNULL(repro_status,'')) LIKE '%%lact%%'
-				          OR LOWER(IFNULL(status,'')) LIKE '%%lact%%'
-				          OR IFNULL(days_in_milk,0) > 0)""",
-				(hid,),
-			)[0][0]
-		)
+		animals = flt(live_herd_count(hid))
+		milkers = animals if hid in milking else 0.0
 		pregnant = flt(
 			frappe.db.sql(
 				"""SELECT COUNT(*) FROM `tabAnimal`

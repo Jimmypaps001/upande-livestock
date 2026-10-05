@@ -148,7 +148,6 @@ def _capitalise(doc, price, arrived, supplier=None):
 			"is_capitalised": 1,
 			"asset_link": asset.name,
 			"purchase_value": price,
-			"current_book_value": price,
 		}, update_modified=False)
 		return asset.name
 	except Exception:

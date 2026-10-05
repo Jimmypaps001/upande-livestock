@@ -114,3 +114,48 @@ def _delete_if_exists(doctype, name):
 	if frappe.db.exists(doctype, name):
 		frappe.delete_doc(doctype, name, force=True, ignore_permissions=True)
 		frappe.db.commit()
+
+
+class TestServiceRecord(IntegrationTestCase):
+	"""Services and conception rate come off the Service events, not columns."""
+
+	def setUp(self):
+		self.cow = make_dam("TEST-SVC-COW").name
+		self.addCleanup(_delete_if_exists, "Animal", self.cow)
+		self.addCleanup(frappe.db.commit)
+		self.addCleanup(frappe.db.delete, "Livestock Event", {"animal": self.cow})
+
+	def _service(self, status, docstatus=1):
+		# Raw rows: the record is a count over what is on file, and a Service's
+		# own validation (eligibility, straws, stock) is not what is under test.
+		frappe.get_doc({
+			"doctype": "Livestock Event",
+			"name": frappe.generate_hash(length=12),
+			"event_type": "Service",
+			"animal": self.cow,
+			"service_status": status,
+			"docstatus": docstatus,
+		}).db_insert()
+
+	def test_rate_is_over_settled_services_only(self):
+		from upande_livestock.serverscripts.common.animal import service_record
+
+		self._service("Successfull")
+		self._service("Failed")
+		self._service("Pending")
+		self._service("Successfull", docstatus=2)  # cancelled: not on file
+		got = service_record([self.cow])[self.cow]
+		self.assertEqual(got["services"], 3)
+		self.assertEqual(got["held"], 1)
+		self.assertEqual(got["conception_rate"], 50.0)
+
+	def test_a_cow_with_nothing_settled_has_no_rate(self):
+		from upande_livestock.serverscripts.common.animal import service_record
+
+		self._service("Pending")
+		self.assertIsNone(service_record([self.cow])[self.cow]["conception_rate"])
+
+	def test_an_empty_list_asks_about_nobody(self):
+		from upande_livestock.serverscripts.common.animal import service_record
+
+		self.assertEqual(service_record([]), {})

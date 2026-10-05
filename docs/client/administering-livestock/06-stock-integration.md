@@ -139,8 +139,9 @@ nothing had moved.
 
 ## Animals as assets
 
-An animal may be capitalised (`is_capitalised`, `asset_link`, `purchase_value`,
-`current_book_value`). Disposal then sells or scraps that Asset — see
+An animal may be capitalised (`is_capitalised`, `asset_link`, `purchase_value`).
+Her book value is read off the linked Asset, so depreciation keeps it current.
+Disposal then sells or scraps that Asset — see
 [Insurance and disposal](05-insurance-and-disposal.md).
 
 ## Checklist when stock is not moving

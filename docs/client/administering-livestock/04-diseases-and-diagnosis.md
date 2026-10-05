@@ -42,7 +42,7 @@ disease. They are **not** what sets a withdrawal on a treated animal — that co
 from the withdrawal days entered per drug on the treatment or drug row. Treat
 these as guidance for whoever is entering the treatment.
 
-> Related gap: the `milk_safe_date` field exists on Animal, Livestock Health Case
+> Related gap: the `milk_safe_date` field exists on Livestock Health Case
 > and Livestock Drug Issue, and the field descriptions say withdrawal periods
 > drive it — but **nothing in the app writes it**. Withdrawal days are captured
 > and stored per drug; they are never turned into a date. Staff are currently

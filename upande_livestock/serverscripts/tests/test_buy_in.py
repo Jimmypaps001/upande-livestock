@@ -11,6 +11,7 @@ somebody else's numbering would be the one record nobody could find twice.
 """
 
 import frappe
+from erpnext.assets.doctype.asset.asset import get_asset_value_after_depreciation
 from frappe.tests import IntegrationTestCase
 from frappe.utils import add_days, today
 
@@ -98,10 +99,11 @@ class TestBuyingAnAnimalIn(IntegrationTestCase):
 		self.assertTrue(got["asset"], "a bought animal was not capitalised")
 		row = frappe.db.get_value(
 			"Animal", got["animal"],
-			["is_capitalised", "purchase_value", "current_book_value"], as_dict=True)
+			["is_capitalised", "purchase_value"], as_dict=True)
 		self.assertEqual(row.is_capitalised, 1)
 		self.assertEqual(row.purchase_value, 120000)
-		self.assertEqual(row.current_book_value, 120000)
+		# Her book value is the Asset's, which depreciation keeps current.
+		self.assertEqual(get_asset_value_after_depreciation(got["asset"]), 120000)
 
 	def test_an_animal_that_cost_nothing_is_not_capitalised(self):
 		"""A gift, or a transfer in. An Asset worth nothing makes the balance

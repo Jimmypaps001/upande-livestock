@@ -6,7 +6,7 @@
 import frappe
 from frappe.utils import flt
 
-from upande_livestock.serverscripts.common.animal import RETIRED_STATUSES
+from upande_livestock.serverscripts.common.animal import RETIRED_STATUSES, service_record
 from upande_livestock.serverscripts.common.envelope import guard_read, run
 
 
@@ -42,8 +42,7 @@ def cull_evidence(animal=None):
 		her = frappe.db.get_value(
 			"Animal", animal,
 			["name", "burn_name", "current_herd", "sex", "date_of_birth", "status",
-			 "parity", "conception_rate", "total_services", "last_calving_date",
-			 "current_book_value", "is_capitalised", "asset_link"],
+			 "parity", "last_calving_date", "is_capitalised", "asset_link"],
 			as_dict=True,
 		)
 		if not her:
@@ -53,18 +52,22 @@ def cull_evidence(animal=None):
 			"Animal",
 			filters=[["status", "not in", list(RETIRED_STATUSES)], ["disabled", "=", 0],
 			         ["sex", "=", "Female"]],
-			fields=["parity", "conception_rate"], limit_page_length=0,
+			fields=["name", "parity"], limit_page_length=0,
 		)
+		record = service_record([r.name for r in herd] + [her.name])
 		med_parity = _median([flt(r.parity) for r in herd if flt(r.parity) > 0])
-		med_rate = _median([flt(r.conception_rate) for r in herd if flt(r.conception_rate) > 0])
+		med_rate = _median(
+			[record[r.name]["conception_rate"] for r in herd if r.name in record]
+		)
+		her_rate = (record.get(her.name) or {}).get("conception_rate")
 
 		measures = []
 		below = 0
 		for label, mine, theirs, unit in (
 			("Calvings", flt(her.parity), med_parity, ""),
-			("Conception rate", flt(her.conception_rate), med_rate, "%"),
+			("Conception rate", her_rate, med_rate, "%"),
 		):
-			if theirs is None:
+			if mine is None or theirs is None:
 				continue
 			is_below = mine < theirs
 			below += 1 if is_below else 0
@@ -96,13 +99,27 @@ def cull_evidence(animal=None):
 			"measured": measured,
 			"was_productive": was_productive,
 			"case": case,
-			"book_value": flt(her.current_book_value),
+			"book_value": _book_value(her.asset_link),
 			"is_capitalised": bool(her.is_capitalised),
 			"asset": her.asset_link,
 			"policy": claim,
 		}
 
 	return run(go, "livestock cull_evidence failed")
+
+
+def _book_value(asset):
+	"""What her Asset is worth today, depreciation included.
+
+	Read off the Asset because Animal's own `current_book_value` was written
+	once, at purchase, and never depreciated — and was 0 on every animal the
+	asset migration carried over. Not capitalised means nothing on the books.
+	"""
+	if not asset:
+		return 0.0
+	from erpnext.assets.doctype.asset.asset import get_asset_value_after_depreciation
+
+	return flt(get_asset_value_after_depreciation(asset))
 
 
 def _open_policy(animal):

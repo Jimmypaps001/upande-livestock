@@ -87,6 +87,48 @@ def live_herd_count(herd):
 	)
 
 
+def service_record(animals=None):
+	"""Services and conception rate per animal, read off her Service events.
+
+	Animal used to carry `total_services` and `conception_rate` columns that
+	nothing ever wrote, so every cow read 0 and the herd median was empty. The
+	events are the record; this counts them.
+
+	The rate is over SETTLED services — held or failed. A service still waiting
+	on its pregnancy check has no answer yet, and counting it as a miss would
+	mark every recently served cow down. A cow with nothing settled has no rate
+	(None), not a rate of zero.
+	"""
+	from upande_livestock.upande_livestock.doctype.livestock_event.livestock_event import (
+		SERVICE_FAILED,
+		SERVICE_HELD,
+	)
+
+	if animals is not None and not animals:
+		return {}
+	where = "AND animal IN %(animals)s" if animals else ""
+	rows = frappe.db.sql(
+		f"""SELECT animal,
+		           COUNT(*) AS services,
+		           SUM(service_status = %(held)s) AS held,
+		           SUM(service_status = %(failed)s) AS failed
+		    FROM `tabLivestock Event`
+		    WHERE event_type = 'Service' AND docstatus = 1 {where}
+		    GROUP BY animal""",
+		{"held": SERVICE_HELD, "failed": SERVICE_FAILED, "animals": tuple(animals or ())},
+		as_dict=True,
+	)
+	out = {}
+	for r in rows:
+		settled = int(r.held or 0) + int(r.failed or 0)
+		out[r.animal] = {
+			"services": int(r.services),
+			"held": int(r.held or 0),
+			"conception_rate": round(100.0 * int(r.held or 0) / settled, 1) if settled else None,
+		}
+	return out
+
+
 def recompute_herd_count(herd):
 	"""Set Herds.number_of_animals to the live count."""
 	if not herd:
