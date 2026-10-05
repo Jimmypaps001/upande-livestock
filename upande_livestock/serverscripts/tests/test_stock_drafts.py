@@ -20,6 +20,8 @@ from upande_livestock.serverscripts.tests.test_drug_issuing import _drug_store, 
 from upande_livestock.serverscripts.tests.test_operations import _employee, _make_cow, _purge, _purge_events_for
 from upande_livestock.serverscripts.transactions._drafts import draft_rows
 from upande_livestock.serverscripts.transactions.post_stock_draft import post_stock_draft
+from upande_livestock.serverscripts.transactions.stock_calendar import stock_calendar
+from upande_livestock.serverscripts.transactions.stock_day import stock_day
 from upande_livestock.serverscripts.transactions.stock_drafts import stock_drafts
 
 
@@ -32,6 +34,12 @@ class TestEachEventPostsUnderItsOwnName(IntegrationTestCase):
 	def test_the_flows_that_are_not_events_keep_their_names(self):
 		self.assertEqual(livestock_stock.stock_entry_type_for("Feeding"), "Animal Feeding")
 		self.assertEqual(livestock_stock.stock_entry_type_for("Ration Manufacture"), "Ration Mixing")
+
+	def test_the_old_event_types_still_count_as_livestock_stock(self):
+		types = livestock_stock.livestock_stock_entry_types()
+		for name in ("Animal Treatment", "Vaccination", "Livestock Drying Off", "Animal Feeding"):
+			self.assertIn(name, types)
+		self.assertNotIn("Material Issue", types)
 
 	def test_an_unknown_kind_falls_back(self):
 		self.assertEqual(livestock_stock.stock_entry_type_for("ZZ No Such Kind"), "Material Issue")
@@ -59,10 +67,10 @@ class TestShortTodayLeavesADraft(IntegrationTestCase):
 		self.addCleanup(_purge, "Animal", self.cow.name)
 		self.addCleanup(_purge_events_for, self.cow.name)
 
-	def _record(self, qty):
+	def _record(self, qty, event_type="Deworming"):
 		res = create_husbandry_event(
 			{
-				"event_type": "Deworming",
+				"event_type": event_type,
 				"animal": self.cow.name,
 				"operator": _employee(),
 				"drugs": [{"item_code": self.drug.item_code, "qty": qty, "source_warehouse": _drug_store()}],
@@ -129,3 +137,29 @@ class TestShortTodayLeavesADraft(IntegrationTestCase):
 		res = self._record(flt(self.drug.actual_qty) + 50)
 		frappe.get_doc("Livestock Event", res["name"]).cancel()
 		self.assertFalse(frappe.db.exists("Stock Entry", res["stock_entry"]))
+
+	def test_the_calendar_counts_a_days_drafts_apart_from_its_posted_entries(self):
+		before = stock_calendar({"from_date": today(), "to_date": today()})["days"].get(today(), {"draft": 0, "posted": 0})
+		self._record(flt(self.drug.actual_qty) + 50)
+		# A second deworming the same day is refused, so the posted one is a vaccination.
+		self._record(1, "Vaccination")
+		after = stock_calendar({"from_date": today(), "to_date": today()})["days"][today()]
+		self.assertEqual(after["draft"], before["draft"] + 1)
+		self.assertEqual(after["posted"], before["posted"] + 1)
+
+	def test_the_calendar_wants_a_range_it_can_answer(self):
+		self.assertIn("error", stock_calendar({}))
+		self.assertIn("error", stock_calendar({"from_date": "2026-01-01", "to_date": "2026-06-01"}))
+
+	def test_a_day_lists_its_drafts_and_its_posted_entries(self):
+		waiting = self._record(flt(self.drug.actual_qty) + 50)["stock_entry"]
+		posted = self._record(1, "Vaccination")["stock_entry"]
+		out = stock_day({"date": today()})
+		self.assertTrue(out.get("ok"), out)
+		status = {e["name"]: e for e in out["entries"]}
+		self.assertEqual(status[waiting]["status"], "Draft")
+		self.assertFalse(status[waiting]["can_post"])
+		self.assertEqual(status[posted]["status"], "Posted")
+		# A posted entry waits on nothing.
+		self.assertIsNone(status[posted]["short"])
+		self.assertFalse(status[posted]["can_post"])

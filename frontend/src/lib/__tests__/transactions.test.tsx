@@ -1,19 +1,20 @@
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
 /**
- * The stock the farm's records used that the store has not handed over: on a
- * calendar by the day it was recorded, and as a list, each posted from here
- * once the store can cover it.
+ * The stock the farm's records moved: every draft still waiting in the middle,
+ * a small calendar on the right with an orange dot where a draft is waiting and
+ * a green one where everything posted, and a day's own entries when it is
+ * picked. A draft the store can cover is posted from here.
  */
 
-/** The server's day, deliberately not the browser's: drafts are dated by the
- *  server, and the calendar must open on its today. */
+/** The server's day, deliberately not the browser's. */
 const SERVER_DAY = "2026-03-14";
 
-const draft = (name: string, over: Record<string, unknown> = {}) => ({
+const entry = (name: string, over: Record<string, unknown> = {}) => ({
   name,
+  status: "Draft",
   posting_date: SERVER_DAY,
   stock_entry_type: "Livestock Vaccination",
   remarks: null,
@@ -25,12 +26,23 @@ const draft = (name: string, over: Record<string, unknown> = {}) => ({
   ...over,
 });
 
-const state = vi.hoisted(() => ({ drafts: [] as unknown[], posted: [] as string[] }));
+const state = vi.hoisted(() => ({
+  drafts: [] as unknown[],
+  day: [] as unknown[],
+  days: {} as Record<string, { draft: number; posted: number }>,
+  posted: [] as string[],
+  asked: [] as string[],
+}));
 
-const call = vi.fn(async (method?: string, args?: { payload?: { name?: string } }) => {
+const call = vi.fn(async (method?: string, args?: { payload?: Record<string, string> }) => {
   const m = method || "";
   if (m.includes("posting_day")) return { ok: true, today: SERVER_DAY, backdating_open: false };
   if (m.includes("stock_drafts")) return { ok: true, drafts: state.drafts };
+  if (m.includes("stock_calendar")) return { ok: true, days: state.days };
+  if (m.includes("stock_day")) {
+    state.asked.push(args?.payload?.date ?? "");
+    return { ok: true, date: args?.payload?.date, entries: state.day };
+  }
   if (m.includes("post_stock_draft")) {
     state.posted.push(args?.payload?.name ?? "");
     return { ok: true, name: args?.payload?.name };
@@ -55,46 +67,70 @@ const draw = () =>
     </TooltipProvider>,
   );
 
+/** The calendar's cell for a day of the server's month. */
+const dayCell = (n: number) =>
+  document.querySelector(`td[data-day="2026-03-${String(n).padStart(2, "0")}"]`) as HTMLElement;
+
 beforeEach(() => {
   state.drafts = [];
+  state.day = [];
+  state.days = {};
   state.posted = [];
+  state.asked = [];
 });
 
 describe("Transactions", () => {
-  it("puts a draft on the day it was recorded and lists it under the calendar", async () => {
-    state.drafts = [draft("STE-1")];
+  it("opens on everything waiting", async () => {
+    state.drafts = [entry("STE-1")];
     draw();
-    const day = await screen.findByRole("gridcell", { name: /1 draft$/ });
-    expect(within(day).getByText(/Vaccination · A001\/20/)).toBeTruthy();
-    // Opened on the server's today, so that day's draft is the one shown.
-    await waitFor(() => expect(day.getAttribute("aria-selected")).toBe("true"));
-    expect(await screen.findByText("Still short: FMD Vaccine: need 2 Nos, store has 0")).toBeTruthy();
-    expect(screen.getByText("1 waiting · 0 ready to post")).toBeTruthy();
+    expect(await screen.findByText("Waiting for stock")).toBeTruthy();
+    expect(await screen.findByText("1 draft · 0 ready to post")).toBeTruthy();
+    const list = screen.getByRole("list", { name: "Transactions" });
+    expect(within(list).getByText("Livestock Vaccination")).toBeTruthy();
+    expect(within(list).getByText("Still short: FMD Vaccine: need 2 Nos, store has 0")).toBeTruthy();
+  });
+
+  it("dots a day orange while a draft waits and green when everything posted", async () => {
+    state.days = { "2026-03-10": { draft: 1, posted: 2 }, "2026-03-11": { draft: 0, posted: 3 } };
+    draw();
+    await waitFor(() => expect(dayCell(10)?.className).toContain("sd-data-amber"));
+    expect(dayCell(11).className).toContain("sd-data-green");
+    expect(dayCell(12).className).not.toMatch(/sd-data-(amber|green)/);
+  });
+
+  it("lists a picked day's drafts and posted entries, and goes back to everything waiting", async () => {
+    state.drafts = [entry("STE-1")];
+    state.day = [
+      entry("STE-1"),
+      entry("STE-2", { status: "Posted", can_post: false, short: null, stock_entry_type: "Livestock Deworming" }),
+    ];
+    draw();
+    await waitFor(() => expect(dayCell(14)).toBeTruthy());
+    fireEvent.click(within(dayCell(14)).getByRole("button"));
+    expect(await screen.findByText("2 transactions · 1 in draft")).toBeTruthy();
+    expect(state.asked).toContain(SERVER_DAY);
+    const list = screen.getByRole("list", { name: "Transactions" });
+    expect(within(list).getByText("Posted")).toBeTruthy();
+    // A posted entry has nothing to post.
+    expect(within(list).getAllByRole("button", { name: "Post" })).toHaveLength(1);
+    fireEvent.click(await screen.findByRole("button", { name: /Everything waiting \(1\)/ }));
+    expect(await screen.findByText("1 draft · 0 ready to post")).toBeTruthy();
   });
 
   it("will not post a draft the store cannot cover", async () => {
-    state.drafts = [draft("STE-1")];
+    state.drafts = [entry("STE-1")];
     draw();
     const button = await screen.findByRole("button", { name: "Post" });
     expect((button as HTMLButtonElement).disabled).toBe(true);
   });
 
   it("posts a covered draft and reads the list again", async () => {
-    state.drafts = [draft("STE-2", { can_post: true, short: null })];
+    state.drafts = [entry("STE-2", { can_post: true, short: null })];
     draw();
     fireEvent.click(await screen.findByRole("button", { name: "Post" }));
     await waitFor(() => expect(state.posted).toEqual(["STE-2"]));
     expect(await screen.findByText(/STE-2 posted/)).toBeTruthy();
     expect(call.mock.calls.filter(([m]) => String(m).includes("stock_drafts")).length).toBeGreaterThan(1);
-  });
-
-  it("has a list of every draft", async () => {
-    state.drafts = [draft("STE-1"), draft("STE-3", { posting_date: "2026-01-02", stock_entry_type: "Livestock Deworming" })];
-    draw();
-    fireEvent.mouseDown(await screen.findByRole("tab", { name: /List/ }));
-    const table = await screen.findByRole("table", { name: "Draft stock entries" });
-    expect(within(table).getByText("Livestock Deworming")).toBeTruthy();
-    expect(within(table).getAllByRole("row")).toHaveLength(3);
   });
 
   it("says when nothing is waiting", async () => {
