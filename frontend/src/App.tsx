@@ -89,6 +89,9 @@ const Procurement = page(() =>
   import("@/pages/Procurement").then((m) => ({ default: m.Procurement })),
 );
 const Herds = page(() => import("@/pages/Herds").then((m) => ({ default: m.Herds })));
+const Transactions = page(() =>
+  import("@/pages/Transactions").then((m) => ({ default: m.Transactions })),
+);
 
 // The breeding calendar and the health screens are five and four exports of
 // one module each: they share a scaffold, so splitting them into nine chunks
@@ -150,6 +153,7 @@ const TITLES: Record<View, string> = {
   culling: "Culling",
   settings: "Settings",
   notifications: "Notifications",
+  transactions: "Transactions",
 };
 
 /** The surfaces this frontend implements. Everything else renders a
@@ -185,6 +189,7 @@ const PAGES: Partial<Record<View, React.ComponentType>> = {
   reports: Reports,
   health: HealthDashboard,
   "ration-editor": RationEditor,
+  transactions: Transactions,
 };
 
 export function App() {

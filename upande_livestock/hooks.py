@@ -168,6 +168,7 @@ after_migrate = [
 	"upande_livestock.serverscripts.common.custom_fields.ensure_livestock_custom_fields",
 	"upande_livestock.install.ensure_milking_stock_entry_type",
 	"upande_livestock.install.ensure_livestock_event_types",
+	"upande_livestock.serverscripts.common.stock.ensure_event_stock_entry_types",
 	"upande_livestock.install.ensure_livestock_timing_defaults",
 ]
 

@@ -75,7 +75,15 @@ def as_dict(value):
 def run(fn, log_title: str) -> dict:
 	"""Execute `fn`, returning its dict on success or {"error": msg} on failure."""
 	try:
-		return fn()
+		out = fn()
+		# Stock issues saved as drafts for want of stock (common/stock): the
+		# record stood, and the page must say what is still to post.
+		from upande_livestock.serverscripts.common.stock import drafts_made
+
+		drafts = drafts_made()
+		if drafts and isinstance(out, dict) and not out.get("error"):
+			out["stock_drafts"] = drafts
+		return out
 	except frappe.PermissionError as e:
 		return {"error": str(e) or _("Not permitted.")}
 	except Exception as e:

@@ -88,6 +88,7 @@ class LivestockDiagnosis(Document):
 			# not Livestock Settings' default company and the fallback centre.
 			company=self.company,
 			herd=livestock_cost_center.herd_of(self.animal),
+			draft_if_short=True,
 		)
 		if name:
 			self.db_set("stock_entry", name, update_modified=False)

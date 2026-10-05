@@ -105,7 +105,7 @@ class TestHusbandryStockIssue(StockSeededTestCase):
 		self.addCleanup(_purge, "Stock Entry", se.name)
 		# The ledger has to say what the drugs were for. The type is the named
 		# one; the purpose stays Material Issue so stock behaves identically.
-		self.assertEqual(se.stock_entry_type, "Vaccination")
+		self.assertEqual(se.stock_entry_type, "Livestock Vaccination")
 		self.assertEqual(se.purpose, "Material Issue")
 		self.assertEqual(se.docstatus, 1)
 		self.assertEqual(se.items[0].item_code, self.drug_item)
@@ -116,7 +116,7 @@ class TestHusbandryStockIssue(StockSeededTestCase):
 		self.assertTrue(res["stock_entry"], "Deworming must post a Stock Entry")
 		self.addCleanup(_purge, "Stock Entry", res["stock_entry"])
 		se = frappe.get_doc("Stock Entry", res["stock_entry"])
-		self.assertEqual(se.stock_entry_type, "Deworming")
+		self.assertEqual(se.stock_entry_type, "Livestock Deworming")
 		self.assertEqual(se.purpose, "Material Issue")
 
 	def test_the_drug_row_records_the_issue(self):
@@ -197,7 +197,7 @@ class TestTreatmentStockIssue(StockSeededTestCase):
 		self.assertTrue(res["drug_stock_entry"], "A treated case must post a drug issue")
 		self.addCleanup(_purge, "Stock Entry", res["drug_stock_entry"])
 		se = frappe.get_doc("Stock Entry", res["drug_stock_entry"])
-		self.assertEqual(se.stock_entry_type, "Animal Treatment")
+		self.assertEqual(se.stock_entry_type, "Livestock Treatment")
 		self.assertEqual(se.purpose, "Material Issue")
 		self.assertEqual(se.items[0].item_code, self.drug_item)
 
@@ -273,7 +273,7 @@ class TestServiceStockIssue(ServiceIsMapped, IntegrationTestCase):
 		self.assertTrue(res["stock_entry"], "A Service must issue a semen straw")
 		self.addCleanup(_purge, "Stock Entry", res["stock_entry"])
 		se = frappe.get_doc("Stock Entry", res["stock_entry"])
-		self.assertEqual(se.stock_entry_type, "Semen Issue")
+		self.assertEqual(se.stock_entry_type, "Livestock Service")
 		self.assertEqual(se.purpose, "Material Issue")
 		self.assertEqual(se.items[0].item_code, self.semen_item)
 		self.assertEqual(se.items[0].s_warehouse, self.semen_store)

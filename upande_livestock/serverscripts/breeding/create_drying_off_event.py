@@ -49,7 +49,7 @@ def create_drying_off_event(payload):
 		for drug in _clean_drug_rows(d.get("items") or d.get("drugs"), d.get("source_warehouse") or event_items.default_store("Drying Off")):
 			doc.append("drug_issues", drug)
 		doc.insert()
-		doc.submit()  # LivestockEvent.on_submit posts the issue as "Animal Treatment"
+		doc.submit()  # LivestockEvent.on_submit posts the issue as "Livestock Drying Off"
 		doc.reload()
 		return {
 			"ok": True,

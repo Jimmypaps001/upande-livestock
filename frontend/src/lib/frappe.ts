@@ -13,6 +13,7 @@
  */
 
 import { requestFinished, requestStarted } from "@/lib/splash";
+import { DRAFTS_EVENT } from "@/lib/stock-drafts";
 
 export interface LivestockBootstrap {
   user: string;
@@ -92,7 +93,15 @@ export async function call<T>(
       body && typeof body === "object" && "message" in body
         ? (body as { message: unknown }).message
         : null;
-    if (message && typeof message === "object") return message as Envelope<T>;
+    if (message && typeof message === "object") {
+      // A record that stood while its stock issue waits as a draft: every
+      // page hears of it the same way, through the toast (Toast.tsx).
+      const drafts = (message as { stock_drafts?: unknown }).stock_drafts;
+      if (Array.isArray(drafts) && drafts.length) {
+        window.dispatchEvent(new CustomEvent(DRAFTS_EVENT, { detail: drafts }));
+      }
+      return message as Envelope<T>;
+    }
     if (!res.ok) {
       // A raise that escaped the envelope (a 403 from the framework itself,
       // a stale CSRF token on a page left open overnight). Say which.

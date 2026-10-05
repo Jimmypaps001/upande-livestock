@@ -20,14 +20,21 @@ TWO THINGS THIS MODULE DELIBERATELY DOES:
    operation — api/operations._run() relies on that rollback. Committing is the
    caller's business, or the request's.
 
-SHORT STOCK BLOCKS. This module used to downgrade a failed issue to a warning, on
-the reasoning that an animal was treated whether or not the balance allows the
-issue to post. That produced 93 vaccinations and 25 health cases with not one
-gram of stock moved, and nobody noticed. The farm's call is now the opposite: an
-issue the store cannot cover stops the event, so the books and the yard cannot
-drift apart silently. `check_availability` reports the gap before anything is
-written, so the message names the drug and the shortfall rather than surfacing a
-raw ERPNext negative-stock error.
+SHORT STOCK, TODAY: THE RECORD STANDS, THE ISSUE WAITS. This module once
+downgraded a failed issue to a warning, which produced 93 vaccinations and 25
+health cases with not one gram of stock moved, and nobody noticed. It then
+blocked the event instead — so a cow treated this morning could not be
+recorded until the store caught up. Now an issue the store cannot cover TODAY
+is saved as a draft Stock Entry: the event is recorded, nothing leaves the
+store that is not there, and the draft sits on the Transactions page, named
+and dated, until somebody posts it. Never silent: the caller's answer carries
+`stock_drafts` (see envelope.run), and the page says so.
+
+A BACKDATED issue the store could not cover on the day still blocks: a draft
+dated last month posted today would be a different transaction.
+`check_availability` reports the gap before anything is written, so the
+message names the drug and the shortfall rather than surfacing a raw ERPNext
+negative-stock error.
 """
 
 import frappe
@@ -45,27 +52,24 @@ def default_semen_item():
 # A Material Issue tells you stock left; it does not tell you why. Naming the
 # reason on the Stock Entry Type means a storekeeper reading the stock ledger can
 # see a deworming round without opening the document, and a report can group by
-# it. Every type here is the transaction it was always going to be, labelled
-# honestly: the issues carry purpose "Material Issue", the two mixes at the end
-# carry "Manufacture". SCP set this precedent with Chemical Spray, Chemical
-# Loaning and Chemical Mixing; livestock was still posting everything as the
-# generic type.
+# it.
+#
+# EVERY EVENT IS ITS OWN TYPE: "Livestock " + the event type — Livestock
+# Vaccination, Livestock Drying Off, Livestock Check Up — made the first time
+# that event posts (and for every posting type on migrate), so a type the farm
+# adds in Settings is labelled honestly without a code change. It replaced a
+# hand-kept map where Drying Off shared "Animal Treatment" and a new event fell
+# through to the bare "Material Issue".
+EVENT_TYPE_PREFIX = "Livestock "
+
+# The flows that are not events keep their own names. The two mixes are NOT
+# Material Issues — each is the Manufacture leg of a Work Order — and they are
+# two different jobs: a concentrate is mixed into the store as an input, a
+# ration is mixed and eaten the same morning. Named to match SCP's "Chemical
+# Mixing", the same shape of entry. Feeding is the feed engine's daily issue,
+# not a recorded event.
 STOCK_ENTRY_TYPES = {
-	"Vaccination": "Vaccination",
-	"Deworming": "Deworming",
-	"Treatment": "Animal Treatment",
-	# Sealing a dry cow's quarters is a treatment, so it shares that type
-	# rather than falling through to the bare "Material Issue".
-	"Drying Off": "Animal Treatment",
-	"Check Up": "Animal Health Check",
-	"Service": "Semen Issue",
 	"Feeding": "Animal Feeding",
-	# The two mixes. These are NOT Material Issues — each is the Manufacture
-	# leg of a Work Order — and they are two different jobs on this farm: a
-	# concentrate is mixed into the store as an input, a ration is mixed and
-	# eaten the same morning. Both were posting as the bare "Manufacture", so
-	# the ledger could not tell the mill from the mixer wagon. Named to match
-	# SCP's "Chemical Mixing", which is the same shape of entry.
 	"Concentrate Manufacture": "Concentrate Mixing",
 	"Ration Manufacture": "Ration Mixing",
 }
@@ -78,6 +82,43 @@ FALLBACK_TYPES = {
 	"Concentrate Manufacture": "Manufacture",
 	"Ration Manufacture": "Manufacture",
 }
+
+
+def event_stock_entry_type(event_type):
+	return f"{EVENT_TYPE_PREFIX}{event_type}"
+
+
+def ensure_event_stock_entry_type(event_type):
+	"""Make "Livestock <event type>" (a Material Issue) if it is missing; return it."""
+	name = event_stock_entry_type(event_type)
+	if not frappe.db.exists("Stock Entry Type", name):
+		doc = frappe.new_doc("Stock Entry Type")
+		doc.name = name
+		doc.purpose = "Material Issue"
+		doc.is_standard = 0
+		doc.insert(ignore_permissions=True)
+	return name
+
+
+def ensure_event_stock_entry_types():
+	"""after_migrate: a type for every event type set to post stock."""
+	if not frappe.db.table_exists("Livestock Event Type") or not frappe.db.table_exists("Stock Entry Type"):
+		return
+	if not frappe.db.has_column("Livestock Event Type", "posts_stock_entry"):
+		return
+	for event_type in frappe.get_all("Livestock Event Type", filters={"posts_stock_entry": 1}, pluck="name"):
+		ensure_event_stock_entry_type(event_type)
+	frappe.db.commit()
+
+
+def livestock_stock_entry_types():
+	"""Every type this app posts under: the events' and the named flows'."""
+	names = set(STOCK_ENTRY_TYPES.values())
+	names.update(
+		frappe.get_all("Stock Entry Type", filters={"name": ["like", f"{EVENT_TYPE_PREFIX}%"]}, pluck="name")
+	)
+	return sorted(names)
+
 
 # None of vaccination, deworming, treatment or service carries a time of day —
 # only a Date field (LivestockEvent.event_date) — so a backdated issue has
@@ -96,14 +137,16 @@ EVENT_POSTING_TIME = "06:00:00"
 def stock_entry_type_for(what):
 	"""The named type for this kind of issue, or the generic one if unknown.
 
-	Falling back rather than throwing: a new event type should not stop a drug
-	leaving the store, it should just be labelled less precisely until somebody
-	adds it here and to the installer.
+	An event type gets its own "Livestock <event>" type, made on first use.
+	Falling back rather than throwing otherwise: an unknown kind should not stop
+	a drug leaving the store, it should just be labelled less precisely.
 	"""
 	key = (what or "").strip()
 	name = STOCK_ENTRY_TYPES.get(key)
-	if name and frappe.db.exists("Stock Entry Type", name):
-		return name
+	if name:
+		return name if frappe.db.exists("Stock Entry Type", name) else FALLBACK_TYPES.get(key, FALLBACK_TYPE)
+	if key and frappe.db.exists("Livestock Event Type", key):
+		return ensure_event_stock_entry_type(key)
 	return FALLBACK_TYPES.get(key, FALLBACK_TYPE)
 
 
@@ -160,7 +203,9 @@ def _employee_for(employee=None):
 	return employee or frappe.db.get_value("Employee", {"user_id": frappe.session.user}, "name")
 
 
-def issue_items(rows, remarks, company=None, posting_date=None, employee=None, what=None, herd=None):
+def issue_items(
+	rows, remarks, company=None, posting_date=None, employee=None, what=None, herd=None, draft_if_short=False
+):
 	"""Post one Material Issue covering `rows`; return the Stock Entry name.
 
 	`rows` is a list of dicts with item_code, qty and warehouse (batch_no and uom
@@ -169,7 +214,8 @@ def issue_items(rows, remarks, company=None, posting_date=None, employee=None, w
 	nothing usable survives, no Stock Entry is created and None is returned.
 
 	Raises when the store cannot cover the rows, naming the drug and the gap —
-	see the module docstring for why that blocks rather than warns.
+	unless `draft_if_short` and the issue is for today, when the entry is saved
+	as a draft instead and noted for the answer (see the module docstring).
 
 	`herd` is which herd the round was for, and only decides the cost centre —
 	see common/cost_center. Optional, because not every caller is about one
@@ -189,7 +235,9 @@ def issue_items(rows, remarks, company=None, posting_date=None, employee=None, w
 		)
 
 	short = check_availability(usable, posting_date=posting_date)
-	if short:
+	today_issue = not posting_date or getdate(posting_date) >= getdate(today())
+	draft = bool(short) and draft_if_short and today_issue
+	if short and not draft:
 		frappe.throw(
 			_("The store cannot cover this issue on {0} — {1}.").format(
 				posting_date or today(), shortage_message(short)
@@ -250,8 +298,31 @@ def issue_items(rows, remarks, company=None, posting_date=None, employee=None, w
 	# repair to 782 Item Defaults.
 	livestock_cost_center.stamp(se, company, herd=herd)
 	se.insert(ignore_permissions=True)
+	if draft:
+		note_draft(se, short)
+		return se.name
 	se.submit()
 	return se.name
+
+
+def note_draft(se, short):
+	"""Remember a draft made this request, for the answer to carry."""
+	drafts = frappe.flags.get("livestock_stock_drafts") or []
+	drafts.append(
+		{
+			"name": se.name,
+			"stock_entry_type": se.stock_entry_type,
+			"short": shortage_message(short),
+		}
+	)
+	frappe.flags.livestock_stock_drafts = drafts
+
+
+def drafts_made():
+	"""The drafts this request made (and forget them)."""
+	drafts = frappe.flags.get("livestock_stock_drafts") or []
+	frappe.flags.livestock_stock_drafts = []
+	return drafts
 
 
 def try_issue_items(rows, remarks, what, **kwargs):
@@ -275,15 +346,28 @@ def try_issue_items(rows, remarks, what, **kwargs):
 
 
 def cancel_issues(names):
-	"""Cancel the submitted Material Issues among `names`, putting the stock back.
+	"""Cancel the submitted Material Issues among `names`, putting the stock back,
+	and delete the drafts among them, so nothing posts later for a record that
+	no longer stands.
 
 	A health case or a check-up cancelled used to leave its drug issue posted:
 	the Stock Entry does not link back to the document that made it, so Frappe
 	never asked. Blank names and entries already cancelled are passed over.
 	"""
 	for name in {n for n in names or () if n}:
-		if frappe.db.get_value("Stock Entry", name, "docstatus") != 1:
+		status = frappe.db.get_value("Stock Entry", name, "docstatus")
+		if status == 0:
+			discard_draft(name)
+			continue
+		if status != 1:
 			continue
 		issue = frappe.get_doc("Stock Entry", name)
 		issue.flags.ignore_permissions = True
 		issue.cancel()
+
+
+def discard_draft(name):
+	"""Delete a draft issue whose record was cancelled. `force`: the cancelled
+	record (and its drug rows) still point at it."""
+	if frappe.db.get_value("Stock Entry", name, "docstatus") == 0:
+		frappe.delete_doc("Stock Entry", name, ignore_permissions=True, force=True)
