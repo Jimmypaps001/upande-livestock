@@ -161,3 +161,9 @@ upande_livestock.patches.settle_disposals
 
 # A health case's and check-up's timeline event shows the issue its source posted.
 upande_livestock.patches.stamp_mirror_event_stock_entries
+
+# Each event type carries its own stock rule (Posts Stock Entry, Item Groups,
+# Default Store, Must Name an Item), written from the site's current mapping or,
+# on a site without one, its "Consumes Drugs" boxes and drug/semen groups. Runs
+# after migrate_legacy_custom_fields, which carries live's drug store across.
+upande_livestock.patches.stock_rules_onto_event_types

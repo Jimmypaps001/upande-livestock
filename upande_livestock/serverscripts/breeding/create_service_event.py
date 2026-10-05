@@ -1,4 +1,4 @@
-"""Record a service (A.I. or natural), issuing the semen straw it consumes."""
+"""Record a service (A.I. or natural), and the straw it used."""
 
 import frappe
 from frappe import _
@@ -15,9 +15,10 @@ def create_service_event(payload):
 	"""Record a Service / insemination.
 
 	LivestockEvent.validate() enforces the breeding rules and stamps the
-	expected-calving / check-due / next-heat dates; its on_submit issues the semen
-	straw out of the semen store. The straw item falls back to Livestock Settings
-	when the caller does not name one.
+	expected-calving / check-due / next-heat dates. Where Service posts stock
+	(Settings → Stock) the straw goes through the items table and on_submit
+	issues it; where it does not, the straw is recorded on the event's own
+	fields — a calf's record reads its sire there — and nothing is issued.
 	"""
 
 	def go():
@@ -30,18 +31,18 @@ def create_service_event(payload):
 		doc.service_date = d.get("service_date") or today()
 		doc.sire = d.get("sire")
 		if consumes_items("Service"):
-			# The farm mapped Service to an item group: the straw goes through
-			# the same table as every other event's items, and the three legacy
-			# fields are left alone (they are still READ for history, and by
-			# record_birth to find a calf's sire on old services).
+			# Service posts stock: the straw goes through the items table like
+			# every other event's items. A caller still sending only the old
+			# straw fields has them turned into an item row, not dropped.
+			if not d.get("items") and d.get("semen_item"):
+				d["items"] = [{"item_code": d.get("semen_item"), "qty": flt(d.get("semen_qty")) or 1,
+				               "source_warehouse": d.get("semen_warehouse") or None}]
 			append_items(doc, d)
 		else:
-			# No straws-only group to map Service to: the straw picker as it has
-			# always worked. Which path a site takes is the mapping's answer.
+			# Service posts no stock here: the straw is recorded on the event's
+			# own fields, where a calf's record finds its sire, and not issued.
 			doc.semen_item = d.get("semen_item") or None
 			doc.semen_qty = flt(d.get("semen_qty")) or 1
-			# Blank is allowed and means "wherever the settings say"; the posting
-			# falls back for us rather than this guessing a store.
 			doc.semen_warehouse = d.get("semen_warehouse") or None
 		doc.insert()
 		doc.submit()

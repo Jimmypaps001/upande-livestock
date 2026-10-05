@@ -71,8 +71,10 @@ on the site and then migrated.
   Recording, Livestock Insurance Policy / Claim.
 - No Custom Field left on Livestock Event from the first design (the 54 in
   `migrate_legacy_event_fields.LEGACY`).
-- Livestock Settings → Drug Store reads "Drug/ Medicine store- old office - KR";
-  Milking Herds lists the three herds that were ticked as milking.
+- Settings → Stock: the drug-consuming event types (those ticked "Consumes
+  Drugs" before) post stock from the drug item group with "Drug/ Medicine
+  store- old office - KR" as their default store, and Service from the semen
+  group; Milking Herds lists the three herds that were ticked as milking.
 - Every Livestock Event's drug rows show on the event (parentfield `drug_issues`).
 - The eight old weight rows are submitted Livestock Weight Records with an animal
   and a date.

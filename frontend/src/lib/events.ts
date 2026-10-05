@@ -110,7 +110,6 @@ export interface HusbandryOptions {
   drug_items: StockChoice[];
   /** Whether anything is mapped; `drug_items` of [] cannot say. */
   drug_items_mapped?: boolean;
-  drug_warehouse: string | null;
   herds: { name: string; label: string; heads: number }[];
   employee: string | null;
 }

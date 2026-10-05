@@ -7,7 +7,7 @@ from upande_livestock.serverscripts.husbandry._shared import _clean_drug_rows
 from upande_livestock.serverscripts.common.envelope import as_dict, guard, run
 from upande_livestock.serverscripts.common.events import new_livestock_event
 from upande_livestock.serverscripts.common import herd_movement
-from upande_livestock.serverscripts.common import stock as livestock_stock
+from upande_livestock.serverscripts.common import event_items
 
 
 @frappe.whitelist()
@@ -46,7 +46,7 @@ def create_drying_off_event(payload):
 		# flags it drug-consuming. The rows were being read off the payload by
 		# nothing at all, which left the teat sealant on the shelf while the
 		# ledger said the cow was dry.
-		for drug in _clean_drug_rows(d.get("drugs"), d.get("source_warehouse") or livestock_stock.drug_warehouse()):
+		for drug in _clean_drug_rows(d.get("drugs"), d.get("source_warehouse") or event_items.default_store("Drying Off")):
 			doc.append("drug_issues", drug)
 		doc.insert()
 		doc.submit()  # LivestockEvent.on_submit posts the issue as "Animal Treatment"

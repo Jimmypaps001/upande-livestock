@@ -9,7 +9,7 @@ from upande_livestock.serverscripts.common.employee import employee_or_throw
 from upande_livestock.serverscripts.husbandry._shared import _clean_drug_rows
 from upande_livestock.serverscripts.common.envelope import as_dict, guard, run
 from upande_livestock.serverscripts.common import backdate
-from upande_livestock.serverscripts.common import stock as livestock_stock
+from upande_livestock.serverscripts.common import event_items
 from upande_livestock.serverscripts.common.health_case import open_case_for, open_file
 
 
@@ -76,7 +76,7 @@ def create_check_up(payload):
 		# Built once: the guard below and the rows share a definition of what
 		# counts as issuing a drug, and two calls could only drift apart.
 		drugs = _clean_drug_rows(
-			d.get("drugs"), d.get("source_warehouse") or livestock_stock.drug_warehouse()
+			d.get("drugs"), d.get("source_warehouse") or event_items.default_store("Check Up")
 		)
 
 		# Treating a cow is issuing stock to her, and that belongs in a file.

@@ -119,12 +119,25 @@ the two apart.
 Get it wrong and the Feed screen will offer to *manufacture* something the farm
 actually buys.
 
-### Drug and semen stores
+### Stock (the Stock tab)
+
+What each event takes out of a store is set **per event type**, on the app's
+**Settings → Stock** tab (or on each Livestock Event Type in the desk):
+
+| Per event type | What it does |
+|---|---|
+| Posts Stock Entry | The event's form offers items and posts a Stock Entry for what is entered. Off: no items, no stock |
+| Item Groups | The groups it draws on — several if needed (a vaccine and the syringes) |
+| Default Store | Offered first, and used for a line that names no store. Blank: the store holding the most |
+| Must Name an Item | It cannot be submitted without the item it used (backdated records and a Natural service are exempt) |
+
+An event can always be recorded without stock unless Must Name an Item is on.
+
+The same tab keeps two defaults:
 
 | Setting | Purpose | Karen Roses |
 |---|---|---|
-| Drug warehouse | Default source for vaccination, deworming, treatment and check-up drugs | Livestock Drug Store - KR |
-| Semen warehouse | Where straws are issued from; falls back to the drug store | Livestock Drug Store - KR |
+| Feed item group | Where feed items live, for the feed screens | — |
 | Semen item | Default straw item when a Service does not name one | LSK-SEMEN-TEST |
 
 > `LSK-SEMEN-TEST` looks like a placeholder left from testing. Worth replacing

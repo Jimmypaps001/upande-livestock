@@ -17,7 +17,7 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.model.naming import make_autoname
-from frappe.utils import flt, getdate, nowdate
+from frappe.utils import getdate, nowdate
 
 from upande_livestock.serverscripts.common import backdate
 from upande_livestock.serverscripts.common import event_items
@@ -1128,6 +1128,33 @@ class LivestockEvent(Document):
 		# Add comment to service
 		service.add_comment("Info", text=f"""Updated by Pregnancy Diagnosis: {self.name}""")
 
+	def before_submit(self):
+		self.require_named_item()
+
+	def require_named_item(self):
+		"""An event whose type is set to "Must Name an Item" says what it used.
+
+		The farm's choice, per event type: off by default, so an event can be
+		recorded without stock. On submit, not on save, so a draft can be put
+		down half-filled. Exempt: a backdated record (its stock is not moved
+		anyway), a timeline mirror (its source holds the drugs), and a Natural
+		service, which uses a bull and no straw.
+		"""
+		from upande_livestock.serverscripts.common import event_items
+
+		if not event_items.must_name_item(self.event_type):
+			return
+		if self.get("custom_is_backdated") or self.get("reference_doctype"):
+			return
+		if self.event_type == "Service" and (self.get("service_type") or "").lower().startswith("natural"):
+			return
+		if any(row.item_code for row in self.get("drug_issues") or []):
+			return
+		frappe.throw(
+			_("A {0} must say what it used: add the item before submitting.").format(self.event_type),
+			title=_("Item required"),
+		)
+
 	def on_submit(self):
 		# --------------------------------------------
 		# RULE: Cow must calve before next pregnancy
@@ -1279,34 +1306,21 @@ class LivestockEvent(Document):
 			recompute_herd_count(self.current_herd)
 
 	def _type_consumes_drugs(self):
-		"""Whether this event type takes drugs out of a store.
-
-		Read off Livestock Event Type rather than a tuple in code, so the farm can
-		flag a new drug-consuming type — dry-cow therapy at Drying Off, calcium at
-		Calving — without a deploy. Mirrors `creates_animal`.
-
-		The farm's event-to-item-group mapping is asked first; the flag stays as
-		the fallback for a site running this code before its migrate.
-		"""
+		"""Whether this event type posts stock: its Livestock Event Type says so
+		(Posts Stock Entry, with item groups). See common.event_items."""
 		if not self.event_type:
 			return False
 		from upande_livestock.serverscripts.common import event_items
 
-		if event_items.groups_for_event(self.event_type):
-			return True
-		# A farm that has written its mapping has said what consumes: a type it
-		# left out does not, whatever its old box says. The box only answers on
-		# a site with no mapping at all.
-		if event_items.has_mapping():
-			return False
-		return bool(frappe.db.get_value("Livestock Event Type", self.event_type, "consumes_drugs"))
+		return event_items.consumes_items(self.event_type)
 
 	def post_stock_issue(self):
 		"""Issue whatever this event consumed out of stock.
 
-		A drug-consuming type issues its `drug_issues` rows; a Service issues the
-		semen straw. Both block when the store cannot cover them — see
-		livestock_stock for why that reversed.
+		An event whose type posts stock (Settings → Stock) issues its
+		`drug_issues` rows — the straw of a ticked Service among them. It blocks
+		when the store cannot cover them — see livestock_stock for why that
+		reversed.
 
 		Guarded by `self.stock_entry` so an amend or a re-submit cannot post a
 		second issue for the same event. That guard is also how a batch issue
@@ -1337,32 +1351,14 @@ class LivestockEvent(Document):
 			return
 
 		rows, what = [], None
-		if self.event_type == "Service" and not event_items.consumes_items("Service"):
-			# LOAD-BEARING ORDER: this is evaluated BEFORE the general branch. An
-			# unmapped Service whose `consumes_drugs` box is ticked would
-			# otherwise take the general branch, find no drug_issues rows and
-			# silently issue nothing. The mapping alone decides the path.
-			# The legacy straw fields are still READ: historical services hold
-			# their straw here and a calf's record must not lose its sire.
-			what = "Service"
-			item = self.semen_item or livestock_stock.default_semen_item()
-			if item:
-				rows.append(
-					{
-						"item_code": item,
-						# A Service with no straw count still consumes one straw.
-						"qty": flt(self.semen_qty) or 1,
-						# The store the operator picked, exactly as a drug row
-						# uses its own `source_warehouse`. The straws are spread
-						# across two stores on live and the settings name a
-						# third that holds none, so issuing every service from
-						# that one setting asked for stock that was never there.
-						"warehouse": self.semen_warehouse or livestock_stock.semen_warehouse(),
-					}
-				)
-		elif event_items.consumes_items(self.event_type) or self._type_consumes_drugs():
+		# Whether an event posts stock is its event type's rule, Service included:
+		# not ticked, nothing is issued. The legacy straw fields are still
+		# written by an unticked Service and READ — a calf's record finds its
+		# sire there on old services — but they post nothing.
+		if event_items.consumes_items(self.event_type):
 			what = self.event_type
-			default_wh = livestock_stock.drug_warehouse()
+			# A line that names no store comes off the event type's Default Store.
+			default_wh = event_items.default_store(self.event_type)
 			for row in self.drug_issues or []:
 				rows.append(
 					{

@@ -11,8 +11,13 @@
   "is_active",
   "cb_details",
   "creates_animal",
-  "consumes_drugs",
-  "detail_doctype"
+  "detail_doctype",
+  "sb_stock",
+  "posts_stock_entry",
+  "stock_item_groups",
+  "cb_stock",
+  "default_store",
+  "must_name_item"
  ],
  "fields": [
   {
@@ -45,24 +50,57 @@
    "label": "Creates Animal"
   },
   {
-   "default": "0",
-   "description": "Events of this type take something out of a store. The Drugs Issued table appears on the event, and submitting posts a Material Issue for those rows. An event of this type submitted with no drug rows warns rather than passing silently.",
-   "fieldname": "consumes_drugs",
-   "fieldtype": "Check",
-   "label": "Consumes Drugs"
-  },
-  {
    "description": "Events of this type are auto-created from this detail DocType.",
    "fieldname": "detail_doctype",
    "fieldtype": "Link",
    "label": "Detail DocType",
    "options": "DocType"
+  },
+  {
+   "fieldname": "sb_stock",
+   "fieldtype": "Section Break",
+   "label": "Stock"
+  },
+  {
+   "default": "0",
+   "fieldname": "posts_stock_entry",
+   "fieldtype": "Check",
+   "label": "Posts Stock Entry",
+   "description": "Events of this type offer items from the groups below and post a Stock Entry for what is entered. An event can still be recorded without any."
+  },
+  {
+   "depends_on": "posts_stock_entry",
+   "fieldname": "stock_item_groups",
+   "fieldtype": "Table MultiSelect",
+   "label": "Item Groups",
+   "options": "Livestock Event Type Item Group",
+   "description": "The item groups this event draws on: the vaccine and the syringes, the straw, the dewormer."
+  },
+  {
+   "fieldname": "cb_stock",
+   "fieldtype": "Column Break"
+  },
+  {
+   "depends_on": "posts_stock_entry",
+   "fieldname": "default_store",
+   "fieldtype": "Link",
+   "label": "Default Store",
+   "options": "Warehouse",
+   "description": "Offered first. Blank: whichever store of the company holds the most."
+  },
+  {
+   "default": "0",
+   "depends_on": "posts_stock_entry",
+   "fieldname": "must_name_item",
+   "fieldtype": "Check",
+   "label": "Must Name an Item",
+   "description": "An event of this type cannot be saved without the item it used. Backdated records and a Natural service are exempt."
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-08-11 00:00:00.000000",
+ "modified": "2026-10-05 18:30:00.000000",
  "modified_by": "Administrator",
  "module": "Upande Livestock",
  "name": "Livestock Event Type",

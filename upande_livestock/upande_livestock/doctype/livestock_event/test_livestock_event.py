@@ -34,6 +34,12 @@ IGNORE_TEST_RECORD_DEPENDENCIES = [
 	# feed_work_order: a Work Order's test records walk BOM -> Employee ->
 	# Department into the fixture this site lacks, as the others above do.
 	"Work Order",
+	# Livestock Event Type now carries its stock rule: a Default Store (Warehouse
+	# -> Company -> ... -> Department) and Item Groups. Its own dependency walk
+	# does not see the ignores above, so it is dropped as a whole; the event
+	# types exist on the site (install.ensure_livestock_event_types).
+	"Livestock Event Type",
+	"Item Group",
 ]
 
 

@@ -12,13 +12,15 @@ are in `Drug/Medicine Store - Old Office - KR` (217) and `Westwood Dairy
 Store - KR` (144): 361 straws over 24 bins that the form could not see.
 
 TWO, the item group fell back to the constant `DAIRY`, which live does not
-use; its 63 semen items are in `Dairy Others`. That half is a setting, not
-code, and is fixed on the site.
+use; its 63 semen items are in `Dairy Others`.
 
-And having chosen a straw, the issue still came out of `semen_warehouse()`
-whatever the operator picked, because a Service had nowhere to record a store.
-A drug row has carried `source_warehouse` for exactly this reason; semen now
-does the same.
+Both lookups are gone. The straws are `items_for_event("Service")`: the groups
+the Service event type's stock rule names, searched across every store of the
+company, the type's Default Store first. A straw is an ordinary items row with
+its own `source_warehouse`, like a drug. The legacy straw fields
+(`semen_item`/`semen_qty`/`semen_warehouse`) are still stored by an unticked
+Service, but no longer post anything — the separate legacy straw issue that
+read them was removed, with its tests.
 
 Run:
     cd sites && ../env/bin/python -c "import frappe, unittest; \
@@ -40,6 +42,7 @@ from upande_livestock.serverscripts.tests.mapping_fixtures import (
 	ServiceIsMapped,
 	ServiceIsUnmapped,
 )
+from upande_livestock.upande_livestock.doctype.livestock_event import livestock_event as LE
 
 
 class TestTheStrawListIsNotPinnedToOneStore(unittest.TestCase):
@@ -48,9 +51,8 @@ class TestTheStrawListIsNotPinnedToOneStore(unittest.TestCase):
 	def _offered(self):
 		seen = {}
 
-		def fake_stock_items(kind, warehouse=None):
-			seen["kind"] = kind
-			seen["warehouse"] = warehouse
+		def fake_items_for_event(event_type, company=None):
+			seen.setdefault("event_types", []).append(event_type)
 			# What the store actually holds, across two stores. A lookup
 			# pinned to one of them can only ever return half of this.
 			return [
@@ -62,17 +64,15 @@ class TestTheStrawListIsNotPinnedToOneStore(unittest.TestCase):
 				 "locations": [{"warehouse": "Drug/Medicine Store - Old Office - KR", "qty": 30.0}]},
 			]
 
-		with patch.object(BO, "stock_items", side_effect=fake_stock_items):
+		with patch.object(BO, "items_for_event", side_effect=fake_items_for_event):
 			out = BO.breeding_options()
 		return seen, out
 
-	def test_every_configured_store_is_searched_not_just_the_semen_store(self):
+	def test_the_straws_are_what_the_service_event_type_draws_on(self):
+		"""Asked by event type, not by a store: items_for_event searches every
+		store of the company, so nothing pins the lookup to one shelf."""
 		seen, _out = self._offered()
-		self.assertEqual(seen["kind"], "semen")
-		self.assertIsNone(
-			seen["warehouse"],
-			"the straw lookup must not be pinned to one store — that is what emptied it on live",
-		)
+		self.assertIn("Service", seen["event_types"])
 
 	def test_the_straws_reach_the_page_with_their_stores_attached(self):
 		_seen, out = self._offered()
@@ -99,105 +99,23 @@ class TestTheEventCanRecordAStore(unittest.TestCase):
 		self.assertEqual(field.options, "Warehouse")
 
 
-class TestTheChosenStoreReachesTheIssue(ServiceIsUnmapped, unittest.TestCase):
-	"""Picking a store has to change where the straw comes from.
+class TestAnUntickedServicePostsNothing(ServiceIsUnmapped, unittest.TestCase):
+	"""Live's shape: Service not ticked. The legacy straw fields are filled —
+	the creator still writes them, and a calf's record reads its sire there —
+	but there is no separate straw issue any more: nothing leaves the store."""
 
-	UNMAPPED, declared: `semen_item` / `semen_qty` / `semen_warehouse` are the
-	legacy straw fields, read only where the farm has not mapped Service to an
-	item group. That is live. The mixin pins it so the case tests the branch it
-	names whatever kaitet.local is configured to do this week.
-
-	kaitet.local carries the live shape: the real straws sit in
-	`Drug/ Medicine store- old office - KR` while `semen_warehouse()` names
-	`Livestock Drug Store - KR`. A Service that ignores the operator's choice
-	asks the wrong shelf for stock it does not have.
-
-	`issue_items` is stubbed rather than posted: this is about the row handed
-	to it, and a real Material Issue per assertion would draw down shared
-	straws that other tests count.
-	"""
-
-	STRAW = "Semen Delta Stormer"
-	CHOSEN = "Drug/ Medicine store- old office - KR"
-
-	def _rows_for(self, warehouse):
-		captured = []
-
-		def fake_issue(rows, **kw):
-			captured.extend(rows)
-			return None
-
+	def test_the_legacy_straw_is_not_issued(self):
 		doc = frappe.new_doc("Livestock Event")
 		doc.event_type = "Service"
 		doc.animal = "ZZ-NOT-SAVED"
 		doc.event_date = frappe.utils.today()
-		doc.semen_item = self.STRAW
-		doc.semen_qty = 1
-		doc.semen_warehouse = warehouse
-
-		from upande_livestock.upande_livestock.doctype.livestock_event import livestock_event as LE
-
-		with patch.object(LE.livestock_stock, "issue_items", side_effect=fake_issue):
+		doc.semen_item = "Semen Delta Stormer"
+		doc.semen_qty = 2
+		doc.semen_warehouse = "Drug/ Medicine store- old office - KR"
+		with patch.object(LE.livestock_stock, "issue_items") as issue:
 			doc.post_stock_issue()
-		return captured
-
-	def test_the_straw_is_issued_from_the_store_the_operator_picked(self):
-		rows = self._rows_for(self.CHOSEN)
-		self.assertEqual(len(rows), 1)
-		self.assertEqual(rows[0]["item_code"], self.STRAW)
-		self.assertEqual(rows[0]["warehouse"], self.CHOSEN)
-
-	def test_no_store_picked_falls_back_to_the_setting(self):
-		"""Blank must keep behaving exactly as it did before the field existed."""
-		from upande_livestock.serverscripts.common import stock as ST
-
-		rows = self._rows_for(None)
-		self.assertEqual(rows[0]["warehouse"], ST.semen_warehouse())
-
-
-class TestHowManyStrawsTheSessionUsed(ServiceIsUnmapped, unittest.TestCase):
-	"""The count on the event is the count taken out of the store.
-
-	UNMAPPED, declared: `semen_qty` is the legacy count. Its mapped counterpart
-	is the items row's own `qty`, covered below.
-
-	`semen_qty` has existed on the DocType since the start and the posting has
-	always read it — but the Service form never rendered it, so it was always
-	the default 1. A double insemination within one day is real practice
-	(guards.py exempts Service from the same-day rule for exactly that reason),
-	and the second straw came out of the flask without coming off the ledger.
-	"""
-
-	STRAW = "Semen Delta Stormer"
-	CHOSEN = "Drug/ Medicine store- old office - KR"
-
-	def _qty_issued(self, straws):
-		captured = []
-
-		def fake_issue(rows, **kw):
-			captured.extend(rows)
-			return None
-
-		doc = frappe.new_doc("Livestock Event")
-		doc.event_type = "Service"
-		doc.animal = "ZZ-NOT-SAVED"
-		doc.event_date = frappe.utils.today()
-		doc.semen_item = self.STRAW
-		doc.semen_qty = straws
-		doc.semen_warehouse = self.CHOSEN
-
-		from upande_livestock.upande_livestock.doctype.livestock_event import livestock_event as LE
-
-		with patch.object(LE.livestock_stock, "issue_items", side_effect=fake_issue):
-			doc.post_stock_issue()
-		return captured[0]["qty"]
-
-	def test_two_straws_takes_two(self):
-		self.assertEqual(self._qty_issued(2), 2)
-
-	def test_a_blank_count_still_takes_one(self):
-		"""A Service that says nothing used a straw all the same."""
-		self.assertEqual(self._qty_issued(0), 1)
+		issue.assert_not_called()
+		self.assertEqual(doc.semen_item, "Semen Delta Stormer")
 
 
 class TestAMappedSiteIssuesTheStrawOnTheTable(ServiceIsMapped, unittest.TestCase):
@@ -205,9 +123,9 @@ class TestAMappedSiteIssuesTheStrawOnTheTable(ServiceIsMapped, unittest.TestCase
 
 	MAPPED: `Service -> Dairy Semen` exists, so the straw is an ordinary items
 	row — `drug_issues` — like a vaccination's drug, and the three legacy fields
-	are not read at all. Everything the unmapped case above defends has to hold
-	on this path too, because it is the path the farm is on: the straw the
-	operator chose, the store the operator chose, the count the operator typed.
+	are not read at all. It is the path the farm is on: the straw the operator
+	chose, the store the operator chose (else the type's Default Store), the
+	count the operator typed.
 
 	`issue_items` is stubbed for the same reason as above: this is about the row
 	handed to it, and a real Material Issue per assertion would draw down shared
@@ -240,11 +158,15 @@ class TestAMappedSiteIssuesTheStrawOnTheTable(ServiceIsMapped, unittest.TestCase
 			{"item_code": self.STRAW, "qty": qty, "source_warehouse": warehouse, "uom": "Nos"},
 		)
 
-		from upande_livestock.upande_livestock.doctype.livestock_event import livestock_event as LE
-
-		with patch.object(LE.livestock_stock, "issue_items", side_effect=fake_issue):
+		with patch.object(LE.livestock_stock, "issue_items", side_effect=fake_issue), \
+		     patch.object(LE.event_items, "default_store", return_value="ZZ Default Store"):
 			doc.post_stock_issue()
 		return captured
+
+	def test_no_store_picked_falls_back_to_the_event_types_default_store(self):
+		rows = self._rows_for(warehouse=None)
+		self.assertEqual(rows[0]["warehouse"], "ZZ Default Store")
+		self.assertNotEqual(rows[0]["warehouse"], self.LEGACY_STORE)
 
 	def test_the_straw_on_the_table_is_the_straw_issued(self):
 		rows = self._rows_for()

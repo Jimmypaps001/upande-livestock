@@ -3,6 +3,7 @@ import { Loader2, ShieldAlert } from "lucide-react";
 import { BackdatingSetting } from "@/components/settings/BackdatingSetting";
 import { ChildTableEditor } from "@/components/settings/ChildTableEditor";
 import { SettingField } from "@/components/settings/SettingField";
+import { StockRulesCard } from "@/components/settings/StockRulesCard";
 import { AmberNotice, Notice } from "@/components/feeding/Notice";
 import { Page, PageHeading } from "@/components/PageShell";
 import { Button } from "@/components/ui/button";
@@ -166,6 +167,9 @@ export function Settings() {
           {doc.tabs.map((tab) => (
             <TabsContent key={tab.fieldname} value={tab.fieldname}>
               <div className="flex flex-col gap-5">
+                {/* The event rules live on each Livestock Event Type, not on this
+                    doctype, so the Stock tab shows them with their own editor. */}
+                {tab.fieldname === "tab_stock" && <StockRulesCard canWrite={!readOnly} />}
                 {tab.sections.map((section) => (
                   <SectionCard
                     key={section.fieldname}

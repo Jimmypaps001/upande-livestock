@@ -1,13 +1,19 @@
 # Copyright (c) 2026, Upande and contributors
 # For license information, please see license.txt
 
+import frappe
+from frappe import _
 from frappe.model.document import Document
 from frappe.utils import flt
 
 from upande_livestock.serverscripts.common import backdate
 from upande_livestock.serverscripts.common import cost_center as livestock_cost_center
+from upande_livestock.serverscripts.common import event_items
 from upande_livestock.serverscripts.common import stock as livestock_stock
 from upande_livestock.serverscripts.common.event_link import cancel_event_for, stamp_stock_entry, sync_event_for
+
+#: The event type whose stock rule a check-up follows.
+CHECK_UP = "Check Up"
 
 
 class LivestockDiagnosis(Document):
@@ -20,6 +26,13 @@ class LivestockDiagnosis(Document):
 		# plan is supposed to be in the future.
 		backdate.assert_not_future(self.diagnosis_date, "Diagnosis Date")
 		backdate.sanitise(self, "diagnosis_date")
+
+	def before_submit(self):
+		# Where the Check Up event type says an item must be named.
+		if event_items.must_name_item(CHECK_UP) and not self.get("custom_is_backdated"):
+			if not any(row.item_code for row in self.drug_issues or []):
+				frappe.throw(_("A Check Up must say what it used: add the item before submitting."),
+				             title=_("Item required"))
 
 	def on_submit(self):
 		sync_event_for(self, "Check Up")
@@ -48,7 +61,9 @@ class LivestockDiagnosis(Document):
 		if self.get("custom_is_backdated"):
 			return
 
-		default_wh = livestock_stock.drug_warehouse()
+		if not event_items.consumes_items(CHECK_UP):
+			return
+		default_wh = event_items.default_store(CHECK_UP)
 		rows = [
 			{
 				"item_code": row.item_code,

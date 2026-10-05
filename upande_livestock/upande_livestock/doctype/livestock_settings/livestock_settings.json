@@ -53,16 +53,6 @@
   "feed_source_warehouses",
   "sb_concentrates",
   "bought_in_concentrates",
-  "sb_husbandry_stock",
-  "drug_warehouse",
-  "custom_feed_item_group",
-  "custom_drug_item_group",
-  "custom_semen_item_group",
-  "custom_drug_warehouses",
-  "custom_event_item_groups",
-  "semen_warehouse",
-  "cb_husbandry_stock",
-  "semen_item",
   "sb_accounting",
   "custom_default_company",
   "custom_default_credit_account",
@@ -95,6 +85,12 @@
   "cb_milk_price",
   "custom_colostrum_item",
   "custom_colostrum_warehouse",
+  "tab_stock",
+  "stock_rules_note",
+  "sb_husbandry_stock",
+  "custom_feed_item_group",
+  "cb_husbandry_stock",
+  "semen_item",
   "tab_herd_movement",
   "sb_calf_intake",
   "female_calf_herd",
@@ -459,14 +455,7 @@
   {
    "fieldname": "sb_husbandry_stock",
    "fieldtype": "Section Break",
-   "label": "Drug & Semen Stores"
-  },
-  {
-   "description": "Default source warehouse for vaccination and deworming drug issues. Each drug row can override it.",
-   "fieldname": "drug_warehouse",
-   "fieldtype": "Link",
-   "label": "Drug Store",
-   "options": "Warehouse"
+   "label": "Stock Defaults"
   },
   {
    "description": "The item group this farm keeps its feed in — raw materials, mixed concentrate and bought-in alike. The Stock page shows this group and nothing else, and a new ration or concentrate is created in it. Left blank it uses “DAIRY”.",
@@ -474,41 +463,6 @@
    "fieldtype": "Link",
    "label": "Feed Item Group",
    "options": "Item Group"
-  },
-  {
-   "description": "The item group this farm keeps its veterinary drugs in. The picker offers stock from this group and nothing else. Left blank it uses “DRUGS”, which is what this group's older sites call it — on a site that calls it something else, say so here or the picker comes back empty.",
-   "fieldname": "custom_drug_item_group",
-   "fieldtype": "Link",
-   "label": "Drug Item Group",
-   "options": "Item Group"
-  },
-  {
-   "description": "The item group semen straws are in. Left blank it uses “DAIRY”.",
-   "fieldname": "custom_semen_item_group",
-   "fieldtype": "Link",
-   "label": "Semen Item Group",
-   "options": "Item Group"
-  },
-  {
-   "description": "Every store the drug and semen pickers look in, in the order they are searched — the same idea as the feed source warehouses above. A farm's drugs sit across the stores it actually uses; one store named alone offers stock the issue cannot find. The single Drug Warehouse above is searched last.",
-   "fieldname": "custom_drug_warehouses",
-   "fieldtype": "Table",
-   "label": "Drug & Semen Stores Searched",
-   "options": "Livestock Drug Warehouse"
-  },
-  {
-   "fieldname": "custom_event_item_groups",
-   "fieldtype": "Table",
-   "options": "Livestock Event Item Group",
-   "label": "What Each Event May Consume",
-   "description": "Which item groups each event type draws its items from. Add as many rows per event as the farm needs — an event with no row consumes nothing and shows no items list."
-  },
-  {
-   "description": "Fallback store for a Service that names none. The straw picker itself searches the Drug & Semen Stores Searched list below. Falls back to the Drug Store when unset.",
-   "fieldname": "semen_warehouse",
-   "fieldtype": "Link",
-   "label": "Semen Store",
-   "options": "Warehouse"
   },
   {
    "fieldname": "cb_husbandry_stock",
@@ -1117,13 +1071,24 @@
    "label": "Milking Herds",
    "options": "Livestock Milking Herd",
    "description": "The herds that are milked. The milking screens offer these herds and their cows, and the mobile app marks them as milking herds."
+  },
+  {
+   "fieldname": "tab_stock",
+   "fieldtype": "Tab Break",
+   "label": "Stock"
+  },
+  {
+   "fieldname": "stock_rules_note",
+   "fieldtype": "HTML",
+   "label": "Event stock rules",
+   "options": "<p>Whether an event posts a Stock Entry, the item groups it draws on, its default store and whether it must name an item are set per event type — on each <a href='/app/livestock-event-type'>Livestock Event Type</a>, or all together on the app's <b>Settings → Stock</b> tab.</p>"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-10-05 17:00:00.000000",
+ "modified": "2026-10-05 18:30:00.000000",
  "modified_by": "Administrator",
  "module": "Upande Livestock",
  "name": "Livestock Settings",

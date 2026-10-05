@@ -338,8 +338,6 @@ def configure_settings(company, milk_item, warehouses, accounts):
 		"custom_milk_target_warehouse": warehouses["dairy"],
 		"custom_milk_discard_warehouse": warehouses["dairy"],
 		"custom_feed_wip_warehouse": warehouses["feed"],
-		"drug_warehouse": warehouses["drug"],
-		"semen_warehouse": warehouses["drug"],
 		# Despite its name, custom_default_credit_account is the account the milk
 		# revenue JE DEBITS (milk_recording.py: dr.account = credit_acct), so it must
 		# be the asset side — the company's receivable. Pointing it at the income
@@ -348,6 +346,10 @@ def configure_settings(company, milk_item, warehouses, accounts):
 	}
 	for field, value in updates.items():
 		frappe.db.set_single_value("Livestock Settings", field, value)
+	# Drug-consuming events issue from the drug store unless a line names another
+	# (Livestock Event Type → Default Store; Settings → Stock in the app).
+	for event_type in frappe.get_all("Livestock Event Type", filters={"posts_stock_entry": 1}, pluck="name"):
+		frappe.db.set_value("Livestock Event Type", event_type, "default_store", warehouses["drug"])
 	print("  Livestock Settings updated:")
 	for k, v in updates.items():
 		print(f"    {k} = {v}")

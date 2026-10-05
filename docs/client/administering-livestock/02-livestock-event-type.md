@@ -20,21 +20,21 @@ the event date, so back-dated entries file under the year they happened.
 |---|---|
 | `is_active` | Whether the type is offered |
 | `creates_animal` | Events of this type create a new Animal on submit |
-| `consumes_drugs` | Events of this type take stock out of a store, and the drug table appears |
+| `posts_stock_entry`, `stock_item_groups`, `default_store`, `must_name_item` | What the type takes out of a store — see below |
 | `detail_doctype` | This type is auto-created from that doctype rather than entered directly |
 | `description` | Free text |
 
 ## The 17 types as configured
 
-| Type | creates_animal | consumes_drugs | detail doctype |
+| Type | creates_animal | posts stock (groups) | detail doctype |
 |---|---|---|---|
 | Abortion | | | |
 | **Birth** | **yes** | | |
 | Calving | | | |
-| **Check Up** | | **yes** | Livestock Diagnosis |
+| **Check Up** | | DRUGS | Livestock Diagnosis |
 | Dehorning | | | |
-| **Deworming** | | **yes** | |
-| **Drying Off** | | **yes** | |
+| **Deworming** | | DRUGS | |
+| **Drying Off** | | DRUGS | |
 | Feeding | | | |
 | Health Case | | | Livestock Health Case |
 | Heat Detection | | | |
@@ -42,25 +42,28 @@ the event date, so back-dated entries file under the year they happened.
 | Milking | | | |
 | Movement | | | |
 | Pregnancy Diagnosis | | | |
-| Service | | | |
-| **Vaccination** | | **yes** | |
+| **Service** | | Dairy Semen | |
+| **Vaccination** | | DRUGS | |
 | Weight Recording | | | |
 
 All 17 are active.
 
-## `consumes_drugs` — the flag worth understanding
+## Stock — what an event takes out of a store
 
-This replaced a hardcoded `("Vaccination", "Deworming")` tuple. Tick it on a
-type and that type's form starts collecting drug rows and posting them as a
-Material Issue out of the drug store — dry-cow therapy at drying off, calcium at
-calving — with no deploy.
+Each type carries its own rule, also editable for all types at once on the
+app's **Settings → Stock** tab:
 
-**Service is deliberately not flagged.** It consumes a semen straw through its
-own field, not through the drug table.
+- **Posts Stock Entry** — the form offers items from the type's groups and posts
+  a Material Issue for what is entered. Off, the type posts nothing.
+- **Item Groups** — as many as the type draws on (a multi-select).
+- **Default Store** — offered first, and the store a line with none comes off.
+- **Must Name an Item** — the event cannot be submitted without one. Backdated
+  records, timeline copies of health cases and check-ups, and a Natural service
+  are exempt.
 
-If a type predates the flag and has it unset in the database, the app falls back
-to the old two-item tuple. A type with the flag explicitly cleared consumes
-nothing.
+Treatment (a health case's rounds) and Check Up follow their types' rules too.
+This replaced a "Consumes Drugs" box and the drug/semen group and store settings
+on Livestock Settings, which disagreed with each other.
 
 ## `creates_animal`
 
@@ -114,7 +117,7 @@ issue.
 
 ## Adding a type
 
-Create the record, name it, tick `is_active`, and set `consumes_drugs` if it
+Create the record, name it, tick `is_active`, and set its stock rule if it
 takes stock. Note that the four husbandry types offered on the Operations screen
 (Vaccination, Deworming, Dehorning, Hoof Trimming) are a fixed list in that
 screen — a new type will be usable from the Desk form and the API, but will not
