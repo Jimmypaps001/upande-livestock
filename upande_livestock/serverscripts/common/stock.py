@@ -303,6 +303,8 @@ def issue_items(
 	# outright. See common/cost_center for why this is a setting and not a
 	# repair to 782 Item Defaults.
 	livestock_cost_center.stamp(se, company, herd=herd)
+	if draft:
+		hold_valuation(se)
 	se.insert(ignore_permissions=True)
 	if draft:
 		note_draft(se, short)
@@ -311,16 +313,33 @@ def issue_items(
 	return se.name
 
 
+def hold_valuation(se):
+	"""Let a draft save with no valuation rate on its lines.
+
+	An item the store has never received has no rate, and ERPNext refuses even
+	to SAVE an entry naming it — which is exactly the item a draft is waiting
+	for. The draft is not costed; `release_valuation` clears this before it
+	posts, so the posted entry is valued like any other.
+	"""
+	for d in se.items:
+		d.allow_zero_valuation_rate = 1
+
+
+def release_valuation(se):
+	for d in se.items:
+		d.allow_zero_valuation_rate = 0
+
+
 def note_draft(se, short):
 	"""Remember a draft made this request, for the answer to carry."""
+	note_draft_message(se, shortage_message(short))
+
+
+def note_draft_message(se, message, label=None):
+	"""As `note_draft`, with the shortage already in words. `label` names the
+	draft when its own type would not (a feed run's draft is its transfer)."""
 	drafts = frappe.flags.get("livestock_stock_drafts") or []
-	drafts.append(
-		{
-			"name": se.name,
-			"stock_entry_type": se.stock_entry_type,
-			"short": shortage_message(short),
-		}
-	)
+	drafts.append({"name": se.name, "stock_entry_type": label or se.stock_entry_type, "short": message})
 	frappe.flags.livestock_stock_drafts = drafts
 
 

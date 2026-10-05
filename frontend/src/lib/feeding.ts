@@ -91,7 +91,14 @@ export type FeedDayStatus = {
 
 export type FeedRunResult = {
   work_order: string;
+  /** "" while the run waits for stock (`pending`). */
   issue_stock_entry: string;
+  /** Fed today but the stores were short: the Feeding is recorded and the
+   *  run's transfer waits as a draft on the Transactions page. */
+  pending?: boolean;
+  transfer_stock_entry?: string;
+  /** What was short, in words, when `pending`. */
+  waiting_for?: string;
   produced_qty: number;
   issued_qty: number;
   uom: string;

@@ -10,10 +10,20 @@ export interface StockEntryRow {
   posting_date: string;
   /** "Livestock Vaccination" — the event the issue is for. */
   stock_entry_type: string;
+  /** What to call it: the type, or for a feed run's transfer "Feed run ·
+   *  waiting to mix" / "Feed transfer". */
+  label?: string;
   remarks: string | null;
   made_by: string;
   /** The record that made it, when it still stands. */
-  source: { doctype: string; name: string; animal: string | null; event_type: string } | null;
+  source: {
+    doctype: string;
+    name: string;
+    animal: string | null;
+    /** A feeding is a herd's, not one animal's. */
+    herd?: string | null;
+    event_type: string;
+  } | null;
   items: { item_code: string; item_name: string; qty: number; uom: string; warehouse: string }[];
   /** A draft whose every line the store holds right now. */
   can_post: boolean;
