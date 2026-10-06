@@ -8,7 +8,9 @@ import { PostingDate } from "@/components/feeding/PostingDate";
 import { RecipePicker, recipeLabel } from "@/components/feeding/RecipePicker";
 import { RequirementTable, shortLines } from "@/components/feeding/RequirementTable";
 import { Figure, FigureRow } from "@/components/Figure";
+import { OperatorField } from "@/components/events/OperatorField";
 import { Page, PageHeading } from "@/components/PageShell";
+import { useToast } from "@/components/Toast";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -48,16 +50,16 @@ import {
   type ManualRow,
   type Recipe,
 } from "@/lib/feeding";
+import { useOperator } from "@/lib/operator";
 import { usePostingDay } from "@/lib/posting-day";
 import { fmt, num, todayISO } from "@/lib/utils";
 
-/** What the page says when a run was fed but the stores could not cover it. */
-function waitingSentence(r: { produced_qty: number; uom: string; work_order: string; transfer_stock_entry?: string; waiting_for?: string }, herd: string) {
-  return `Fed ${fmt(r.produced_qty)} ${r.uom || ""} to ${herd} and recorded. ${
-    r.waiting_for ?? "The stores are short"
-  } — so the stock waits as a draft on Transactions (Work Order ${r.work_order}, ${
-    r.transfer_stock_entry ?? ""
-  }) and is mixed and issued once the feed is in.`;
+/** What the page says when a run was fed but the stores could not cover it.
+ *  Only what was fed: the draft itself — what is short, where it waits — is
+ *  announced for every page alike (lib/stock-drafts), so saying it here too
+ *  would put the same sentence on screen twice. */
+function waitingSentence(r: { produced_qty: number; uom: string; work_order: string }, herd: string) {
+  return `Fed ${fmt(r.produced_qty)} ${r.uom || ""} to ${herd} and recorded on Work Order ${r.work_order}.`;
 }
 
 export function Feeding() {
@@ -73,10 +75,15 @@ export function Feeding() {
   const [lineBatch, setLineBatch] = useState<Record<string, string>>({});
   const [plans, setPlans] = useState<Record<string, BatchPlan>>({});
   const [loading, setLoading] = useState(false);
-  /** Whatever the server last said. Never reworded — see components/feeding/Notice. */
+  /** Whatever the server last said when the page itself could not load —
+   *  that stays on the page. What a RUN answers is said in a toast, at the
+   *  bottom, where the button is: nobody should scroll up to learn whether
+   *  the feed went out. Never reworded — see components/feeding/Notice. */
   const [failure, setFailure] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-  const [lastRunMode, setLastRunMode] = useState<string | null>(null);
+  const toast = useToast();
+  // Who gave the feed. The run is attributed to them — and on a login with no
+  // Employee (Administrator, a shared tablet) nothing posts without one.
+  const who = useOperator();
 
   /**
    * The day this page posts against — one decision, at the top, for both tabs.
@@ -193,8 +200,6 @@ export function Feeding() {
 
   function chooseHerd(name: string) {
     setHerd(name);
-    setSuccess(null);
-    setLastRunMode(null);
     load(name, true);
   }
 
@@ -283,8 +288,6 @@ export function Feeding() {
   async function mixAndFeed() {
     if (!program) return;
     setMixing(true);
-    setFailure(null);
-    setSuccess(null);
     // The System tab always runs through manufactureFeed, standing ration or
     // a previously-used recipe alike — bom_no carries the picker's choice,
     // and manufacture_feed.py validates it against the herd. No hand-tuning
@@ -297,26 +300,28 @@ export function Feeding() {
       portion,
       posting_date: effectiveDate,
       bom_no: selectedBom || undefined,
+      employee: who.operator || undefined,
     });
     setMixing(false);
     if (isError(r)) {
-      setFailure(r.error);
+      toast(r.error, "error");
       return;
     }
     const recipeNote =
       !usingStandingRecipe && selectedRecipe ? ` using ${selectedRecipe.item_name}` : "";
     if (r.pending) {
-      setSuccess(waitingSentence(r, program.herd_label || program.herd));
-      setLastRunMode(null);
+      toast(waitingSentence(r, program.herd_label || program.herd), "ok");
       load(program.herd, false);
       return;
     }
-    setSuccess(
-      `Manufactured and issued ${fmt(r.produced_qty)} ${r.uom || ""} to ${
-        program.herd_label || program.herd
-      }${recipeNote} — Work Order ${r.work_order}, issued on ${r.issue_stock_entry}.`,
+    toast(
+      `${backdating ? `Backdated to ${effectiveDate}: ` : ""}Manufactured and issued ${fmt(r.produced_qty)} ${
+        r.uom || ""
+      } to ${program.herd_label || program.herd}${recipeNote} — Work Order ${r.work_order}, issued on ${
+        r.issue_stock_entry
+      }.`,
+      "ok",
     );
-    setLastRunMode(backdating ? "Backdated" : null);
     load(program.herd, false);
   }
 
@@ -326,14 +331,12 @@ export function Feeding() {
     const lines = (manualRows || [])
       .map((r) => ({ item_code: r.item_code, qty: num(r.qty) }))
       .filter((l) => l.qty > 0);
-    setFailure(null);
-    setSuccess(null);
     if (heads <= 0) {
-      setFailure("Enter how many animals were fed.");
+      toast("Enter how many animals were fed.", "error");
       return;
     }
     if (!lines.length) {
-      setFailure("Enter a quantity for at least one ingredient.");
+      toast("Enter a quantity for at least one ingredient.", "error");
       return;
     }
     setManualBusy(true);
@@ -347,25 +350,25 @@ export function Feeding() {
       heads,
       posting_date: effectiveDate,
       base_bom: selectedBom || undefined,
+      employee: who.operator || undefined,
     });
     setManualBusy(false);
     if (isError(r)) {
-      setFailure(r.error);
+      toast(r.error, "error");
       return;
     }
     if (r.pending) {
-      setSuccess(waitingSentence(r, program.herd_label || program.herd));
-      setLastRunMode("Manual");
+      toast(`Manual: ${waitingSentence(r, program.herd_label || program.herd)}`, "ok");
       setManualHerd(null);
       load(program.herd, false);
       return;
     }
-    setSuccess(
-      `Manufactured and issued ${fmt(r.produced_qty)} ${r.uom || ""} — Work Order ${
-        r.work_order
-      }, issued on ${r.issue_stock_entry}.`,
+    toast(
+      `${backdating ? `Manual, backdated to ${effectiveDate}` : "Manual"}: manufactured and issued ${fmt(
+        r.produced_qty,
+      )} ${r.uom || ""} — Work Order ${r.work_order}, issued on ${r.issue_stock_entry}.`,
+      "ok",
     );
-    setLastRunMode(backdating ? "Manual · Backdated" : "Manual");
     // Reseed from the fresh programme (and the possibly-just-minted recipe
     // list) next time this herd is chosen.
     setManualHerd(null);
@@ -397,14 +400,6 @@ export function Feeding() {
       />
 
       {failure && <Notice tone="error">{failure}</Notice>}
-      {success && (
-        <Notice tone="ok">
-          <div className="flex flex-wrap items-center gap-2">
-            <span>{success}</span>
-            {lastRunMode && <Mark>{lastRunMode}</Mark>}
-          </div>
-        </Notice>
-      )}
 
       <Card>
         <CardHeader>
@@ -437,6 +432,11 @@ export function Feeding() {
               <Loader2 className="h-4 w-4 animate-spin" />
               Checking the stores…
             </div>
+          )}
+
+          {program && (
+            // One for both tabs: whichever run is made, it is this person's.
+            <OperatorField operator={who.operator} onChange={who.setOperator} className="max-w-sm" />
           )}
 
           {program && (

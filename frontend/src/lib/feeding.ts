@@ -251,6 +251,8 @@ export function manufactureFeed(args: {
   source_by_item?: string;
   /** A batch per ingredient; blank lets the rule decide, split FEFO. */
   batch_by_item?: string;
+  /** Who gave the feed; unnamed, the Employee linked to the signed-in user. */
+  employee?: string;
 }): Promise<Envelope<FeedRunResult>> {
   return call(RECORD_FEEDING, { payload: { action: "manufacture", ...args } });
 }
@@ -273,6 +275,8 @@ export function manualFeed(args: {
   posting_date: string;
   base_bom?: string;
   portion?: number;
+  /** Who gave the feed; unnamed, the Employee linked to the signed-in user. */
+  employee?: string;
 }): Promise<Envelope<FeedRunResult>> {
   const { portion, ...rest } = args;
   return call(MANUAL_FEED, { payload: { ...rest, portion: portion ?? 1 } });
