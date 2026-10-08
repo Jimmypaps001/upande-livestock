@@ -40,6 +40,7 @@ export const VIEWS = [
   "settings",
   "notifications",
   "transactions",
+  "feed-quality",
 ] as const;
 
 export type View = (typeof VIEWS)[number];
