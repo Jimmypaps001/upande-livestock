@@ -16,6 +16,9 @@ def get_events() -> dict:
 		herds = _herd_labels()
 		rows = frappe.get_all(
 			"Livestock Event",
+			# What happened: submitted records only. A cancelled one did not
+			# happen, and a draft has not yet.
+			filters={"docstatus": 1},
 			fields=[
 				"name",
 				"animal",
