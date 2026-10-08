@@ -89,6 +89,9 @@ const Procurement = page(() =>
   import("@/pages/Procurement").then((m) => ({ default: m.Procurement })),
 );
 const Herds = page(() => import("@/pages/Herds").then((m) => ({ default: m.Herds })));
+const FeedQuality = page(() =>
+  import("@/pages/FeedQuality").then((m) => ({ default: m.FeedQuality })),
+);
 const Transactions = page(() =>
   import("@/pages/Transactions").then((m) => ({ default: m.Transactions })),
 );
@@ -154,6 +157,7 @@ const TITLES: Record<View, string> = {
   settings: "Settings",
   notifications: "Notifications",
   transactions: "Transactions",
+  "feed-quality": "Quality & Feed",
 };
 
 /** The surfaces this frontend implements. Everything else renders a
@@ -190,6 +194,7 @@ const PAGES: Partial<Record<View, React.ComponentType>> = {
   health: HealthDashboard,
   "ration-editor": RationEditor,
   transactions: Transactions,
+  "feed-quality": FeedQuality,
 };
 
 export function App() {

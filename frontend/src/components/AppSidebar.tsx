@@ -29,6 +29,7 @@ import {
   Warehouse,
   Wheat,
   CalendarClock,
+  TrendingUp,
 } from "lucide-react";
 import {
   Sidebar,
@@ -141,6 +142,12 @@ const NAV: NavSection[] = [
         icon: FlaskConical,
         hint: "File the creamery's figures against a milking",
       },
+      {
+        view: "feed-quality",
+        label: "Quality & Feed",
+        icon: TrendingUp,
+        hint: "Milk quality beside each herd's ration",
+      },
       { view: "movement", label: "Movement", icon: ArrowRightLeft },
       { view: "drying-off", label: "Drying Off", icon: Sun },
       { view: "calving", label: "Calving", icon: Baby },
@@ -203,6 +210,7 @@ export const BUILT_VIEWS: ReadonlySet<View> = new Set<View>([
   "quality",
   "animals",
   "transactions",
+  "feed-quality",
 ]);
 
 export function AppSidebar({
