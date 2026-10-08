@@ -36,6 +36,22 @@ def _employee():
 	return frappe.db.get_value("Employee", {"status": "Active"}, "name")
 
 
+def _purge_births_for(dam):
+	"""Drop the Birth events of every calving `dam` had.
+
+	A Birth carries the CALF, not the dam — and a stillbirth carries no animal
+	at all — so `_purge_events_for(dam)` never reaches it. Left behind, each run
+	added stillbirths with no animal to the farm's Events page.
+	"""
+	calvings = frappe.get_all(
+		"Livestock Event", filters={"animal": dam, "event_type": "Calving"}, pluck="name")
+	if not calvings:
+		return
+	for name in frappe.get_all(
+		"Livestock Event", filters={"related_calving": ["in", calvings]}, pluck="name"):
+		_purge("Livestock Event", name)
+
+
 class TestCalfRouting(IntegrationTestCase):
 	"""Sex decides the herd, and nothing else does."""
 
@@ -275,6 +291,8 @@ class TestABlankNumberIsNotADeath(IntegrationTestCase):
 		self.dam = _make_cow("ZZ BLANK NUMBER DAM", months_old=48)
 		self.addCleanup(_purge_events_for, self.dam.name)
 		self.addCleanup(_purge, "Animal", self.dam.name)
+		# Registered last, so it runs first: while the calvings still exist.
+		self.addCleanup(_purge_births_for, self.dam.name)
 
 		served = add_days(today(), -285)
 		r = create_service_event({
