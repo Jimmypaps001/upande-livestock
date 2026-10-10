@@ -14,3 +14,9 @@ beside, so a warning in red text carries a red icon without a second asset.
 
 Used from Python via `serverscripts/common/notice.py: icon()`, which is the only
 place the path is written down.
+
+The SVGs here are generated: their source is
+`upande_scp/shared/icons/notice/<name>.svg`, the one icon set the SCP web app,
+the desk and the Scout app also draw from. Edit the source there and run
+`node scripts/build_icons.mjs` in upande_scp; the filenames stay the same, so
+`notice.py` never changes.
