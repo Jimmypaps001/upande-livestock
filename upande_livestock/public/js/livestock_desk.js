@@ -103,7 +103,7 @@
 				"justify-content:center;background:#ffffff"
 		);
 		var img = document.createElement("img");
-		img.src = "/assets/upande_livestock/images/upande_mark.svg";
+		img.src = "/assets/upande_livestock/images/livestock_logo_loader.svg";
 		img.alt = "Upande Livestock";
 		img.setAttribute(
 			"style",
