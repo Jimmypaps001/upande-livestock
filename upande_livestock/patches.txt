@@ -167,3 +167,7 @@ upande_livestock.patches.stamp_mirror_event_stock_entries
 # on a site without one, its "Consumes Drugs" boxes and drug/semen groups. Runs
 # after migrate_legacy_custom_fields, which carries live's drug store across.
 upande_livestock.patches.stock_rules_onto_event_types
+
+# The apps-screen tile shows the animated Livestock mark (plain Upande mark at
+# rest, the herd scene on hover).
+upande_livestock.patches.animated_livestock_logo
