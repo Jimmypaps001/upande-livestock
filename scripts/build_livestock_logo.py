@@ -12,14 +12,14 @@
   scene as a pure-CSS loop (the splash shows it through ``<img>``, where
   scripts never run).
 
-THE SCENE (Livestock's own, minimal): the arrow steps aside to the top right,
-a ground line draws across, and a dairy cow walks in onto it — a flat side-on
-silhouette in the arrow's own grey, the Friesian read through two white
-patches and a blaze, with a tuft of grass as the one accent colour. The round
-is quiet: she lowers her head and grazes (two small nods), lifts it again, and
-swishes her tail; the grass leans as she crops it. On the desk it eases in on
-hover, the round loops while the pointer stays, and on leave it all eases back
-out to the plain mark. The loader runs in → round → out.
+THE SCENE (Livestock's own, after the reference silhouettes in
+doc references/livestock files/icon): the arrow steps aside to the top right, a
+strip of green grass draws across, and a dairy cow walks in onto it — one
+realistic solid silhouette in the arrow's own grey, the grass the one accent.
+The round is quiet: she lowers her head toward the grass and lifts it, and
+swishes her tail. On the desk it eases in on hover, the round loops while the
+pointer stays, and on leave it all eases back out to the plain mark. The loader
+runs in → round → out.
 
 Keyframes are written once (``ENTER`` and ``LOOP``) and emitted both as CSS for
 the loader and as JSON for the desk script.
@@ -47,52 +47,43 @@ ARROW = """<g class="arrow">
     </g>
   </g>"""
 
-# One cow, side on, in the arrow's own ink: a flat, minimal silhouette — the
-# Friesian read through two white patches cut out of the body and a blaze down
-# the face — standing on a ground line, with a tuft of grass as the one accent
-# colour. Facing left, so she walks in toward the arrow's old place.
+# One cow, side on, after the reference set in doc references/livestock files/
+# icon: a realistic solid silhouette, not a cartoon — straight back, dewlap,
+# slim legs with hocks, a tail with its switch — in the arrow's own grey,
+# standing on a strip of green grass, the one accent colour. Facing right.
+# Drawn in its own 560 × 380 box, placed on the disc by COW_AT.
 COW_INK = "#45433f"
 GRASS = "#6a9a4c"
-GROUND = "#d6d2c8"
-NECK_PIVOT = (246, 330)
-TAIL_PIVOT = (562, 332)
-GRASS_BASE = (166, 592)
+COW_AT = "translate(46 180) scale(1.15)"
 
-COW = f"""<g class="cow">
-    <g class="tail">
-      <path d="M560 330 C584 354 590 402 584 450" fill="none" stroke="{COW_INK}" stroke-width="12" stroke-linecap="round"/>
-      <ellipse cx="584" cy="462" rx="11" ry="22" fill="{COW_INK}"/>
-    </g>
-    <!-- legs, then the body over their tops -->
-    <rect x="252" y="440" width="30" height="148" rx="12" fill="{COW_INK}"/>
-    <rect x="296" y="440" width="30" height="148" rx="12" fill="{COW_INK}"/>
-    <rect x="470" y="440" width="30" height="148" rx="12" fill="{COW_INK}"/>
-    <rect x="514" y="440" width="30" height="148" rx="12" fill="{COW_INK}"/>
-    <path d="M236 318 C300 296 452 298 512 312 C552 322 568 356 566 398 C564 438 548 462 516 466
-             L262 466 C226 464 210 436 208 404 C206 370 212 334 236 318 Z" fill="{COW_INK}"/>
-    <path d="M430 462 C430 490 472 490 472 462 Z" fill="{COW_INK}"/>
-    <!-- the Friesian patches, cut out -->
-    <path d="M328 322 C360 312 404 318 414 340 C424 366 394 384 362 380 C334 376 314 352 328 322 Z" fill="#ffffff"/>
-    <path d="M472 330 C502 324 532 340 534 368 C522 394 488 392 472 374 C460 360 460 338 472 330 Z" fill="#ffffff"/>
-    <g class="head">
-      <path d="M252 322 C232 314 206 298 190 288 L170 352 C192 364 222 374 254 382 Z" fill="{COW_INK}"/>
-      <path d="M206 276 C190 262 160 258 142 266 C124 274 112 296 106 322 L98 360 C96 378 108 392 126 392
-               L150 392 C166 392 176 382 182 368 L210 312 C216 298 216 286 206 276 Z" fill="{COW_INK}"/>
-      <path d="M192 278 L232 256 L222 290 Z" fill="{COW_INK}"/>
-      <path d="M176 268 C178 248 190 238 206 236" fill="none" stroke="{COW_INK}" stroke-width="12" stroke-linecap="round"/>
-      <path d="M140 286 C130 310 124 336 122 360" fill="none" stroke="#ffffff" stroke-width="12" stroke-linecap="round"/>
-      <circle cx="166" cy="304" r="8" fill="#ffffff"/>
-    </g>
-  </g>"""
+BODY = (
+    "M78 72 C140 62 230 66 300 64 C330 63 352 64 370 66 C380 64 388 60 392 56 "
+    "C396 80 402 110 408 132 "
+    "C396 136 388 150 382 166 C376 184 370 198 366 212 "
+    "L362 316 C362 324 354 328 346 326 L342 230 C338 220 332 218 326 222 "
+    "L322 318 C322 326 314 330 306 326 L304 222 "
+    "C280 230 230 234 180 228 C166 226 156 230 150 244 C142 262 140 282 142 298 "
+    "L146 318 C146 326 138 330 130 326 L124 300 C118 282 114 266 112 248 "
+    "C106 262 104 282 106 298 L110 318 C110 326 102 330 94 326 L88 298 "
+    "C80 270 76 240 70 210 C62 170 60 122 66 92 C68 82 72 76 78 72 Z"
+)
+HEAD = (
+    "M392 56 L384 42 L404 52 C410 50 416 52 418 58 C432 76 450 104 462 126 "
+    "C468 138 462 150 448 150 C434 150 420 140 408 132 C398 126 388 110 384 92 "
+    "C382 76 386 64 392 56 Z"
+)
 
-# The one accent: a tuft of grass where she grazes.
-TUFT = f"""<path d="M110 592 L590 592" class="ground" fill="none" stroke="{GROUND}" stroke-width="10"
-          stroke-linecap="round" pathLength="1" stroke-dasharray="1"/>
-  <g class="tuft">
-    <g class="sway">
-      <path d="M150 592 C148 560 140 530 128 508" fill="none" stroke="{GRASS}" stroke-width="11" stroke-linecap="round"/>
-      <path d="M166 592 C166 556 168 520 176 488" fill="none" stroke="{GRASS}" stroke-width="11" stroke-linecap="round"/>
-      <path d="M182 592 C186 566 196 544 210 528" fill="none" stroke="{GRASS}" stroke-width="11" stroke-linecap="round"/>
+COW = f"""<g transform="{COW_AT}">
+    <path class="ground" d="M30 334 C120 326 420 326 530 334" fill="none" stroke="{GRASS}"
+          stroke-width="12" stroke-linecap="round" pathLength="1" stroke-dasharray="1"/>
+    <g class="cow">
+      <g class="tail">
+        <path d="M70 84 C52 122 48 182 52 238 C53 254 56 264 60 272" fill="none" stroke="{COW_INK}"
+              stroke-width="8" stroke-linecap="round"/>
+        <path d="M60 262 C51 271 51 292 60 299 C69 292 69 271 60 262 Z" fill="{COW_INK}"/>
+      </g>
+      <path d="{BODY}" fill="{COW_INK}"/>
+      <path class="head" d="{HEAD}" fill="{COW_INK}"/>
     </g>
   </g>"""
 
@@ -106,7 +97,6 @@ def body(rest_hidden: bool) -> str:
   <circle cx="344.5" cy="344.5" r="340" fill="#ffffff" stroke="#1c1b19" stroke-opacity=".3" stroke-width="7"/>
   <g clip-path="url(#lv-disc)">
   <g class="scene"{hide}>
-  {TUFT}
   {COW}
   </g>
   {ARROW}
@@ -140,50 +130,35 @@ ENTER = [
         (0.5, {"strokeDashoffset": 0}),
         (1, {"strokeDashoffset": 0}),
     ]),
-    # she walks in from the left onto the line
+    # she walks in from the left onto the grass
     (".cow", None, [
-        (0, {"transform": "translate(-110px, 0px)", "opacity": 0}),
-        (0.25, {"transform": "translate(-110px, 0px)", "opacity": 0}),
+        (0, {"transform": "translate(-120px, 0px)", "opacity": 0}),
+        (0.25, {"transform": "translate(-120px, 0px)", "opacity": 0}),
         (0.45, {"opacity": 1}),
-        (0.9, {"transform": "translate(0px, 0px)", "opacity": 1}),
+        (0.92, {"transform": "translate(0px, 0px)", "opacity": 1}),
         (1, {"transform": "translate(0px, 0px)", "opacity": 1}),
-    ]),
-    (".tuft", "fill-box|50% 100%", [
-        (0, {"transform": "scale(1, 0)"}),
-        (0.7, {"transform": "scale(1, 0)"}),
-        (1, {"transform": "scale(1, 1)"}),
     ]),
 ]
 
-# The round, quiet: she lowers her head to the grass and grazes (two small
-# nods), lifts it again; the tail swishes once; the grass leans as she crops it.
+# The round, quiet: she lowers her head toward the grass and lifts it again;
+# the tail swishes once. Pivots are the parts' own boxes (fill-box), so they
+# hold however the cow is placed on the disc.
 LOOP = [
-    (".head", f"view-box|{NECK_PIVOT[0]}px {NECK_PIVOT[1]}px", [
+    (".head", "fill-box|10% 70%", [
         (0, {"transform": "rotate(0deg)"}),
-        (0.12, {"transform": "rotate(0deg)"}),
-        (0.34, {"transform": "rotate(-30deg)"}),
-        (0.44, {"transform": "rotate(-26deg)"}),
-        (0.52, {"transform": "rotate(-30deg)"}),
-        (0.6, {"transform": "rotate(-26deg)"}),
-        (0.68, {"transform": "rotate(-30deg)"}),
-        (0.86, {"transform": "rotate(0deg)"}),
+        (0.15, {"transform": "rotate(0deg)"}),
+        (0.38, {"transform": "rotate(16deg)"}),
+        (0.5, {"transform": "rotate(13deg)"}),
+        (0.6, {"transform": "rotate(16deg)"}),
+        (0.82, {"transform": "rotate(0deg)"}),
         (1, {"transform": "rotate(0deg)"}),
     ]),
-    (".tail", f"view-box|{TAIL_PIVOT[0]}px {TAIL_PIVOT[1]}px", [
+    (".tail", "fill-box|60% 0%", [
         (0, {"transform": "rotate(0deg)"}),
-        (0.7, {"transform": "rotate(0deg)"}),
-        (0.78, {"transform": "rotate(14deg)"}),
-        (0.86, {"transform": "rotate(-8deg)"}),
-        (0.94, {"transform": "rotate(0deg)"}),
-        (1, {"transform": "rotate(0deg)"}),
-    ]),
-    (".sway", f"view-box|{GRASS_BASE[0]}px {GRASS_BASE[1]}px", [
-        (0, {"transform": "rotate(0deg)"}),
-        (0.36, {"transform": "rotate(0deg)"}),
-        (0.44, {"transform": "rotate(8deg)"}),
-        (0.52, {"transform": "rotate(-3deg)"}),
-        (0.6, {"transform": "rotate(8deg)"}),
-        (0.7, {"transform": "rotate(0deg)"}),
+        (0.62, {"transform": "rotate(0deg)"}),
+        (0.72, {"transform": "rotate(-12deg)"}),
+        (0.82, {"transform": "rotate(7deg)"}),
+        (0.9, {"transform": "rotate(0deg)"}),
         (1, {"transform": "rotate(0deg)"}),
     ]),
 ]
