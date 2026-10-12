@@ -12,14 +12,14 @@
   scene as a pure-CSS loop (the splash shows it through ``<img>``, where
   scripts never run).
 
-THE SCENE (Livestock's own): the arrow steps aside to the top right, a
-Friesian cow's head rises into the disc — black and white, pink muzzle, a
-yellow ear tag — and a milk pail slides in beside her. The round is the herd's
-day in three beats: milk (drops fall into the pail and it fills), feed (a
-sprig of grass at her mouth, she chews, it is gone), health (a heart beats
-above her head with a pulse ring). She blinks once along the way. On the desk
-it eases in on hover, the round loops while the pointer stays, and on leave it
-all eases back out to the plain mark. The loader runs in → round → out.
+THE SCENE (Livestock's own, minimal): the arrow steps aside to the top right,
+a ground line draws across, and a dairy cow walks in onto it — a flat side-on
+silhouette in the arrow's own grey, the Friesian read through two white
+patches and a blaze, with a tuft of grass as the one accent colour. The round
+is quiet: she lowers her head and grazes (two small nods), lifts it again, and
+swishes her tail; the grass leans as she crops it. On the desk it eases in on
+hover, the round loops while the pointer stays, and on leave it all eases back
+out to the plain mark. The loader runs in → round → out.
 
 Keyframes are written once (``ENTER`` and ``LOOP``) and emitted both as CSS for
 the loader and as JSON for the desk script.
@@ -47,94 +47,53 @@ ARROW = """<g class="arrow">
     </g>
   </g>"""
 
-# A Friesian's head, front on, left of centre: ears out sideways (the tag on
-# her left, the viewer's right), black patches over one eye and a cheek, a
-# forelock, big friendly eyes, a pink muzzle that chews.
-HEAD = "M175 222 C175 158 365 158 365 222 L350 392 C344 424 196 424 190 392 Z"
+# One cow, side on, in the arrow's own ink: a flat, minimal silhouette — the
+# Friesian read through two white patches cut out of the body and a blaze down
+# the face — standing on a ground line, with a tuft of grass as the one accent
+# colour. Facing left, so she walks in toward the arrow's old place.
+COW_INK = "#45433f"
+GRASS = "#6a9a4c"
+GROUND = "#d6d2c8"
+NECK_PIVOT = (246, 330)
+TAIL_PIVOT = (562, 332)
+GRASS_BASE = (166, 592)
 
 COW = f"""<g class="cow">
-    <!-- ears, behind the head -->
-    <g stroke="{INK}" stroke-width="12">
-      <ellipse cx="138" cy="252" rx="72" ry="34" transform="rotate(-18 138 252)" fill="#ffffff"/>
-      <ellipse cx="402" cy="252" rx="72" ry="34" transform="rotate(18 402 252)" fill="#1c1b19"/>
+    <g class="tail">
+      <path d="M560 330 C584 354 590 402 584 450" fill="none" stroke="{COW_INK}" stroke-width="12" stroke-linecap="round"/>
+      <ellipse cx="584" cy="462" rx="11" ry="22" fill="{COW_INK}"/>
     </g>
-    <ellipse cx="128" cy="250" rx="40" ry="16" transform="rotate(-18 128 250)" fill="#f4b7b0"/>
-    <!-- the ear tag: every animal in the herd register has one -->
-    <g class="tag">
-      <path d="M420 262 V276" stroke="{INK}" stroke-width="10"/>
-      <rect x="396" y="274" width="54" height="60" rx="12" fill="#f2c230" stroke="{INK}" stroke-width="10"/>
-    </g>
-    <!-- the face, with its black patches clipped to it -->
-    <path d="{HEAD}" fill="#ffffff"/>
-    <g clip-path="url(#lv-head)" fill="{INK}">
-      <path d="M160 160 C240 150 288 214 262 270 C242 336 194 352 160 318 Z"/>
-      <path d="M372 262 C318 276 306 344 336 400 L380 400 Z"/>
-    </g>
-    <path d="{HEAD}" fill="none" stroke="{INK}" stroke-width="12" stroke-linejoin="round"/>
-    <!-- forelock -->
-    <path d="M226 186 L244 146 L262 180 L280 142 L298 180 L314 150 L322 192 Z" fill="{INK}"/>
-    <!-- eyes: white with a dark pupil and a glint, so both read on black or white -->
-    <g class="eyes">
-      <circle cx="226" cy="298" r="31" fill="#ffffff" stroke="{INK}" stroke-width="8"/>
-      <circle cx="314" cy="298" r="31" fill="#ffffff" stroke="{INK}" stroke-width="8"/>
-      <circle cx="229" cy="304" r="19" fill="{INK}"/>
-      <circle cx="317" cy="304" r="19" fill="{INK}"/>
-      <circle cx="236" cy="296" r="7" fill="#ffffff"/>
-      <circle cx="324" cy="296" r="7" fill="#ffffff"/>
-    </g>
-    <!-- the muzzle, which chews -->
-    <g class="muzzle">
-      <ellipse cx="270" cy="440" rx="110" ry="74" fill="#f4b7b0" stroke="{INK}" stroke-width="12"/>
-      <ellipse cx="234" cy="436" rx="15" ry="21" transform="rotate(-14 234 436)" fill="#7a3b3b"/>
-      <ellipse cx="306" cy="436" rx="15" ry="21" transform="rotate(14 306 436)" fill="#7a3b3b"/>
-      <path d="M238 480 Q270 500 302 480" fill="none" stroke="{INK}" stroke-width="9" stroke-linecap="round"/>
+    <!-- legs, then the body over their tops -->
+    <rect x="252" y="440" width="30" height="148" rx="12" fill="{COW_INK}"/>
+    <rect x="296" y="440" width="30" height="148" rx="12" fill="{COW_INK}"/>
+    <rect x="470" y="440" width="30" height="148" rx="12" fill="{COW_INK}"/>
+    <rect x="514" y="440" width="30" height="148" rx="12" fill="{COW_INK}"/>
+    <path d="M236 318 C300 296 452 298 512 312 C552 322 568 356 566 398 C564 438 548 462 516 466
+             L262 466 C226 464 210 436 208 404 C206 370 212 334 236 318 Z" fill="{COW_INK}"/>
+    <path d="M430 462 C430 490 472 490 472 462 Z" fill="{COW_INK}"/>
+    <!-- the Friesian patches, cut out -->
+    <path d="M328 322 C360 312 404 318 414 340 C424 366 394 384 362 380 C334 376 314 352 328 322 Z" fill="#ffffff"/>
+    <path d="M472 330 C502 324 532 340 534 368 C522 394 488 392 472 374 C460 360 460 338 472 330 Z" fill="#ffffff"/>
+    <g class="head">
+      <path d="M252 322 C232 314 206 298 190 288 L170 352 C192 364 222 374 254 382 Z" fill="{COW_INK}"/>
+      <path d="M206 276 C190 262 160 258 142 266 C124 274 112 296 106 322 L98 360 C96 378 108 392 126 392
+               L150 392 C166 392 176 382 182 368 L210 312 C216 298 216 286 206 276 Z" fill="{COW_INK}"/>
+      <path d="M192 278 L232 256 L222 290 Z" fill="{COW_INK}"/>
+      <path d="M176 268 C178 248 190 238 206 236" fill="none" stroke="{COW_INK}" stroke-width="12" stroke-linecap="round"/>
+      <path d="M140 286 C130 310 124 336 122 360" fill="none" stroke="#ffffff" stroke-width="12" stroke-linecap="round"/>
+      <circle cx="166" cy="304" r="8" fill="#ffffff"/>
     </g>
   </g>"""
 
-# The milk pail, right of her muzzle. The milk shows through the pail as a
-# gauge: a cream level that rises as the drops land.
-PAIL_BODY = "M430 422 L580 422 L563 560 L447 560 Z"
-PAIL_INNER = "M446 436 L564 436 L551 546 L459 546 Z"
-
-PAIL = f"""<g class="pail">
-    <path d="M440 420 C440 330 570 330 570 420" fill="none" stroke="#3a4045" stroke-width="11"/>
-    <path d="{PAIL_BODY}" fill="#8c979e" stroke="#3a4045" stroke-width="12" stroke-linejoin="round"/>
-    <g clip-path="url(#lv-pail)">
-      <rect class="milk" x="430" y="436" width="150" height="124" fill="#fffaf0"/>
+# The one accent: a tuft of grass where she grazes.
+TUFT = f"""<path d="M110 592 L590 592" class="ground" fill="none" stroke="{GROUND}" stroke-width="10"
+          stroke-linecap="round" pathLength="1" stroke-dasharray="1"/>
+  <g class="tuft">
+    <g class="sway">
+      <path d="M150 592 C148 560 140 530 128 508" fill="none" stroke="{GRASS}" stroke-width="11" stroke-linecap="round"/>
+      <path d="M166 592 C166 556 168 520 176 488" fill="none" stroke="{GRASS}" stroke-width="11" stroke-linecap="round"/>
+      <path d="M182 592 C186 566 196 544 210 528" fill="none" stroke="{GRASS}" stroke-width="11" stroke-linecap="round"/>
     </g>
-    <rect x="420" y="404" width="170" height="26" rx="12" fill="#b9c2c7" stroke="#3a4045" stroke-width="11"/>
-  </g>"""
-
-# One drop, point up, centred on 0,0 (about 60 × 80: ~5 px on the tile).
-DROP = "M0 -46 C18 -16 32 0 32 18 A32 32 0 0 1 -32 18 C-32 0 -18 -16 0 -46 Z"
-
-
-def _drop(n: int, x: int) -> str:
-    return (
-        f'<g class="drop{n}"><path transform="translate({x} 270)" d="{DROP}" '
-        f'fill="#ffffff" stroke="#3a4045" stroke-width="9" stroke-linejoin="round"/></g>'
-    )
-
-
-HEART_AT = (270, 90)
-SPRIG_BASE = (150, 556)
-
-ROUND = f"""<g class="round">
-    {_drop(1, 492)}
-    {_drop(2, 524)}
-    {_drop(3, 506)}
-    <!-- feed: a sprig of grass at her mouth -->
-    <g class="sprig" stroke="#4f8a3a" stroke-width="30" stroke-linecap="round" fill="none">
-      <path d="M{SPRIG_BASE[0]} {SPRIG_BASE[1]} Q140 500 104 472"/>
-      <path d="M{SPRIG_BASE[0]} {SPRIG_BASE[1]} Q150 490 160 452"/>
-      <path d="M{SPRIG_BASE[0]} {SPRIG_BASE[1]} Q166 506 204 490"/>
-    </g>
-    <!-- health: a heart that beats above her head, with a pulse ring -->
-    <circle class="pulse" cx="{HEART_AT[0]}" cy="{HEART_AT[1] - 6}" r="62" fill="none" stroke="#c43b52" stroke-width="14"/>
-    <!-- (the class is on a wrapper: a CSS transform replaces the transform attribute) -->
-    <g class="heart"><path transform="translate({HEART_AT[0]} {HEART_AT[1]})"
-          d="M0 40 C-66 -4 -62 -54 -28 -54 C-12 -54 0 -42 0 -30 C0 -42 12 -54 28 -54 C62 -54 66 -4 0 40 Z"
-          fill="#c43b52" stroke="#8e2537" stroke-width="8" stroke-linejoin="round"/></g>
   </g>"""
 
 
@@ -142,19 +101,13 @@ def body(rest_hidden: bool) -> str:
     hide = ' opacity="0"' if rest_hidden else ""
     return f"""  <defs>
     <clipPath id="lv-disc"><circle cx="344.5" cy="344.5" r="336"/></clipPath>
-    <clipPath id="lv-head"><path d="{HEAD}"/></clipPath>
-    <clipPath id="lv-pail"><path d="{PAIL_INNER}"/></clipPath>
   </defs>
   <!-- the white disc of upande_logo.png, with its thin dark rim -->
   <circle cx="344.5" cy="344.5" r="340" fill="#ffffff" stroke="#1c1b19" stroke-opacity=".3" stroke-width="7"/>
   <g clip-path="url(#lv-disc)">
   <g class="scene"{hide}>
-  <!-- the scene sits a little low: the heart needs the room above her head -->
-  <g transform="translate(0 28)">
-  {PAIL}
+  {TUFT}
   {COW}
-  {ROUND}
-  </g>
   </g>
   {ARROW}
   </g>
@@ -181,110 +134,62 @@ ENTER = [
         (0.12, {"opacity": 1}),
         (1, {"opacity": 1}),
     ]),
-    # she rises into the disc from below, a small overshoot, settles
+    (".ground", None, [
+        (0, {"strokeDashoffset": 1}),
+        (0.1, {"strokeDashoffset": 1}),
+        (0.5, {"strokeDashoffset": 0}),
+        (1, {"strokeDashoffset": 0}),
+    ]),
+    # she walks in from the left onto the line
     (".cow", None, [
-        (0, {"transform": "translate(0px, 440px)"}),
-        (0.15, {"transform": "translate(0px, 440px)"}),
-        (0.68, {"transform": "translate(0px, -16px)"}),
-        (0.8, {"transform": "translate(0px, 0px)"}),
-        (1, {"transform": "translate(0px, 0px)"}),
+        (0, {"transform": "translate(-110px, 0px)", "opacity": 0}),
+        (0.25, {"transform": "translate(-110px, 0px)", "opacity": 0}),
+        (0.45, {"opacity": 1}),
+        (0.9, {"transform": "translate(0px, 0px)", "opacity": 1}),
+        (1, {"transform": "translate(0px, 0px)", "opacity": 1}),
     ]),
-    # the pail slides in from the right
-    (".pail", None, [
-        (0, {"transform": "translate(300px, 0px)"}),
-        (0.4, {"transform": "translate(300px, 0px)"}),
-        (0.85, {"transform": "translate(0px, 0px)"}),
-        (1, {"transform": "translate(0px, 0px)"}),
-    ]),
-    (".round", None, [
-        (0, {"opacity": 0}),
-        (0.82, {"opacity": 0}),
-        (1, {"opacity": 1}),
+    (".tuft", "fill-box|50% 100%", [
+        (0, {"transform": "scale(1, 0)"}),
+        (0.7, {"transform": "scale(1, 0)"}),
+        (1, {"transform": "scale(1, 1)"}),
     ]),
 ]
 
-
-def _drop_fall(lo: float) -> list:
-    """A drop appears under the arrow, falls into the pail, is gone."""
-    hi = lo + 0.12
-    return [
-        (0, {"transform": "translate(0px, 0px)", "opacity": 0}),
-        (lo, {"transform": "translate(0px, 0px)", "opacity": 0}),
-        (lo + 0.02, {"transform": "translate(0px, 10px)", "opacity": 1}),
-        (hi, {"transform": "translate(0px, 170px)", "opacity": 1}),
-        (hi + 0.01, {"transform": "translate(0px, 170px)", "opacity": 0}),
-        (1, {"transform": "translate(0px, 170px)", "opacity": 0}),
-    ]
-
-
-MILK_EMPTY = "translate(0px, 116px)"
-
-# The round: milk (0–.40), feed (.38–.64), health (.62–.88); the pail is
-# emptied out of sight at the end so the next round starts clean.
+# The round, quiet: she lowers her head to the grass and grazes (two small
+# nods), lifts it again; the tail swishes once; the grass leans as she crops it.
 LOOP = [
-    (".drop1", None, _drop_fall(0.02)),
-    (".drop2", None, _drop_fall(0.13)),
-    (".drop3", None, _drop_fall(0.24)),
-    (".milk", None, [
-        (0, {"transform": MILK_EMPTY, "opacity": 1}),
-        (0.1, {"transform": MILK_EMPTY, "opacity": 1}),
-        (0.18, {"transform": "translate(0px, 80px)", "opacity": 1}),
-        (0.29, {"transform": "translate(0px, 42px)", "opacity": 1}),
-        (0.4, {"transform": "translate(0px, 4px)", "opacity": 1}),
-        (0.9, {"transform": "translate(0px, 4px)", "opacity": 1}),
-        (0.97, {"transform": "translate(0px, 4px)", "opacity": 0}),
-        (0.98, {"transform": MILK_EMPTY, "opacity": 0}),
-        (1, {"transform": MILK_EMPTY, "opacity": 1}),
+    (".head", f"view-box|{NECK_PIVOT[0]}px {NECK_PIVOT[1]}px", [
+        (0, {"transform": "rotate(0deg)"}),
+        (0.12, {"transform": "rotate(0deg)"}),
+        (0.34, {"transform": "rotate(-30deg)"}),
+        (0.44, {"transform": "rotate(-26deg)"}),
+        (0.52, {"transform": "rotate(-30deg)"}),
+        (0.6, {"transform": "rotate(-26deg)"}),
+        (0.68, {"transform": "rotate(-30deg)"}),
+        (0.86, {"transform": "rotate(0deg)"}),
+        (1, {"transform": "rotate(0deg)"}),
     ]),
-    (".eyes", "fill-box|50% 50%", [
-        (0, {"transform": "scaleY(1)"}),
-        (0.3, {"transform": "scaleY(1)"}),
-        (0.32, {"transform": "scaleY(.1)"}),
-        (0.34, {"transform": "scaleY(1)"}),
-        (1, {"transform": "scaleY(1)"}),
+    (".tail", f"view-box|{TAIL_PIVOT[0]}px {TAIL_PIVOT[1]}px", [
+        (0, {"transform": "rotate(0deg)"}),
+        (0.7, {"transform": "rotate(0deg)"}),
+        (0.78, {"transform": "rotate(14deg)"}),
+        (0.86, {"transform": "rotate(-8deg)"}),
+        (0.94, {"transform": "rotate(0deg)"}),
+        (1, {"transform": "rotate(0deg)"}),
     ]),
-    # feed: the sprig grows at her mouth, she chews twice, it is eaten
-    (".sprig", f"view-box|{SPRIG_BASE[0]}px {SPRIG_BASE[1]}px", [
-        (0, {"transform": "translate(0px, 0px) scale(0)", "opacity": 0}),
-        (0.38, {"transform": "translate(0px, 0px) scale(0)", "opacity": 0}),
-        (0.44, {"transform": "translate(0px, 0px) scale(1.08)", "opacity": 1}),
-        (0.47, {"transform": "translate(0px, 0px) scale(1)", "opacity": 1}),
-        (0.55, {"transform": "translate(28px, -22px) scale(.7)", "opacity": 1}),
-        (0.63, {"transform": "translate(60px, -60px) scale(.1)", "opacity": 0}),
-        (1, {"transform": "translate(60px, -60px) scale(.1)", "opacity": 0}),
-    ]),
-    (".muzzle", None, [
-        (0, {"transform": "translate(0px, 0px)"}),
-        (0.48, {"transform": "translate(0px, 0px)"}),
-        (0.52, {"transform": "translate(0px, 16px)"}),
-        (0.56, {"transform": "translate(0px, 0px)"}),
-        (0.6, {"transform": "translate(0px, 16px)"}),
-        (0.64, {"transform": "translate(0px, 0px)"}),
-        (1, {"transform": "translate(0px, 0px)"}),
-    ]),
-    # health: the heart pops, beats twice, fades
-    (".heart", "fill-box|50% 50%", [
-        (0, {"transform": "scale(0)", "opacity": 0}),
-        (0.63, {"transform": "scale(0)", "opacity": 0}),
-        (0.68, {"transform": "scale(1)", "opacity": 1}),
-        (0.72, {"transform": "scale(1.28)", "opacity": 1}),
-        (0.76, {"transform": "scale(1)", "opacity": 1}),
-        (0.8, {"transform": "scale(1.28)", "opacity": 1}),
-        (0.84, {"transform": "scale(1)", "opacity": 1}),
-        (0.92, {"transform": "scale(.6)", "opacity": 0}),
-        (1, {"transform": "scale(.6)", "opacity": 0}),
-    ]),
-    (".pulse", f"view-box|{HEART_AT[0]}px {HEART_AT[1] - 6}px", [
-        (0, {"transform": "scale(.5)", "opacity": 0}),
-        (0.71, {"transform": "scale(.5)", "opacity": 0}),
-        (0.73, {"transform": "scale(.7)", "opacity": 1}),
-        (0.86, {"transform": "scale(1.4)", "opacity": 0}),
-        (1, {"transform": "scale(1.4)", "opacity": 0}),
+    (".sway", f"view-box|{GRASS_BASE[0]}px {GRASS_BASE[1]}px", [
+        (0, {"transform": "rotate(0deg)"}),
+        (0.36, {"transform": "rotate(0deg)"}),
+        (0.44, {"transform": "rotate(8deg)"}),
+        (0.52, {"transform": "rotate(-3deg)"}),
+        (0.6, {"transform": "rotate(8deg)"}),
+        (0.7, {"transform": "rotate(0deg)"}),
+        (1, {"transform": "rotate(0deg)"}),
     ]),
 ]
 
-ENTER_MS = 1100
-LOOP_MS = 3400
+ENTER_MS = 1200
+LOOP_MS = 3600
 EASE = "cubic-bezier(.3,.7,.2,1)"
 
 
