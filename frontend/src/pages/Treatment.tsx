@@ -6,6 +6,7 @@ import { EventDate } from "@/components/EventDate";
 import { Notice } from "@/components/feeding/Notice";
 import { StockPicker, blankRow, type ItemRow } from "@/components/stock/StockPicker";
 import { OperatorField } from "@/components/events/OperatorField";
+import { VetField } from "@/components/events/VetField";
 import { Page, PageHeading } from "@/components/PageShell";
 import { RefreshButton } from "@/components/RefreshButton";
 import { useToast } from "@/components/Toast";
@@ -23,6 +24,7 @@ import { getHealthOptions, getOpenCases, type HealthOptions, type OpenCasesView 
 import { getAnimalCase, treatAnimal, type AnimalCaseStanding } from "@/lib/health";
 import { useBatchPlans } from "@/lib/use-batch-plans";
 import { useOperator } from "@/lib/operator";
+import { useVetChoice } from "@/lib/vets";
 import { useSaveShortcut } from "@/lib/use-save-shortcut";
 import { cn, fmt, todayISO } from "@/lib/utils";
 
@@ -67,6 +69,7 @@ export function Treatment() {
   const [itemsFailure, setItemsFailure] = useState<string | null>(null);
   const toast = useToast();
   const who = useOperator(options?.employee);
+  const { vets, vet, setVet } = useVetChoice();
 
   const [animal, setAnimal] = useState<string | null>(null);
   const [standing, setStanding] = useState<AnimalCaseStanding | null>(null);
@@ -160,6 +163,7 @@ export function Treatment() {
       severity: fresh ? severity || undefined : undefined,
       operator: who.value,
       opened_by: who.value,
+      vet: vet || undefined,
       treatment_date: when,
       treatments: usable.map((d) => {
         const x = details[d.key] ?? NO_DETAIL;
@@ -376,6 +380,7 @@ export function Treatment() {
                 {who.mustAsk && (
                   <OperatorField operator={who.operator} onChange={who.setOperator} />
                 )}
+                <VetField vets={vets} value={vet} onChange={setVet} />
               </div>
 
               {itemsFailure && (

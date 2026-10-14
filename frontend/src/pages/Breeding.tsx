@@ -137,6 +137,7 @@ export function Diagnosis() {
         ]}
         operatorOf={(o) => o.employee}
         itemsOf={(o) => o.items_by_event?.["Pregnancy Diagnosis"]}
+        withVet
         submitLabel="Record the result"
         submit={createPregnancyDiagnosis}
         said={(r, a) => `${a} checked — ${r.name}.`}
@@ -220,6 +221,7 @@ export function DryingOff() {
         ]}
         operatorOf={(o) => o.employee}
         eventType="Drying Off"
+        withVet
         submitLabel="Dry her off"
         submit={createDryingOffEvent}
         // The server repeats the deviation it recorded, so the confirmation

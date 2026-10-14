@@ -5,6 +5,7 @@ import { EventDate } from "@/components/EventDate";
 import { Notice } from "@/components/feeding/Notice";
 import { StockPicker, blankRow, type ItemRow } from "@/components/stock/StockPicker";
 import { OperatorField } from "@/components/events/OperatorField";
+import { VetField } from "@/components/events/VetField";
 import { Page, PageHeading } from "@/components/PageShell";
 import { RefreshButton } from "@/components/RefreshButton";
 import { TargetPicker } from "@/components/events/TargetPicker";
@@ -21,6 +22,7 @@ import { isError } from "@/lib/frappe";
 import { createHusbandryEvent, getHusbandryOptions, type HusbandryOptions } from "@/lib/events";
 import { useBatchPlans } from "@/lib/use-batch-plans";
 import { useOperator } from "@/lib/operator";
+import { useVetChoice } from "@/lib/vets";
 import { useSaveShortcut } from "@/lib/use-save-shortcut";
 import { cn, fmt, todayISO } from "@/lib/utils";
 
@@ -47,6 +49,8 @@ export function Husbandry() {
   const [failure, setFailure] = useState<string | null>(null);
   const toast = useToast();
   const who = useOperator(options?.employee);
+  const { vets, vet, setVet } = useVetChoice();
+  const [fee, setFee] = useState("");
 
   const [kind, setKind] = useState("");
   const [when, setWhen] = useState(todayISO());
@@ -83,6 +87,7 @@ export function Husbandry() {
     );
   }, [takesDrugs]);
 
+  const external = vets.find((v) => v.value === vet)?.type === "External";
   const ready = !!kind && picked.length > 0 && !who.needed;
   // THE BASKET. Every line that will leave the store, consolidated — the same
   // drug on two rows is one withdrawal from the store and has to be checked
@@ -128,6 +133,9 @@ export function Husbandry() {
       animals: picked,
       event_date: when,
       operator: who.value,
+      vet: vet || undefined,
+      // Only an external vet is paid a fee; the server refuses one for staff.
+      vet_fee: external && Number(fee) > 0 ? Number(fee) : undefined,
       remarks: remarks.trim() || undefined,
       // A line the picker could not place falls back, on the server, to the
       // event type's Default Store (Settings → Stock).
@@ -148,6 +156,14 @@ export function Husbandry() {
       toast(r.error, "error");
       return;
     }
+    const feeNote = (r as { vet_fee?: { posted: boolean; journal_entry: string; reason: string } | null }).vet_fee;
+    if (feeNote) {
+      toast(
+        feeNote.posted
+          ? `The vet fee was posted to ${feeNote.journal_entry}.`
+          : `The vet fee was recorded but not posted: ${feeNote.reason}`,
+      );
+    }
     toast(
       `${kind} recorded for ${picked.length} animal${picked.length === 1 ? "" : "s"}.` +
         (basket.length
@@ -156,6 +172,7 @@ export function Husbandry() {
     );
     setPicked([]);
     setRemarks("");
+    setFee("");
     void load();
   }
 
@@ -200,6 +217,21 @@ export function Husbandry() {
             </div>
             {who.mustAsk && (
               <OperatorField operator={who.operator} onChange={who.setOperator} />
+            )}
+            <VetField vets={vets} value={vet} onChange={setVet} />
+            {external && (
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="h-fee">Vet fee for the round</Label>
+                <Input
+                  id="h-fee"
+                  type="number"
+                  min={0}
+                  value={fee}
+                  onChange={(e) => setFee(e.target.value)}
+                  placeholder="0"
+                  className="w-[140px]"
+                />
+              </div>
             )}
           </div>
 

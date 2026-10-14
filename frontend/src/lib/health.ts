@@ -40,7 +40,8 @@ export interface CaseRow {
   duration_days: number | null;
   production_loss_kg: number | null;
   total_treatment_cost: number | null;
-  vet_called: number | null;
+  /** The Livestock Vet on the file, and their name. */
+  vet: string | null;
   vet_name: string | null;
   days_open: number | null;
   treatments: number;

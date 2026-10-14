@@ -43,7 +43,7 @@ export function CheckUp() {
           { name: "bcs", label: "Body condition", kind: "number", step: "0.25",
             hint: "1 to 5." },
           { name: "lameness_score", label: "Lameness", kind: "number",
-            hint: "0 to 5, 0 being sound." },
+            hint: "0 to 3, 0 being sound." },
           { name: "appearance", label: "Appearance", kind: "select", options: o.appearances },
           { name: "hydration", label: "Hydration", kind: "select", options: o.hydrations },
           { name: "suggested_disease", label: "Suspected", kind: "select", options: o.diseases },
@@ -53,12 +53,14 @@ export function CheckUp() {
           // had nowhere to go.
           { name: "differential_notes", label: "Differential / notes", kind: "notes",
             placeholder: "Could be ketosis; check urine before treating." },
-          { name: "action_taken", label: "What was done", kind: "select", options: o.actions },
+          { name: "action_taken", label: "What was done", kind: "select", options: o.actions,
+            required: true },
           { name: "follow_up_date", label: "Look again on", kind: "date", planned: true },
           { name: "action_notes", label: "Notes", kind: "notes" },
         ]}
         operatorOf={(o) => o.employee}
         eventType="Check Up"
+        withVet
         submitLabel="Record the check up"
         submit={createCheckUp}
         // A CHECK-UP IS WHERE A FILE COMES FROM, so the answer says whether one

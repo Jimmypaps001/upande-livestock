@@ -203,6 +203,7 @@ export interface RaiseInput {
   buyer_name?: string;
   buyer_contact?: string;
   sale_price?: number;
+  vet?: string;
 }
 
 export function raiseCull(input: RaiseInput) {
@@ -212,9 +213,9 @@ export function raiseCull(input: RaiseInput) {
   );
 }
 
-export function vetVerdict(caseName: string, verdict: Verdict, notes?: string) {
+export function vetVerdict(caseName: string, verdict: Verdict, notes?: string, vet?: string) {
   return call<{ name: string; status: ReviewStatus; verdict: Verdict }>(VERDICT, {
-    payload: { case: caseName, verdict, notes },
+    payload: { case: caseName, verdict, notes, vet: vet || undefined },
   });
 }
 
@@ -252,6 +253,7 @@ export function recordMortality(input: {
   remarks?: string;
   death_date?: string;
   operator?: string;
+  vet?: string;
 }) {
   return call<{ name: string; animal: string; claim: { name: string; claimed_amount: number } | null }>(
     MORTALITY,
