@@ -16,7 +16,7 @@ timestamp that has already crossed a timezone.
 import frappe
 
 from upande_livestock.serverscripts.common.envelope import as_dict, run
-from upande_livestock.serverscripts.milking.create_milk_recording import create_milk_recording
+from upande_livestock.serverscripts.milking.create_milk_recording import record
 
 
 @frappe.whitelist()
@@ -26,6 +26,10 @@ def record_milking(payload=None):
 		# the "quality required at milking" rule never blocks them. The recording
 		# is saved and flagged as awaiting quality instead, and turns up on the
 		# Quality page for whoever has the creamery docket.
-		return create_milk_recording(as_dict(payload), from_handset=True)
+		# offline=1 is the phone saying this milking waited in its queue. It buys
+		# one day of grace on a closed backdating window (see create_milk_recording),
+		# and is stored on the recording so the grace is never silent.
+		d = as_dict(payload)
+		return record(d, from_handset=True, offline=bool(int(d.get("offline") or 0)))
 
 	return run(go, "livestock mobile record_milking failed")
