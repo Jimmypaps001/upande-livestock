@@ -106,7 +106,7 @@ def create_husbandry_event(payload):
 		if vet_fee > 0:
 			fee = vet_fees.post_vet_fee(
 				vet, vet_fee, company_or_throw(d.get("company")),
-				posting_date=_date, animals=animals, backdated=is_backdated, what=event_type,
+				posting_date=_date, animals=animals, what=event_type,
 			)
 		created = []
 		for animal in animals:

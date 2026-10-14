@@ -17,11 +17,31 @@ from frappe.utils import getdate, today
 
 class LivestockVet(Document):
 	def validate(self):
+		self.validate_link_is_permanent()
 		if self.vet_type == "Internal":
 			self.validate_internal()
 		else:
 			self.validate_external()
 		self.warn_if_licence_expired()
+
+	def validate_link_is_permanent(self):
+		"""The Vet-Employee link is fixed once the vet exists.
+
+		The JSON flag (set_only_once) only guards the form; an API update must not
+		turn an internal vet external, or point them at another employee, either.
+		Past work and fees are recorded against this vet on the strength of what
+		they are.
+		"""
+		if self.is_new():
+			return
+		before = self.get_doc_before_save() or frappe.get_doc("Livestock Vet", self.name)
+		for field, label in (("vet_type", _("Type")), ("employee", _("Employee"))):
+			if (before.get(field) or None) != (self.get(field) or None):
+				frappe.throw(
+					_("{0} cannot be changed once the vet is created. Disable this vet and "
+					  "create another.").format(label),
+					title=_("Vet link is permanent"),
+				)
 
 	def validate_internal(self):
 		if not self.employee:
