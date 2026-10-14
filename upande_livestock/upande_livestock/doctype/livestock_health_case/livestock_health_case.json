@@ -416,6 +416,26 @@
    "print": 1,
    "email": 1,
    "share": 1
+  },
+  {
+   "read": 1,
+   "report": 1,
+   "role": "Livestock Milker"
+  },
+  {
+   "read": 1,
+   "report": 1,
+   "role": "Livestock Attendant"
+  },
+  {
+   "read": 1,
+   "report": 1,
+   "role": "Livestock Breeder"
+  },
+  {
+   "read": 1,
+   "report": 1,
+   "role": "Livestock Stores"
   }
  ],
  "row_format": "Dynamic",

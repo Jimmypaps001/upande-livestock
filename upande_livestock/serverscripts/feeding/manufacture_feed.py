@@ -29,7 +29,7 @@ dropdown for all four lines is a run nobody can post as the farm works."""
 
 import frappe
 
-from upande_livestock.serverscripts.common.envelope import guard, run
+from upande_livestock.serverscripts.common.envelope import guard_stock, run
 from upande_livestock.serverscripts.feeding import _engine as feeding
 from upande_livestock.serverscripts.feeding._tuned_bom import _base_for
 
@@ -40,8 +40,7 @@ def manufacture_feed(
 	source_warehouse=None, source_by_item=None, batch_by_item=None,
 ):
 	def go():
-		guard("Work Order")
-		guard("Stock Entry")
+		guard_stock("Work Order", "Stock Entry")
 		resolved_bom_no = _base_for(herd, bom_no).name if bom_no else None
 		res = feeding.manufacture_herd_feed(
 			herd,

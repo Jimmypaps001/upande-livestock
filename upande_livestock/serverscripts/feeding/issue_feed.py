@@ -4,14 +4,14 @@ Guards Stock Entry: this moves real stock."""
 
 import frappe
 
-from upande_livestock.serverscripts.common.envelope import guard, run
+from upande_livestock.serverscripts.common.envelope import guard_stock, run
 from upande_livestock.serverscripts.feeding import _engine as feeding
 
 
 @frappe.whitelist()
 def issue_feed(herd, qty, employee=None, posting_date=None, source_warehouse=None):
 	def go():
-		guard("Stock Entry")
+		guard_stock("Stock Entry")
 		res = feeding.feed_herd(
 			herd, qty, employee=employee, posting_date=posting_date,
 			source_warehouse=source_warehouse,

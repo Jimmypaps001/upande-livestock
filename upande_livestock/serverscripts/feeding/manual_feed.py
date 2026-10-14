@@ -28,7 +28,7 @@ grant (create a BOM anywhere in manufacturing) for a strictly narrower need
 import frappe
 from frappe import _
 
-from upande_livestock.serverscripts.common.envelope import as_dict, guard, run
+from upande_livestock.serverscripts.common.envelope import as_dict, guard_stock, run
 from upande_livestock.serverscripts.feeding._engine import manufacture_herd_feed
 from upande_livestock.serverscripts.feeding._tuned_bom import tuned_bom
 
@@ -38,8 +38,7 @@ def manual_feed(payload):
 	"""Mix and issue a tuned ration. See the module docstring."""
 
 	def go():
-		guard("Work Order")
-		guard("Stock Entry")
+		guard_stock("Work Order", "Stock Entry")
 		d = as_dict(payload)
 
 		herd = d.get("herd")

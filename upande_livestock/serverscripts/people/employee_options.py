@@ -21,13 +21,15 @@ been typed and gets back the first handful that match, by name or by number —
 a man who knows his employee number should not have to remember how somebody
 spelled him.
 
-Read-guarded on Employee — a staff list is not public.
+Read-guarded: a staff list is not public. Anyone who can read Employee, or holds a
+livestock role, may pick an operator; the farm roles have no Employee DocPerm and
+the read here is of name, designation and user only.
 """
 
 import frappe
 
 from upande_livestock.serverscripts.common.employee import current_employee
-from upande_livestock.serverscripts.common.envelope import as_dict, guard_read, run
+from upande_livestock.serverscripts.common.envelope import as_dict, guard_read_or_livestock, run
 
 LIMIT = 25
 
@@ -35,7 +37,7 @@ LIMIT = 25
 @frappe.whitelist()
 def employee_options(payload=None):
 	def go():
-		guard_read("Employee")
+		guard_read_or_livestock("Employee")
 		d = as_dict(payload)
 		q = (d.get("q") or "").strip()
 		filters = {"status": "Active"}
