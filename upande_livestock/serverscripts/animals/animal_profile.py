@@ -26,9 +26,10 @@ from itertools import pairwise
 import frappe
 from frappe.utils import add_days, date_diff, flt, getdate, today
 
+from upande_livestock.serverscripts.common import animal_stage
 from upande_livestock.serverscripts.common.envelope import as_dict, guard_read, run
 
-RETIRED = ("Dead", "Deceased", "Sold", "Culled", "Disposed", "Transferred Out")
+RETIRED = animal_stage.RETIRED
 
 #: Which event types earn a mark on the timeline, and what to call them.
 MILESTONES = {
@@ -124,42 +125,11 @@ def _expected_calving(events):
 
 
 def _cycle(a, events, last_calving, expected):
-	"""Where she stands in the loop between one calving and the next."""
-	if a.disabled or a.status in RETIRED:
-		return {"stage": "retired", "dayInStage": 0, "daysInMilk": None,
-		        "nextUp": "She has left the farm", "nextOn": None}
+	"""Where she stands in the loop between one calving and the next.
 
-	dim = date_diff(today(), getdate(last_calving)) if last_calving else None
-	served = _last(events, "Service")
-	dried = _last(events, "Drying Off")
-	confirmed = None
-	for e in reversed(events):
-		if e.event_type == "Calving":
-			break
-		if e.event_type == "Pregnancy Diagnosis" and e.diagnosis_result == "Confirmed":
-			confirmed = str(e.event_date)
-			break
-
-	def since(d):
-		return date_diff(today(), getdate(d)) if d else 0
-
-	if dried and (not last_calving or getdate(dried) > getdate(last_calving)):
-		return {"stage": "dry", "dayInStage": since(dried), "daysInMilk": dim,
-		        "nextUp": "Calving", "nextOn": expected}
-	if confirmed:
-		return {"stage": "confirmed", "dayInStage": since(confirmed), "daysInMilk": dim,
-		        "nextUp": "Drying off, then calving", "nextOn": expected}
-	if served and (not last_calving or getdate(served) > getdate(last_calving)):
-		return {"stage": "served", "dayInStage": since(served), "daysInMilk": dim,
-		        "nextUp": "Pregnancy check", "nextOn": add_days(served, 35)}
-	if not last_calving:
-		return {"stage": "heifer", "dayInStage": since(a.date_of_birth), "daysInMilk": None,
-		        "nextUp": "First service", "nextOn": None}
-	if dim is not None and dim <= 60:
-		return {"stage": "fresh", "dayInStage": dim, "daysInMilk": dim,
-		        "nextUp": "Ready to serve", "nextOn": add_days(last_calving, 60)}
-	return {"stage": "open", "dayInStage": dim or 0, "daysInMilk": dim,
-	        "nextUp": "Service", "nextOn": None}
+	The rule lives in common/animal_stage, shared with the phone's sync.
+	"""
+	return animal_stage.cycle(a, animal_stage.facts_from_events(events), expected)
 
 
 def _kpis(name, events, a):
