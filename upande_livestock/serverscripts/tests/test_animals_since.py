@@ -42,7 +42,7 @@ class TestAnimalsSince(IntegrationTestCase):
 		self.assertTrue({self.a.name, self.b.name} <= _names(r))
 		row = next(x for x in r["animals"] if x["name"] == self.a.name)
 		for key in ("tag", "animal_name", "sex", "breed", "dob", "herd", "status",
-		            "image", "dam", "sire", "modified"):
+		            "image", "dam", "sire", "parity", "last_weight_kg", "modified"):
 			self.assertIn(key, row)
 		self.assertTrue(r["server_time"])
 
