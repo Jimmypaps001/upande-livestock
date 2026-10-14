@@ -147,14 +147,27 @@ class TestTheVetsVerdictIsFinalOnHealth(IntegrationTestCase):
 		self.assertIn("awaiting vet", got.get("error", "").lower())
 
 	def test_who_saw_her_and_when_is_recorded(self):
+		"""A vet with a record is named by it; the date and notes are kept."""
+		vet = frappe.get_doc({
+			"doctype": "Livestock Vet", "vet_type": "External", "vet_name": "ZZ Verdict Vet",
+			"registration_number": "KVB-V-1", "phone": "0700000001", "user": frappe.session.user,
+		}).insert(ignore_permissions=True)
+		self.addCleanup(lambda: frappe.delete_doc("Livestock Vet", vet.name, force=True, ignore_permissions=True))
 		case = raise_cull({"animal": self.animal, "flow": culling.DISPOSAL})["name"]
 		vet_verdict({"case": case, "verdict": "Recommends disposal", "notes": "Chronic mastitis"})
 		d = frappe.db.get_value(
-			"Livestock Disposal", case,
-			["custom_vet_by", "custom_vet_on", "custom_vet_notes"], as_dict=True)
-		self.assertEqual(d.custom_vet_by, frappe.session.user)
+			"Livestock Disposal", case, ["vet", "custom_vet_on", "custom_vet_notes"], as_dict=True)
+		self.assertEqual(d.vet, vet.name)
 		self.assertEqual(str(d.custom_vet_on), today())
 		self.assertEqual(d.custom_vet_notes, "Chronic mastitis")
+
+	def test_a_vet_with_no_record_is_named_in_the_notes(self):
+		case = raise_cull({"animal": self.animal, "flow": culling.DISPOSAL})["name"]
+		vet_verdict({"case": case, "verdict": "Recommends disposal", "notes": "Chronic mastitis"})
+		d = frappe.db.get_value("Livestock Disposal", case, ["vet", "custom_vet_notes"], as_dict=True)
+		self.assertFalse(d.vet)
+		self.assertIn("Chronic mastitis", d.custom_vet_notes)
+		self.assertIn(frappe.session.user, d.custom_vet_notes)
 
 
 class TestAnApprovalIsOfTerms(IntegrationTestCase):

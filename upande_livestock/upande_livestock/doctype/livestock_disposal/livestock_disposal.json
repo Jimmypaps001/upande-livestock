@@ -44,7 +44,7 @@
   "sb_cull_signoff",
   "custom_vet_verdict",
   "custom_vet_notes",
-  "custom_vet_by",
+  "vet",
   "custom_vet_on",
   "cb_cull_signoff",
   "custom_approved_by",
@@ -288,11 +288,12 @@
   },
   {
    "allow_on_submit": 1,
-   "fieldname": "custom_vet_by",
+   "fieldname": "vet",
    "fieldtype": "Link",
-   "label": "Seen By",
-   "options": "User",
-   "read_only": 1
+   "label": "Vet",
+   "options": "Livestock Vet",
+   "search_index": 1,
+   "description": "The vet who gave the verdict, or attended the animal."
   },
   {
    "allow_on_submit": 1,

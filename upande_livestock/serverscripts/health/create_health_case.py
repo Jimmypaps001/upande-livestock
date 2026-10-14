@@ -7,6 +7,7 @@ from upande_livestock.serverscripts.common import backdate
 from upande_livestock.serverscripts.common.company import company_or_throw
 from upande_livestock.serverscripts.common.employee import current_employee
 from upande_livestock.serverscripts.common.envelope import as_dict, guard, run
+from upande_livestock.serverscripts.common.vet import resolve_vet
 from upande_livestock.serverscripts.common.health_case import open_case_for, treatment_row
 
 
@@ -59,8 +60,7 @@ def create_health_case(payload):
 		doc.body_systems = d.get("body_systems")
 		doc.provisional_diagnosis = d.get("provisional_diagnosis") or None
 		doc.severity = d.get("severity") or None
-		doc.vet_called = 1 if d.get("vet_called") else 0
-		doc.vet_name = d.get("vet_name")
+		doc.vet = resolve_vet(d)
 		# Treatments given at the point of opening. Each row naming a drug_item is
 		# issued out of the drug store by LivestockHealthCase.on_submit; further
 		# treatments are added on the case itself later.

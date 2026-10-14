@@ -10,6 +10,15 @@ import frappe
 
 from upande_livestock.serverscripts.common import backdate
 from upande_livestock.serverscripts.common.employee import employee_or_throw
+from upande_livestock.serverscripts.common.vet import resolve_vet
+
+
+#: The event types a vet may be named on (Livestock Event's `vet` field shows for
+#: these). Keep in step with that field's depends_on.
+VET_EVENT_TYPES = (
+	"Treatment", "Check Up", "Vaccination", "Deworming", "Hoof Trimming",
+	"Dehorning", "Pregnancy Diagnosis", "Drying Off",
+)
 
 
 def new_livestock_event(d, event_type, date_key=None):
@@ -36,5 +45,8 @@ def new_livestock_event(d, event_type, date_key=None):
 	doc.event_date = event_date
 	doc.operator = employee_or_throw(d.get("operator"))
 	doc.remarks = d.get("remarks")
+	if event_type in VET_EVENT_TYPES:
+		# Named, or the signed-in vet; a refusal for a disabled or unknown one.
+		doc.vet = resolve_vet(d)
 	backdate.stamp(doc, is_backdated)
 	return doc

@@ -131,6 +131,7 @@ def open_file(d, opened_from=None):
 	from upande_livestock.serverscripts.common import backdate
 	from upande_livestock.serverscripts.common.company import company_or_throw
 	from upande_livestock.serverscripts.common.employee import current_employee
+	from upande_livestock.serverscripts.common.vet import resolve_vet
 
 	animal = (d.get("animal") or "").strip()
 	if not animal:
@@ -165,8 +166,7 @@ def open_file(d, opened_from=None):
 	doc.body_systems = d.get("body_systems")
 	doc.provisional_diagnosis = d.get("provisional_diagnosis") or None
 	doc.severity = d.get("severity") or None
-	doc.vet_called = 1 if d.get("vet_called") else 0
-	doc.vet_name = d.get("vet_name")
+	doc.vet = resolve_vet(d)
 	if opened_from:
 		doc.outcome_notes = _("Opened from {0}.").format(opened_from)
 	doc.insert()

@@ -14,8 +14,11 @@ from upande_livestock.serverscripts.common.animal import STATUS_BY_DISPOSAL_TYPE
 # test_livestock_event.py / test_livestock_diagnosis.py hit the same wall; mirror
 # their fix and build the fixtures we need by hand instead.
 IGNORE_TEST_RECORD_DEPENDENCIES = [
-	# The cull chain's two signature fields (custom_vet_by, custom_approved_by)
-	# are Links to User, which put User on the dependency walk for the first
+	# Livestock Vet links Employee, User and Supplier, which walk into the
+	# Department fixture this site lacks. Tests that need a vet make one.
+	"Livestock Vet",
+	# The cull chain's signature field (custom_approved_by)
+	# is a Link to User, which puts User on the dependency walk for the first
 	# time — and User drags in Email Account, then Company, then ERPNext's
 	# Department fixtures, which want a root "All Departments" this site does
 	# not have. Nothing here needs a test User: everything runs as

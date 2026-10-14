@@ -171,3 +171,7 @@ upande_livestock.patches.stock_rules_onto_event_types
 # The apps-screen tile shows the animated Livestock mark (plain Upande mark at
 # rest, the herd scene on hover).
 upande_livestock.patches.animated_livestock_logo
+
+# A vet is a Livestock Vet record. Health case "Vet Called"/"Vet Name" and the
+# disposal's "Seen By" user are folded into `vet` (or the notes) and dropped.
+upande_livestock.patches.vets_as_records

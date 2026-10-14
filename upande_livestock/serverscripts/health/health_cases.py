@@ -60,16 +60,21 @@ def health_cases(payload=None):
 			        "opened_date", "closed_date", "presenting_symptoms",
 			        "provisional_diagnosis", "confirmed_diagnosis", "severity",
 			        "duration_days", "production_loss_kg", "total_treatment_cost",
-			        "vet_called", "vet_name"],
+			        "vet"],
 			order_by="opened_date desc, creation desc",
 			limit_page_length=PAGE,
 		)
 		last = _last_treatments([r.name for r in rows])
 		counts = _counts(rows)
 
+		vet_names = dict(frappe.get_all(
+			"Livestock Vet", filters={"name": ["in", list({r.vet for r in rows if r.vet}) or ["__none__"]]},
+			fields=["name", "vet_name"], as_list=True,
+		))
 		files = []
 		for r in rows:
 			case = dict(r)
+			case["vet_name"] = vet_names.get(r.vet)
 			case["days_open"] = days_open(case)
 			case["treatments"] = last.get(r.name, {}).get("count", 0)
 			case["last_treatment_on"] = last.get(r.name, {}).get("on")

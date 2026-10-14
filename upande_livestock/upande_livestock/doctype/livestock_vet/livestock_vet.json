@@ -1,0 +1,210 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "VET-.####",
+ "creation": "2026-10-14 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "sb_vet",
+  "vet_type",
+  "enabled",
+  "employee",
+  "cb_vet",
+  "vet_name",
+  "phone",
+  "email",
+  "user",
+  "sb_external",
+  "registration_number",
+  "qualification",
+  "licence_expiry",
+  "cb_external",
+  "practice_name",
+  "supplier"
+ ],
+ "fields": [
+  {
+   "fieldname": "sb_vet",
+   "fieldtype": "Section Break",
+   "label": "Veterinarian"
+  },
+  {
+   "fieldname": "vet_type",
+   "fieldtype": "Select",
+   "label": "Type",
+   "options": "Internal\nExternal",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "description": "Internal: a farm employee. External: a contracted or visiting practitioner."
+  },
+  {
+   "fieldname": "enabled",
+   "fieldtype": "Check",
+   "label": "Enabled",
+   "default": "1",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "description": "Disabled vets stay on past records but cannot be chosen for new ones."
+  },
+  {
+   "fieldname": "employee",
+   "fieldtype": "Link",
+   "label": "Employee",
+   "options": "Employee",
+   "depends_on": "eval:doc.vet_type=='Internal'",
+   "mandatory_depends_on": "eval:doc.vet_type=='Internal'",
+   "search_index": 1
+  },
+  {
+   "fieldname": "cb_vet",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "vet_name",
+   "fieldtype": "Data",
+   "label": "Vet Name",
+   "in_list_view": 1,
+   "fetch_from": "employee.employee_name",
+   "mandatory_depends_on": "eval:doc.vet_type=='External'"
+  },
+  {
+   "fieldname": "phone",
+   "fieldtype": "Data",
+   "label": "Phone",
+   "options": "Phone",
+   "fetch_from": "employee.cell_number",
+   "mandatory_depends_on": "eval:doc.vet_type=='External'"
+  },
+  {
+   "fieldname": "email",
+   "fieldtype": "Data",
+   "label": "Email",
+   "options": "Email",
+   "depends_on": "eval:doc.vet_type=='External'"
+  },
+  {
+   "fieldname": "user",
+   "fieldtype": "Link",
+   "label": "User",
+   "options": "User",
+   "fetch_from": "employee.user_id",
+   "description": "The login this vet records under. Their entries default to this vet."
+  },
+  {
+   "fieldname": "sb_external",
+   "fieldtype": "Section Break",
+   "label": "Practice and Registration",
+   "depends_on": "eval:doc.vet_type=='External'"
+  },
+  {
+   "fieldname": "registration_number",
+   "fieldtype": "Data",
+   "label": "Kenya Veterinary Board Registration No.",
+   "mandatory_depends_on": "eval:doc.vet_type=='External'",
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "qualification",
+   "fieldtype": "Data",
+   "label": "Qualification"
+  },
+  {
+   "fieldname": "licence_expiry",
+   "fieldtype": "Date",
+   "label": "Licence Expiry"
+  },
+  {
+   "fieldname": "cb_external",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "practice_name",
+   "fieldtype": "Data",
+   "label": "Practice / Clinic"
+  },
+  {
+   "fieldname": "supplier",
+   "fieldtype": "Link",
+   "label": "Supplier",
+   "options": "Supplier",
+   "description": "Where this vet's fees are payable. Leave blank and fees are recorded but not posted."
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-10-14 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Upande Livestock",
+ "name": "Livestock Vet",
+ "naming_rule": "Expression (old style)",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "permlevel": 0,
+   "idx": 1,
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "email": 1,
+   "share": 1
+  },
+  {
+   "role": "Livestock Manager",
+   "permlevel": 0,
+   "idx": 2,
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "email": 1,
+   "share": 1
+  },
+  {
+   "role": "Livestock Vet",
+   "permlevel": 0,
+   "idx": 3,
+   "read": 1,
+   "report": 1
+  },
+  {
+   "role": "Livestock Breeder",
+   "permlevel": 0,
+   "idx": 4,
+   "read": 1,
+   "report": 1
+  },
+  {
+   "role": "Livestock Attendant",
+   "permlevel": 0,
+   "idx": 5,
+   "read": 1,
+   "report": 1
+  },
+  {
+   "role": "Livestock Stores",
+   "permlevel": 0,
+   "idx": 6,
+   "read": 1,
+   "report": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "search_fields": "vet_name,registration_number,employee",
+ "show_title_field_in_link": 1,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "vet_name",
+ "track_changes": 1
+}

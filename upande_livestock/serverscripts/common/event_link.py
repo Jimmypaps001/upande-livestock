@@ -50,6 +50,8 @@ def sync_event_for(doc, event_type):
 	event.reference_name = doc.name
 	if operator:
 		event.operator = operator
+	if doc.meta.has_field("vet") and doc.get("vet"):
+		event.vet = doc.vet
 	if doc.meta.has_field("current_herd") and doc.get("current_herd"):
 		event.current_herd = doc.current_herd
 	event.remarks = f"Auto-created from {doc.doctype} {doc.name}"
