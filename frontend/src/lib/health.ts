@@ -195,6 +195,8 @@ export const treatAnimal = (p: Payload) =>
     added: number;
     treatments: number;
     stock_entry: string;
+    vet?: string | null;
+    vet_fee?: { amount: number; posted: boolean; journal_entry: string; reason: string } | null;
   }>(`${NS}.treat_animal.treat_animal`, p);
 
 export const closeCase = (p: Payload) =>
