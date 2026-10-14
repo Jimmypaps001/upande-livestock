@@ -81,6 +81,7 @@ export function Treatment() {
   const [when, setWhen] = useState(todayISO());
   const [doses, setDoses] = useState<ItemRow[]>(() => [blankRow()]);
   const [details, setDetails] = useState<Record<number, DoseDetail>>({});
+  const [fee, setFee] = useState("");
   const [busy, setBusy] = useState(false);
   const plans = useBatchPlans(doses);
 
@@ -147,6 +148,8 @@ export function Treatment() {
   const picked = roster.find((a) => a.id === animal) || null;
   const usable = doses.filter((d) => d.item && Number(d.qty) > 0);
   const needComplaint = fresh && !complaint.trim();
+  // Only an external vet is paid a fee; the server refuses one for staff.
+  const external = vets.find((v) => v.value === vet)?.type === "External";
   const ready = !!animal && usable.length > 0 && !needComplaint && !who.needed && !asking;
 
   useSaveShortcut(() => void send(), ready && !busy);
@@ -164,6 +167,7 @@ export function Treatment() {
       operator: who.value,
       opened_by: who.value,
       vet: vet || undefined,
+      vet_fee: external && Number(fee) > 0 ? Number(fee) : undefined,
       treatment_date: when,
       treatments: usable.map((d) => {
         const x = details[d.key] ?? NO_DETAIL;
@@ -187,6 +191,14 @@ export function Treatment() {
       toast(r.error, "error");
       return;
     }
+    if (r.vet_fee) {
+      toast(
+        r.vet_fee.posted
+          ? `The vet fee was posted to ${r.vet_fee.journal_entry}.`
+          : `The vet fee was recorded but not posted: ${r.vet_fee.reason}`,
+      );
+    }
+    setFee("");
     toast(
       r.opened
         ? `A new file is open for ${r.animal} — ${r.case} — with ${r.added} treatment${r.added === 1 ? "" : "s"} in it.`
@@ -381,6 +393,20 @@ export function Treatment() {
                   <OperatorField operator={who.operator} onChange={who.setOperator} />
                 )}
                 <VetField vets={vets} value={vet} onChange={setVet} />
+                {external && (
+                  <div className="flex flex-col gap-1.5">
+                    <Label htmlFor="tx-fee">Vet fee for this treatment</Label>
+                    <Input
+                      id="tx-fee"
+                      type="number"
+                      min={0}
+                      value={fee}
+                      onChange={(e) => setFee(e.target.value)}
+                      placeholder="0"
+                      className="w-[140px]"
+                    />
+                  </div>
+                )}
               </div>
 
               {itemsFailure && (

@@ -224,6 +224,9 @@ export type RecentMilking = {
   discarded_kg: number;
   net_yield_kg: number;
   custom_is_backdated: 0 | 1;
+  /** Synced a day late from the phone's offline queue, under the manager's setting. */
+  late_sync_grace?: 0 | 1;
+  posted_by_name?: string | null;
 };
 
 const RECENT_FIELDS = [
@@ -236,6 +239,8 @@ const RECENT_FIELDS = [
   "discarded_kg",
   "net_yield_kg",
   "custom_is_backdated",
+  "late_sync_grace",
+  "posted_by_name",
 ];
 
 /**

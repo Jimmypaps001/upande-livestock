@@ -463,6 +463,14 @@ export function Milking() {
                         <span className="flex items-center gap-2">
                           {r.recording_date}
                           {r.custom_is_backdated ? <Mark>Backdated</Mark> : null}
+                          {r.late_sync_grace ? (
+                            <span
+                              data-testid="late-sync-badge"
+                              className="rounded bg-amber-100 px-1.5 py-0.5 text-[11px] font-semibold text-amber-900"
+                            >
+                              Synced a day late · posted by {r.posted_by_name || "unknown"}
+                            </span>
+                          ) : null}
                         </span>
                       </TableCell>
                       <TableCell className="tabular-nums">
