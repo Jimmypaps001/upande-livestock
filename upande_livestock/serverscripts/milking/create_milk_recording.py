@@ -58,20 +58,34 @@ def record(payload, from_handset=False, offline=False):
 		doc.herd = herd
 		doc.milking_time = d.get("milking_time") or nowtime()
 		recording_date, is_backdated = backdate.resolve(d, "recording_date")
+		late_sync = False
 		if offline and is_backdated and not backdate.window_open():
 			# The one exception to a closed window: a milking taken on the phone
-			# without signal may sync a day late. The test is the milking's own
-			# date against server today; captured_at is audit and never trusted.
-			if getdate(recording_date) < add_days(getdate(today()), -1):
+			# without signal may sync a day late — when the manager has allowed it.
+			# The test is the milking's own date against server today; captured_at
+			# is audit and never trusted.
+			yesterday = getdate(recording_date) == add_days(getdate(today()), -1)
+			if not yesterday:
 				frappe.throw(
 					_("This milking is more than a day old — ask the Livestock Manager "
 					  "to open backdating, then retry.")
 				)
+			if not frappe.db.get_single_value("Livestock Settings", "allow_offline_milking_grace"):
+				frappe.throw(
+					_("This milking is from yesterday and late offline syncs are switched off — "
+					  "ask the Livestock Manager.")
+				)
+			late_sync = True
 		else:
 			backdate.assert_allowed(is_backdated)
 		if offline:
 			doc.captured_offline = 1
 			doc.captured_at = _captured_at(d.get("captured_at"))
+		if late_sync:
+			# Who posted it, so the grace is never anonymous.
+			doc.late_sync_grace = 1
+			doc.posted_by_user = frappe.session.user
+			doc.posted_by_employee = current_employee()
 		doc.recording_date = recording_date
 		backdate.stamp(doc, is_backdated)
 		doc.cows_milked = int(flt(d.get("cows_milked")))
