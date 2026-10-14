@@ -164,3 +164,58 @@ class TestShortTodayLeavesADraft(IntegrationTestCase):
 		# A posted entry waits on nothing.
 		self.assertIsNone(status[posted]["short"])
 		self.assertFalse(status[posted]["can_post"])
+
+
+class TestPhoneOutcomes(TestShortTodayLeavesADraft):
+	"""What the handset is told. It records; the server decides, and answers."""
+
+	def _phone(self, qty, **extra):
+		from upande_livestock.serverscripts.mobile.record_animal_event import record_animal_event
+
+		res = record_animal_event(
+			{
+				"type": "Deworming",
+				"animals": [self.cow.name],
+				"operator": _employee(),
+				"drugs": [{"item_code": self.drug.item_code, "qty": qty, "source_warehouse": _drug_store()}],
+				**extra,
+			}
+		)
+		if res.get("stock_entry") and frappe.db.exists("Stock Entry", res["stock_entry"]):
+			self.addCleanup(self._drop_entry, res["stock_entry"])
+		return res
+
+	def test_short_today_answers_saved_with_a_named_draft(self):
+		res = self._phone(flt(self.drug.actual_qty) + 50)
+		self.assertFalse(res.get("error"), res.get("error"))
+		self.assertTrue(res["name"])
+		self.assertEqual(res["stock_drafts"][0]["name"], res["stock_entry"])
+		self.assertEqual(res["stock_drafts"][0]["stock_entry_type"], "Livestock Deworming")
+		self.assertIn("need", res["stock_drafts"][0]["short"])
+
+	def test_covered_answers_with_no_drafts(self):
+		res = self._phone(1)
+		self.assertNotIn("stock_drafts", res)
+		self.assertEqual(frappe.db.get_value("Stock Entry", res["stock_entry"], "docstatus"), 1)
+
+	def test_backdated_and_short_is_an_error_not_a_draft(self):
+		from frappe.utils import add_days
+
+		res = self._phone(flt(self.drug.actual_qty) + 50, event_date=add_days(today(), -3))
+		self.assertTrue(res.get("error"), res)
+		self.assertNotIn("stock_drafts", res)
+
+	def test_a_vet_fee_is_kept_on_the_first_event_and_reported_unposted(self):
+		je_before = frappe.db.count("Journal Entry")
+		res = self._phone(1, vet_fee=2500)
+		self.assertFalse(res.get("error"), res.get("error"))
+		self.assertEqual(res["vet_fee"]["amount"], 2500)
+		self.assertFalse(res["vet_fee"]["posted"])
+		self.assertTrue(res["vet_fee"]["reason"])
+		self.assertIn("2,500", frappe.db.get_value("Livestock Event", res["name"], "remarks"))
+		# Nothing is posted client-side or invented server-side.
+		self.assertEqual(frappe.db.count("Journal Entry"), je_before)
+
+	def test_no_fee_means_no_fee_in_the_answer(self):
+		res = self._phone(1)
+		self.assertIsNone(res["vet_fee"])

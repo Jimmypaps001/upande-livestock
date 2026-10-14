@@ -3,6 +3,7 @@ against one animal or a whole herd, issuing any drugs it consumes."""
 
 import frappe
 from frappe import _
+from frappe.utils import flt, fmt_money
 
 from upande_livestock.serverscripts.common.envelope import as_dict, guard, run
 from upande_livestock.serverscripts.common.events import new_livestock_event
@@ -11,6 +12,20 @@ from upande_livestock.serverscripts.common import cost_center as livestock_cost_
 from upande_livestock.serverscripts.common import event_items
 from upande_livestock.serverscripts.common import stock as livestock_stock
 from upande_livestock.serverscripts.husbandry._shared import HUSBANDRY_TYPES, _clean_drug_rows, _refuse_foreign_items, _husbandry_targets, _type_consumes_drugs
+
+
+# The vet fee has no posting yet, and that is deliberate. A Journal Entry needs
+# two sides: Livestock Settings names the debit (custom_vet_expense_account) but
+# nothing names the credit. custom_default_credit_account looks like it, yet the
+# milk revenue entry DEBITS it (milk_recording.py) and the demo seeds it with the
+# milk-unbilled receivable — crediting a vet bill to it would be wrong. Until the
+# farm adds a "Vet Fee Credit Account" setting the amount is kept on the record
+# and reported back as not posted, never guessed at.
+VET_FEE_UNPOSTED = "No credit account is set for vet fees in Livestock Settings, so no Journal Entry was posted."
+
+
+def _vet_fee_note(amount):
+	return _("Vet fee for the round: {0} (not yet posted to the books)").format(fmt_money(amount, currency="KES"))
 
 
 @frappe.whitelist()
@@ -25,6 +40,10 @@ def create_husbandry_event(payload):
 	A round recorded today that the store cannot cover is still recorded; its
 	issue is saved as a draft and waits on the Transactions page (see
 	common/stock).
+
+	`vet_fee` (the round's total, optional) is recorded on the first event's
+	remarks and answered as `vet_fee` — see VET_FEE_UNPOSTED for why it does not
+	reach the books yet.
 	"""
 
 	def go():
@@ -82,9 +101,15 @@ def create_husbandry_event(payload):
 				herd=livestock_cost_center.herd_of(animals),
 			)
 
+		# The fee is for the whole round, so it is written once — on the first
+		# event — rather than on every cow, where a report summing remarks would
+		# count it 119 times.
+		vet_fee = flt(d.get("vet_fee"))
 		created = []
 		for animal in animals:
 			doc = new_livestock_event(dict(d, animal=animal), event_type)
+			if vet_fee > 0 and not created:
+				doc.remarks = "\n".join(x for x in (doc.remarks, _vet_fee_note(vet_fee)) if x)
 			for drug in drugs:
 				doc.append("drug_issues", dict(drug, stock_entry_ref=stock_entry))
 			if stock_entry:
@@ -104,6 +129,11 @@ def create_husbandry_event(payload):
 			"stock_entry": stock_entry or "",
 			"drugs_issued": len(drugs),
 			"qty_per_animal": sum(drug["qty"] for drug in drugs),
+			"vet_fee": (
+				{"amount": vet_fee, "journal_entry": "", "posted": False, "reason": VET_FEE_UNPOSTED}
+				if vet_fee > 0
+				else None
+			),
 		}
 
 	return run(go, "livestock create_husbandry_event failed")
