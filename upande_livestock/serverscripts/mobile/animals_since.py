@@ -31,6 +31,7 @@ Read-guarded on Animal.
 import frappe
 from frappe.utils import now
 
+from upande_livestock.serverscripts.common import animal_stage
 from upande_livestock.serverscripts.common.choices import RETIRED_STATUSES
 from upande_livestock.serverscripts.common.envelope import guard_read, run
 
@@ -44,17 +45,24 @@ def animals_since(since=None):
 
 		active = [["status", "not in", RETIRED_STATUSES], ["disabled", "=", 0]]
 		filters = list(active)
+		or_filters = None
 		if since_ts:
-			filters.append(["modified", ">", since_ts])
+			moved = sorted(animal_stage.moved_since(since_ts))
+			or_filters = [["modified", ">", since_ts]]
+			if moved:
+				or_filters.append(["name", "in", moved])
 		rows = frappe.get_all(
 			"Animal",
 			filters=filters,
-			fields=["name", "tag_number", "burn_name", "sex", "breed", "date_of_birth",
+			or_filters=or_filters,
+			fields=["name", "disabled", "tag_number", "burn_name", "sex", "breed", "date_of_birth",
 			        "current_herd", "status", "repro_status", "image", "dam",
 			        "sire_name", "parity", "last_weight_kg", "modified"],
 			order_by="tag_number asc",
 			limit_page_length=0,
 		)
+
+		stages = animal_stage.stages_for(rows)
 
 		removed = []
 		if since_ts:
@@ -87,6 +95,7 @@ def animals_since(since=None):
 					"dob": r.date_of_birth,
 					"herd": r.current_herd,
 					"status": r.status,
+					"stage": stages[r.name],
 					"repro_status": r.repro_status,
 					"image": r.image,
 					"dam": r.dam,
