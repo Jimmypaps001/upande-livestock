@@ -4,7 +4,7 @@ Same Work Order route as the TMR, and the same two guards."""
 
 import frappe
 
-from upande_livestock.serverscripts.common.envelope import guard, run
+from upande_livestock.serverscripts.common.envelope import guard_stock, run
 from upande_livestock.serverscripts.feeding import _engine as feeding
 
 
@@ -14,8 +14,7 @@ def manufacture_concentrate(
 	source_warehouse=None, target_warehouse=None, source_by_item=None, batch_by_item=None,
 ):
 	def go():
-		guard("Work Order")
-		guard("Stock Entry")
+		guard_stock("Work Order", "Stock Entry")
 		res = feeding.manufacture_concentrate(
 			item_code, qty=qty, bom_no=bom_no, allow_shortage=allow_shortage,
 			source_warehouse=source_warehouse, target_warehouse=target_warehouse,

@@ -1135,6 +1135,26 @@
    "share": 1,
    "submit": 1,
    "write": 1
+  },
+  {
+   "read": 1,
+   "role": "Livestock Milker"
+  },
+  {
+   "read": 1,
+   "role": "Livestock Attendant"
+  },
+  {
+   "read": 1,
+   "role": "Livestock Breeder"
+  },
+  {
+   "read": 1,
+   "role": "Livestock Vet"
+  },
+  {
+   "read": 1,
+   "role": "Livestock Stores"
   }
  ],
  "row_format": "Dynamic",

@@ -85,7 +85,12 @@ class TestNamespaceLivestockRoles(IntegrationTestCase):
 
 	def test_each_role_is_confined_to_its_job(self):
 		"""A milker cannot treat a cow; a vet cannot dispose of one."""
-		self.assertNotIn("Livestock Milker", _roles_on("Livestock Health Case"))
+		# Read-only on a health file is allowed (the milk-safe date, and the
+		# options every record screen loads); treating is not.
+		perms = {p.role: p for p in frappe.get_meta("Livestock Health Case").permissions}
+		for role in ("Livestock Milker", "Livestock Attendant", "Livestock Breeder", "Livestock Stores"):
+			for power in ("write", "create", "submit", "cancel", "delete"):
+				self.assertFalse(perms[role].get(power), f"{role} can {power} a health case")
 		self.assertNotIn("Livestock Attendant", _roles_on("Livestock Disposal"))
 		self.assertNotIn("Livestock Attendant", _roles_on("Livestock Diagnosis"))
 		self.assertNotIn("Livestock Breeder", _roles_on("Milk Recording"))

@@ -7,7 +7,7 @@ import frappe
 from frappe import _
 from frappe.utils import add_days, flt, today
 
-from upande_livestock.serverscripts.common.envelope import as_dict, guard, run
+from upande_livestock.serverscripts.common.envelope import as_dict, guard_stock, run
 from upande_livestock.serverscripts.feeding.feed_procurement import _feed_store
 
 
@@ -32,7 +32,7 @@ def create_feed_request(payload):
 	"""
 
 	def go():
-		guard("Material Request")
+		guard_stock("Material Request")
 		d = as_dict(payload)
 		rows = _clean(d.get("items"))
 		if not rows:
@@ -82,7 +82,8 @@ def create_feed_request(payload):
 				# keeper reading the request would use, not "livestock feed".
 				line.custom_purpose = _("Herd feed — {0} days of cover").format(
 					d.get("target_days") or "")
-		doc.insert()
+		# The role check above is the gate; Material Request is ERPNext's.
+		doc.insert(ignore_permissions=True)
 
 		return {
 			"ok": True,
