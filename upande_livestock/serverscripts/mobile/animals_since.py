@@ -51,7 +51,7 @@ def animals_since(since=None):
 			filters=filters,
 			fields=["name", "tag_number", "burn_name", "sex", "breed", "date_of_birth",
 			        "current_herd", "status", "repro_status", "image", "dam",
-			        "sire_name", "modified"],
+			        "sire_name", "parity", "last_weight_kg", "modified"],
 			order_by="tag_number asc",
 			limit_page_length=0,
 		)
@@ -91,6 +91,8 @@ def animals_since(since=None):
 					"image": r.image,
 					"dam": r.dam,
 					"sire": r.sire_name,
+					"parity": r.parity,
+					"last_weight_kg": r.last_weight_kg,
 					"modified": r.modified,
 				}
 				for r in rows
