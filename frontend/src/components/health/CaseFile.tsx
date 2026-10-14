@@ -149,7 +149,7 @@ export function CaseFile({
                 c.confirmed_diagnosis ? `confirmed ${c.confirmed_diagnosis}` : null,
                 c.severity ? c.severity.toLowerCase() : null,
                 c.body_systems || null,
-                c.vet_called ? `vet ${c.vet_name || "called"}` : "no vet called",
+                c.vet ? `vet ${c.vet_name || c.vet}` : "no vet",
               ]
                 .filter(Boolean)
                 .join(" · ")}

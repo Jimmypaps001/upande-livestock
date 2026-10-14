@@ -38,7 +38,9 @@ import {
   type Verdict,
 } from "@/lib/culling";
 import { OperatorField } from "@/components/events/OperatorField";
+import { VetField } from "@/components/events/VetField";
 import { useOperator } from "@/lib/operator";
+import { useVetChoice } from "@/lib/vets";
 import { cn, fmt, todayISO} from "@/lib/utils";
 
 /**
@@ -480,6 +482,7 @@ function CaseChain({
   act: (fn: () => Promise<{ error?: string } | Record<string, unknown>>, said: string) => void;
   who: ReturnType<typeof useOperator>;
 }) {
+  const { vets, vet, setVet } = useVetChoice();
   const verdicts: readonly Verdict[] =
     c.flow === "Sale" ? (["Fit for sale", "Not fit for sale"] as const) : VERDICTS;
 
@@ -514,6 +517,7 @@ function CaseChain({
             <Label htmlFor="vet-notes">What the vet found</Label>
             <Textarea id="vet-notes" value={notes} onChange={(e) => setNotes(e.target.value)} />
           </div>
+          <VetField vets={vets} value={vet} onChange={setVet} label="Vet who saw her" />
           <div className="flex flex-wrap gap-2">
             {verdicts.map((v) => (
               <Button
@@ -522,7 +526,7 @@ function CaseChain({
                 disabled={busy}
                 onClick={() =>
                   act(
-                    () => vetVerdict(c.name, v, notes),
+                    () => vetVerdict(c.name, v, notes, vet),
                     v === "Not fit for sale"
                       ? "The case is closed — she is not fit to sell."
                       : "Recorded. The case has moved on.",

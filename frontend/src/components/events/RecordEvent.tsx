@@ -18,12 +18,14 @@ import { Label } from "@/components/ui/label";
 import { Picker, type PickerOption } from "@/components/ui/picker";
 import { Textarea } from "@/components/ui/textarea";
 import { OperatorField } from "@/components/events/OperatorField";
+import { VetField } from "@/components/events/VetField";
 import { StockPicker, blankRow, type ItemRow } from "@/components/stock/StockPicker";
 import { EventDate } from "@/components/EventDate";
 import { useToast } from "@/components/Toast";
 import { useSaveShortcut } from "@/lib/use-save-shortcut";
 import { isError, type Envelope } from "@/lib/frappe";
 import { useOperator } from "@/lib/operator";
+import { useVetChoice } from "@/lib/vets";
 import type { AnimalChoice, StockChoice } from "@/lib/events";
 import { useBatchPlans } from "@/lib/use-batch-plans";
 import { cn, todayISO } from "@/lib/utils";
@@ -122,6 +124,9 @@ export interface RecordEventProps<O> {
    *  Stock) the items table appears on its own, offering the type's in-stock
    *  items from the options payload's `items_by_event` — no per-page wiring. */
   eventType?: string;
+  /** Offer the vet picker. For events a vet does: check-ups, pregnancy
+   *  diagnosis, drying off. The server applies the same default. */
+  withVet?: boolean;
 }
 
 export function RecordEvent<O>({
@@ -141,6 +146,7 @@ export function RecordEvent<O>({
   operatorOf,
   itemsOf: itemsOfProp,
   eventType,
+  withVet,
 }: RecordEventProps<O>) {
   const itemsOf =
     itemsOfProp ??
@@ -160,6 +166,7 @@ export function RecordEvent<O>({
   const [busy, setBusy] = useState(false);
   const toast = useToast();
   const who = useOperator(options && operatorOf ? operatorOf(options) : undefined);
+  const { vets, vet, setVet } = useVetChoice();
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -244,6 +251,7 @@ export function RecordEvent<O>({
     setBusy(true);
     const payload: Record<string, unknown> = { animal: picked };
     if (who.value) payload.operator = who.value;
+    if (withVet && vet) payload.vet = vet;
     for (const f of fields) {
       const v = values[f.name];
       if (v === undefined || v === "") {
@@ -365,6 +373,7 @@ export function RecordEvent<O>({
                   />
                 ))}
               </div>
+              {withVet && <VetField vets={vets} value={vet} onChange={setVet} />}
               {itemsOf && options && (
                 <StockPicker
                   choices={itemsOf(options)}

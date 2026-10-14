@@ -27,7 +27,7 @@ const OPEN_CASE = {
   duration_days: null,
   production_loss_kg: null,
   total_treatment_cost: null,
-  vet_called: 0,
+  vet: null,
   vet_name: null,
   days_open: 11,
   treatments: 4,

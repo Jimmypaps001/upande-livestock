@@ -3,6 +3,7 @@ import { ShieldCheck, Skull } from "lucide-react";
 import { AnimalSearch } from "@/components/animals/AnimalSearch";
 import { Notice } from "@/components/feeding/Notice";
 import { OperatorField } from "@/components/events/OperatorField";
+import { VetField } from "@/components/events/VetField";
 import { DatePicker } from "@/components/DatePicker";
 import { EventDate } from "@/components/EventDate";
 import { Button } from "@/components/ui/button";
@@ -12,6 +13,7 @@ import { Picker } from "@/components/ui/picker";
 import { Textarea } from "@/components/ui/textarea";
 import { isError } from "@/lib/frappe";
 import { useOperator } from "@/lib/operator";
+import { useVetChoice } from "@/lib/vets";
 import {
   DEATH_CAUSES,
   FLOWS,
@@ -50,6 +52,7 @@ export function RaiseCase({
   preselect?: string | null;
 }) {
   const [animal, setAnimal] = useState<string | null>(preselect ?? null);
+  const { vets, vet, setVet } = useVetChoice();
   const [flow, setFlow] = useState<Flow>("Sale");
   const [reason, setReason] = useState("");
   const [cause, setCause] = useState<string>(DEATH_CAUSES[0]);
@@ -100,6 +103,7 @@ export function RaiseCase({
             remarks: reason || undefined,
             death_date: when,
             operator: who.value,
+            vet: vet || undefined,
           })
         : await raiseCull({
             animal,
@@ -319,6 +323,7 @@ export function RaiseCase({
       </div>
 
       {failure && <Notice tone="error">{failure}</Notice>}
+      {flow === "Mortality" && <VetField vets={vets} value={vet} onChange={setVet} label="Vet who attended" />}
       {flow === "Mortality" && who.mustAsk && (
         <OperatorField operator={who.operator} onChange={who.setOperator} />
       )}
