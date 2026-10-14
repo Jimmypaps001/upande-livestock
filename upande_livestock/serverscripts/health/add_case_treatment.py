@@ -4,6 +4,7 @@ import frappe
 from frappe import _
 
 from upande_livestock.serverscripts.common.envelope import as_dict, guard, run
+from upande_livestock.serverscripts.common.vet import resolve_vet
 from upande_livestock.serverscripts.common.health_case import TREATING_STATUSES, treatment_row
 
 
@@ -36,6 +37,10 @@ def add_case_treatment(payload):
 		if doc.case_status not in TREATING_STATUSES:
 			frappe.throw(_("Case {0} is {1}; open a new case to treat her again.").format(
 				doc.name, doc.case_status))
+
+		vet = resolve_vet(d)
+		if vet and not doc.vet:
+			doc.vet = vet
 
 		before = {t.name for t in doc.treatments or []}
 		for t in treatments:

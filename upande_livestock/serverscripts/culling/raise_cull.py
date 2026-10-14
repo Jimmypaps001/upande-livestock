@@ -9,6 +9,7 @@ from frappe.utils import flt
 
 from upande_livestock.serverscripts.common import backdate, culling
 from upande_livestock.serverscripts.common.envelope import as_dict, guard, run
+from upande_livestock.serverscripts.common.vet import resolve_vet
 from upande_livestock.serverscripts.culling.cull_evidence import cull_evidence
 
 
@@ -73,6 +74,7 @@ def raise_cull(payload):
 		doc.custom_death_cause = d.get("death_cause") or None
 		doc.book_value = flt(evidence.get("book_value"))
 		doc.reason_details = d.get("reason") or None
+		doc.vet = resolve_vet(d)
 		if flow == culling.SALE:
 			doc.customer = d.get("customer") or None
 			doc.buyer_name = d.get("buyer_name") or None

@@ -8,6 +8,7 @@ from frappe import _
 from frappe.utils import today
 
 from upande_livestock.serverscripts.common.envelope import as_dict, guard, run
+from upande_livestock.serverscripts.common.vet import resolve_vet
 from upande_livestock.serverscripts.common.health_case import (
 	TREATING_STATUSES,
 	open_case_for,
@@ -90,6 +91,12 @@ def treat_animal(payload):
 				_("{0} has no open file. Say what is wrong with her and a new one will be "
 				  "opened for this treatment.").format(animal)
 			)
+
+		# The vet who attended: named, or the signed-in vet. A file already naming
+		# a vet keeps them; a vet seeing a case a herder opened is put on it.
+		vet = resolve_vet(d)
+		if vet and not case.vet:
+			case.vet = vet
 
 		before = {t.name for t in case.treatments or []}
 		for t in rows:

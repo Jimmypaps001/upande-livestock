@@ -9,6 +9,7 @@ from frappe.utils import today
 
 from upande_livestock.serverscripts.common import culling
 from upande_livestock.serverscripts.common.envelope import as_dict, guard_write, run
+from upande_livestock.serverscripts.common.vet import resolve_vet
 
 VERDICTS = ("Fit for sale", "Not fit for sale", "Recommends disposal")
 
@@ -40,11 +41,18 @@ def vet_verdict(payload):
 		doc = frappe.get_doc("Livestock Disposal", name)
 		culling.assert_at(doc, {culling.AWAITING_VET}, "seen by a vet")
 
+		vet = resolve_vet(d)
+		notes = d.get("notes") or None
+		if not vet:
+			notes = "\n".join(x for x in (notes, _("Seen by: {0}").format(frappe.session.user)) if x)
+
 		nxt = culling.next_after_vet(doc.custom_cull_flow, verdict)
 		doc.db_set({
 			"custom_vet_verdict": verdict,
-			"custom_vet_notes": d.get("notes") or None,
-			"custom_vet_by": frappe.session.user,
+			"custom_vet_notes": notes,
+			# The vet's record when this user is one; a vet role with no record
+			# yet is named in the notes so the verdict still says who gave it.
+			"vet": vet,
 			"custom_vet_on": today(),
 			"custom_review_status": nxt,
 			"custom_rejected_reason": (

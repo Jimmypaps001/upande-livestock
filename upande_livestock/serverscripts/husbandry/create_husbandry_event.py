@@ -3,30 +3,21 @@ against one animal or a whole herd, issuing any drugs it consumes."""
 
 import frappe
 from frappe import _
-from frappe.utils import flt, fmt_money
+from frappe.utils import flt
 
 from upande_livestock.serverscripts.common.envelope import as_dict, guard, run
 from upande_livestock.serverscripts.common.events import new_livestock_event
 from upande_livestock.serverscripts.common import backdate
+from upande_livestock.serverscripts.common import vet_fee as vet_fees
+from upande_livestock.serverscripts.common.company import company_or_throw
+from upande_livestock.serverscripts.common.vet import resolve_vet
 from upande_livestock.serverscripts.common import cost_center as livestock_cost_center
 from upande_livestock.serverscripts.common import event_items
 from upande_livestock.serverscripts.common import stock as livestock_stock
 from upande_livestock.serverscripts.husbandry._shared import HUSBANDRY_TYPES, _clean_drug_rows, _refuse_foreign_items, _husbandry_targets, _type_consumes_drugs
 
 
-# The vet fee has no posting yet, and that is deliberate. A Journal Entry needs
-# two sides: Livestock Settings names the debit (custom_vet_expense_account) but
-# nothing names the credit. custom_default_credit_account looks like it, yet the
-# milk revenue entry DEBITS it (milk_recording.py) and the demo seeds it with the
-# milk-unbilled receivable — crediting a vet bill to it would be wrong. Until the
-# farm adds a "Vet Fee Credit Account" setting the amount is kept on the record
-# and reported back as not posted, never guessed at.
-VET_FEE_UNPOSTED = "No credit account is set for vet fees in Livestock Settings, so no Journal Entry was posted."
-
-
-def _vet_fee_note(amount):
-	return _("Vet fee for the round: {0} (not yet posted to the books)").format(fmt_money(amount, currency="KES"))
-
+# Posting the vet fee is common/vet_fee's job; this file only asks it to.
 
 @frappe.whitelist()
 def create_husbandry_event(payload):
@@ -41,9 +32,12 @@ def create_husbandry_event(payload):
 	issue is saved as a draft and waits on the Transactions page (see
 	common/stock).
 
-	`vet_fee` (the round's total, optional) is recorded on the first event's
-	remarks and answered as `vet_fee` — see VET_FEE_UNPOSTED for why it does not
-	reach the books yet.
+	`vet` is the Livestock Vet who did the round (default: the signed-in user's
+	vet record). `vet_fee` (the round's total, optional) is recorded on the first
+	event's remarks and answered as `vet_fee`. An external vet with a Supplier is
+	owed it, and it is posted as a Journal Entry (see common/vet_fee); an internal
+	vet is refused a fee; with no supplier or no expense account it is recorded
+	and reported as not posted, with the reason.
 	"""
 
 	def go():
@@ -56,6 +50,10 @@ def create_husbandry_event(payload):
 					event_type or _("(none)"), ", ".join(HUSBANDRY_TYPES)
 				)
 			)
+
+		vet = resolve_vet(d)
+		vet_fee = flt(d.get("vet_fee"))
+		vet_fees.refuse_internal(vet, vet_fee)
 
 		animals = _husbandry_targets(d)
 		consumes = _type_consumes_drugs(event_type)
@@ -104,12 +102,17 @@ def create_husbandry_event(payload):
 		# The fee is for the whole round, so it is written once — on the first
 		# event — rather than on every cow, where a report summing remarks would
 		# count it 119 times.
-		vet_fee = flt(d.get("vet_fee"))
+		fee = None
+		if vet_fee > 0:
+			fee = vet_fees.post_vet_fee(
+				vet, vet_fee, company_or_throw(d.get("company")),
+				posting_date=_date, animals=animals, backdated=is_backdated, what=event_type,
+			)
 		created = []
 		for animal in animals:
 			doc = new_livestock_event(dict(d, animal=animal), event_type)
 			if vet_fee > 0 and not created:
-				doc.remarks = "\n".join(x for x in (doc.remarks, _vet_fee_note(vet_fee)) if x)
+				doc.remarks = "\n".join(x for x in (doc.remarks, vet_fees.fee_note(vet_fee, fee)) if x)
 			for drug in drugs:
 				doc.append("drug_issues", dict(drug, stock_entry_ref=stock_entry))
 			if stock_entry:
@@ -129,11 +132,8 @@ def create_husbandry_event(payload):
 			"stock_entry": stock_entry or "",
 			"drugs_issued": len(drugs),
 			"qty_per_animal": sum(drug["qty"] for drug in drugs),
-			"vet_fee": (
-				{"amount": vet_fee, "journal_entry": "", "posted": False, "reason": VET_FEE_UNPOSTED}
-				if vet_fee > 0
-				else None
-			),
+			"vet": vet,
+			"vet_fee": fee,
 		}
 
 	return run(go, "livestock create_husbandry_event failed")

@@ -19,6 +19,9 @@ from upande_livestock.install import ensure_livestock_event_types
 # create the Animal and Employee values they need directly, so all of these are
 # safe to drop from the auto-generated dependency walk.
 IGNORE_TEST_RECORD_DEPENDENCIES = [
+	# Livestock Vet links Employee, User and Supplier, which walk into the
+	# Department fixture this site lacks. Tests that need a vet make one.
+	"Livestock Vet",
 	"Animal",
 	"Herds",
 	"Employee",

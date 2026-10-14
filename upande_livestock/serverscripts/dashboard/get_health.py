@@ -26,7 +26,7 @@ def get_health() -> dict:
 				"severity",
 				"provisional_diagnosis",
 				"confirmed_diagnosis",
-				"vet_called",
+				"vet",
 				"is_zoonotic",
 				"is_notifiable",
 				"custom_is_backdated",
@@ -42,6 +42,7 @@ def get_health() -> dict:
 		for r in rows:
 			r["herd_label"] = herds.get(r.get("current_herd") or "", r.get("current_herd") or "")
 			r["opened_date"] = str(r["opened_date"]) if r.get("opened_date") else ""
+			r["vet_called"] = bool(r.get("vet"))  # for a client built before vets were records
 			r["diagnosis"] = r.get("confirmed_diagnosis") or r.get("provisional_diagnosis") or ""
 		summary = {
 			"total": len(rows),

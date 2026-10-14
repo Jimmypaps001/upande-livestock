@@ -59,6 +59,7 @@ def record_mortality(payload):
 			"death_cause": cause,
 			"disposal_date": d.get("death_date") or d.get("disposal_date"),
 			"reason": d.get("remarks"),
+			"vet": d.get("vet"),
 		})
 		if not raised.get("ok"):
 			return raised

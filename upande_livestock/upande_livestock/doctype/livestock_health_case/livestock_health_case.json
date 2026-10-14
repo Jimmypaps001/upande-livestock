@@ -26,8 +26,7 @@
   "confirmed_diagnosis",
   "severity",
   "sb_vet",
-  "vet_called",
-  "vet_name",
+  "vet",
   "cb_vet",
   "tab_treatment",
   "sb_treatlog",
@@ -185,18 +184,14 @@
    "label": "Veterinary Involvement"
   },
   {
-   "default": "0",
-   "fieldname": "vet_called",
-   "fieldtype": "Check",
-   "label": "Vet Called",
-   "allow_on_submit": 1
-  },
-  {
-   "depends_on": "eval:doc.vet_called == 1",
-   "fieldname": "vet_name",
-   "fieldtype": "Data",
-   "label": "Vet Name",
-   "allow_on_submit": 1
+   "allow_on_submit": 1,
+   "description": "The vet who attended the case. Chosen from the farm's vets, not typed.",
+   "fieldname": "vet",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "Vet",
+   "options": "Livestock Vet",
+   "search_index": 1
   },
   {
    "fieldname": "cb_vet",

@@ -13,6 +13,7 @@
   "event_type",
   "event_date",
   "operator",
+  "vet",
   "remarks",
   "reference_doctype",
   "reference_name",
@@ -135,6 +136,16 @@
    "label": "Operator(technician)",
    "mandatory_depends_on": "eval:!doc.reference_doctype",
    "options": "Employee"
+  },
+  {
+   "depends_on": "eval:['Treatment','Check Up','Vaccination','Deworming','Hoof Trimming','Dehorning','Pregnancy Diagnosis','Drying Off'].includes(doc.event_type)",
+   "description": "The vet who did this. Chosen from the farm's vets.",
+   "fieldname": "vet",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "Vet",
+   "options": "Livestock Vet",
+   "search_index": 1
   },
   {
    "fieldname": "remarks",

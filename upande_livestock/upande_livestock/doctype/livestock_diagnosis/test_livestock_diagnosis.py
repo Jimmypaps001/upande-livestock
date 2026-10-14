@@ -9,6 +9,9 @@ from frappe.tests import IntegrationTestCase
 # Livestock Diagnosis's own test_livestock_event.py sibling hit the same wall;
 # mirror its fix and build the fixtures we need by hand in setUp instead.
 IGNORE_TEST_RECORD_DEPENDENCIES = [
+	# Livestock Vet links Employee, User and Supplier, which walk into the
+	# Department fixture this site lacks. Tests that need a vet make one.
+	"Livestock Vet",
 	"Animal",
 	"Herds",
 	"Company",

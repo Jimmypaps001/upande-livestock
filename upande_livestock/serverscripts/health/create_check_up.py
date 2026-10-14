@@ -9,6 +9,7 @@ from upande_livestock.serverscripts.common.employee import employee_or_throw
 from upande_livestock.serverscripts.husbandry._shared import _clean_drug_rows
 from upande_livestock.serverscripts.common.envelope import as_dict, guard, run
 from upande_livestock.serverscripts.common import backdate
+from upande_livestock.serverscripts.common.vet import resolve_vet
 from upande_livestock.serverscripts.common import event_items
 from upande_livestock.serverscripts.common.health_case import open_case_for, open_file
 
@@ -58,6 +59,7 @@ def create_check_up(payload):
 		doc.diagnosis_date = diagnosis_date
 		backdate.stamp(doc, is_backdated)
 		doc.operator = employee_or_throw(d.get("operator"))
+		doc.vet = resolve_vet(d)
 		doc.reason_for_check = d.get("reason_for_check")
 		doc.appearance = d.get("appearance") or None
 		doc.hydration = d.get("hydration") or None
@@ -112,6 +114,7 @@ def create_check_up(payload):
 					"company": doc.company,
 					"opened_date": doc.diagnosis_date,
 					"opened_by": doc.operator,
+					"vet": doc.vet,
 					"presenting_symptoms": doc.reason_for_check or doc.action_notes
 					                       or _("Escalated from a check-up."),
 					"provisional_diagnosis": doc.suggested_disease,

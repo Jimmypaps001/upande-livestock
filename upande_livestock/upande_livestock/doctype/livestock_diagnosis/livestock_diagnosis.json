@@ -16,6 +16,7 @@
   "cb_identity",
   "diagnosis_date",
   "operator",
+  "vet",
   "reason_for_check",
   "tab_vitals",
   "sb_vitals",
@@ -119,6 +120,15 @@
    "label": "Operator",
    "options": "Employee",
    "reqd": 1
+  },
+  {
+   "description": "The vet who did the check-up, if one did.",
+   "fieldname": "vet",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "Vet",
+   "options": "Livestock Vet",
+   "search_index": 1
   },
   {
    "description": "Why the animal was checked. e.g. \"Off feed\", \"Limping\", \"Routine\".",

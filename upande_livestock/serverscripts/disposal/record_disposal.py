@@ -6,6 +6,7 @@ from frappe.utils import flt
 
 from upande_livestock.serverscripts.common import backdate
 from upande_livestock.serverscripts.common.envelope import as_dict, guard, run
+from upande_livestock.serverscripts.common.vet import resolve_vet
 
 
 @frappe.whitelist()
@@ -40,6 +41,7 @@ def record_disposal(payload):
 		doc.gift_destination = d.get("gift_destination")
 		doc.reason_details = d.get("reason_details")
 		doc.witness = d.get("witness")
+		doc.vet = resolve_vet(d)
 		doc.insert()
 		doc.submit()
 		doc.reload()
