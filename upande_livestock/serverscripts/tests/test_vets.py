@@ -19,6 +19,8 @@ from upande_livestock.serverscripts.health.create_health_case import create_heal
 from upande_livestock.serverscripts.husbandry.create_husbandry_event import create_husbandry_event
 from upande_livestock.serverscripts.breeding.create_drying_off_event import create_drying_off_event
 from upande_livestock.serverscripts.people.vet_options import vet_options
+from upande_livestock.serverscripts.health.treat_animal import treat_animal
+from upande_livestock.serverscripts.tests.timings_utils import set_setting
 from upande_livestock.serverscripts.tests.test_operations import _employee, _make_cow, _purge, _purge_events_for
 from upande_livestock.upande_livestock.doctype.livestock_vet.livestock_vet import get_current_vet, vet_for_user
 
@@ -64,6 +66,11 @@ class VetCase(IntegrationTestCase):
 		self.made.append(doc.name)
 		return doc
 
+	def _freeze(self, date):
+		original = frappe.db.get_value("Company", self.company, "accounts_frozen_till_date")
+		frappe.db.set_value("Company", self.company, "accounts_frozen_till_date", date)
+		self.addCleanup(lambda: (frappe.db.set_value("Company", self.company, "accounts_frozen_till_date", original), frappe.db.commit()))
+
 	def supplier(self):
 		if not frappe.db.exists("Supplier", SUPPLIER):
 			frappe.get_doc({"doctype": "Supplier", "supplier_name": SUPPLIER, "supplier_group": frappe.db.get_value("Supplier Group", {}, "name")}).insert(ignore_permissions=True)
@@ -85,6 +92,32 @@ class TestTheVetRecord(VetCase):
 		vet = self.internal()
 		with self.assertRaises(frappe.ValidationError):
 			frappe.get_doc({"doctype": "Livestock Vet", "vet_type": "Internal", "employee": vet.employee}).insert(ignore_permissions=True)
+
+	def test_the_vet_link_is_permanent_on_the_server_too(self):
+		"""set_only_once guards the form; an API update must be refused as well."""
+		emp, other = _employees(2)
+		internal = self.internal(emp)
+		internal.employee = other
+		with self.assertRaises(frappe.ValidationError):
+			internal.save(ignore_permissions=True)
+		internal.reload()
+		internal.vet_type = "External"
+		with self.assertRaises(frappe.ValidationError):
+			internal.save(ignore_permissions=True)
+		# Through the document API, as a client would.
+		with self.assertRaises(frappe.ValidationError):
+			frappe.db.set_value("Livestock Vet", internal.name, "vet_type", "External")
+			frappe.get_doc("Livestock Vet", internal.name).save(ignore_permissions=True)
+		frappe.db.rollback()
+		ext = self.external()
+		ext.vet_type = "Internal"
+		ext.employee = emp
+		with self.assertRaises(frappe.ValidationError):
+			ext.save(ignore_permissions=True)
+		# Anything else about them is still editable.
+		internal = frappe.get_doc("Livestock Vet", internal.name)
+		internal.qualification = "BVSc"
+		internal.save(ignore_permissions=True)
 
 	def test_an_internal_vet_needs_an_employee(self):
 		with self.assertRaises(frappe.ValidationError):
@@ -185,10 +218,10 @@ class TestWhereVetLands(VetCase):
 class TestTheVetFee(VetCase):
 	def setUp(self):
 		super().setUp()
+		self.company = default_company()
 		self.cow = _make_cow("ZZ FEE COW")
 		self.addCleanup(_purge, "Animal", self.cow.name)
 		self.addCleanup(_purge_events_for, self.cow.name)
-		self.company = default_company()
 		self.original = frappe.db.get_single_value("Livestock Settings", EXPENSE_FIELD)
 		self.addCleanup(self._restore)
 
@@ -260,6 +293,124 @@ class TestTheVetFee(VetCase):
 		res = self._round(None)
 		self.assertFalse(res["vet_fee"]["posted"])
 		self.assertEqual(res["vet_fee"]["amount"], 1500)
+
+	def test_a_backdated_round_posts_dated_on_the_day_of_the_work(self):
+		set_setting(self, "custom_backdating_open", 1)
+		self._expense()
+		day = add_days(today(), -3)
+		res = self._round(self.external(supplier=self.supplier()), event_date=day)
+		self.assertFalse(res.get("error"), res.get("error"))
+		self.assertTrue(res["vet_fee"]["posted"], res["vet_fee"])
+		je = frappe.get_doc("Journal Entry", res["vet_fee"]["journal_entry"])
+		self.addCleanup(_purge, "Journal Entry", je.name)
+		self.assertEqual(str(je.posting_date), day)
+
+	def test_a_closed_period_is_recorded_not_posted(self):
+		set_setting(self, "custom_backdating_open", 1)
+		self._expense()
+		day = add_days(today(), -3)
+		self._freeze(add_days(today(), -1))
+		before = frappe.db.count("Journal Entry")
+		res = self._round(self.external(supplier=self.supplier()), event_date=day)
+		self.assertFalse(res.get("error"), res.get("error"))
+		self.assertFalse(res["vet_fee"]["posted"])
+		self.assertIn("frozen", res["vet_fee"]["reason"])
+		self.assertEqual(frappe.db.count("Journal Entry"), before)
+
+	def test_a_period_closing_voucher_closes_the_date(self):
+		from upande_livestock.serverscripts.common import vet_fee
+		stub = frappe._dict(name="PCV-ZZ")
+		original = frappe.db.get_value
+		def fake(doctype, *a, **kw):
+			return "PCV-ZZ" if doctype == "Period Closing Voucher" else original(doctype, *a, **kw)
+		frappe.db.get_value = fake
+		try:
+			reason = vet_fee.closed_period_reason(self.company, add_days(today(), -3))
+		finally:
+			frappe.db.get_value = original
+		self.assertIn("PCV-ZZ", reason)
+
+
+class TestTheTreatmentFee(VetCase):
+	def setUp(self):
+		super().setUp()
+		self.animal = "ZZ-TREAT-FEE"
+		self._tidy()
+		_make_cow(self.animal, herd="Lactating group 1")
+		self.who = _employee()
+		self.company = default_company()
+		self.original = frappe.db.get_single_value("Livestock Settings", EXPENSE_FIELD)
+		self.addCleanup(self._tidy)
+		self.addCleanup(lambda: (frappe.db.set_single_value("Livestock Settings", EXPENSE_FIELD, self.original), frappe.db.commit()))
+
+	def _tidy(self):
+		for n in frappe.get_all("Livestock Health Case", filters={"animal": self.animal}, pluck="name"):
+			_purge("Livestock Health Case", n)
+		_purge_events_for(self.animal)
+		if frappe.db.exists("Animal", self.animal):
+			frappe.delete_doc("Animal", self.animal, force=True, ignore_permissions=True)
+		frappe.db.commit()
+
+	def _expense(self):
+		account = frappe.db.get_value("Account", {"company": self.company, "root_type": "Expense", "is_group": 0}, "name")
+		frappe.db.set_single_value("Livestock Settings", EXPENSE_FIELD, account)
+		return account
+
+	def _treat(self, vet, fee=1200, **kw):
+		return treat_animal({
+			"animal": self.animal, "operator": self.who, "open_new": True,
+			"presenting_symptoms": "Swollen quarter", "vet": vet.name if vet else None, "vet_fee": fee,
+			"treatments": [{"drug_name_text": "Oxytet", "qty": 1, "administered_by": self.who}], **kw,
+		})
+
+	def test_an_external_vet_with_a_supplier_posts_a_payable(self):
+		account = self._expense()
+		res = self._treat(self.external(supplier=self.supplier()))
+		self.assertFalse(res.get("error"), res.get("error"))
+		fee = res["vet_fee"]
+		self.assertTrue(fee["posted"], fee)
+		self.addCleanup(_purge, "Journal Entry", fee["journal_entry"])
+		je = frappe.get_doc("Journal Entry", fee["journal_entry"])
+		self.assertEqual(je.docstatus, 1)
+		self.assertEqual(str(je.posting_date), today())
+		debit = [r for r in je.accounts if r.debit_in_account_currency][0]
+		credit = [r for r in je.accounts if r.credit_in_account_currency][0]
+		self.assertEqual((debit.account, debit.debit_in_account_currency), (account, 1200))
+		self.assertEqual((credit.party_type, credit.party), ("Supplier", SUPPLIER))
+
+	def test_a_backdated_treatment_posts_on_its_own_day(self):
+		set_setting(self, "custom_backdating_open", 1)
+		self._expense()
+		day = add_days(today(), -5)
+		res = self._treat(self.external(supplier=self.supplier()), treatment_date=day)
+		self.assertTrue(res["vet_fee"]["posted"], res)
+		self.addCleanup(_purge, "Journal Entry", res["vet_fee"]["journal_entry"])
+		self.assertEqual(str(frappe.db.get_value("Journal Entry", res["vet_fee"]["journal_entry"], "posting_date")), day)
+
+	def test_a_closed_period_is_recorded_not_posted(self):
+		set_setting(self, "custom_backdating_open", 1)
+		self._expense()
+		self._freeze(add_days(today(), -1))
+		res = self._treat(self.external(supplier=self.supplier()), treatment_date=add_days(today(), -5))
+		self.assertTrue(res.get("ok"), res)
+		self.assertFalse(res["vet_fee"]["posted"])
+		self.assertIn("frozen", res["vet_fee"]["reason"])
+
+	def test_an_internal_vet_is_refused_a_fee_and_nothing_is_recorded(self):
+		res = self._treat(self.internal())
+		self.assertIn("no vet fee", res["error"])
+		self.assertFalse(frappe.db.exists("Livestock Health Case", {"animal": self.animal}))
+
+	def test_an_external_vet_without_a_supplier_is_recorded_not_posted(self):
+		self._expense()
+		res = self._treat(self.external())
+		self.assertTrue(res["ok"])
+		self.assertFalse(res["vet_fee"]["posted"])
+		self.assertIn("no Supplier", res["vet_fee"]["reason"])
+
+	def test_no_fee_means_no_fee_in_the_answer(self):
+		res = self._treat(self.external(), fee=0)
+		self.assertIsNone(res["vet_fee"])
 
 
 class TestVetPerformance(VetCase):

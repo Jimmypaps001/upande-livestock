@@ -5,9 +5,11 @@
 
 import frappe
 from frappe import _
-from frappe.utils import today
+from frappe.utils import flt, today
 
+from upande_livestock.serverscripts.common.company import company_or_throw
 from upande_livestock.serverscripts.common.envelope import as_dict, guard, run
+from upande_livestock.serverscripts.common import vet_fee as vet_fees
 from upande_livestock.serverscripts.common.vet import resolve_vet
 from upande_livestock.serverscripts.common.health_case import (
 	TREATING_STATUSES,
@@ -38,6 +40,11 @@ def treat_animal(payload):
 	answer says which file it went into and whether that file is new, so the
 	person at the crush can see they have started a fresh one rather than
 	writing into a file from last season.
+
+	`vet_fee` (optional) follows the same rules as a husbandry round's (see
+	common/vet_fee): an external vet with a Supplier is owed it and it is posted
+	as a Journal Entry dated the treatment's day; an internal vet is refused a
+	fee; otherwise it is recorded and answered as not posted, with the reason.
 	"""
 
 	def go():
@@ -48,6 +55,10 @@ def treat_animal(payload):
 			frappe.throw(_("Select an animal."))
 		if not frappe.db.exists("Animal", animal):
 			frappe.throw(_("{0} is not an animal on this farm.").format(animal))
+
+		vet_fee = flt(d.get("vet_fee"))
+		vet = resolve_vet(d)
+		vet_fees.refuse_internal(vet, vet_fee)
 
 		rows = [
 			t for t in (d.get("treatments") or [])
@@ -94,7 +105,6 @@ def treat_animal(payload):
 
 		# The vet who attended: named, or the signed-in vet. A file already naming
 		# a vet keeps them; a vet seeing a case a herder opened is put on it.
-		vet = resolve_vet(d)
 		if vet and not case.vet:
 			case.vet = vet
 
@@ -109,6 +119,15 @@ def treat_animal(payload):
 		case.save()
 		case.reload()
 
+		fee = None
+		if vet_fee > 0:
+			on = d.get("treatment_date") or d.get("event_date") or today()
+			fee = vet_fees.post_vet_fee(
+				vet, vet_fee, company_or_throw(d.get("company")),
+				posting_date=on, animals=[animal], what=_("treatment"),
+			)
+			case.add_comment("Info", vet_fees.fee_note(vet_fee, fee))
+
 		added = [t for t in case.treatments or [] if t.name not in before]
 		return {
 			"ok": True,
@@ -119,6 +138,8 @@ def treat_animal(payload):
 			"added": len(added),
 			"treatments": len(case.treatments or []),
 			"on": d.get("treatment_date") or today(),
+			"vet": vet,
+			"vet_fee": fee,
 			"stock_entry": (added[0].stock_entry_ref if added else "") or "",
 		}
 

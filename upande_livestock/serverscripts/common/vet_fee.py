@@ -11,7 +11,10 @@ reported back as not posted, with the reason:
 * no vet named, or an external vet with no Supplier: nobody to owe it to;
 * no expense account in Livestock Settings, or no default payable account on
   the company: nothing to post it to;
-* a backdated round: the ledger is not rewritten for a visit months ago.
+* the visit's date falls in a closed accounting period: the books for that
+  period are shut, so there is nowhere to post it.
+
+A fee on a backdated round or treatment still posts, dated the day of the work.
 
 An INTERNAL vet is refused. A farm employee is paid by payroll, and a fee for
 them would be a second payment for the same hours.
@@ -19,7 +22,7 @@ them would be a second payment for the same hours.
 
 import frappe
 from frappe import _
-from frappe.utils import flt, fmt_money, today
+from frappe.utils import flt, fmt_money, getdate, today
 
 from upande_livestock.serverscripts.common import cost_center as livestock_cost_center
 
@@ -42,7 +45,46 @@ def refuse_internal(vet, fee):
 		)
 
 
-def post_vet_fee(vet, amount, company, posting_date=None, animals=None, backdated=False, what=None):
+def closed_period_reason(company, posting_date):
+	"""Why `posting_date` cannot take a Journal Entry for `company`, or None.
+
+	Three ways the books can be shut: the accounts frozen date in Accounts
+	Settings, a submitted Period Closing Voucher covering the date, or an
+	Accounting Period that has closed Journal Entries.
+	"""
+	date = getdate(posting_date)
+	# Company.accounts_frozen_till_date on v16; Accounts Settings.acc_frozen_upto before.
+	if frappe.get_meta("Company").has_field("accounts_frozen_till_date"):
+		frozen = frappe.db.get_value("Company", company, "accounts_frozen_till_date")
+	else:
+		frozen = frappe.db.get_single_value("Accounts Settings", "acc_frozen_upto")
+	if frozen and date <= getdate(frozen):
+		return _("Accounts are frozen up to {0}, so the fee dated {1} was recorded but not posted.").format(
+			frappe.format(getdate(frozen), "Date"), frappe.format(date, "Date")
+		)
+	closing = frappe.db.get_value(
+		"Period Closing Voucher",
+		{"company": company, "docstatus": 1, "period_end_date": (">=", date)},
+		"name",
+	)
+	if closing:
+		return _("{0} closed the period containing {1}, so the fee was recorded but not posted.").format(
+			closing, frappe.format(date, "Date")
+		)
+	period = frappe.db.sql(
+		"""select ap.name from `tabAccounting Period` ap
+		join `tabClosed Document` cd on cd.parent = ap.name
+		where ap.company = %s and ap.disabled = 0 and %s between ap.start_date and ap.end_date
+		and cd.document_type = 'Journal Entry' and cd.closed = 1 limit 1""",
+		(company, date),
+	)
+	if period:
+		return _("Accounting Period {0} is closed for Journal Entries on {1}, so the fee was recorded "
+		         "but not posted.").format(period[0][0], frappe.format(date, "Date"))
+	return None
+
+
+def post_vet_fee(vet, amount, company, posting_date=None, animals=None, what=None):
 	"""Post the fee when it can be posted; always answer what happened.
 
 	Returns {"amount", "journal_entry", "posted", "reason"}.
@@ -61,8 +103,9 @@ def post_vet_fee(vet, amount, company, posting_date=None, animals=None, backdate
 		return not_posted(amount, _("{0} has no default payable account, so no Journal Entry was posted.").format(company))
 	if frappe.db.get_value("Account", expense, "company") != company:
 		return not_posted(amount, _("The vet expense account {0} does not belong to {1}.").format(expense, company))
-	if backdated:
-		return not_posted(amount, _("A backdated round does not post to the books."))
+	closed = closed_period_reason(company, posting_date or today())
+	if closed:
+		return not_posted(amount, closed)
 
 	cost_center = None
 	if animals:
