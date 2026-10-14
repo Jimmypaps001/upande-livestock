@@ -74,8 +74,8 @@ def replay_deferred_milk(payload=None):
 	backdated Milk Recordings. See the module docstring for scope and idempotency."""
 
 	def go():
-		guard("Stock Entry")
-		guard("Journal Entry")
+		guard("Stock Entry", employee=False)
+		guard("Journal Entry", employee=False)
 		d = as_dict(payload)
 		names = _candidates(d.get("name"), d.get("from_date"), d.get("to_date"))
 

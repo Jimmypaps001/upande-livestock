@@ -52,7 +52,7 @@ def save_livestock_settings(payload=None):
 	"""Write the changed scalars. See the module docstring."""
 
 	def go():
-		guard(DOCTYPE)
+		guard(DOCTYPE, employee=False)
 		# `guard` asks whether this user may create the doctype, which for a
 		# Single is the same grant as editing it — every role that can write
 		# Livestock Settings has it. The write permission is asserted in its

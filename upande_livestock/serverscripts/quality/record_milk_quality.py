@@ -9,6 +9,7 @@ from frappe.utils import flt, today
 
 from upande_livestock.serverscripts.common import quality
 from upande_livestock.serverscripts.common.envelope import as_dict, run
+from upande_livestock.serverscripts.common.guards import require_employee
 
 
 @frappe.whitelist()
@@ -23,6 +24,7 @@ def record_milk_quality(payload):
 	"""
 
 	def go():
+		require_employee()
 		if not frappe.has_permission("Milk Recording", "write"):
 			frappe.throw(_("You are not permitted to record milk quality."), frappe.PermissionError)
 

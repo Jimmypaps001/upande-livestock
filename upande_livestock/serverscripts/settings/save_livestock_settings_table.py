@@ -45,7 +45,7 @@ def save_livestock_settings_table(payload=None):
 	"""
 
 	def go():
-		guard(DOCTYPE)
+		guard(DOCTYPE, employee=False)
 		if not frappe.has_permission(DOCTYPE, "write"):
 			frappe.throw(
 				_("You are not permitted to change {0}.").format(DOCTYPE), frappe.PermissionError

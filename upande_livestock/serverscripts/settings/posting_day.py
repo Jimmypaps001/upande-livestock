@@ -15,6 +15,7 @@ from frappe.utils import today
 
 from upande_livestock.serverscripts.common import backdate
 from upande_livestock.serverscripts.common.envelope import guard_read, run
+from upande_livestock.serverscripts.common.guards import employee_status
 
 
 @frappe.whitelist()
@@ -23,6 +24,14 @@ def posting_day():
 		# Every record screen is about animals; whoever may read them may know
 		# what day it is to the server.
 		guard_read("Animal")
-		return {"ok": True, "today": today(), "backdating_open": backdate.window_open()}
+		# is_employee rides along: it is the one extra fact the phone needs when it
+		# wakes, and this is the light call it already makes then. A user with no
+		# Employee is view-only (guards.require_employee refuses their records).
+		return {
+			"ok": True,
+			"today": today(),
+			"backdating_open": backdate.window_open(),
+			**employee_status(),
+		}
 
 	return run(go, "livestock posting_day failed")

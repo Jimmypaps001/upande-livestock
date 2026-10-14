@@ -21,14 +21,76 @@ import frappe
 from frappe import _
 
 
-def guard(doctype: str) -> None:
-	"""Raise a clean PermissionError-style throw if the user can't create `doctype`."""
+def guard(doctype: str, employee: bool = True) -> None:
+	"""Raise a clean PermissionError-style throw if the user can't create `doctype`.
+
+	Also refuses a user with no linked Employee (see guards.require_employee):
+	every endpoint that records something goes through here, so the phone's
+	"view only" rule binds on the server and not only in the UI. Settings and
+	configuration endpoints pass `employee=False`.
+	"""
+	if employee:
+		from upande_livestock.serverscripts.common.guards import require_employee
+
+		require_employee(doctype)
 	if not frappe.has_permission(doctype, "create"):
 		# PermissionError, not the default ValidationError: `run` distinguishes the
 		# two, and only the general branch rolls back and writes an Error Log. A
 		# refusal is an answer, not a fault — and a phone whose user lacks a role
 		# would otherwise fill the log on every screen it opens.
 		frappe.throw(_("You are not permitted to create {0}.").format(doctype), frappe.PermissionError)
+
+
+# Who may book feed and the stock behind it. Stock Entry, Work Order and
+# Material Request are ERPNext doctypes and the farm's roles are not ERPNext
+# roles: a store keeper should not need Stock Manager (which can edit any stock
+# anywhere) to feed a herd. The endpoint checks THESE roles, then does the
+# privileged part itself with ignore_permissions. A user who already holds the
+# ERPNext permissions keeps working, as before.
+STOCK_ROLES = ("Livestock Stores", "Livestock Manager")
+
+
+def guard_stock(*doctypes: str) -> None:
+	"""Raise unless the user is a farm stores/manager role, or holds `doctypes` create.
+
+	Always also requires an Employee (see guards.require_employee).
+	"""
+	from upande_livestock.serverscripts.common.guards import require_employee
+
+	require_employee()
+	roles = set(frappe.get_roles())
+	if roles & set(STOCK_ROLES) or "System Manager" in roles:
+		return
+	if all(frappe.has_permission(dt, "create") for dt in doctypes):
+		return
+	frappe.throw(
+		_("You are not permitted to book stock. This needs the {0} role.").format(
+			" or ".join(STOCK_ROLES)
+		),
+		frappe.PermissionError,
+	)
+
+
+LIVESTOCK_ROLES = (
+	"Livestock Manager",
+	"Livestock Vet",
+	"Livestock Breeder",
+	"Livestock Attendant",
+	"Livestock Milker",
+	"Livestock Stores",
+)
+
+
+def guard_read_or_livestock(doctype: str) -> None:
+	"""Raise unless the user can read `doctype` or holds any livestock role.
+
+	For a read of an ERPNext doctype (Employee) that the farm roles have no
+	DocPerm on and should not be given: the endpoint does the read itself and
+	returns only the narrow fields the screen shows.
+	"""
+	if frappe.has_permission(doctype, "read") or set(frappe.get_roles()) & set(LIVESTOCK_ROLES):
+		return
+	frappe.throw(_("You are not permitted to read {0}.").format(doctype), frappe.PermissionError)
 
 
 def guard_read(doctype: str) -> None:
@@ -85,7 +147,12 @@ def run(fn, log_title: str) -> dict:
 			out["stock_drafts"] = drafts
 		return out
 	except frappe.PermissionError as e:
-		return {"error": str(e) or _("Not permitted.")}
+		out = {"error": str(e) or _("Not permitted.")}
+		if type(e).__name__ == "NotEmployee":
+			# A stable code, so a client can tell this refusal from a missing
+			# role and neither queue the item nor retry it.
+			out["code"] = "not_employee"
+		return out
 	except Exception as e:
 		frappe.db.rollback()
 		frappe.log_error(title=log_title)

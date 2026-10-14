@@ -376,3 +376,53 @@ def check_guards(doc):
 	_check_age_window(doc)
 	_check_interval(doc)
 	_check_duplicate(doc)
+
+
+# --- Who may record -----------------------------------------------------------
+#
+# The phone records facts and the server decides. A user who is not linked to an
+# Employee (Employee.user_id) is view-only: the data models stamp an operator on
+# every record, and "who did this" must be a person on the payroll. The check
+# lives here, once, and `envelope.guard` calls it, so every recording endpoint
+# the phone and the web use inherits it. Config endpoints opt out with
+# `guard(doctype, employee=False)`.
+
+NOT_EMPLOYEE = (
+	"You're not registered as an employee, so you can't record. "
+	"Ask HR to link your user to an Employee."
+)
+NOT_EMPLOYEE_MILKING = "You're not registered as an employee, so you can't record milkings."
+
+# Roles that skip the check. The web desk has an operator picker, so a manager
+# who is not on the payroll can still record on behalf of a named Employee
+# there; and Administrator is what console jobs and tests run as. Phone users
+# are never helped by this: the app reads `is_employee` as the server states it.
+BYPASS_ROLES = ("System Manager",)
+
+
+class NotEmployee(frappe.PermissionError):
+	"""Raised for a session user with no linked Employee; `run` adds a code."""
+
+
+def employee_status(user=None):
+	"""{is_employee, employee, employee_name} for `user` (default: the session user)."""
+	user = user or frappe.session.user
+	row = frappe.db.get_value(
+		"Employee", {"user_id": user, "status": ["!=", "Left"]}, ["name", "employee_name"], as_dict=True
+	)
+	return {
+		"is_employee": bool(row),
+		"employee": row.name if row else None,
+		"employee_name": row.employee_name if row else None,
+	}
+
+
+def require_employee(doctype=None):
+	"""Refuse the session user unless an Employee is linked to them."""
+	user = frappe.session.user
+	if user == "Administrator" or set(frappe.get_roles(user)) & set(BYPASS_ROLES):
+		return
+	if employee_status(user)["is_employee"]:
+		return
+	message = NOT_EMPLOYEE_MILKING if doctype == "Milk Recording" else NOT_EMPLOYEE
+	raise NotEmployee(_(message))

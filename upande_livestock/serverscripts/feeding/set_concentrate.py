@@ -20,7 +20,7 @@ def set_concentrate(payload):
 	"""
 
 	def go():
-		guard("BOM")
+		guard("BOM", employee=False)
 		d = as_dict(payload)
 		res = _set(d.get("name"), d.get("lines") or [], farm=d.get("farm"))
 		res["ok"] = True
