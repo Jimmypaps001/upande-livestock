@@ -71,6 +71,9 @@ def record_feeding(payload=None):
 					"portion": d.get("portion"),
 					"posting_date": d.get("posting_date"),
 					"employee": d.get("employee"),
+					# The recipe the operator tuned from. Left out, the tuned BOM
+					# descends from the herd's registered one, not what was on screen.
+					"base_bom": d.get("base_bom"),
 				}
 			)
 		frappe.throw(

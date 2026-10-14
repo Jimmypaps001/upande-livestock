@@ -131,3 +131,32 @@ class TestMobileBundles(IntegrationTestCase):
 		name = herds[0]["name"]
 		for row in get_animal_bundle(herd=name).get("animals", []):
 			self.assertEqual(row["herd"], name)
+
+
+class TestRecordFeedingForwardsWhatTheAppSends(IntegrationTestCase):
+	def test_manual_feeding_forwards_the_base_bom(self):
+		"""The phone sends `base_bom` — the recipe the operator tuned from — so the
+		tuned BOM descends from what was on screen. The dispatcher built its own
+		dict for `manual_feed` and left the key out, so every manual run silently
+		descended from the herd's registered BOM instead."""
+		from unittest import mock
+
+		from upande_livestock.serverscripts.mobile import record_feeding as mod
+
+		with mock.patch.object(mod, "manual_feed", return_value={"ok": True}) as m:
+			mod.record_feeding(
+				{
+					"action": "manual",
+					"herd": "H",
+					"heads": 2,
+					"portion": 0.5,
+					"posting_date": "2026-10-14",
+					"employee": "E",
+					"base_bom": "BOM-TUNED-001",
+					"lines": [{"item_code": "I", "qty": 1}],
+				}
+			)
+		sent = m.call_args.args[0]
+		self.assertEqual(sent.get("base_bom"), "BOM-TUNED-001")
+		self.assertEqual(sent["herd"], "H")
+		self.assertEqual(sent["lines"], [{"item_code": "I", "qty": 1}])
