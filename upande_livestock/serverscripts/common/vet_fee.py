@@ -89,6 +89,10 @@ def post_vet_fee(vet, amount, company, posting_date=None, animals=None, backdate
 		"cost_center": cost_center,
 	})
 	je.title = f"Vet fee: {vet}"
+	# The endpoint has already asked whether this user may record the work; a vet
+	# or herdsman recording a round has no Accounts role, and the entry is fixed
+	# by the vet's Supplier and the farm's own expense account, not by the caller.
+	je.flags.ignore_permissions = True
 	je.insert()
 	je.submit()
 	return {"amount": amount, "journal_entry": je.name, "posted": True, "reason": ""}
