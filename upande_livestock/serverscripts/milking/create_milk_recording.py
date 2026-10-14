@@ -5,15 +5,32 @@ the controller with ignore_permissions, so this is the one check that matters.""
 
 import frappe
 from frappe import _
-from frappe.utils import flt, nowtime
+from frappe.utils import add_days, flt, get_datetime, getdate, nowtime, today
 
 from upande_livestock.serverscripts.common import backdate, quality
 from upande_livestock.serverscripts.common.employee import current_employee
 from upande_livestock.serverscripts.common.envelope import as_dict, guard, run
 
 
+def _captured_at(raw):
+	try:
+		return get_datetime(raw) if raw else None
+	except Exception:
+		return None
+
+
 @frappe.whitelist()
 def create_milk_recording(payload, from_handset=False):
+	return record(payload, from_handset=from_handset)
+
+
+def record(payload, from_handset=False, offline=False):
+	"""Create and submit a Milk Recording.
+
+	`offline` is not a parameter of the whitelisted entry point on purpose: only
+	`mobile.record_milking` may ask for the one-day late-sync grace, so a REST
+	caller of `create_milk_recording` cannot claim it."""
+
 	def go():
 		guard("Milk Recording")
 		d = as_dict(payload)
@@ -41,7 +58,20 @@ def create_milk_recording(payload, from_handset=False):
 		doc.herd = herd
 		doc.milking_time = d.get("milking_time") or nowtime()
 		recording_date, is_backdated = backdate.resolve(d, "recording_date")
-		backdate.assert_allowed(is_backdated)
+		if offline and is_backdated and not backdate.window_open():
+			# The one exception to a closed window: a milking taken on the phone
+			# without signal may sync a day late. The test is the milking's own
+			# date against server today; captured_at is audit and never trusted.
+			if getdate(recording_date) < add_days(getdate(today()), -1):
+				frappe.throw(
+					_("This milking is more than a day old — ask the Livestock Manager "
+					  "to open backdating, then retry.")
+				)
+		else:
+			backdate.assert_allowed(is_backdated)
+		if offline:
+			doc.captured_offline = 1
+			doc.captured_at = _captured_at(d.get("captured_at"))
 		doc.recording_date = recording_date
 		backdate.stamp(doc, is_backdated)
 		doc.cows_milked = int(flt(d.get("cows_milked")))
