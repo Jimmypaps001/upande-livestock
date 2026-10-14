@@ -22,6 +22,7 @@ from upande_livestock.serverscripts.culling.approve_cull import approve_cull
 from upande_livestock.serverscripts.culling.raise_cull import raise_cull
 from upande_livestock.serverscripts.culling.record_mortality import record_mortality
 from upande_livestock.serverscripts.culling.vet_verdict import vet_verdict
+from upande_livestock.serverscripts.tests.test_employee_gate import link_employee
 from upande_livestock.serverscripts.tests.test_culling import _employee, _tidy
 from upande_livestock.serverscripts.tests.test_operations import _make_cow
 
@@ -47,6 +48,9 @@ def _user(email, role):
 		if not any(x.role == r for x in doc.roles):
 			doc.append("roles", {"role": r})
 	doc.save(ignore_permissions=True)
+	# These tests are about the role gates; a user with no Employee is refused
+	# before they are reached (guards.require_employee).
+	link_employee(email)
 	frappe.db.commit()
 	return email
 
@@ -62,6 +66,7 @@ def _drop_users():
 	frappe.set_user("Administrator")
 	for email in (VET, HAND):
 		try:
+			frappe.db.delete("Employee", {"user_id": email})
 			frappe.delete_doc("User", email, force=True, ignore_permissions=True)
 		except Exception:
 			frappe.clear_last_message()

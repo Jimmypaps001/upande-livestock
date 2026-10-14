@@ -9,6 +9,7 @@ from frappe.utils import today
 
 from upande_livestock.serverscripts.common.employee import current_employee
 from upande_livestock.serverscripts.common.envelope import as_dict, run
+from upande_livestock.serverscripts.common.guards import require_employee
 
 
 @frappe.whitelist()
@@ -31,6 +32,7 @@ def mark_cull_review(payload):
 	"""
 
 	def go():
+		require_employee()
 		if not frappe.has_permission("Animal", "write"):
 			frappe.throw(_("You are not permitted to mark animals for review."),
 			             frappe.PermissionError)

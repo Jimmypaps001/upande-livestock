@@ -26,7 +26,7 @@ def set_herd_ration(payload):
 	"""
 
 	def go():
-		guard("BOM")
+		guard("BOM", employee=False)
 		d = as_dict(payload)
 		herd = (d.get("herd") or "").strip()
 		if not herd:

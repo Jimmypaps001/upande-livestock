@@ -20,7 +20,7 @@ def save_stock_rules(payload=None):
 	"""
 
 	def go():
-		guard(EVENT_TYPE)
+		guard(EVENT_TYPE, employee=False)
 		if not frappe.has_permission(EVENT_TYPE, "write"):
 			frappe.throw(_("You are not permitted to change event types."), frappe.PermissionError)
 		sent = as_dict(payload).get("rules")

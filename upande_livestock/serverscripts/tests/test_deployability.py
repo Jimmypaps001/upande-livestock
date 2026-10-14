@@ -49,6 +49,14 @@ def _endpoint_files():
 		yield path
 
 
+# guard_stock: the farm role check for booking stock; guard_read_or_livestock: a
+# read of an ERPNext doctype the farm roles have no DocPerm on.
+GUARD_CALLS = (
+	"guard(", "guard_read(", "guard_write(", "has_permission(",
+	"guard_stock(", "guard_read_or_livestock(",
+)
+
+
 class TestServerscriptsShape(IntegrationTestCase):
 	def test_no_file_holds_more_than_one_endpoint(self):
 		for path in _endpoint_files():
@@ -78,9 +86,13 @@ class TestServerscriptsShape(IntegrationTestCase):
 		guarded = set()
 		for path in _endpoint_files():
 			source = path.read_text()
-			for fn in _whitelisted(ast.parse(source)):
+			# Any function, not only whitelisted ones: an endpoint may hand its work
+			# to a plain helper in the same module that holds the guard.
+			for fn in ast.walk(ast.parse(source)):
+				if not isinstance(fn, ast.FunctionDef):
+					continue
 				body = ast.get_source_segment(source, fn) or ""
-				if any(t in body for t in ("guard(", "guard_read(", "guard_write(", "has_permission(")):
+				if any(t in body for t in GUARD_CALLS):
 					guarded.add(fn.name)
 
 		offenders = []
@@ -96,11 +108,14 @@ class TestServerscriptsShape(IntegrationTestCase):
 			}
 			for fn in _whitelisted(tree):
 				body = ast.get_source_segment(source, fn) or ""
-				if any(t in body for t in ("guard(", "guard_read(", "guard_write(", "has_permission(")):
+				if any(t in body for t in GUARD_CALLS):
 					continue
 				# Delegation: every guarded endpoint this module imports and, in
 				# the module as a whole, actually references.
 				delegates = {n for n in imported & guarded if n in source}
+				# ... or a guarded helper defined in this same module and called here.
+				local = {n.name for n in ast.walk(tree) if isinstance(n, ast.FunctionDef)}
+				delegates |= {n for n in local & guarded if f"{n}(" in body and n != fn.name}
 				if delegates:
 					continue
 				offenders.append(f"{path.relative_to(ROOT)}::{fn.name}")
@@ -126,7 +141,7 @@ class TestServerscriptsShape(IntegrationTestCase):
 		fns = _whitelisted(tree)
 		self.assertEqual(len(fns), 1)
 		body = ast.get_source_segment(source, fns[0]) or ""
-		self.assertFalse(any(t in body for t in ("guard(", "guard_read(", "guard_write(", "has_permission(")))
+		self.assertFalse(any(t in body for t in GUARD_CALLS))
 		imported = {
 			alias.asname or alias.name
 			for node in ast.walk(tree)

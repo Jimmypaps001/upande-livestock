@@ -30,7 +30,7 @@ def create_herd(payload):
 	"""
 
 	def go():
-		guard("Herds")
+		guard("Herds", employee=False)
 		d = as_dict(payload)
 		name = (d.get("herd_name") or "").strip()
 		animals = [a for a in (d.get("animals") or []) if a]
