@@ -124,6 +124,7 @@
   "steamer_days_from_lactation",
   "sb_backdating",
   "custom_backdating_open",
+  "allow_offline_milking_grace",
   "sb_milk_quality",
   "custom_milk_quality_capture",
   "custom_quality_required_at_milking",
@@ -701,6 +702,13 @@
    "fieldname": "custom_backdating_open",
    "fieldtype": "Check",
    "label": "Backdating Open"
+  },
+  {
+   "default": "0",
+   "description": "When on, a milking recorded on the phone without signal is accepted if it syncs the next day, even with Backdating Open off. The record shows who posted it. Off: such a milking is refused like any backdated record.",
+   "fieldname": "allow_offline_milking_grace",
+   "fieldtype": "Check",
+   "label": "Allow offline milkings to sync one day late"
   },
   {
    "fieldname": "sb_milk_quality",

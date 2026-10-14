@@ -47,6 +47,10 @@
   "custom_is_backdated",
   "captured_offline",
   "captured_at",
+  "late_sync_grace",
+  "posted_by_employee",
+  "posted_by_name",
+  "posted_by_user",
   "custom_quality_pending"
  ],
  "fields": [
@@ -297,6 +301,46 @@
    "fieldtype": "Datetime",
    "label": "Captured At",
    "no_copy": 1,
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "depends_on": "late_sync_grace",
+   "description": "Synced a day late from the phone's offline queue, under the manager's late-sync setting.",
+   "fieldname": "late_sync_grace",
+   "fieldtype": "Check",
+   "in_list_view": 0,
+   "in_standard_filter": 1,
+   "label": "Synced a Day Late",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
+   "depends_on": "late_sync_grace",
+   "description": "Who posted this late sync.",
+   "fieldname": "posted_by_employee",
+   "fieldtype": "Link",
+   "label": "Posted By (Employee)",
+   "no_copy": 1,
+   "options": "Employee",
+   "read_only": 1
+  },
+  {
+   "depends_on": "late_sync_grace",
+   "fetch_from": "posted_by_employee.employee_name",
+   "fieldname": "posted_by_name",
+   "fieldtype": "Data",
+   "label": "Posted By",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
+   "depends_on": "late_sync_grace",
+   "fieldname": "posted_by_user",
+   "fieldtype": "Link",
+   "label": "Posted By (User)",
+   "no_copy": 1,
+   "options": "User",
    "read_only": 1
   },
   {
