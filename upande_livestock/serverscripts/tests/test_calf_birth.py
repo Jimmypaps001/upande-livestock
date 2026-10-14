@@ -340,3 +340,15 @@ class TestABlankNumberIsNotADeath(IntegrationTestCase):
 		"""Either the outcome, the flag, or the sentinel — never a blank box."""
 		res = self._book([{"sex": "Male", "is_stillborn": 1}])
 		self.assertEqual(res["calves"], [], "an explicit stillbirth created an animal")
+
+	def test_a_calf_photo_becomes_the_calfs_image(self):
+		"""The phone uploads the picture, then sends its URL with the calving.
+		Frappe does not point an Attach Image field at a file on its own, so the
+		server has to set it — and only the calf that was given one gets one."""
+		res = self._book([{"sex": "Female", "photo": "/files/zz-calf-test.jpg"}])
+		self.assertEqual(
+			frappe.db.get_value("Animal", res["calves"][0]["animal"], "image"), "/files/zz-calf-test.jpg")
+
+	def test_the_photo_is_optional(self):
+		res = self._book([{"sex": "Female"}])
+		self.assertFalse(frappe.db.get_value("Animal", res["calves"][0]["animal"], "image"))
