@@ -117,6 +117,10 @@ export interface HusbandryOptions {
 export interface WeightOptions {
   animals: AnimalChoice[];
   methods: string[];
+  /** Livestock Settings → Weighing Method Default (already one of `methods`). */
+  default_method?: string;
+  /** Livestock Settings → Weighbridge Available; when off it is not in `methods`. */
+  weighbridge_available?: boolean;
   herds?: { name: string; label?: string; heads?: number }[];
   employee: string | null;
 }

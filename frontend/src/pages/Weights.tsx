@@ -104,7 +104,7 @@ export function Weights() {
     }
     setFailure(null);
     setOptions(r);
-    setMethod((m) => m || r.methods[0] || "");
+    setMethod((m) => m || r.default_method || r.methods[0] || "");
   }, []);
 
   useEffect(() => {

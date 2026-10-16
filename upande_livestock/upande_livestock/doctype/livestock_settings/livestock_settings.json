@@ -39,6 +39,8 @@
   "max_dehorning_age_months",
   "weight_section",
   "min_weight_recording_interval_days",
+  "default_weight_method",
+  "weighbridge_available",
   "hoof_section",
   "min_hoof_trimming_interval_days",
   "tab_dairy",
@@ -367,6 +369,21 @@
    "fieldname": "min_weight_recording_interval_days",
    "fieldtype": "Int",
    "label": "Min Weight Recording Interval (Days)"
+  },
+  {
+   "default": "Platform Scale",
+   "description": "The method the Weights screens (web and mobile) start on.",
+   "fieldname": "default_weight_method",
+   "fieldtype": "Select",
+   "label": "Weighing Method Default",
+   "options": "Weighbridge\nPlatform Scale\nHeart Girth Tape\nVisual Estimate"
+  },
+  {
+   "default": "1",
+   "description": "Untick when the farm has no weighbridge: the Weights screens stop offering it as a method.",
+   "fieldname": "weighbridge_available",
+   "fieldtype": "Check",
+   "label": "Weighbridge Available"
   },
   {
    "fieldname": "hoof_section",

@@ -316,6 +316,31 @@ class TestWeightRecord(IntegrationTestCase):
 	def test_options_offer_the_methods(self):
 		res = _assert_ok(self, weight_options(), "weight_options")
 		self.assertIn("Platform Scale", res["methods"])
+		self.assertIn("Weighbridge", res["methods"])
+		self.assertTrue(res["weighbridge_available"])
+
+	def test_settings_drive_default_and_weighbridge(self):
+		fields = ("default_weight_method", "weighbridge_available")
+
+		def restore():
+			# These were never set on a fresh site; leave no row behind.
+			frappe.db.sql(
+				"delete from tabSingles where doctype='Livestock Settings' and field in %s", (fields,)
+			)
+			frappe.clear_cache(doctype="Livestock Settings")
+
+		self.addCleanup(restore)
+		frappe.db.set_single_value("Livestock Settings", "default_weight_method", "Heart Girth Tape")
+		frappe.db.set_single_value("Livestock Settings", "weighbridge_available", 0)
+		res = _assert_ok(self, weight_options(settings_only=1), "weight_options")
+		self.assertNotIn("Weighbridge", res["methods"])
+		self.assertFalse(res["weighbridge_available"])
+		self.assertEqual(res["default_method"], "Heart Girth Tape")
+		self.assertEqual(res["animals"], [])
+		# A default naming a method that is no longer offered falls back.
+		frappe.db.set_single_value("Livestock Settings", "default_weight_method", "Weighbridge")
+		res = _assert_ok(self, weight_options(), "weight_options")
+		self.assertEqual(res["default_method"], res["methods"][0])
 
 
 class TestHealthEndpoints(IntegrationTestCase):
