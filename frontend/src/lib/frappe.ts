@@ -189,3 +189,28 @@ export async function searchItems(
     return [];
   }
 }
+
+/**
+ * Upload a file the way the desk does (`upload_file`, multipart) and hand back
+ * its URL, or `{error}`. Public, like the calf photo: an <img> loads it with no
+ * further ceremony. Attaching it to something is the caller's next call.
+ */
+export async function uploadFile(file: File): Promise<{ file_url: string } | { error: string }> {
+  try {
+    const form = new FormData();
+    form.append("file", file, file.name);
+    form.append("is_private", "0");
+    const res = await fetch("/api/method/upload_file", {
+      method: "POST",
+      credentials: "include",
+      headers: { "X-Frappe-CSRF-Token": csrf(), "X-Requested-With": "XMLHttpRequest" },
+      body: form,
+    });
+    const body = await res.json().catch(() => null);
+    const url = body?.message?.file_url;
+    if (typeof url === "string" && url) return { file_url: url };
+    return { error: "The picture did not upload." };
+  } catch {
+    return { error: "Network error — the picture did not reach the server." };
+  }
+}

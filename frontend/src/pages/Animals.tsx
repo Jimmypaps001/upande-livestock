@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { BarChart3, CalendarClock, ChevronLeft, ShieldAlert } from "lucide-react";
 import { CompareDialog } from "@/components/animals/CompareDialog";
+import { PhotoStrip } from "@/components/animals/PhotoStrip";
 import { AnimalPortrait, AnimalPortraitSkeleton } from "@/components/animals/AnimalPortrait";
 import { AnimalSearch } from "@/components/animals/AnimalSearch";
 import { CycleRing, CycleRingSkeleton } from "@/components/animals/CycleRing";
@@ -281,6 +282,7 @@ export function Animals() {
                 ) : (
                   <AnimalPortraitSkeleton />
                 )}
+                {profile && <PhotoStrip key={profile.id} animal={profile.id} upload={{ context: "profile", label: "New profile photo" }} />}
                 <Card>
                   <CardHeaderRow className="pb-0">
                     <CardHeading>

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { ArrowLeft, CheckCircle2, FileText, Stethoscope } from "lucide-react";
+import { PhotoStrip } from "@/components/animals/PhotoStrip";
 import { CaseTimeline } from "@/components/health/CaseTimeline";
 import { DatePicker } from "@/components/DatePicker";
 import { EventDate } from "@/components/EventDate";
@@ -157,6 +158,14 @@ export function CaseFile({
           </div>
 
           <FactRow file={file} />
+
+          <PhotoStrip
+            animal={c.animal}
+            only={c.name}
+            title="Photos of this case"
+            empty={c.open ? "No photos on this file yet." : "No photos were added to this file."}
+            upload={c.open ? { context: "health_case", ref: c.name } : undefined}
+          />
         </CardContent>
       </Card>
 
