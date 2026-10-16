@@ -45,7 +45,7 @@ TAB = "custom_livestock_tab"
 
 #: Doctypes this app borrows. A field of ours on one of these that is no longer
 #: in the spec is stale and gets removed — see `ensure_livestock_custom_fields`.
-MANAGED_DOCTYPES = ("Work Order", "BOM", "Stock Entry")
+MANAGED_DOCTYPES = ("Work Order", "BOM", "Stock Entry", "File")
 
 #: Shown only on a document that is ours.
 LIVESTOCK_ONLY = "eval:doc.custom_is_livestock_feed"
@@ -55,6 +55,17 @@ MILKING_ONLY = 'eval:doc.stock_entry_type == "Milking"'
 def field_spec():
 	"""Every custom field this app owns, by doctype, in form order."""
 	return {
+		# A short note on a photograph in an animal's gallery (animal_photos).
+		"File": [
+			{
+				"fieldname": "livestock_caption",
+				"label": "Livestock Caption",
+				"fieldtype": "Data",
+				"insert_after": "file_name",
+				"length": 140,
+				"module": MODULE,
+			},
+		],
 		"Work Order": [
 			{
 				"fieldname": TAB,
