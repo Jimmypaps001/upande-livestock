@@ -184,11 +184,51 @@ def describe_gaps(prefix, yy, limit=12, used=None):
 	)
 
 
+def _series_key(prefix, yy):
+	return "ANIMALNO-{}-{:02d}".format(prefix, int(yy) % 100)
+
+
+def claim(prefix, yy):
+	"""Take the next free sequence for this prefix and year, race-safely.
+
+	The counter is a row in Frappe's own `tabSeries`, read with SELECT ... FOR
+	UPDATE. The row lock is held until the request's transaction ends, so two
+	calvings arriving together queue behind each other and cannot read the same
+	number — which `max(taken) + 1` on its own cannot promise. The row is seeded
+	from what the register already holds, and every claim still steps past any
+	number that exists (one typed in by hand, or loaded by an import that never
+	touched the counter), so the counter can only ever be behind reality, never
+	hand out something taken.
+	"""
+	key = _series_key(prefix, yy)
+	# INSERT IGNORE so the first caller of a year creates the row and a racing
+	# one does not fail; the FOR UPDATE below then serialises them.
+	frappe.db.sql("INSERT IGNORE INTO `tabSeries` (`name`, `current`) VALUES (%s, 0)", key)
+	current = frappe.db.sql(
+		"SELECT `current` FROM `tabSeries` WHERE `name`=%s FOR UPDATE", key)[0][0]
+	used = taken(prefix, yy)
+	nxt = max(int(current or 0), max(used) if used else 0) + 1
+	while nxt in used:
+		nxt += 1
+	if nxt > MAX_SEQ:
+		holes = gaps(prefix, yy, limit=1, used=used)
+		if not holes:
+			frappe.throw(_("Every number from 001 to {0} is used for 20{1}.").format(MAX_SEQ, yy))
+		return holes[0]
+	frappe.db.sql("UPDATE `tabSeries` SET `current`=%s WHERE `name`=%s", (nxt, key))
+	return nxt
+
+
 def allocate(sex, birth_date=None):
-	"""The next number for an animal of this sex born on this date."""
+	"""The next number for an animal of this sex born on this date.
+
+	Claims it from the counter, so calling this twice in one request gives two
+	different numbers even before either animal is saved — which is what twins
+	need.
+	"""
 	prefix = prefix_for_sex(sex)
 	yy = year_of(birth_date)
-	return format_id(prefix, next_free(prefix, yy), yy)
+	return format_id(prefix, claim(prefix, yy), yy)
 
 
 def assert_assignable(animal_id, sex, current=None):

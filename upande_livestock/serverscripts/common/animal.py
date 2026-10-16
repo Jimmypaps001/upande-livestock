@@ -168,6 +168,9 @@ def create_calf(dam, tag_number, sex, event_date, birth_weight=None, burn_name=N
 
 	calf = frappe.new_doc("Animal")
 	calf.tag_number = tag
+	# The register number is the animal's name; book_number is read-only on the
+	# form, so it is written here and nowhere else.
+	calf.book_number = tag
 	calf.burn_name = burn_name or tag
 	calf.sex = sex
 	calf.date_of_birth = event_date

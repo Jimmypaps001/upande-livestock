@@ -90,6 +90,7 @@ def record_calf_births(payload):
 				if not stillborn:
 					created.append({
 						"animal": birth.animal,
+						"book_number": birth.animal,
 						"tag": birth.calf_tag_number,
 						"sex": birth.calf_sex,
 						"herd": frappe.db.get_value("Animal", birth.animal, "current_herd"),

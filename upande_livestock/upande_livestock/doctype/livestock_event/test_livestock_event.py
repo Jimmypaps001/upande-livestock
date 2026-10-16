@@ -919,6 +919,7 @@ class TestLivestockEventMultipleBirths(IntegrationTestCase):
 				"event_date": "2026-07-02",
 				"outcome": "Live Birth",
 				"calves": [
+					# A typed number is ignored: the server numbers every calf.
 					{"name": "TEST-TRIPLET-1", "sex": "Female"},
 					{"name": "TEST-TRIPLET-2", "sex": "Male"},
 				],
@@ -928,8 +929,10 @@ class TestLivestockEventMultipleBirths(IntegrationTestCase):
 		self._register_birth_family_cleanup(result["name"], [c["animal"] for c in result["calves"]])
 		self.assertTrue(result["ok"])
 		self.assertEqual(len(result["calves"]), 2)
+		self.assertEqual(
+			[c["animal"][0] for c in result["calves"]], ["A", "B"])
 		for n in (1, 2):
-			self.assertEqual(frappe.db.count("Animal", {"tag_number": f"TEST-TRIPLET-{n}"}), 1)
+			self.assertEqual(frappe.db.count("Animal", {"tag_number": f"TEST-TRIPLET-{n}"}), 0)
 
 	def _book_with_straw(self, related_pregnancy=None):
 		"""record_birth for a Service that carries a straw, LIVE: real Service,

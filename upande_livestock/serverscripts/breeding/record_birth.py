@@ -14,7 +14,12 @@ from upande_livestock.serverscripts.husbandry._shared import append_items
 
 def _calf_row(calf, outcome):
 	"""Normalise one incoming calf dict for record_calf_births."""
-	tag = (calf.get("name") or "").strip().upper()
+	# The number is NEVER taken from the caller. Nobody types one any more, and an
+	# older phone's queued payload may still carry whatever was in its box ("A",
+	# "A012/26"); honouring it is how two animals share a number. The only thing
+	# read from `name` is the STILLBORN sentinel, and the server allocates the rest.
+	sentinel = (calf.get("name") or "").strip().upper() == "STILLBORN"
+	tag = ""
 	# A missing number is NOT a stillbirth. It used to be — an empty tag meant
 	# nobody had typed one, and a calf with no tag could not be created. Now the
 	# system allocates the number, so "no number given" means "give it one", and
@@ -23,7 +28,7 @@ def _calf_row(calf, outcome):
 	stillborn = (
 		outcome != "Live Birth"
 		or bool(calf.get("is_stillborn"))
-		or tag == "STILLBORN"
+		or sentinel
 	)
 	return {
 		"tag": tag,

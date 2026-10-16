@@ -93,11 +93,12 @@
    "search_index": 1
   },
   {
-   "description": "The farm's own register number, e.g. A028/19 — letter, sequence, year of birth. What people say out loud.",
+   "description": "The farm's own register number, e.g. A028/19 — letter (A female, B male), sequence, year of birth. Assigned by the system when a calf is born; not typed.",
    "fieldname": "book_number",
    "fieldtype": "Data",
    "in_standard_filter": 1,
    "label": "Book Number",
+   "read_only": 1,
    "unique": 0
   },
   {
