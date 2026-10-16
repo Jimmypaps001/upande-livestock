@@ -19,7 +19,13 @@ import { Label } from "@/components/ui/label";
 import { Picker } from "@/components/ui/picker";
 import { Textarea } from "@/components/ui/textarea";
 import { isError } from "@/lib/frappe";
-import { createHusbandryEvent, getHusbandryOptions, type HusbandryOptions } from "@/lib/events";
+import {
+  createHusbandryEvent,
+  getHusbandryOptions,
+  getRoundEligibility,
+  type HusbandryOptions,
+  type SkippedAnimal,
+} from "@/lib/events";
 import { useBatchPlans } from "@/lib/use-batch-plans";
 import { useOperator } from "@/lib/operator";
 import { useVetChoice } from "@/lib/vets";
@@ -59,6 +65,11 @@ export function Husbandry() {
   const [remarks, setRemarks] = useState("");
   const [busy, setBusy] = useState(false);
   const plans = useBatchPlans(drugs);
+  // Animals the server's rules would refuse for this job (deworming too soon,
+  // too old to dehorn, ...). Marked before saving and left out of the round;
+  // the server still decides on save and reports what it skipped.
+  const [marked, setMarked] = useState<SkippedAnimal[]>([]);
+  const [outcome, setOutcome] = useState<{ recorded: number; skipped: SkippedAnimal[]; warnings: string[] } | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -77,6 +88,26 @@ export function Husbandry() {
     void load();
   }, [load]);
 
+  useEffect(() => {
+    if (!kind || !picked.length) return;
+    let live = true;
+    void getRoundEligibility({ event_type: kind, animals: picked, event_date: when }).then((r) => {
+      if (live) setMarked(isError(r) ? [] : (r.skipped ?? []));
+    });
+    return () => {
+      live = false;
+    };
+  }, [kind, picked, when]);
+  const ineligible = useMemo(
+    () => (picked.length ? marked.filter((m) => picked.includes(m.animal)) : []),
+    [marked, picked],
+  );
+  const roundAnimals = useMemo(
+    () => picked.filter((a) => !ineligible.some((m) => m.animal === a)),
+    [picked, ineligible],
+  );
+  const labelOf = (id: string) => options?.animals.find((a) => a.name === id)?.label || id;
+
   const takesDrugs = !!kind && (options?.drug_consuming_types ?? []).includes(kind);
 
   // A round that consumes nothing should not be carrying empty drug rows, and
@@ -88,7 +119,7 @@ export function Husbandry() {
   }, [takesDrugs]);
 
   const external = vets.find((v) => v.value === vet)?.type === "External";
-  const ready = !!kind && picked.length > 0 && !who.needed;
+  const ready = !!kind && roundAnimals.length > 0 && !who.needed;
   // THE BASKET. Every line that will leave the store, consolidated — the same
   // drug on two rows is one withdrawal from the store and has to be checked
   // against the balance as one, or two rows of 60 against a stock of 100 both
@@ -115,11 +146,11 @@ export function Husbandry() {
         uom: item?.uom || "",
       };
       line.each += qty;
-      line.all += qty * picked.length;
+      line.all += qty * roundAnimals.length;
       held.set(id, line);
     }
     return [...held.values()];
-  }, [drugs, picked.length, options]);
+  }, [drugs, roundAnimals.length, options]);
 
   const short = basket.filter((b) => b.have != null && b.all > b.have);
 
@@ -130,7 +161,7 @@ export function Husbandry() {
     setBusy(true);
     const r = await createHusbandryEvent({
       event_type: kind,
-      animals: picked,
+      animals: roundAnimals,
       event_date: when,
       operator: who.value,
       vet: vet || undefined,
@@ -164,8 +195,20 @@ export function Husbandry() {
           : `The vet fee was recorded but not posted: ${feeNote.reason}`,
       );
     }
+    const done = r as {
+      animals?: number;
+      skipped?: SkippedAnimal[];
+      stock_warnings?: string[];
+    };
+    const recorded = done.animals ?? roundAnimals.length;
+    const skipped = [
+      ...ineligible.filter((m) => !(done.skipped ?? []).some((k) => k.animal === m.animal)),
+      ...(done.skipped ?? []),
+    ];
+    setOutcome({ recorded, skipped, warnings: done.stock_warnings ?? [] });
     toast(
-      `${kind} recorded for ${picked.length} animal${picked.length === 1 ? "" : "s"}.` +
+      `${kind} recorded for ${recorded} animal${recorded === 1 ? "" : "s"}.` +
+        (skipped.length ? ` ${skipped.length} skipped.` : "") +
         (basket.length
           ? ` ${basket.map((b) => `${fmt(b.all)} ${b.uom} ${b.name}`.trim()).join(", ")} issued.`
           : ""),
@@ -184,6 +227,16 @@ export function Husbandry() {
       </PageHeading>
 
       {failure && <Notice tone="error">{failure}</Notice>}
+
+      {outcome && (
+        <Notice tone={outcome.skipped.length ? "info" : "ok"}>
+          {[
+            `Recorded ${outcome.recorded} · Skipped ${outcome.skipped.length}`,
+            ...outcome.skipped.map((k) => `${labelOf(k.animal)}: ${k.reason}`),
+            ...outcome.warnings,
+          ].join("\n")}
+        </Notice>
+      )}
 
       <Card>
         <CardHeaderRow>
@@ -242,6 +295,19 @@ export function Husbandry() {
             onChange={setPicked}
           />
 
+          {ineligible.length > 0 && (
+            <div className="flex flex-col gap-1 rounded-md border border-dashed px-3 py-2 text-[12px] text-[var(--sd-quiet)]">
+              <span className="font-medium">
+                Left out of this round ({ineligible.length}) — the farm's rules refuse them:
+              </span>
+              {ineligible.map((m) => (
+                <span key={m.animal} className="opacity-70">
+                  {labelOf(m.animal)}: {m.reason}
+                </span>
+              ))}
+            </div>
+          )}
+
           {takesDrugs && (
             <div className="flex flex-col gap-2">
               <Label>What each animal got</Label>
@@ -260,7 +326,7 @@ export function Husbandry() {
                       item={{ qty: have, uom: item?.uom }}
                       name={item?.item_name || d.item}
                       each={Number(d.qty || 0)}
-                      head={picked.length}
+                      head={roundAnimals.length}
                     />
                   ) : null;
                 })}
@@ -292,7 +358,7 @@ export function Husbandry() {
                             {fmt(b.each)} {b.uom}
                           </td>
                           <td className="px-3 py-1.5 text-right tabular-nums text-[var(--sd-muted)]">
-                            {picked.length}
+                            {roundAnimals.length}
                           </td>
                           <td
                             className={cn(
@@ -336,7 +402,7 @@ export function Husbandry() {
               <Syringe className="mr-2 h-4 w-4" strokeWidth={1.75} />
               {busy
                 ? "Recording…"
-                : `Record ${kind || "it"} for ${picked.length || "…"} animal${picked.length === 1 ? "" : "s"}`}
+                : `Record ${kind || "it"} for ${roundAnimals.length || "…"} animal${roundAnimals.length === 1 ? "" : "s"}`}
             </Button>
             {!picked.length && (
               <span className="text-[11.5px] text-[var(--sd-muted)]">

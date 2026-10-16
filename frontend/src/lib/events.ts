@@ -167,6 +167,17 @@ export const getHealthOptions = () =>
   call<HealthOptions>(`${NS}.health.health_options.health_options`, {});
 export const getHusbandryOptions = () =>
   call<HusbandryOptions>(`${NS}.husbandry.husbandry_options.husbandry_options`, {});
+export interface SkippedAnimal {
+  animal: string;
+  reason: string;
+}
+/** Which animals a routine round would skip, and why — advice before saving; the
+ *  server decides again on save. */
+export const getRoundEligibility = (p: Payload) =>
+  post<{ eligible: string[]; skipped: SkippedAnimal[] }>(
+    `${NS}.husbandry.round_eligibility.round_eligibility`,
+    p,
+  );
 export const getWeightOptions = () =>
   call<WeightOptions>(`${NS}.weights.weight_options.weight_options`, {});
 export const getMovementOptions = () =>
