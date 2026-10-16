@@ -162,7 +162,7 @@ def _balances(groups, warehouses):
 	if not groups or not warehouses:
 		return []
 	return frappe.db.sql(
-		"""SELECT i.name, i.item_name, i.stock_uom, b.warehouse, b.actual_qty AS qty
+		"""SELECT i.name, i.item_name, i.stock_uom, i.item_group, b.warehouse, b.actual_qty AS qty
 		   FROM `tabItem` i
 		   JOIN `tabBin` b ON b.item_code = i.name
 		   WHERE i.item_group IN %(groups)s
@@ -237,3 +237,36 @@ def items_by_event(company=None):
 	in stock".
 	"""
 	return {t: items_for_event(t, company) for t in _rules() if consumes_items(t)}
+
+
+def stock_overview(company=None):
+	"""What the livestock stores hold: every item in a group some event type
+	posts stock from, by store, with the quantity and the events that use it.
+
+	The same groups and the same company-scoped leaf warehouses the pickers
+	read, so this list can never show stock an event could not draw on, and an
+	item group nobody mapped is not here. One row per (store, item): balances
+	are never summed across stores. Read-only.
+	"""
+	rules = _rules()
+	users = {}
+	for event_type, rule in rules.items():
+		for group in rule["groups"]:
+			users.setdefault(group, []).append(event_type)
+	warehouses = _company_warehouses(company or _default_company())
+	stores = {}
+	for r in _balances(list(users), warehouses):
+		stores.setdefault(r["warehouse"], []).append(
+			{
+				"item_code": r["name"],
+				"item_name": r.get("item_name") or r["name"],
+				"uom": r.get("stock_uom") or "",
+				"qty": flt(r["qty"]),
+				"item_group": r.get("item_group"),
+				"events": sorted(users.get(r.get("item_group"), [])),
+			}
+		)
+	return [
+		{"warehouse": wh, "items": sorted(items, key=lambda i: (i["item_name"] or "").lower())}
+		for wh, items in sorted(stores.items())
+	]

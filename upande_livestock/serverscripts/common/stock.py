@@ -179,10 +179,14 @@ def check_availability(rows, posting_date=None):
 
 	short = []
 	for (item, wh), qty in demand.items():
-		if historic:
-			have = flt(get_stock_balance(item, wh, posting_date))
-		else:
-			have = flt(frappe.db.get_value("Bin", {"item_code": item, "warehouse": wh}, "actual_qty"))
+		# The LEDGER's balance, today's included. Bin is a cache of it, and a
+		# Bin can hold a count the ledger never received (stock loaded or copied
+		# in as a bare number): ERPNext refuses to issue against the ledger, so
+		# a check against Bin passed an issue that then failed deep inside the
+		# Stock Entry with a valuation or negative-stock error nobody could act
+		# on. Judged here, such a line is reported short and today's issue is
+		# saved as a draft like any other short one.
+		have = flt(get_stock_balance(item, wh, posting_date if historic else today()))
 		if have + 1e-9 < qty:
 			short.append(
 				{
@@ -305,6 +309,8 @@ def issue_items(
 	livestock_cost_center.stamp(se, company, herd=herd)
 	if draft:
 		hold_valuation(se)
+	else:
+		allow_unvalued_lines(se)
 	se.insert(ignore_permissions=True)
 	if draft:
 		note_draft(se, short)
@@ -323,6 +329,32 @@ def hold_valuation(se):
 	"""
 	for d in se.items:
 		d.allow_zero_valuation_rate = 1
+
+
+def allow_unvalued_lines(se):
+	"""Let a line the ledger has no value for issue at zero.
+
+	A semen straw (or a drug) can sit in a store with a count but no cost: it
+	was donated, opened as a bare quantity, or the store's ledger was
+	rebuilt. ERPNext then refuses the issue with "Valuation Rate ... is required
+	to do accounting entries" -- a bookkeeping stop that the person holding the
+	phone cannot fix and that has nothing to do with whether the animal was
+	served. It offers its own way out: allow zero valuation on that line. A line
+	the ledger CAN value is left alone, so costed stock keeps its cost.
+	"""
+	from erpnext.stock.stock_ledger import get_valuation_rate
+
+	for d in se.items:
+		if not d.s_warehouse:
+			continue
+		try:
+			rate = get_valuation_rate(
+				d.item_code, d.s_warehouse, se.doctype, se.name, allow_zero_rate=True, company=se.company
+			)
+		except Exception:
+			rate = 0
+		if not flt(rate):
+			d.allow_zero_valuation_rate = 1
 
 
 def release_valuation(se):
