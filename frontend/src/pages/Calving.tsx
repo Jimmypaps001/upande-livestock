@@ -35,6 +35,8 @@ interface CalfRow {
   sex: "Female" | "Male";
   burn_name: string;
   birth_weight: string;
+  /** "" means the herd Settings routes this calf's sex to. */
+  herd: string;
   is_stillborn: boolean;
 }
 
@@ -44,6 +46,7 @@ const blankCalf = (): CalfRow => ({
   sex: "Female",
   burn_name: "",
   birth_weight: "",
+  herd: "",
   is_stillborn: false,
 });
 
@@ -151,6 +154,7 @@ export function Calving() {
         sex: c.sex,
         burn_name: c.burn_name.trim() || undefined,
         birth_weight: c.birth_weight ? Number(c.birth_weight) : undefined,
+        herd: c.herd || undefined,
         is_stillborn: c.is_stillborn,
       })),
     });
@@ -162,7 +166,7 @@ export function Calving() {
     const born = (r.calves || []).map((c) => c.animal).filter(Boolean);
     toast(
       born.length
-        ? `${dam} calved — ${born.join(", ")} ${born.length === 1 ? "is" : "are"} on the farm.`
+        ? `${dam} calved — ${born.join(", ")} ${born.length === 1 ? "is" : "are"} on the farm, numbered in order.`
         : `${dam} calved — ${r.name}.`,
     );
     setDam(null);
@@ -316,6 +320,17 @@ export function Calving() {
                           />
                         </div>
                         <div className="flex flex-col gap-1.5">
+                          <Label>Book no.</Label>
+                          <span
+                            className="flex h-10 w-40 items-center rounded-[var(--sd-radius-lg)] border border-[var(--sd-line)] px-3 text-[12.5px] text-[var(--sd-muted)]"
+                            data-testid={`c-book-${i}`}
+                          >
+                            {c.is_stillborn
+                              ? "None — stillborn"
+                              : `${c.sex === "Female" ? "A" : "B"} series, assigned on save`}
+                          </span>
+                        </div>
+                        <div className="flex flex-col gap-1.5">
                           <Label htmlFor={`c-name-${c.key}`}>Name</Label>
                           <Input
                             id={`c-name-${c.key}`}
@@ -342,6 +357,24 @@ export function Calving() {
                               )
                             }
                             className="w-32"
+                          />
+                        </div>
+                        <div className="flex flex-col gap-1.5">
+                          <Label htmlFor={`c-herd-${c.key}`}>Herd</Label>
+                          <Picker
+                            id={`c-herd-${c.key}`}
+                            value={c.herd}
+                            onChange={(next) =>
+                              setCalves((s) => s.map((x, j) => (j === i ? { ...x, herd: next } : x)))
+                            }
+                            options={(options?.herds ?? []).map((h) => ({ value: h.name, label: h.label }))}
+                            clearable
+                            clearLabel={`Default — ${
+                              (c.sex === "Female" ? where?.female_calf.to_herd : where?.male_calf.to_herd) ||
+                              "from Settings"
+                            }`}
+                            label={`Calf ${i + 1} herd`}
+                            className="w-[190px]"
                           />
                         </div>
                         <label className="flex items-center gap-2 pb-2 text-[12.5px] text-[var(--sd-muted)]">
