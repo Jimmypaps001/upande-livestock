@@ -29,7 +29,7 @@ bind on newly recorded events; it is a deliberate to-do, not an oversight.
 
 import frappe
 from frappe import _
-from frappe.utils import cint, date_diff, flt, getdate
+from frappe.utils import cint, date_diff, flt, getdate, today
 
 from upande_livestock.serverscripts.common import backdate
 from upande_livestock.serverscripts.common.timings import TIMING_DEFAULTS, read_setting
@@ -376,6 +376,28 @@ def check_guards(doc):
 	_check_age_window(doc)
 	_check_interval(doc)
 	_check_duplicate(doc)
+
+
+def ineligible_reason(animal, event_type, event_date=None, backdated=False):
+	"""Why `animal` may not have `event_type` recorded on `event_date`, or None.
+
+	The same rules `check_guards` enforces on save, asked without saving: a
+	batch round uses it to skip the animals a rule refuses (and to mark them
+	before the round is saved) instead of failing the whole round. Because it
+	runs the guards themselves there is no second copy of any rule to drift.
+	"""
+	if not frappe.db.exists("Animal", animal):
+		return _("{0} is not an animal on this farm.").format(animal)
+	doc = frappe.new_doc("Livestock Event")
+	doc.animal = animal
+	doc.event_type = event_type
+	doc.event_date = event_date or today()
+	doc.custom_is_backdated = 1 if backdated else 0
+	try:
+		check_guards(doc)
+	except frappe.ValidationError as e:
+		return frappe.utils.strip_html_tags(str(e)).strip() or _("Not eligible.")
+	return None
 
 
 # --- Who may record -----------------------------------------------------------

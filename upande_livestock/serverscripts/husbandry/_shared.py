@@ -158,3 +158,25 @@ def append_items(doc, d):
 	_refuse_foreign_items(doc.event_type, rows)
 	for row in rows:
 		doc.append("drug_issues", row)
+
+
+def split_eligible(animals, event_type, event_date=None, backdated=False):
+	"""Sort a round's animals into (eligible, skipped).
+
+	`skipped` is [{"animal", "reason"}], each reason the rule's own words (see
+	guards.ineligible_reason). A repeated animal is kept once. The order of
+	`animals` is kept, so the answer reads like the list the person picked.
+	"""
+	from upande_livestock.serverscripts.common.guards import ineligible_reason
+
+	eligible, skipped, seen = [], [], set()
+	for animal in animals:
+		if animal in seen:
+			continue
+		seen.add(animal)
+		reason = ineligible_reason(animal, event_type, event_date, backdated)
+		if reason:
+			skipped.append({"animal": animal, "reason": reason})
+		else:
+			eligible.append(animal)
+	return eligible, skipped

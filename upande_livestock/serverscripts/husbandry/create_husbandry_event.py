@@ -14,7 +14,7 @@ from upande_livestock.serverscripts.common.vet import resolve_vet
 from upande_livestock.serverscripts.common import cost_center as livestock_cost_center
 from upande_livestock.serverscripts.common import event_items
 from upande_livestock.serverscripts.common import stock as livestock_stock
-from upande_livestock.serverscripts.husbandry._shared import HUSBANDRY_TYPES, _clean_drug_rows, _refuse_foreign_items, _husbandry_targets, _type_consumes_drugs
+from upande_livestock.serverscripts.husbandry._shared import HUSBANDRY_TYPES, _clean_drug_rows, _refuse_foreign_items, _husbandry_targets, _type_consumes_drugs, split_eligible
 
 
 # Posting the vet fee is common/vet_fee's job; this file only asks it to.
@@ -56,6 +56,17 @@ def create_husbandry_event(payload):
 		vet_fees.refuse_internal(vet, vet_fee)
 
 		animals = _husbandry_targets(d)
+		_date, is_backdated = backdate.resolve(d)
+		# Each animal is judged on its own. One cow dewormed last month does not
+		# cost the other eighty their round: she is skipped, with the reason, and
+		# nothing is issued for her.
+		animals, skipped = split_eligible(animals, event_type, _date, is_backdated)
+		if not animals:
+			frappe.throw(
+				_("No animal could be recorded for {0}:").format(event_type)
+				+ "\n"
+				+ "\n".join("{0}: {1}".format(s["animal"], s["reason"]) for s in skipped)
+			)
 		consumes = _type_consumes_drugs(event_type)
 		default_wh = d.get("source_warehouse") or event_items.default_store(event_type)
 		drugs = _clean_drug_rows(d.get("drugs"), default_wh) if consumes else []
@@ -71,7 +82,6 @@ def create_husbandry_event(payload):
 		# A backdated round posts nothing. The drug rows are still written onto
 		# every event and flagged, so the quantities survive for a reconciliation
 		# pass, but the store's balance is not rewritten months after the fact.
-		_date, is_backdated = backdate.resolve(d)
 		unposted = backdate.suppresses_stock(event_type, is_backdated)
 		stock_entry = None
 		if drugs and not unposted:
@@ -127,6 +137,8 @@ def create_husbandry_event(payload):
 			"ok": True,
 			"name": created[0] if created else "",
 			"names": created,
+			"recorded": animals,
+			"skipped": skipped,
 			"animals": len(created),
 			"event_type": event_type,
 			"stock_entry": stock_entry or "",
