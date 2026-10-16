@@ -331,19 +331,68 @@ def hold_valuation(se):
 		d.allow_zero_valuation_rate = 1
 
 
-def allow_unvalued_lines(se):
-	"""Let a line the ledger has no value for issue at zero.
+def last_purchase_rate(item_code, company=None):
+	"""What the item last cost to buy, per stock UOM, or 0 with no history.
+
+	Item.last_purchase_rate first; failing that the newest submitted Purchase
+	Receipt or Purchase Invoice line for the item (and company), by posting
+	date. Rates are in company currency.
+	"""
+	rate = flt(frappe.db.get_value("Item", item_code, "last_purchase_rate"))
+	if rate > 0:
+		return rate
+	best = None
+	for parent, child in (("Purchase Receipt", "Purchase Receipt Item"), ("Purchase Invoice", "Purchase Invoice Item")):
+		cond = "AND p.company = %(company)s" if company else ""
+		rows = frappe.db.sql(
+			f"""SELECT p.posting_date, p.posting_time, p.creation,
+			           IF(c.base_net_rate > 0, c.base_net_rate, c.base_rate) / IF(c.conversion_factor > 0, c.conversion_factor, 1) AS rate
+			    FROM `tab{child}` c JOIN `tab{parent}` p ON p.name = c.parent
+			    WHERE c.item_code = %(item)s AND p.docstatus = 1 AND p.is_return = 0
+			      AND IF(c.base_net_rate > 0, c.base_net_rate, c.base_rate) > 0 {cond}
+			    ORDER BY p.posting_date DESC, p.posting_time DESC, p.creation DESC LIMIT 1""",
+			{"item": item_code, "company": company},
+			as_dict=True,
+		)
+		if rows:
+			key = (str(rows[0].posting_date), str(rows[0].posting_time), str(rows[0].creation))
+			if best is None or key > best[0]:
+				best = (key, flt(rows[0].rate))
+	return best[1] if best else 0.0
+
+
+def note_warning(message):
+	"""Remember something the answer must say aloud (see envelope.run)."""
+	warnings = frappe.flags.get("livestock_stock_warnings") or []
+	if message not in warnings:
+		warnings.append(message)
+	frappe.flags.livestock_stock_warnings = warnings
+
+
+def warnings_made():
+	warnings = frappe.flags.get("livestock_stock_warnings") or []
+	frappe.flags.livestock_stock_warnings = []
+	return warnings
+
+
+def allow_unvalued_lines(se, zero_fallback=True):
+	"""Cost a line the ledger has no value for at the item's last purchase price.
 
 	A semen straw (or a drug) can sit in a store with a count but no cost: it
 	was donated, opened as a bare quantity, or the store's ledger was
-	rebuilt. ERPNext then refuses the issue with "Valuation Rate ... is required
-	to do accounting entries" -- a bookkeeping stop that the person holding the
-	phone cannot fix and that has nothing to do with whether the animal was
-	served. It offers its own way out: allow zero valuation on that line. A line
-	the ledger CAN value is left alone, so costed stock keeps its cost.
+	rebuilt. Issuing it at nothing hides what it cost the farm, so the line is
+	costed at what the item last cost to buy (`last_purchase_rate`). The Stock
+	Entry re-derives outgoing rates from the ledger on every validate, so the
+	rate is re-applied after that step, on this document only.
+
+	Only an item with NO purchase history at all is issued at zero, using
+	ERPNext's allow-zero-valuation flag, and the answer carries a warning
+	naming it. A line the ledger CAN value is left alone, so costed stock
+	keeps its cost.
 	"""
 	from erpnext.stock.stock_ledger import get_valuation_rate
 
+	priced = {}
 	for d in se.items:
 		if not d.s_warehouse:
 			continue
@@ -353,8 +402,44 @@ def allow_unvalued_lines(se):
 			)
 		except Exception:
 			rate = 0
-		if not flt(rate):
+		if flt(rate):
+			continue
+		price = last_purchase_rate(d.item_code, se.company)
+		if price > 0:
+			priced[d.idx] = price
+			d.basic_rate = price
+			d.set_basic_rate_manually = 1
+			d.allow_zero_valuation_rate = 0
+		elif zero_fallback:
 			d.allow_zero_valuation_rate = 1
+			item_name = frappe.db.get_value("Item", d.item_code, "item_name") or d.item_code
+			note_warning(
+				_("{0} has no cost \u2014 issued at zero; set its valuation rate").format(item_name)
+			)
+	if priced:
+		_keep_rates(se)
+
+
+def _keep_rates(se):
+	"""Re-apply the last-purchase rates after the Stock Entry resets outgoing ones."""
+	original = se.set_rate_for_outgoing_items
+	for d in se.items:
+		if d.s_warehouse and d.get("set_basic_rate_manually"):
+			d.flags.last_purchase_rate = flt(d.basic_rate)
+
+	def wrapped(*args, **kwargs):
+		original(*args, **kwargs)
+		total = 0.0
+		for d in se.items:
+			rate = flt(d.flags.get("last_purchase_rate"))
+			if d.s_warehouse and rate:
+				d.basic_rate = rate
+				d.basic_amount = flt(flt(d.transfer_qty) * rate, d.precision("basic_amount"))
+			if d.s_warehouse and not d.t_warehouse:
+				total += flt(d.basic_amount)
+		return total
+
+	se.set_rate_for_outgoing_items = wrapped
 
 
 def release_valuation(se):

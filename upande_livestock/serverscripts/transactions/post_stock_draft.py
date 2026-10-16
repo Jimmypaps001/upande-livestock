@@ -44,6 +44,9 @@ def post_stock_draft(payload=None):
 		se.posting_date = today()
 		se.posting_time = nowtime()
 		livestock_stock.release_valuation(se)
+		# A drug the farm has bought is costed at its last price; one it never has is posted
+		# as ERPNext values it, exactly as before.
+		livestock_stock.allow_unvalued_lines(se, zero_fallback=False)
 		se.flags.ignore_permissions = True
 		se.save()
 		se.submit()

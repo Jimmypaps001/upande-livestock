@@ -38,11 +38,13 @@ def _entry_with(*lines):
 
 
 class TestAnUnvaluedLineIsAllowedAtZero(IntegrationTestCase):
-	def test_a_line_with_no_rate_is_allowed_zero_valuation(self):
+	def test_a_line_with_no_rate_and_no_purchase_history_is_zero_valued_and_warned(self):
 		se = _entry_with(("ZZ-ITEM", "ZZ-WH"))
-		with patch("erpnext.stock.stock_ledger.get_valuation_rate", return_value=0):
+		with patch("erpnext.stock.stock_ledger.get_valuation_rate", return_value=0), \
+		     patch.object(livestock_stock, "last_purchase_rate", return_value=0):
 			livestock_stock.allow_unvalued_lines(se)
 		self.assertEqual(se.items[0].allow_zero_valuation_rate, 1)
+		self.assertIn("has no cost", livestock_stock.warnings_made()[0])
 
 	def test_a_line_with_a_rate_keeps_its_cost(self):
 		se = _entry_with(("ZZ-ITEM", "ZZ-WH"))

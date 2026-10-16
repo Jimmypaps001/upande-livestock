@@ -142,6 +142,11 @@ def run(fn, log_title: str) -> dict:
 		# record stood, and the page must say what is still to post.
 		from upande_livestock.serverscripts.common.stock import drafts_made
 
+		from upande_livestock.serverscripts.common.stock import warnings_made
+
+		warnings = warnings_made()
+		if warnings and isinstance(out, dict) and not out.get("error"):
+			out["stock_warnings"] = warnings
 		drafts = drafts_made()
 		if drafts and isinstance(out, dict) and not out.get("error"):
 			out["stock_drafts"] = drafts
