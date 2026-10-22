@@ -240,6 +240,48 @@ before_uninstall = [
 # 	}
 # }
 
+doc_events = {
+	# Live updates for open phones: each save only notes the change; one
+	# `livestock_changed` message per kind goes out after commit.
+	# See serverscripts/common/live.py.
+	**{
+		dt: {
+			"on_update": "upande_livestock.serverscripts.common.live.note",
+			"on_update_after_submit": "upande_livestock.serverscripts.common.live.note",
+			"on_cancel": "upande_livestock.serverscripts.common.live.note",
+			"on_trash": "upande_livestock.serverscripts.common.live.note",
+		}
+		for dt in (
+			"Animal",
+			"Herds",
+			"Livestock Event",
+			"Milk Recording",
+			"Livestock Weight Record",
+			"Livestock Disposal",
+			"Livestock Health Case",
+			"Livestock Diagnosis",
+			"Livestock Vet",
+			"Livestock Settings",
+		)
+	},
+	# Animal also thumbnails a changed profile picture; a File attached to one of
+	# our doctypes is thumbnailed on insert (serverscripts/common/thumbs.py).
+	"Animal": {
+		"on_update": [
+			"upande_livestock.serverscripts.common.live.note",
+			"upande_livestock.serverscripts.common.thumbs.thumb_animal",
+		],
+		"on_update_after_submit": "upande_livestock.serverscripts.common.live.note",
+		"on_cancel": "upande_livestock.serverscripts.common.live.note",
+		"on_trash": "upande_livestock.serverscripts.common.live.note",
+	},
+	"File": {"after_insert": "upande_livestock.serverscripts.common.thumbs.thumb_file"},
+	"Stock Entry": {
+		"on_submit": "upande_livestock.serverscripts.common.live.note",
+		"on_cancel": "upande_livestock.serverscripts.common.live.note",
+	},
+}
+
 # Scheduled Tasks
 # ---------------
 
