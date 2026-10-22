@@ -248,6 +248,16 @@ def bull_cull_status(animal):
 # ---------------------------------------------------------------------------
 
 
+def heifer_herds():
+	"""The herds that hold heifers: Livestock Settings' Heifer herds table.
+
+	Empty when the farm has not filled it in; clients then fall back to
+	stage and age, which also catches calves.
+	"""
+	s = settings()
+	return list(dict.fromkeys(r.herd for r in (s.get("heifer_herds") or []) if r.herd))
+
+
 def milking_herds():
 	"""The herds that are milked: Livestock Settings' Milking Herds table.
 

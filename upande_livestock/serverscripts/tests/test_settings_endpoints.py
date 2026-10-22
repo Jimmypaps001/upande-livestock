@@ -73,6 +73,7 @@ class TestLivestockSettingsEndpoints(IntegrationTestCase):
 				"custom_company_cost_centers",
 				"feed_source_warehouses",
 				"growth_ladder",
+				"heifer_herds",
 				"milking_herds",
 			],
 		)

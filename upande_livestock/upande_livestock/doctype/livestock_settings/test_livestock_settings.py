@@ -26,7 +26,7 @@ IGNORE_TEST_RECORD_DEPENDENCIES = [
 	"Herds", "Warehouse", "Item", "Item Group", "Stock Entry Type", "Company", "Account",
 	"Cost Center", "Business Unit", "Farm", "Herd Growth Stage",
 	"Livestock Bought In Concentrate", "Livestock Cost Center Default",
-	"Livestock Feed Warehouse", "Livestock Milking Herd",
+	"Livestock Feed Warehouse", "Livestock Milking Herd", "Livestock Heifer Herd",
 ]
 
 

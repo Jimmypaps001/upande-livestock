@@ -111,6 +111,7 @@
   "heifer_dry_off_before_calving_days",
   "sb_lactation",
   "milking_herds",
+  "heifer_herds",
   "high_yield_herd",
   "post_calving_herd",
   "high_yield_days_from_conception",
@@ -1096,6 +1097,13 @@
    "label": "Milking Herds",
    "options": "Livestock Milking Herd",
    "description": "The herds that are milked. The milking screens offer these herds and their cows, and the mobile app marks them as milking herds."
+  },
+  {
+   "fieldname": "heifer_herds",
+   "fieldtype": "Table",
+   "label": "Heifer herds",
+   "options": "Livestock Heifer Herd",
+   "description": "The herds that hold heifers (for example the service heifers). The mobile app's Heifers filter shows the animals in these herds."
   },
   {
    "fieldname": "tab_stock",

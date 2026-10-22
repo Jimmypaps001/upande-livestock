@@ -154,6 +154,25 @@ class TestBullCullWindow(IntegrationTestCase):
 class TestEligibility(IntegrationTestCase):
 	"""Derived from where an animal stands — never marked by hand."""
 
+	def test_heifer_herds_are_read_from_the_settings_table_and_exposed(self):
+		from unittest import mock
+
+		from upande_livestock.serverscripts.movement import eligibility as elig
+		from upande_livestock.serverscripts.mobile import get_bootstrap_bundle as boot
+
+		fake = frappe._dict(heifer_herds=[
+			frappe._dict(herd="H-A"), frappe._dict(herd="H-B"), frappe._dict(herd="H-A"), frappe._dict(herd=None),
+		])
+		with mock.patch.object(hm, "settings", return_value=fake):
+			self.assertEqual(hm.heifer_herds(), ["H-A", "H-B"])
+		with mock.patch.object(hm, "settings", return_value=frappe._dict()):
+			self.assertEqual(hm.heifer_herds(), [], "unconfigured means empty, so clients fall back")
+		with mock.patch.object(hm, "heifer_herds", return_value=["H-A"]):
+			self.assertEqual(elig.eligibility()["heifer_herds"], ["H-A"])
+			herds = boot.get_bootstrap_bundle().get("herds", [])
+			self.assertTrue(all("is_heifer" in h for h in herds))
+			self.assertTrue(all(h["is_heifer"] == (h["name"] == "H-A") for h in herds))
+
 	def test_milking_offers_only_the_lactation_groups(self):
 		s = hm.settings()
 		herds = hm.milking_herds()
