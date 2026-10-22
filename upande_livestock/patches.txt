@@ -175,3 +175,6 @@ upande_livestock.patches.animated_livestock_logo
 # A vet is a Livestock Vet record. Health case "Vet Called"/"Vet Name" and the
 # disposal's "Seen By" user are folded into `vet` (or the notes) and dropped.
 upande_livestock.patches.vets_as_records
+
+# Every animal picture gets a ~240 px thumbnail for lists.
+upande_livestock.patches.thumbnail_animal_photos

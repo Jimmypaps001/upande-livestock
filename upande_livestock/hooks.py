@@ -282,6 +282,13 @@ doc_events = {
 	},
 }
 
+# A File attached to an animal picture doctype is thumbnailed on insert, and a
+# changed Animal.image is thumbnailed on save (serverscripts/common/thumbs.py).
+doc_events = {
+	"Animal": {"on_update": "upande_livestock.serverscripts.common.thumbs.thumb_animal"},
+	"File": {"after_insert": "upande_livestock.serverscripts.common.thumbs.thumb_file"},
+}
+
 # Scheduled Tasks
 # ---------------
 

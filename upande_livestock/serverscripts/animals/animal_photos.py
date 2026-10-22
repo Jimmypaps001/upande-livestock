@@ -24,6 +24,7 @@ import frappe
 from frappe import _
 from frappe.utils import get_fullname
 
+from upande_livestock.serverscripts.common import thumbs
 from upande_livestock.serverscripts.common.envelope import as_dict, guard_read, run
 from upande_livestock.serverscripts.common.guards import require_employee
 from upande_livestock.serverscripts.common.envelope import LIVESTOCK_ROLES
@@ -119,7 +120,7 @@ def animal_gallery(animal=None, payload=None):
 				continue
 			seen.add(f.file_url)
 			out.append({
-				"name": f.name, "url": f.file_url, "thumb": f.thumbnail_url or None,
+				"name": f.name, "url": f.file_url, "thumb": f.thumbnail_url or thumbs.existing_thumb(f.file_url),
 				"date": str(f.creation), "source": source_of(f),
 				"ref_doctype": f.attached_to_doctype, "ref_name": f.attached_to_name,
 				"caption": f.livestock_caption or "", "uploaded_by": f.owner,
@@ -137,7 +138,7 @@ def animal_gallery(animal=None, payload=None):
 		for url, date, owner, source, dt, nm in extra:
 			if _is_image(url) and url not in seen:
 				seen.add(url)
-				out.append({"name": None, "url": url, "thumb": None, "date": str(date),
+				out.append({"name": None, "url": url, "thumb": thumbs.existing_thumb(url), "date": str(date),
 				            "source": source, "ref_doctype": dt, "ref_name": nm,
 				            "caption": "", "uploaded_by": owner})
 

@@ -31,7 +31,7 @@ Read-guarded on Animal.
 import frappe
 from frappe.utils import now
 
-from upande_livestock.serverscripts.common import animal_stage
+from upande_livestock.serverscripts.common import animal_stage, thumbs
 from upande_livestock.serverscripts.common.choices import RETIRED_STATUSES
 from upande_livestock.serverscripts.common.envelope import guard_read, run
 
@@ -98,6 +98,7 @@ def animals_since(since=None):
 					"stage": stages[r.name],
 					"repro_status": r.repro_status,
 					"image": r.image,
+					"thumb": thumbs.existing_thumb(r.image),
 					"dam": r.dam,
 					"sire": r.sire_name,
 					"parity": r.parity,
