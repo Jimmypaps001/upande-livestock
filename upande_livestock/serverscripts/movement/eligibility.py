@@ -28,6 +28,8 @@ def eligibility():
 			"ok": True,
 			"milking_herds": herd_movement.milking_herds(),
 			"heifer_herds": herd_movement.heifer_herds(),
+			"in_calf_herds": herd_movement.in_calf_herds(),
+			"calf_group_herds": herd_movement.calf_group_herds(),
 			"service_herds": herd_movement.service_herds(),
 			"service_wait_days": herd_movement.service_wait_days(),
 			"growth_ladder": ladder,

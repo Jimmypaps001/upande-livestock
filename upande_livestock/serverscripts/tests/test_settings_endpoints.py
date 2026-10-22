@@ -70,10 +70,12 @@ class TestLivestockSettingsEndpoints(IntegrationTestCase):
 			sorted(tables),
 			[
 				"bought_in_concentrates",
+				"calf_herds",
 				"custom_company_cost_centers",
 				"feed_source_warehouses",
 				"growth_ladder",
 				"heifer_herds",
+				"in_calf_herds",
 				"milking_herds",
 			],
 		)

@@ -258,6 +258,24 @@ def heifer_herds():
 	return list(dict.fromkeys(r.herd for r in (s.get("heifer_herds") or []) if r.herd))
 
 
+def _settings_herds(table):
+	s = settings()
+	return list(dict.fromkeys(r.herd for r in (s.get(table) or []) if r.herd))
+
+
+def in_calf_herds():
+	"""Where in-calf animals go: Livestock Settings' In-calf herds table. Empty when unset."""
+	return _settings_herds("in_calf_herds")
+
+
+def calf_group_herds():
+	"""The calf groups: Livestock Settings' Calf herds table. Empty when unset.
+
+	Not calf_herd(sex), which is the single herd a newborn is put in.
+	"""
+	return _settings_herds("calf_herds")
+
+
 def milking_herds():
 	"""The herds that are milked: Livestock Settings' Milking Herds table.
 

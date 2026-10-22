@@ -27,6 +27,7 @@ IGNORE_TEST_RECORD_DEPENDENCIES = [
 	"Cost Center", "Business Unit", "Farm", "Herd Growth Stage",
 	"Livestock Bought In Concentrate", "Livestock Cost Center Default",
 	"Livestock Feed Warehouse", "Livestock Milking Herd", "Livestock Heifer Herd",
+	"Livestock In-calf Herd", "Livestock Calf Herd",
 ]
 
 

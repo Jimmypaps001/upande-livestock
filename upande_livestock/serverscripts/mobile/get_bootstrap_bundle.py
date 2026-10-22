@@ -89,6 +89,8 @@ def get_bootstrap_bundle(version=None):
 		milking = set(herd_movement.milking_herds())
 		dry = set(herd_movement.dry_herds())
 		heifer = set(herd_movement.heifer_herds())
+		in_calf = set(herd_movement.in_calf_herds())
+		calf = set(herd_movement.calf_group_herds())
 		return {
 			"ok": True,
 			"version": current,
@@ -105,6 +107,8 @@ def get_bootstrap_bundle(version=None):
 					"is_milking": h.name in milking,
 					"is_dry": h.name in dry,
 					"is_heifer": h.name in heifer,
+					"is_in_calf": h.name in in_calf,
+					"is_calf": h.name in calf,
 					"is_calf_rearing": bool(h.custom_is_calf_rearing),
 					"min_age": h.min_age,
 					"max_age": h.max_age,

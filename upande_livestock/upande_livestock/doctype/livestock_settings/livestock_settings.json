@@ -112,6 +112,8 @@
   "sb_lactation",
   "milking_herds",
   "heifer_herds",
+  "in_calf_herds",
+  "calf_herds",
   "high_yield_herd",
   "post_calving_herd",
   "high_yield_days_from_conception",
@@ -1104,6 +1106,20 @@
    "label": "Heifer herds",
    "options": "Livestock Heifer Herd",
    "description": "The herds that hold heifers (for example the service heifers). The mobile app's Heifers filter shows the animals in these herds."
+  },
+  {
+   "fieldname": "in_calf_herds",
+   "fieldtype": "Table",
+   "label": "In-calf herds",
+   "options": "Livestock In-calf Herd",
+   "description": "The herds where in-calf animals go (for example the bullying heifers and the steamers). The mobile app's In-calf filter shows only the animals in these herds."
+  },
+  {
+   "fieldname": "calf_herds",
+   "fieldtype": "Table",
+   "label": "Calf herds",
+   "options": "Livestock Calf Herd",
+   "description": "The calf groups (for example the bull calves, 0-2 and 2-4). The mobile app's Calves filter shows the animals in these herds."
   },
   {
    "fieldname": "tab_stock",

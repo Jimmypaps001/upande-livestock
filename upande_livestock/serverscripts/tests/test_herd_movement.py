@@ -173,6 +173,32 @@ class TestEligibility(IntegrationTestCase):
 			self.assertTrue(all("is_heifer" in h for h in herds))
 			self.assertTrue(all(h["is_heifer"] == (h["name"] == "H-A") for h in herds))
 
+	def test_in_calf_and_calf_herds_are_read_from_settings_and_exposed(self):
+		from unittest import mock
+
+		from upande_livestock.serverscripts.movement import eligibility as elig
+		from upande_livestock.serverscripts.mobile import get_bootstrap_bundle as boot
+
+		fake = frappe._dict(
+			in_calf_herds=[frappe._dict(herd="IC-A"), frappe._dict(herd="IC-A"), frappe._dict(herd=None)],
+			calf_herds=[frappe._dict(herd="C-A"), frappe._dict(herd="C-B")],
+		)
+		with mock.patch.object(hm, "settings", return_value=fake):
+			self.assertEqual(hm.in_calf_herds(), ["IC-A"])
+			self.assertEqual(hm.calf_group_herds(), ["C-A", "C-B"])
+		with mock.patch.object(hm, "settings", return_value=frappe._dict()):
+			self.assertEqual(hm.in_calf_herds(), [])
+			self.assertEqual(hm.calf_group_herds(), [])
+		with mock.patch.object(hm, "in_calf_herds", return_value=["IC-A"]), mock.patch.object(
+			hm, "calf_group_herds", return_value=["C-A"]
+		):
+			out = elig.eligibility()
+			self.assertEqual(out["in_calf_herds"], ["IC-A"])
+			self.assertEqual(out["calf_group_herds"], ["C-A"])
+			herds = boot.get_bootstrap_bundle().get("herds", [])
+			self.assertTrue(all(h["is_in_calf"] == (h["name"] == "IC-A") for h in herds))
+			self.assertTrue(all(h["is_calf"] == (h["name"] == "C-A") for h in herds))
+
 	def test_milking_offers_only_the_lactation_groups(self):
 		s = hm.settings()
 		herds = hm.milking_herds()
