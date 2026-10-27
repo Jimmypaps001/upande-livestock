@@ -3,8 +3,8 @@
 
 """Where the dam and her calves stand once she has calved.
 
-The calves are routed by sex. The dam stays in the herd she calved in: a beef
-cow rears her calf at foot, so nothing moves her.
+The calves are routed by sex. The dam goes to Livestock Settings' cow herd when
+one is set, and stays where she is when none is.
 
 The destinations are also answered BEFORE anything is written, so the person
 at the pen can see the consequence while they can still say it is wrong.
@@ -18,6 +18,8 @@ from frappe.utils import add_days, today
 
 from upande_livestock.serverscripts.breeding.calving_destinations import calving_destinations
 from upande_livestock.serverscripts.breeding.create_service_event import create_service_event
+from upande_livestock.serverscripts.common import herd_movement as hm
+from upande_livestock.serverscripts.tests.timings_utils import set_setting
 from upande_livestock.serverscripts.tests.test_operations import (
 	_make_cow,
 	_open_backdating_window,
@@ -31,7 +33,7 @@ def _employee():
 
 
 def _two_herds():
-	herds = frappe.get_all("Herds", pluck="name", limit_page_length=2)
+	herds = frappe.get_all("Herds", pluck="name", limit_page_length=2, order_by="name")
 	if len(herds) < 2:
 		raise unittest.SkipTest("fewer than two herds on this site")
 	return herds
@@ -50,7 +52,8 @@ class TestTheDestinationsAreAnsweredBeforeAnythingIsWritten(IntegrationTestCase)
 		for who in ("dam", "female_calf", "male_calf"):
 			self.assertIn(who, got)
 
-	def test_the_dam_stays_where_she_is(self):
+	def test_the_dam_stays_where_she_is_with_no_cow_herd(self):
+		set_setting(self, "cow_herd", None)
 		got = calving_destinations(dam=self.dam)
 		self.assertFalse(got["dam"]["will_move"])
 		self.assertEqual(got["dam"]["from_herd"], got["dam"]["to_herd"])
@@ -71,13 +74,13 @@ class TestTheDestinationsAreAnsweredBeforeAnythingIsWritten(IntegrationTestCase)
 		self.assertIn("error", calving_destinations(dam=None))
 
 
-class TestTheDamStaysPut(IntegrationTestCase):
+class TestTheDamAfterCalving(IntegrationTestCase):
 	def setUp(self):
 		_open_backdating_window(self)
 		self.employee = _employee()
 		if not self.employee:
 			raise unittest.SkipTest("no active Employee on this site")
-		self.herd = _two_herds()[0]
+		self.herd, self.cows = _two_herds()
 
 		self.dam = _make_cow("ZZ ROUTING DAM", months_old=48, herd=self.herd)
 		self.addCleanup(_purge_events_for, self.dam.name)
@@ -100,19 +103,53 @@ class TestTheDamStaysPut(IntegrationTestCase):
 		dx.insert(ignore_permissions=True)
 		dx.submit()
 
-	def test_calving_leaves_her_in_her_herd_with_no_movement(self):
+	def _calve(self, when=None):
 		doc = frappe.new_doc("Livestock Event")
 		doc.event_type = "Calving"
 		doc.animal = self.dam.name
-		doc.event_date = today()
+		doc.event_date = when or today()
 		doc.operator = self.employee
 		doc.custom_no_of_calves = 1
 		doc.custom_calving_outcome = "Live Birth"
 		doc.insert(ignore_permissions=True)
 		doc.submit()
-		self.assertEqual(frappe.db.get_value("Animal", self.dam.name, "current_herd"), self.herd)
+		return doc
+
+	def _herd_of_dam(self):
+		return frappe.db.get_value("Animal", self.dam.name, "current_herd")
+
+	def test_with_no_cow_herd_she_stays_put(self):
+		set_setting(self, "cow_herd", None)
+		self._calve()
+		self.assertEqual(self._herd_of_dam(), self.herd)
 		self.assertFalse(frappe.db.exists("Livestock Event", {
 			"animal": self.dam.name, "event_type": "Movement", "docstatus": 1}))
+
+	def test_with_a_cow_herd_she_moves_there_and_can_be_served_again(self):
+		set_setting(self, "cow_herd", self.cows)
+		self._calve()
+		self.assertEqual(self._herd_of_dam(), self.cows)
+		self.assertIn(self.cows, hm.service_herds())
+		wait = hm.service_wait_days()
+		frappe.db.set_value("Animal", self.dam.name, "last_calving_date",
+		                    add_days(today(), -(wait + 1)), update_modified=False)
+		frappe.clear_document_cache("Animal", self.dam.name)
+		self.assertTrue(hm.is_servable(self.dam.name))
+
+	def test_a_cow_who_moved_since_is_left_where_she_stands(self):
+		set_setting(self, "cow_herd", self.cows)
+		move = frappe.new_doc("Livestock Event")
+		move.event_type = "Movement"
+		move.animal = self.dam.name
+		move.event_date = today()
+		move.new_herd = self.cows
+		move.operator = self.employee
+		move.insert(ignore_permissions=True)
+		move.submit()
+		self._calve(when=add_days(today(), -30))
+		self.assertEqual(self._herd_of_dam(), self.cows)
+		self.assertEqual(frappe.db.count("Livestock Event", {
+			"animal": self.dam.name, "event_type": "Movement", "docstatus": 1}), 1)
 
 
 class TestAnAnimalWithNoHerdCanBeMovedIntoOne(IntegrationTestCase):

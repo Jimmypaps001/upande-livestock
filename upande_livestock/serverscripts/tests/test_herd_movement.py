@@ -246,3 +246,46 @@ class TestAnUnsetTimingIsItsDefaultNotOff(unittest.TestCase):
 			self.assertEqual(HM.service_wait_days(), timings.TIMING_DEFAULTS["post_calving_optimal_service_days"])
 			self.assertEqual(HM.get_timing("min_service_age_months"), 15)
 			self.assertEqual(HM.get_timing("gestation_period_days"), 280)
+
+
+class TestCowHerd(unittest.TestCase):
+	"""The herd a cow goes to when she calves, and is served again from."""
+
+	def _settings(self, cow):
+		from unittest import mock
+
+		return mock.patch.object(hm, "settings", return_value=frappe._dict(cow_herd=cow))
+
+	def test_it_is_read_from_settings_when_it_names_a_herd(self):
+		from unittest import mock
+
+		with self._settings("COWS"), mock.patch.object(frappe.db, "exists", return_value=True):
+			self.assertEqual(hm.cow_herd(), "COWS")
+		with self._settings("GONE"), mock.patch.object(frappe.db, "exists", return_value=False):
+			self.assertIsNone(hm.cow_herd())
+		with self._settings(None):
+			self.assertIsNone(hm.cow_herd())
+
+	def test_it_is_a_servable_herd_beside_the_ladder_rungs(self):
+		from unittest import mock
+
+		ladder = [{"herd": "TOP", "exits_on_service": 1}, {"herd": "LOW", "exits_on_service": 0}]
+		with mock.patch.object(hm, "growth_ladder", return_value=ladder), mock.patch.object(
+			hm, "cow_herd", return_value="COWS"
+		):
+			self.assertEqual(hm.service_herds(), ["TOP", "COWS"])
+		with mock.patch.object(hm, "growth_ladder", return_value=ladder), mock.patch.object(
+			hm, "cow_herd", return_value=None
+		):
+			self.assertEqual(hm.service_herds(), ["TOP"])
+
+	def test_a_cow_in_the_cow_herd_past_the_wait_is_servable(self):
+		from unittest import mock
+
+		row = frappe._dict(current_herd="COWS", last_calving_date=add_days(today(), -400), repro_status="Open")
+		with mock.patch.object(hm, "service_herds", return_value=["COWS"]), mock.patch.object(
+			frappe.db, "get_value", return_value=row
+		), mock.patch.object(hm, "service_wait_days", return_value=60), mock.patch.object(
+			hm, "open_days", return_value=400
+		), mock.patch.object(hm, "has_open_service", return_value=False):
+			self.assertTrue(hm.is_servable("A1"))

@@ -63,17 +63,23 @@ def next_growth_herd(herd):
 	return rungs[i + 1]["herd"]
 
 
+def cow_herd():
+	"""Where a cow goes when she calves: Livestock Settings' cow herd, if it names a herd."""
+	herd = settings().get("cow_herd")
+	return herd if herd and frappe.db.exists("Herds", herd) else None
+
+
 def calving_destinations(dam):
 	"""Where the dam and each kind of calf stand once this calving is recorded.
 
 	Answered before anything is written, so the person at the pen can see it and
 	stop if it is wrong. Sex decides the calves and nothing else does; the dam
-	stays in the herd she is in: a beef cow calves and rears the calf at foot.
+	goes to the cow herd if Settings names one, otherwise stays where she is.
 	"""
 	row = frappe.db.get_value("Animal", dam, ["current_herd", "burn_name", "sex"], as_dict=True) \
 		if dam else None
 	from_herd = row.current_herd if row else None
-	to_herd = from_herd
+	to_herd = cow_herd() or from_herd
 
 	return {
 		"dam": {
@@ -81,8 +87,9 @@ def calving_destinations(dam):
 			"label": (row.burn_name if row else None) or dam,
 			"from_herd": from_herd,
 			"to_herd": to_herd,
-			"will_move": False,
-			"reason": "a cow stays in her herd with her calf",
+			"will_move": bool(to_herd and from_herd != to_herd),
+			"reason": "she moves to the cow herd" if to_herd and from_herd != to_herd
+			          else "a cow stays in her herd with her calf",
 		},
 		"female_calf": {
 			"to_herd": calf_herd("Female"),
@@ -236,12 +243,14 @@ def calf_group_herds():
 
 
 def service_herds():
-	"""The rungs of the ladder that are left by being served.
+	"""The rungs of the ladder that are left by being served, plus the cow herd.
 
 	A heifer becomes servable at the top of the ladder; a cow becomes servable
 	again once she is far enough past calving, which `service_wait_days` covers.
 	"""
-	return [r["herd"] for r in growth_ladder() if r["exits_on_service"]]
+	herds = [r["herd"] for r in growth_ladder() if r["exits_on_service"]]
+	cows = cow_herd()
+	return herds + [cows] if cows and cows not in herds else herds
 
 
 def service_wait_days():
