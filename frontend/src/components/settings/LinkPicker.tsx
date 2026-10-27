@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
  * A picker over real records, and only real records.
  *
  * Every link on this page names something the farm posts against — the
- * warehouse the milk lands in, the account the journal entry credits, the herd
+ * warehouse the feed comes from, the account the journal entry credits, the herd
  * a newborn joins. A wrong value in one of those does not raise; it posts
  * somewhere else and is found in the reconciliation. So what the operator types
  * is a search term and never a value: the field only changes when a row in the

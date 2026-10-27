@@ -316,8 +316,8 @@ export function RaiseCase({
           onChange={(e) => setReason(e.target.value)}
           placeholder={
             flow === "Mortality"
-              ? "Found down after the morning milking; treated for milk fever on Tuesday."
-              : "Third case of mastitis this lactation, and she has not held to two services."
+              ? "Found down after the morning feed; treated for bloat on Tuesday."
+              : "Third case of lameness this year, and she has not held to two services."
           }
         />
       </div>

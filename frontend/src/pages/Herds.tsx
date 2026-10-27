@@ -167,7 +167,7 @@ function SplitHerd({
             id="h-name"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Lactating group 4"
+            placeholder="Finishing group 4"
           />
         </div>
 

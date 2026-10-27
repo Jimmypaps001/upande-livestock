@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 /**
  * Where she stands in the loop between one calving and the next.
  *
- * A dairy cow's year is a circle — calve, wait, serve, carry, dry off, calve
+ * A dairy cow's year is a circle — calve, wait, serve, carry, calve
  * again — and every textbook on the subject draws it as one. Rendering it as a
  * row of status chips would throw away the one thing the shape is telling you:
  * that this is a cycle she has been round before and will go round again, and
@@ -16,7 +16,7 @@ import { cn } from "@/lib/utils";
  * a diagram that gave "served" and "in calf" equal quarters would quietly
  * misteach the thing it exists to explain.
  *
- * Drawn by hand in SVG, as the milk chart is: this app carries no charting
+ * Drawn in SVG, like the other charts here: this app carries no charting
  * dependency and one ring does not earn a hundred kilobytes over a rural
  * connection.
  */
@@ -27,7 +27,6 @@ const SPAN: Record<string, number> = {
   open: 39,
   served: 35,
   confirmed: 245,
-  dry: 60,
 };
 
 const SIZE = 260;

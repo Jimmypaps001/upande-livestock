@@ -50,7 +50,7 @@ const straws = [
 const breeding: Record<string, unknown> = {
   ok: true,
   animals: [
-    { name: "A039/26", label: "APIJA (A039/26)", herd: "Lactating group 1", herd_label: "Lactating group 1", repro: "Open" },
+    { name: "A039/26", label: "APIJA (A039/26)", herd: "Finishing group 1", herd_label: "Finishing group 1", repro: "Open" },
   ],
   diagnosis_animals: [],
   heat_animals: [],

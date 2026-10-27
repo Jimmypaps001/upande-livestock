@@ -149,10 +149,10 @@ describe("a record whose stock waits as a draft", () => {
     act(() => {
       window.dispatchEvent(
         new CustomEvent("livestock:stock-drafts", {
-          detail: [{ name: "STE-9", stock_entry_type: "Livestock Drying Off", short: "Tube: need 4 Nos, store has 0" }],
+          detail: [{ name: "STE-9", stock_entry_type: "Livestock Weighing", short: "Tube: need 4 Nos, store has 0" }],
         }),
       );
     });
-    expect(await screen.findByText(/STE-9 \(Livestock Drying Off\) is saved as a draft/)).toBeTruthy();
+    expect(await screen.findByText(/STE-9 \(Livestock Weighing\) is saved as a draft/)).toBeTruthy();
   });
 });

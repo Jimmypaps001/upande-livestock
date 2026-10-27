@@ -19,7 +19,7 @@ const board = {
       name: "A039/26",
       burn_name: "APIJA",
       sex: "Female" as const,
-      current_herd: "Lactating group 1",
+      current_herd: "Finishing group 1",
       breed: "Ayrshire",
       date_of_birth: "2022-04-11",
       image: null,
@@ -30,7 +30,7 @@ const board = {
       name: "ANI-DISP-2026-00099",
       animal: "A057/22",
       animal_name: "NDAMA",
-      herd: "Lactating group 1",
+      herd: "Finishing group 1",
       disposal_date: "2026-09-12",
       disposal_type: "Sold",
       flow: "Sale" as const,
@@ -47,7 +47,7 @@ const board = {
     },
   ],
   flagged: [
-    { name: "A101/23", burn_name: "SITA", herd: "Lactating group 2", reason: "Three mastitis cases", marked_on: "2026-09-01", marked_by: "x@y.z" },
+    { name: "A101/23", burn_name: "SITA", herd: "Finishing group 2", reason: "Three mastitis cases", marked_on: "2026-09-01", marked_by: "x@y.z" },
   ],
   recent: [],
   open_claims: [

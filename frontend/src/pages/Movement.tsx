@@ -142,9 +142,8 @@ export function Movement() {
   return (
     <Page>
       <PageHeading eyebrow="Upande Livestock · Herd" title="Movement">
-        Who is due out of the herd they are in. A calf moves when she has been
-        in her pen long enough; a milking cow moves when she is far enough in
-        calf — both are here, and each says which.
+        Who is due out of the herd they are in. An animal moves when it has been
+        in its pen long enough, and each row says which.
       </PageHeading>
 
       {/* Failures of the page itself sit at the top; what a BUTTON said sits
@@ -175,7 +174,7 @@ export function Movement() {
             value={remarks}
             onChange={(e) => setRemarks(e.target.value)}
             className="min-h-[38px]"
-            placeholder="Coming into milk."
+            placeholder="Reached the next weight band."
           />
         </div>
         {who.mustAsk && (

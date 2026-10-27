@@ -10,7 +10,7 @@
  * THE ANIMAL LIST IS THE SERVER'S, NEVER "every active animal". A weaner in
  * the service list is an invitation to record a service biology rules out, and
  * a cow with no open service in the diagnosis list is a "Confirmed" invented
- * from nothing — which then drives calving, herd moves and milk. Each options
+ * from nothing — which then drives calving and herd moves. Each options
  * endpoint already narrows; the screens ask and do not filter for themselves.
  */
 import { call, type Envelope } from "@/lib/frappe";
@@ -46,7 +46,7 @@ export interface AnimalChoice {
   repro: string | null;
   /* ── only on the narrowed breeding lists ───────────────────────────────
      The server works these out from Livestock Settings — the gestation
-     length, the dry-off window, the calving lead — so no screen has to
+     length, the calving lead — so no screen has to
      hold a second copy of the farm's own rules. */
   /** Her expected calving date. */
   due?: string | null;
@@ -55,8 +55,6 @@ export interface AnimalChoice {
   /** Inside the farm's window for this event. Never a refusal: calves come
    *  early, and a screen that would not record one sends people to the desk. */
   ready?: boolean;
-  /** Drying off: whether she has already been taken out of milk. */
-  dried_off?: boolean;
   /** Heat: her last service is still pending, so this heat is its answer. */
   repeat?: boolean;
 }
@@ -149,13 +147,8 @@ export interface MovementOptions {
    *  explicit empty list means "nothing is mapped". */
   items_by_event?: Record<string, StockChoice[]>;
   animals: AnimalChoice[];
-  /** In calf, still in milk, inside the farm's dry-off window. */
-  dry_off_animals: AnimalChoice[];
-  /** In calf, dried off, near her date. */
+  /** In calf and near her date. */
   calving_animals: AnimalChoice[];
-  /** Where this farm dries cows off to (Settings). A suggestion: a different
-   *  herd is warned about and then accepted. */
-  dry_off_herd: string | null;
   herds: { name: string; label: string }[];
   calving_outcomes: string[];
   employee: string | null;
@@ -193,8 +186,6 @@ export const createPregnancyDiagnosis = (p: Payload) =>
   post<{ name: string }>(`${NS}.breeding.create_pregnancy_diagnosis.create_pregnancy_diagnosis`, p);
 export const createAbortionEvent = (p: Payload) =>
   post<{ name: string }>(`${NS}.breeding.create_abortion_event.create_abortion_event`, p);
-export const createDryingOffEvent = (p: Payload) =>
-  post<{ name: string }>(`${NS}.breeding.create_drying_off_event.create_drying_off_event`, p);
 export const createHeatEvent = (p: Payload) =>
   post<{ name: string }>(`${NS}.breeding.create_heat_event.create_heat_event`, p);
 export const createCheckUp = (p: Payload) =>
@@ -243,27 +234,7 @@ export interface EventsView {
   error?: string;
 }
 
-export interface ProductionRow {
-  name: string;
-  recording_date: string;
-  session?: string | null;
-  herd?: string | null;
-  cows_milked?: number | null;
-  total_yield_kg?: number | null;
-  discarded_kg?: number | null;
-  net_yield_kg?: number | null;
-  milk_revenue?: number | null;
-}
-
-export interface ProductionView {
-  rows: ProductionRow[];
-  summary: Record<string, number>;
-  filters: Record<string, unknown>;
-  error?: string;
-}
-
 export interface ReportsView {
-  production: { month_kg?: number; prev_kg?: number; delta_kg?: number; month_rev?: number; prev_rev?: number };
   health: { active_animals?: number; open_cases?: number; cases_month?: number; open_rate?: number };
   reproduction: { pregnant?: number; served?: number; open?: number; births_month?: number; preg_rate?: number };
   herds: { name: string; animals: number }[];
@@ -286,8 +257,6 @@ export interface OpenCasesView {
 }
 
 export const getEventsView = () => call<EventsView>(`${NS}.dashboard.get_events.get_events`, {});
-export const getProductionView = () =>
-  call<ProductionView>(`${NS}.dashboard.get_production.get_production`, {});
 export const getReportsView = () => call<ReportsView>(`${NS}.dashboard.get_reports.get_reports`, {});
 export const getOpenCases = () =>
   call<OpenCasesView>(`${NS}.health.open_health_cases.open_health_cases`, {});
@@ -311,7 +280,6 @@ export interface MoveSuggestion {
 
 export interface MovementSuggestions {
   growth: MoveSuggestion[];
-  lactation: MoveSuggestion[];
   counts: Record<string, number>;
 }
 

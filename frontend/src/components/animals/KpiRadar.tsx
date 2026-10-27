@@ -1,11 +1,11 @@
 import type { AnimalKpis } from "@/lib/animals";
 
 /**
- * Six measures of a cow, on one shape.
+ * Five measures of an animal, on one shape.
  *
  * The point of a radar here is not the numbers — they are listed underneath,
- * where they can be read exactly. It is the silhouette: a cow who is strong on
- * yield and weak on fertility makes a lopsided shape you recognise across the
+ * where they can be read exactly. It is the silhouette: an animal who is strong on
+ * fertility and weak on health makes a lopsided shape you recognise across the
  * herd, and two animals compared side by side are compared as shapes before
  * anybody reads a figure.
  *
@@ -14,7 +14,7 @@ import type { AnimalKpis } from "@/lib/animals";
  * good end — so they are inverted here rather than left to trip up the reader.
  * A radar with one axis running backwards is worse than no radar.
  *
- * Drawn by hand, as the milk chart and the cycle ring are.
+ * Drawn by hand, as the cycle ring is.
  */
 
 const SIZE = 230;
@@ -34,7 +34,7 @@ export interface RadarAxis {
   readout: string;
 }
 
-/** Turn the raw KPIs into six comparable axes. */
+/** Turn the raw KPIs into five comparable axes. */
 export function axesFrom(k: AnimalKpis): RadarAxis[] {
   const clamp = (n: number) => Math.max(0, Math.min(1, n));
   return [
@@ -43,13 +43,6 @@ export function axesFrom(k: AnimalKpis): RadarAxis[] {
       label: "Fertility",
       value: k.conceptionRate == null ? null : clamp(k.conceptionRate / 100),
       readout: k.conceptionRate == null ? "—" : `${k.conceptionRate}% conception`,
-    },
-    {
-      key: "yield",
-      label: "Yield",
-      // 100 is the herd median; 150 and above fills the axis.
-      value: k.yieldIndex == null ? null : clamp((k.yieldIndex - 50) / 100),
-      readout: k.yieldIndex == null ? "—" : `${k.yieldIndex}% of herd median`,
     },
     {
       key: "interval",

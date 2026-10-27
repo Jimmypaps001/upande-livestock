@@ -6,8 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 /**
  * The feed projection, actually rendered.
  *
- * It is a tab on the Dashboard now rather than a page of its own — milk and
- * feed are the same question asked from two ends — so this renders the body
+ * It is a tab on the Dashboard now rather than a page of its own — so this renders the body
  * without the page shell, which is exactly how the Dashboard hosts it.
  *
  * What this catches that a type check cannot: a chart that throws on a feed
@@ -26,7 +25,7 @@ const items = [
     days_cover: 0,
     runs_out_on: "2026-09-14",
     within_horizon: true,
-    herds: [{ herd: "Lactating group 1", heads: 69, per_head: 5, per_day: 345 }],
+    herds: [{ herd: "Finishing group 1", heads: 69, per_head: 5, per_day: 345 }],
     concentrates: [],
     series: Array.from({ length: 31 }, () => 0),
   },

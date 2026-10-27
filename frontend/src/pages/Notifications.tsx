@@ -19,7 +19,7 @@ import { cn } from "@/lib/utils";
  *
  * Every row here is a `Livestock Alert` somebody is responsible for — an animal
  * due to move, a cow close to calving, a pregnancy check nobody recorded. It is
- * deliberately NOT a feed of animal events: several thousand milkings, weighings
+ * deliberately NOT a feed of animal events: several thousand weighings
  * and drug issues are recorded here every week, and a bell that rang for each
  * would be switched off within days. Things that are DUE, OVERDUE or need a
  * decision earn a notification; things that merely happened do not.

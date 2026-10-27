@@ -28,7 +28,7 @@ export const BACKDATE_WARNING =
  * the same rule.
  *
  * `dateLabel` and `noun` exist only so a page can name its own event without
- * forking the control: milking records a "recording" on the "date milked",
+ * forking the control: weighing records a "weighing" on the "date weighed",
  * feeding posts a "run" on the "date fed", and the switch, the ceiling and the
  * amber warning must stay identical across both or the two pages teach the
  * operator two different rules. The defaults are Feeding's own wording.

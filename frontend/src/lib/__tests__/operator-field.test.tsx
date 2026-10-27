@@ -17,7 +17,7 @@ const call = vi.fn(async () => ({
   more: false,
   employees: [
     { value: "HR-EMP-1", label: "JOSIAH KIPTOO", detail: "HR-EMP-1 · Herdsman" },
-    { value: "HR-EMP-2", label: "MARY CHEPKOECH", detail: "HR-EMP-2 · Milker" },
+    { value: "HR-EMP-2", label: "MARY CHEPKOECH", detail: "HR-EMP-2 · Herdsman" },
   ],
 }));
 

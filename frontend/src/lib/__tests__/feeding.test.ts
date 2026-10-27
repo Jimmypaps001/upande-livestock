@@ -52,9 +52,9 @@ describe("seedManualRows", () => {
 /** A recipe as `herd_recipes` returns it — lines already per-head, in recipe
  *  uom, exactly the real output verified against kaitet.local. */
 const recipe = {
-  bom_no: "BOM-Lactating Group 1-015",
-  item_code: "Lactating Group 1",
-  item_name: "Lactating Group 1",
+  bom_no: "BOM-Finishing group 1-015",
+  item_code: "Finishing group 1",
+  item_name: "Finishing group 1",
   kind: "Standing",
   is_standing: true,
   created: "2026-09-04 02:30:04.152679",

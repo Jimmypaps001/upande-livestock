@@ -16,7 +16,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 const list = {
   ok: true,
   animals: [
-    { id: "A057/22", name: "APIJA", sex: "Female", herd: "Lactation Group 3 TEST HERD",
+    { id: "A057/22", name: "APIJA", sex: "Female", herd: "Finishing group 3 TEST HERD",
       breed: "Ayrshire", bornOn: "2022-03-04", status: "Active", stage: "open", photo: null },
     { id: "A085/22", name: "ATLAS", sex: "Female", herd: "STEAMERS",
       breed: null, bornOn: "2022-12-07", status: "Active", stage: "open", photo: null },
@@ -31,15 +31,15 @@ const profile = {
   sire: null,
   lastCalving: null,
   expectedCalving: null,
-  cycle: { stage: "confirmed", dayInStage: 206, daysInMilk: null,
-           nextUp: "Drying off, then calving", nextOn: null },
+  cycle: { stage: "confirmed", dayInStage: 206,
+           nextUp: "Calving", nextOn: null },
   kpis: { parity: 0, services: 1, conceptions: 1, abortions: 0, conceptionRate: 100,
-          calvingInterval: null, lactationYield: null, yieldIndex: null, treatments: 0 },
+          calvingInterval: null, treatments: 0 },
   milestones: [
     { kind: "service", on: "2025-10-13", label: "Served", detail: "A.I." },
     { kind: "confirmed", on: "2026-02-20", label: "Checked", detail: "Confirmed" },
   ],
-  spells: [{ herd: "Lactation Group 3 TEST HERD", from: "2022-03-04", to: null, unrecorded: false }],
+  spells: [{ herd: "Finishing group 3 TEST HERD", from: "2022-03-04", to: null, unrecorded: false }],
 };
 
 const call = vi.fn(async (method?: string): Promise<Record<string, unknown>> => {

@@ -5,7 +5,7 @@ const animal: FarmAnimal = {
   name: "A039/26",
   burn_name: "APIJA",
   sex: "Female",
-  current_herd: "Lactating group 1",
+  current_herd: "Finishing group 1",
   breed: "Ayrshire",
   date_of_birth: "2022-04-11",
   image: null,

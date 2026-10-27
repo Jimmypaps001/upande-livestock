@@ -6,7 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 /**
  * A dose's details belong to the drug they were typed for. A withdrawal period
  * left behind when the drug changes is shown under the new drug's name, and
- * milk goes to the tank on the old drug's date.
+ * the animal is cleared for sale on the old drug's date.
  */
 
 const state = vi.hoisted(() => ({

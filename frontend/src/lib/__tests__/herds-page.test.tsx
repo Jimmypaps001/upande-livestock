@@ -16,7 +16,7 @@ const animals = [
     name: "A039/26",
     burn_name: "APIJA",
     sex: "Female" as const,
-    current_herd: "Lactating group 1",
+    current_herd: "Finishing group 1",
     breed: "Ayrshire",
     date_of_birth: "2022-04-11",
     image: null,
@@ -46,7 +46,7 @@ const call = vi.fn(async (method?: string) => {
     };
   }
   if (m.endsWith("create_herd")) {
-    return { ok: true, herd: "Lactating group 4", heads: 1, moved: [], emptied_from: ["Lactating group 1"], ration: null };
+    return { ok: true, herd: "Finishing group 4", heads: 1, moved: [], emptied_from: ["Finishing group 1"], ration: null };
   }
   if (m.endsWith("buy_in_animal")) {
     return {
@@ -94,7 +94,7 @@ describe("the herds page", () => {
     draw();
     await waitFor(() => expect(screen.getByText("APIJA")).toBeTruthy());
     fireEvent.change(screen.getByLabelText(/What the herd is called/), {
-      target: { value: "Lactating group 4" },
+      target: { value: "Finishing group 4" },
     });
     expect(screen.getByRole("button", { name: /Create it empty/ })).toBeTruthy();
   });

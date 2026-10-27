@@ -12,10 +12,8 @@ export const VIEWS = [
   "dashboard",
   "animals",
   "herds",
-  "quality",
   "events",
   "health",
-  "production",
   "reports",
   "feeding",
   "concentrate",
@@ -23,9 +21,7 @@ export const VIEWS = [
   "rations",
   "ration-editor",
   "procurement",
-  "milking",
   "movement",
-  "drying-off",
   "calving",
   "service",
   "diagnosis",
@@ -40,7 +36,6 @@ export const VIEWS = [
   "settings",
   "notifications",
   "transactions",
-  "feed-quality",
 ] as const;
 
 export type View = (typeof VIEWS)[number];

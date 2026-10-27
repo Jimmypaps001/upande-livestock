@@ -20,9 +20,9 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 const options = {
   ok: true,
   animals: [
-    { name: "A039/26", label: "APIJA (A039/26)", herd: "Lactating group 1", herd_label: "Lactating group 1", repro: "Open" },
+    { name: "A039/26", label: "APIJA (A039/26)", herd: "Finishing group 1", herd_label: "Finishing group 1", repro: "Open" },
   ],
-  diseases: ["Mastitis", "Milk fever"],
+  diseases: ["Mastitis", "Bloat"],
   // One option, so the form seeds it: "What was done" is required, as on the server.
   actions: ["Watch"],
   appearances: ["Bright", "Dull"],

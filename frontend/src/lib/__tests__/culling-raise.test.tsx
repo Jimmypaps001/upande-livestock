@@ -17,7 +17,7 @@ const animals = Array.from({ length: 40 }, (_, i) => ({
   name: `A0${String(i).padStart(2, "0")}/22`,
   burn_name: `COW-${i}`,
   sex: "Female" as const,
-  current_herd: "Lactating group 1",
+  current_herd: "Finishing group 1",
   breed: "Ayrshire",
   date_of_birth: "2022-03-04",
   image: null,
@@ -37,7 +37,7 @@ const payloads: Record<string, unknown> = {
     ok: true,
     animal: "A000/22",
     name: "COW-0",
-    herd: "Lactating group 1",
+    herd: "Finishing group 1",
     status: "Active",
     measures: [],
     below: 0,
@@ -55,7 +55,6 @@ const payloads: Record<string, unknown> = {
     considered: 40,
     flagged_count: 0,
     herd: {},
-    per_animal_milk: false,
   },
 };
 

@@ -549,7 +549,7 @@ export function Treatment() {
 
   // A different drug on a row is a different dose, route and — above all —
   // withdrawal period. Carrying drug A's 7 days under drug B's name would send
-  // milk to the tank before it is safe, so a changed item wipes its details.
+  // an animal to sale or slaughter before it is safe, so a changed item wipes its details.
   // A changed quantity or store keeps them.
   function changeDoses(next: ItemRow[]) {
     const was = new Map(doses.map((d) => [d.key, d.item]));

@@ -54,7 +54,7 @@ const blankCalf = (): CalfRow => ({
  * A calving: the cow, the calves, and where all of them end up.
  *
  * THREE ANIMALS CHANGE HERD AT A CALVING and until recently two of them did —
- * the calves were routed by sex and the cow stayed in the dry herd she calved
+ * the calves were routed by sex and the cow stayed in the herd she calved
  * in, because nothing moved her. So the destinations are shown BEFORE anything
  * is written, while the person at the pen can still say it is wrong.
  *
@@ -110,7 +110,7 @@ export function Calving() {
     };
   }, [dam]);
 
-  // WHO MAY CALVE IS NOT EVERYONE. In calf, dried off, and near her date —
+  // WHO MAY CALVE IS NOT EVERYONE. In calf and near her date —
   // worked out on the server from the farm's own gestation length and calving
   // lead, so the window moves when Settings moves. A calving creates an animal
   // and retires a pregnancy, which is far too much to hang on picking the wrong
@@ -231,9 +231,6 @@ export function Calving() {
                             ? `${-a.days_to_calving} days overdue`
                             : `due in ${a.days_to_calving} days`}
                         </span>
-                      )}
-                      {a.dried_off === false && (
-                        <span className="ml-2 text-[var(--sd-sev-moderate)]">not dried off</span>
                       )}
                     </span>
                   </button>

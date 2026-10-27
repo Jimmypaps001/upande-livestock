@@ -129,7 +129,7 @@ export async function call<T>(
  * applies the same permission check: a user who may not list Warehouse gets an
  * empty list, not somebody else's warehouses. Using it here means the settings
  * page offers only records that exist — the alternative, a text box, is how a
- * milk warehouse ends up spelled two ways and a month of postings lands
+ * feed warehouse ends up spelled two ways and a month of postings lands
  * nowhere.
  *
  * Returns `null` — not `[]` — when the call itself failed, so a picker can say

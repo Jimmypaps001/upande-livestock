@@ -7,8 +7,8 @@ import { cn } from "@/lib/utils";
  * The second is worth building only if the box really is the same box — a
  * placeholder half the height of its content makes the page jump when the data
  * lands, which is worse than the spinner it replaced. So each of these takes
- * the dimension that the real component is built on: `MilkChart` is 320px tall
- * and `RunOutChart` 300, both by a constant at the top of their file, and the
+ * the dimension that the real component is built on: `RunOutChart` is 300px tall,
+ * by a constant at the top of their file, and the
  * caller passes the same number.
  */
 

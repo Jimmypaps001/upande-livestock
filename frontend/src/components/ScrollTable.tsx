@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
  * A table that scrolls inside itself, in both directions, with its header kept.
  *
  * THE SAME BUG FOUR TIMES. A table whose rows grow with the herd or with the
- * farm's history — every event ever recorded, every milking, every animal
+ * farm's history — every event ever recorded, every animal
  * picked for a weighing — was written as `overflow-x-auto` and nothing else, so
  * it grew to whatever length the data happened to be and the page scrolled for
  * a minute to get past it. Everything underneath, including the buttons that do

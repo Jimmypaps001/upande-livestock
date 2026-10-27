@@ -7,14 +7,11 @@ import {
   Bell,
   ClipboardList,
   ClipboardPen,
-  Droplets,
-  FlaskConical,
   FileText,
   Heart,
   HeartPulse,
   Home,
   LayoutDashboard,
-  Milk,
   PanelLeftClose,
   PanelLeftOpen,
   Scale,
@@ -29,7 +26,6 @@ import {
   Warehouse,
   Wheat,
   CalendarClock,
-  TrendingUp,
 } from "lucide-react";
 import {
   Sidebar,
@@ -71,12 +67,11 @@ const NAV: NavSection[] = [
         view: "dashboard",
         label: "Dashboard",
         icon: LayoutDashboard,
-        hint: "Milk production over time",
+        hint: "Head count, weight and gain per herd",
       },
       { view: "animals", label: "Animals", icon: ClipboardList },
       { view: "events", label: "Events", icon: Activity },
       { view: "health", label: "Health", icon: HeartPulse },
-      { view: "production", label: "Production", icon: Milk },
       { view: "reports", label: "Reports", icon: FileText },
       {
         view: "transactions",
@@ -111,7 +106,7 @@ const NAV: NavSection[] = [
         view: "rations",
         label: "Rations",
         icon: ClipboardPen,
-        hint: "Which recipe each herd was fed, and the milk beside it",
+        hint: "Which recipe each herd was fed",
       },
       {
         view: "ration-editor",
@@ -130,26 +125,7 @@ const NAV: NavSection[] = [
   {
     label: "Operations",
     items: [
-      {
-        view: "milking",
-        label: "Milking",
-        icon: Droplets,
-        hint: "Record what a herd gave at one milking",
-      },
-      {
-        view: "quality",
-        label: "Quality",
-        icon: FlaskConical,
-        hint: "File the creamery's figures against a milking",
-      },
-      {
-        view: "feed-quality",
-        label: "Quality & Feed",
-        icon: TrendingUp,
-        hint: "Milk quality beside each herd's ration",
-      },
       { view: "movement", label: "Movement", icon: ArrowRightLeft },
-      { view: "drying-off", label: "Drying Off", icon: Sun },
       { view: "calving", label: "Calving", icon: Baby },
       { view: "heat", label: "Heat", icon: Sun },
       { view: "service", label: "Service", icon: Heart },
@@ -190,7 +166,6 @@ export const BUILT_VIEWS: ReadonlySet<View> = new Set<View>([
   "service",
   "diagnosis",
   "abortion",
-  "drying-off",
   "heat",
   "check-up",
   "health-case",
@@ -200,17 +175,13 @@ export const BUILT_VIEWS: ReadonlySet<View> = new Set<View>([
   "calving",
   "treatment",
   "events",
-  "production",
   "reports",
   "health",
   "culling",
   "settings",
   "notifications",
-  "milking",
-  "quality",
   "animals",
   "transactions",
-  "feed-quality",
 ]);
 
 export function AppSidebar({

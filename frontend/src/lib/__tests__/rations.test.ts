@@ -1,8 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
   groupByHerd,
-  milkColumnLabel,
-  milkCoverage,
   recipesUsed,
   type RationRow,
 } from "@/lib/rations";
@@ -24,46 +22,27 @@ function row(over: Partial<RationRow>): RationRow {
     runs: 1,
     heads: 12,
     feed_mode: "",
-    milk_kg: null,
-    milk_days: 0,
     ...over,
   };
 }
 
-describe("milkColumnLabel", () => {
-  it("uses the server's own label, so the heading cannot outlive the window", () => {
-    expect(milkColumnLabel("same_day", "milk next day")).toBe("milk next day");
-  });
-
-  it("still names the window when the server sent no label", () => {
-    expect(milkColumnLabel("next_day")).toBe("milk next day");
-    expect(milkColumnLabel("avg_three")).toContain("average");
-  });
-
-  it("never falls back to a bare 'milk' for a window it knows", () => {
-    for (const w of ["same_day", "next_day", "plus_two", "avg_three"]) {
-      expect(milkColumnLabel(w)).not.toBe("milk");
-    }
-  });
-});
-
 describe("groupByHerd", () => {
   const rows = [
-    row({ herd: "Lactating group 1", herd_label: "Lactating group 1", fed_on: "2026-07-09" }),
+    row({ herd: "Finishing group 1", herd_label: "Finishing group 1", fed_on: "2026-07-09" }),
     row({ fed_on: "2026-07-09" }),
-    row({ herd: "Lactating group 1", herd_label: "Lactating group 1", fed_on: "2026-07-13" }),
+    row({ herd: "Finishing group 1", herd_label: "Finishing group 1", fed_on: "2026-07-13" }),
     row({ fed_on: "2026-07-11" }),
   ];
 
   it("reads each herd's days newest first", () => {
     const groups = groupByHerd(rows);
-    expect(groups.map((g) => g.herd)).toEqual(["Lactating group 1", "0-2"]);
+    expect(groups.map((g) => g.herd)).toEqual(["Finishing group 1", "0-2"]);
     expect(groups[0].rows.map((r) => r.fed_on)).toEqual(["2026-07-13", "2026-07-09"]);
     expect(groups[1].rows.map((r) => r.fed_on)).toEqual(["2026-07-11", "2026-07-09"]);
   });
 
   it("keeps the server's herd order rather than sorting alphabetically", () => {
-    expect(groupByHerd(rows)[0].herd).toBe("Lactating group 1");
+    expect(groupByHerd(rows)[0].herd).toBe("Finishing group 1");
   });
 });
 
@@ -81,17 +60,5 @@ describe("recipesUsed", () => {
     expect(used[1].days).toBe(2);
     expect(used[1].qty).toBe(108);
     expect(used[1].last_fed).toBe("2026-07-10");
-  });
-});
-
-describe("milkCoverage", () => {
-  it("counts a recorded zero as recorded and a missing figure as missing", () => {
-    expect(
-      milkCoverage([
-        row({ milk_kg: 1000 }),
-        row({ milk_kg: 0 }),
-        row({ milk_kg: null }),
-      ]),
-    ).toEqual({ withMilk: 2, total: 3 });
   });
 });

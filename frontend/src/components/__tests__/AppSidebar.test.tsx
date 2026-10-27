@@ -81,7 +81,7 @@ describe("sidebar footer", () => {
     )!;
 
     // The nav really is inside the scrolling viewport…
-    expect(viewport.textContent).toContain("Milking");
+    expect(viewport.textContent).toContain("Feeding");
     // …and the footer really is not.
     expect(scroller.contains(footer(container))).toBe(false);
     // The only flexible row is the content; the footer is pushed to the bottom
@@ -139,10 +139,10 @@ describe("sidebar footer", () => {
 });
 
 describe("sidebar nav", () => {
-  it("lists Milking as a built page rather than a placeholder", () => {
+  it("lists Feeding as a built page rather than a placeholder", () => {
     mount();
-    const link = screen.getByRole("link", { name: /Milking/ });
-    expect(link.getAttribute("href")).toBe("#/milking");
+    const link = screen.getByRole("link", { name: /Feeding/ });
+    expect(link.getAttribute("href")).toBe("#/feeding");
     expect(link.querySelector("span")?.className).not.toContain("sd-quiet");
   });
 });

@@ -38,7 +38,6 @@ export interface CaseRow {
   confirmed_diagnosis: string | null;
   severity: string | null;
   duration_days: number | null;
-  production_loss_kg: number | null;
   total_treatment_cost: number | null;
   /** The Livestock Vet on the file, and their name. */
   vet: string | null;
@@ -61,7 +60,6 @@ export interface CaseRegister {
     closed: number;
     recovered: number;
     died: number;
-    lost_kg: number;
     cost: number;
   };
   truncated: boolean;
@@ -97,7 +95,7 @@ export interface CaseFile {
     herd: string | null;
     opened_by: string | null;
     body_systems: string | null;
-    milk_safe_date: string | null;
+    slaughter_safe_date: string | null;
     treatment_cost: number;
     outcome_notes: string | null;
   };
@@ -157,7 +155,7 @@ export interface HealthOverview {
   diagnoses: { diagnosis: string | null; cases: number; confirmed: number; open: number }[];
   severity: { severity: string | null; cases: number }[];
   herds: { herd: string | null; cases: number; open: number }[];
-  cost: { treatment: number; lost_kg: number; costed: number; cases: number };
+  cost: { treatment: number; costed: number; cases: number };
   concern_days: number;
   stale_days: number;
 }

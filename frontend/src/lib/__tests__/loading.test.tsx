@@ -4,7 +4,6 @@ import { Figure, FigureRow } from "@/components/Figure";
 import { ToastProvider } from "@/components/Toast";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ChartSkeleton } from "@/components/Loading";
-import { MILK_CHART_HEIGHT } from "@/components/dashboard/MilkChart";
 
 /**
  * The point of a skeleton is that the box does not change.
@@ -15,6 +14,8 @@ import { MILK_CHART_HEIGHT } from "@/components/dashboard/MilkChart";
  * than the spinner it replaced, so what is tested is the geometry and not the
  * appearance.
  */
+const CHART_HEIGHT = 320;
+
 describe("loading into place", () => {
   it("a loading figure occupies the same box as a loaded one", () => {
     const { container: loadingBox } = render(
@@ -41,10 +42,9 @@ describe("loading into place", () => {
   });
 
   it("the chart placeholder is the height of the chart it stands in for", () => {
-    const { container } = render(<ChartSkeleton height={MILK_CHART_HEIGHT} />);
+    const { container } = render(<ChartSkeleton height={CHART_HEIGHT} />);
     const box = container.firstElementChild as HTMLElement;
-    expect(box.style.height).toBe(`${MILK_CHART_HEIGHT}px`);
-    expect(MILK_CHART_HEIGHT).toBe(320);
+    expect(box.style.height).toBe(`${CHART_HEIGHT}px`);
   });
 });
 
@@ -52,14 +52,11 @@ describe("loading into place", () => {
  * And the dashboard hosts the feed projection rather than the sidebar carrying
  * a second entry for it.
  */
-const call = vi.fn(async (method?: string) => {
-  const m = method || "";
-  if (m.includes("feed_projection")) {
-    return { ok: true, start: "2026-09-14", days: 30, dates: ["2026-09-14"],
-             basis: "today's head counts and today's rations", items: [], running_out: [] };
-  }
-  return { ok: true, points: [], summary: {}, herds: [] };
-});
+const call = vi.fn(async () => ({
+  ok: true, start: "2026-09-14", days: 30, dates: ["2026-09-14"],
+  basis: "today's head counts and today's rations",
+  items: [], running_out: [], herds: [], events: [],
+}));
 
 vi.mock("@/lib/frappe", async () => {
   const actual = await vi.importActual<typeof import("@/lib/frappe")>("@/lib/frappe");
@@ -69,7 +66,7 @@ vi.mock("@/lib/frappe", async () => {
 const { Dashboard } = await import("@/pages/Dashboard");
 
 describe("the dashboard", () => {
-  it("offers milk and feed as two tabs of one question", async () => {
+  it("hosts the feed projection", async () => {
     render(
       <TooltipProvider>
       <ToastProvider>
@@ -77,7 +74,7 @@ describe("the dashboard", () => {
       </ToastProvider>
     </TooltipProvider>,
     );
-    await waitFor(() => expect(screen.getByRole("tab", { name: /Milk production/ })).toBeTruthy());
-    expect(screen.getByRole("tab", { name: /Feed projection/ })).toBeTruthy();
+    await waitFor(() => expect(call).toHaveBeenCalled());
+    expect(screen.getByRole("heading", { name: "Dashboard" })).toBeTruthy();
   });
 });

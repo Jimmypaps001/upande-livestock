@@ -65,7 +65,7 @@ export const DEATH_CAUSES = [
   "Disease — other tick-borne",
   "Disease — other",
   "Calving complications",
-  "Metabolic (milk fever, ketosis, bloat)",
+  "Metabolic (ketosis, bloat)",
   "Injury / accident",
   "Predation",
   "Poisoning",
@@ -351,9 +351,6 @@ export interface CullCandidates {
     open_days: number | null;
     sick_days: number | null;
   };
-  /** False on this farm — Milk Recording is per herd, so "low produce" cannot
-   *  mean litres and the screen says so rather than implying otherwise. */
-  per_animal_milk: boolean;
 }
 
 export const getCullCandidates = (limit?: number) =>

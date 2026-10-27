@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Activity, HeartPulse, Milk } from "lucide-react";
+import { Activity, HeartPulse } from "lucide-react";
 import { Figure, FigureRow } from "@/components/Figure";
 import { Notice } from "@/components/feeding/Notice";
 import { STICKY_HEAD, ScrollTable } from "@/components/ScrollTable";
@@ -11,16 +11,16 @@ import {
 import { Input } from "@/components/ui/input";
 import { isError } from "@/lib/frappe";
 import {
-  getEventsView, getOpenCases, getProductionView, getReportsView,
-  type EventsView, type OpenCasesView, type ProductionView, type ReportsView,
+  getEventsView, getOpenCases, getReportsView,
+  type EventsView, type OpenCasesView, type ReportsView,
 } from "@/lib/events";
 import { cn, fmt } from "@/lib/utils";
 
 /**
- * The four screens that only read.
+ * The three screens that only read.
  *
  * Everything else in this app records something. These are the ones somebody
- * opens to find out — what happened, what was milked, how the farm is doing,
+ * opens to find out — what happened, how the farm is doing,
  * what is still being treated — and their whole job is to be legible at a
  * glance and honest about what they do not know.
  */
@@ -164,95 +164,9 @@ export function Events() {
   );
 }
 
-export function Production() {
-  const load = useCallback(() => getProductionView(), []);
-  const { data, loading, failure, refresh } = useView<ProductionView>(load);
-  const rows = data?.rows ?? [];
-  const s = data?.summary ?? {};
-
-  return (
-    <Page>
-      <PageHeading eyebrow="Upande Livestock · Milking" title="Production">
-        What the farm has milked lately. Kilograms, because that is what every
-        recording holds and what the milk is priced by — not relabelled litres.
-      </PageHeading>
-
-      {failure && <Notice tone="error">{failure}</Notice>}
-      {data?.error && <Notice tone="error">{data.error}</Notice>}
-
-      <FigureRow>
-        <Figure label="Net milk" value={fmt(s.net_kg ?? 0)} unit="kg" hint="last 30 days" />
-        <Figure label="Revenue" value={fmt(s.revenue ?? 0)} hint="last 30 days" />
-        <Figure label="Discarded" value={fmt(s.discarded_kg ?? 0)} unit="kg" hint="last 30 days" />
-        <Figure label="Milkings" value={String(s.records ?? 0)} hint="recorded" />
-      </FigureRow>
-
-      <Card>
-        <CardHeaderRow>
-          <CardHeading>
-            <CardTitle>Recent milkings</CardTitle>
-            <CardDescription>One row per session per herd.</CardDescription>
-          </CardHeading>
-          <CardTools>
-            <RefreshButton onClick={refresh} loading={loading} label="the milkings" />
-          </CardTools>
-        </CardHeaderRow>
-        <CardContent className="pt-0">
-          {!rows.length ? (
-            <p className="flex items-center gap-2 text-[13px] text-[var(--sd-muted)]">
-              <Milk className="h-4 w-4 text-[var(--sd-quiet)]" strokeWidth={1.75} />
-              No milking has been recorded yet.
-            </p>
-          ) : (
-            <ScrollTable tall>
-              <table className="w-full min-w-[640px] text-[12.5px]">
-                <thead className={STICKY_HEAD}>
-                  <tr className="text-left text-[10.5px] uppercase tracking-[0.12em] text-[var(--sd-quiet)]">
-                    <th className="py-2 pr-3 font-medium">Date</th>
-                    <th className="py-2 pr-3 font-medium">Herd</th>
-                    <th className="py-2 pr-3 font-medium">Session</th>
-                    <th className="py-2 pr-3 text-right font-medium">Cows</th>
-                    <th className="py-2 pr-3 text-right font-medium">Total</th>
-                    <th className="py-2 pr-3 text-right font-medium">Discarded</th>
-                    <th className="py-2 text-right font-medium">Net</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((r) => (
-                    <tr key={r.name} className="border-t border-[var(--sd-line)]">
-                      <td className="py-2.5 pr-3 tabular-nums text-[var(--sd-muted)]">
-                        {r.recording_date}
-                      </td>
-                      <td className="py-2.5 pr-3 text-[var(--sd-ink)]">{r.herd || "—"}</td>
-                      <td className="py-2.5 pr-3 text-[var(--sd-muted)]">{r.session || "—"}</td>
-                      <td className="py-2.5 pr-3 text-right tabular-nums text-[var(--sd-muted)]">
-                        {r.cows_milked ?? "—"}
-                      </td>
-                      <td className="py-2.5 pr-3 text-right tabular-nums text-[var(--sd-muted)]">
-                        {fmt(r.total_yield_kg ?? 0)}
-                      </td>
-                      <td className="py-2.5 pr-3 text-right tabular-nums text-[var(--sd-muted)]">
-                        {fmt(r.discarded_kg ?? 0)}
-                      </td>
-                      <td className="py-2.5 text-right tabular-nums font-medium text-[var(--sd-ink)]">
-                        {fmt(r.net_yield_kg ?? 0)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </ScrollTable>
-          )}
-        </CardContent>
-      </Card>
-    </Page>
-  );
-}
-
 export function Reports() {
   const load = useCallback(() => getReportsView(), []);
   const { data, loading, failure, refresh } = useView<ReportsView>(load);
-  const p = data?.production ?? {};
   const h = data?.health ?? {};
   const r = data?.reproduction ?? {};
   const herds = data?.herds ?? [];
@@ -270,9 +184,6 @@ export function Reports() {
       {data?.error && <Notice tone="error">{data.error}</Notice>}
 
       <FigureRow>
-        <Figure label="Milk this month" value={fmt(p.month_kg ?? 0)} unit="kg"
-                hint={`${(p.delta_kg ?? 0) >= 0 ? "+" : ""}${fmt(p.delta_kg ?? 0)} on last month`} />
-        <Figure label="Revenue" value={fmt(p.month_rev ?? 0)} hint="this month" />
         <Figure label="Open cases" value={String(h.open_cases ?? 0)}
                 hint={`${h.open_rate ?? 0}% of the herd`} />
         <Figure label="Births" value={String(r.births_month ?? 0)} hint="this month" />

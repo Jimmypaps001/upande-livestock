@@ -20,10 +20,10 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 const breeding = {
   ok: true,
   animals: [
-    { name: "A039/26", label: "APIJA (A039/26)", herd: "Lactating group 1", herd_label: "Lactating group 1", repro: "Open" },
+    { name: "A039/26", label: "APIJA (A039/26)", herd: "Finishing group 1", herd_label: "Finishing group 1", repro: "Open" },
   ],
   diagnosis_animals: [
-    { name: "A101/23", label: "SITA (A101/23)", herd: "Lactating group 2", herd_label: "Lactating group 2", repro: "Served" },
+    { name: "A101/23", label: "SITA (A101/23)", herd: "Finishing group 2", herd_label: "Finishing group 2", repro: "Served" },
   ],
   service_types: ["A.I.", "Natural"],
   diagnosis_results: ["Confirmed", "Not Pregnant"],

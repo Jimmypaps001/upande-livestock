@@ -21,13 +21,9 @@ import {
 import { isError } from "@/lib/frappe";
 import {
   ALL_HERDS,
-  DEFAULT_MILK_WINDOW,
   groupByHerd,
-  milkColumnLabel,
-  milkCoverage,
   rationHistory,
   recipesUsed,
-  type MilkWindow,
   type RationHistory,
   type RationRow,
 } from "@/lib/rations";
@@ -37,47 +33,12 @@ import { cn, fmt } from "@/lib/utils";
  * Rations — the record of what each herd was actually fed.
  *
  * One row per herd, per day, per recipe: the recipe the run cited, the
- * quantity mixed, how many head it was mixed for, and the milk recorded in
- * whichever window the reader chose.
- *
- * The milk figure is deliberately **beside** the ration and not derived from
- * it. There is no yield-per-kg column here and there should never be one: milk
- * comes from weeks of feeding, stage of lactation, weather and who was
- * milking, and a ratio on this page would read as a claim the data cannot
- * carry. The window control exists for the same reason — the farm says how
- * long it thinks the lag is, the page does not decide.
+ * quantity mixed and how many head it was mixed for.
  *
  * The recipe is shown by name AND by BOM number. Three of this farm's BOMs are
  * all called "TMR Calves Meal"; the number is the only thing separating the
  * mix fed in April from the one fed in August.
  */
-
-const WINDOW_HINTS: Record<string, string> = {
-  same_day: "Milk recorded on the day the ration was mixed.",
-  next_day: "Milk recorded the day after the ration was mixed.",
-  plus_two: "Milk recorded two days after the ration was mixed.",
-  avg_three:
-    "The average of the days recorded between the day fed and two days after — over the days that were actually written down, not over three regardless.",
-};
-
-function Milk({ row }: { row: RationRow }) {
-  if (row.milk_kg === null || row.milk_kg === undefined)
-    return (
-      <span className="text-[var(--sd-quiet)]" title="No milk recording in this window">
-        not recorded
-      </span>
-    );
-  return (
-    <>
-      {fmt(row.milk_kg)} <span className="text-[11px] text-[var(--sd-quiet)]">kg</span>
-      {row.milk_days > 1 && (
-        <span className="ml-1 text-[11px] text-[var(--sd-quiet)]">
-          ({row.milk_days} days)
-        </span>
-      )}
-    </>
-  );
-}
 
 /** Row key stable enough to track which rows are expanded across a re-render
  *  — the same triple that already keys the `<tr>` itself. */
@@ -87,11 +48,9 @@ function rationRowKey(row: RationRow): string {
 
 function RationTable({
   rows,
-  milkHeading,
   showHerd,
 }: {
   rows: RationRow[];
-  milkHeading: string;
   showHerd: boolean;
 }) {
   // Which rows are expanded to show their ingredients, kept local to this
@@ -106,7 +65,7 @@ function RationTable({
       return next;
     });
   }
-  const dataCols = showHerd ? 7 : 6;
+  const dataCols = showHerd ? 6 : 5;
 
   return (
     <div className="overflow-x-auto rounded-[var(--sd-radius-lg)] border border-[var(--sd-line)]">
@@ -120,9 +79,7 @@ function RationTable({
             <th className="px-3 py-2.5 text-right font-medium">Mixed</th>
             <th className="px-3 py-2.5 text-right font-medium">Head</th>
             <th className="px-3 py-2.5 font-medium">Mode</th>
-            {/* Headed with the window that produced the number, never just
-                "Milk" — the whole point of the control above. */}
-            <th className="px-3 py-2.5 text-right font-medium">{milkHeading}</th>
+            {/* beef: weight gain beside the ration (Task 7) */}
           </tr>
         </thead>
         <tbody>
@@ -173,9 +130,6 @@ function RationTable({
                   <td className="px-3 py-2.5 text-[var(--sd-muted)]">
                     {row.feed_mode || <span className="text-[var(--sd-quiet)]">—</span>}
                   </td>
-                  <td className="px-3 py-2.5 text-right tabular-nums">
-                    <Milk row={row} />
-                  </td>
                 </tr>
                 {isOpen && (
                   <tr className="border-b border-[var(--sd-line-soft)] bg-[var(--sd-bg-soft)] last:border-0">
@@ -196,7 +150,6 @@ function RationTable({
 
 export function Rations() {
   const [herd, setHerd] = useState<string>(ALL_HERDS);
-  const [milkWindow, setMilkWindow] = useState<MilkWindow>(DEFAULT_MILK_WINDOW);
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [data, setData] = useState<RationHistory | null>(null);
@@ -205,7 +158,7 @@ export function Rations() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const r = await rationHistory({ herd, fromDate, toDate, milkWindow, limit: 300 });
+    const r = await rationHistory({ herd, fromDate, toDate, limit: 300 });
     setLoading(false);
     if (isError(r)) {
       setError(r.error);
@@ -213,20 +166,16 @@ export function Rations() {
     }
     setError(null);
     setData(r as RationHistory);
-  }, [herd, fromDate, toDate, milkWindow]);
+  }, [herd, fromDate, toDate]);
 
   useEffect(() => {
     load();
   }, [load]);
 
   const rows = data?.rows || [];
-  // The server's own label, so the column heading and the figures under it can
-  // never describe different days.
-  const milkHeading = milkColumnLabel(data?.milk_window || milkWindow, data?.milk_window_label);
   const oneHerd = herd !== ALL_HERDS;
   const grouped = useMemo(() => groupByHerd(rows), [rows]);
   const recipes = useMemo(() => recipesUsed(rows), [rows]);
-  const coverage = useMemo(() => milkCoverage(rows), [rows]);
   const herdOptions = data?.herds || [];
 
   return (
@@ -234,9 +183,7 @@ export function Rations() {
       <PageHeading eyebrow="Upande Livestock · Feeding" title="Rations">
         Every recipe a herd was actually fed, the day it went out and how much was mixed —
         read from the mix run itself, so a recipe changed today does not rewrite what was
-        fed in April. The milk recorded nearby is shown next to it, in whichever window you
-        choose. It is placed beside the ration, not divided by it: milk comes from weeks of
-        feeding, not one day's mix.
+        fed in April.
       </PageHeading>
 
       {error && <Notice tone="error">{error}</Notice>}
@@ -269,28 +216,6 @@ export function Rations() {
                   ))}
                 </SelectContent>
               </Select>
-              <Select
-                value={milkWindow}
-                onValueChange={(v) => setMilkWindow(v as MilkWindow)}
-              >
-                <SelectTrigger
-                  id="rations-window"
-                  aria-label="Milk window"
-                  className={cn(HEADER_PILL, "max-w-[15rem]")}
-                >
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {(data?.windows || []).map((w) => (
-                    <SelectItem key={w.value} value={w.value}>
-                      {w.label}
-                    </SelectItem>
-                  ))}
-                  {!data?.windows?.length && (
-                    <SelectItem value={DEFAULT_MILK_WINDOW}>milk same day</SelectItem>
-                  )}
-                </SelectContent>
-              </Select>
               <DatePicker
                 id="rations-from"
                 value={fromDate}
@@ -308,37 +233,14 @@ export function Rations() {
               <RefreshButton onClick={load} loading={loading} label="the mix runs" />
             </CardTools>
           </div>
-          <p className="text-[12px] text-[var(--sd-quiet)]">
-            {WINDOW_HINTS[data?.milk_window || milkWindow]}
-          </p>
         </CardHeaderRow>
         <CardContent className="flex flex-col gap-3">
           <FigureRow>
             <Figure label="Ration days" value={String(rows.length)} hint="herd × day × recipe" />
             <Figure label="Recipes used" value={String(recipes.length)} hint="distinct BOMs" />
             <Figure label="Herds fed" value={String(grouped.length)} />
-            <Figure
-              label="Days with milk"
-              value={`${coverage.withMilk}/${coverage.total}`}
-              hint="in this window"
-            />
+            {/* beef: weight gain beside the ration (Task 7) */}
           </FigureRow>
-          {/* An empty milk column is a recording gap, not a bad month, and the
-              page has to say which. */}
-          {coverage.total > 0 && coverage.withMilk < coverage.total && (
-            <Notice tone="info">
-              {coverage.total - coverage.withMilk} of {coverage.total} ration days have no
-              milk recording in this window, so their milk column is blank rather than
-              zero. Blank means nobody wrote a figure down — not that the herd gave
-              nothing.
-            </Notice>
-          )}
-          {data?.milk_visible === false && (
-            <Notice tone="info">
-              You are not permitted to read milk records, so the milk column is empty on
-              every row. The rations themselves are unaffected.
-            </Notice>
-          )}
           {data?.truncated && (
             <Notice tone="info">
               Showing the most recent {data.limit} ration days. Set a From date to read
@@ -410,7 +312,7 @@ export function Rations() {
             <CardDescription>Newest day first.</CardDescription>
           </CardHeader>
           <CardContent>
-            <RationTable rows={grouped[0]?.rows || []} milkHeading={milkHeading} showHerd={false} />
+            <RationTable rows={grouped[0]?.rows || []} showHerd={false} />
           </CardContent>
         </Card>
       ) : (
@@ -426,7 +328,7 @@ export function Rations() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <RationTable rows={group.rows} milkHeading={milkHeading} showHerd={false} />
+              <RationTable rows={group.rows} showHerd={false} />
             </CardContent>
           </Card>
         ))

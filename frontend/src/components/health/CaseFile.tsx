@@ -338,12 +338,8 @@ function FactRow({ file }: { file: Case }) {
       value: file.drugs.length ? `${file.drugs.length} kind${file.drugs.length === 1 ? "" : "s"}` : "none",
     },
     {
-      label: "Milk withheld to",
-      value: c.milk_safe_date || "—",
-    },
-    {
-      label: "Milk lost",
-      value: c.production_loss_kg ? `${fmt(c.production_loss_kg)} kg` : "not recorded",
+      label: "Safe to sell/slaughter from",
+      value: c.slaughter_safe_date || "—",
     },
   ];
   return (

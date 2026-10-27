@@ -14,7 +14,7 @@ import { cn } from "@/lib/utils";
  * the band underneath is which herd she was standing in, and the marks above
  * are what happened to her. Read together they say things neither says alone —
  * that she was served three weeks after arriving in the bulling herd, that the
- * abortion came in the middle of her longest spell in milk.
+ * abortion came in the middle of her longest spell in one herd.
  *
  * The axis is real time, not one slot per event. A timeline with evenly spaced
  * milestones is a list wearing a line's clothing: it hides the eighteen quiet
@@ -29,7 +29,6 @@ const KIND_LABEL: Record<MilestoneKind, string> = {
   confirmed: "Confirmed",
   calving: "Calved",
   abortion: "Abortion",
-  drying: "Dried off",
   health: "Health",
   weight: "Weighed",
 };

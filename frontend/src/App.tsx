@@ -61,9 +61,6 @@ const Concentrate = page(() =>
   import("@/pages/Concentrate").then((m) => ({ default: m.Concentrate })),
 );
 const Stock = page(() => import("@/pages/Stock").then((m) => ({ default: m.Stock })));
-const Quality = page(() =>
-  import("@/pages/Quality").then((m) => ({ default: m.Quality })),
-);
 const Rations = page(() =>
   import("@/pages/Rations").then((m) => ({ default: m.Rations })),
 );
@@ -79,9 +76,6 @@ const Settings = page(() =>
 const Notifications = page(() =>
   import("@/pages/Notifications").then((m) => ({ default: m.Notifications })),
 );
-const Milking = page(() =>
-  import("@/pages/Milking").then((m) => ({ default: m.Milking })),
-);
 const Culling = page(() =>
   import("@/pages/Culling").then((m) => ({ default: m.Culling })),
 );
@@ -89,9 +83,6 @@ const Procurement = page(() =>
   import("@/pages/Procurement").then((m) => ({ default: m.Procurement })),
 );
 const Herds = page(() => import("@/pages/Herds").then((m) => ({ default: m.Herds })));
-const FeedQuality = page(() =>
-  import("@/pages/FeedQuality").then((m) => ({ default: m.FeedQuality })),
-);
 const Transactions = page(() =>
   import("@/pages/Transactions").then((m) => ({ default: m.Transactions })),
 );
@@ -102,7 +93,6 @@ const Transactions = page(() =>
 const Service = page(() => import("@/pages/Breeding").then((m) => ({ default: m.Service })));
 const Diagnosis = page(() => import("@/pages/Breeding").then((m) => ({ default: m.Diagnosis })));
 const Abortion = page(() => import("@/pages/Breeding").then((m) => ({ default: m.Abortion })));
-const DryingOff = page(() => import("@/pages/Breeding").then((m) => ({ default: m.DryingOff })));
 const Heat = page(() => import("@/pages/Breeding").then((m) => ({ default: m.Heat })));
 const CheckUp = page(() => import("@/pages/Health").then((m) => ({ default: m.CheckUp })));
 const HealthCases = page(() =>
@@ -119,7 +109,6 @@ const Treatment = page(() => import("@/pages/Treatment").then((m) => ({ default:
 // The four read-only views share a loader and nothing else heavy, so they ship
 // as one chunk rather than four copies of it.
 const Events = page(() => import("@/pages/Insights").then((m) => ({ default: m.Events })));
-const Production = page(() => import("@/pages/Insights").then((m) => ({ default: m.Production })));
 const Reports = page(() => import("@/pages/Insights").then((m) => ({ default: m.Reports })));
 const HealthDashboard = page(() =>
   import("@/pages/HealthDashboard").then((m) => ({ default: m.HealthDashboard })),
@@ -131,7 +120,6 @@ const TITLES: Record<View, string> = {
   herds: "Herds",
   events: "Events",
   health: "Health",
-  production: "Production",
   reports: "Reports",
   feeding: "Feeding",
   concentrate: "Concentrate",
@@ -139,10 +127,7 @@ const TITLES: Record<View, string> = {
   rations: "Rations",
   "ration-editor": "Ration Editor",
   procurement: "Procurement",
-  milking: "Milking",
-  quality: "Quality",
   movement: "Movement",
-  "drying-off": "Drying Off",
   calving: "Calving",
   service: "Service",
   diagnosis: "Pregnancy Diagnosis",
@@ -157,7 +142,6 @@ const TITLES: Record<View, string> = {
   settings: "Settings",
   notifications: "Notifications",
   transactions: "Transactions",
-  "feed-quality": "Quality & Feed",
 };
 
 /** The surfaces this frontend implements. Everything else renders a
@@ -171,15 +155,12 @@ const PAGES: Partial<Record<View, React.ComponentType>> = {
   dashboard: Dashboard,
   settings: Settings,
   notifications: Notifications,
-  milking: Milking,
-  quality: Quality,
   culling: Culling,
   procurement: Procurement,
   herds: Herds,
   service: Service,
   diagnosis: Diagnosis,
   abortion: Abortion,
-  "drying-off": DryingOff,
   heat: Heat,
   "check-up": CheckUp,
   "health-case": HealthCases,
@@ -189,12 +170,10 @@ const PAGES: Partial<Record<View, React.ComponentType>> = {
   calving: Calving,
   treatment: Treatment,
   events: Events,
-  production: Production,
   reports: Reports,
   health: HealthDashboard,
   "ration-editor": RationEditor,
   transactions: Transactions,
-  "feed-quality": FeedQuality,
 };
 
 export function App() {

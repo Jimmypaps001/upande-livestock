@@ -202,16 +202,6 @@ export function Animals() {
                     unit={profile?.kpis.conceptionRate == null ? undefined : "%"}
                     hint={`${profile?.kpis.services ?? 0} ${profile?.kpis.services === 1 ? "service" : "services"}`}
                   />
-                  <Figure
-                    loading={!profile}
-                    label="Days in milk"
-                    value={profile?.cycle.daysInMilk == null ? "—" : String(profile.cycle.daysInMilk)}
-                    hint={
-                      profile?.kpis.lactationYield
-                        ? `${profile.kpis.lactationYield.toLocaleString()} kg this lactation`
-                        : undefined
-                    }
-                  />
                 </FigureRow>
                 </button>
 

@@ -80,13 +80,6 @@ export function HealthDashboard({ onOpenCase }: { onOpenCase?: (name: string) =>
         />
         <Figure
           loading={!data}
-          label="Milk lost"
-          value={cost?.lost_kg ? fmt(cost.lost_kg) : "—"}
-          unit={cost?.lost_kg ? "kg" : undefined}
-          hint="recorded against cases"
-        />
-        <Figure
-          loading={!data}
           label="Treatment cost"
           value={cost?.treatment ? fmt(cost.treatment) : "—"}
           hint={

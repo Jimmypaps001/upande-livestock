@@ -15,21 +15,19 @@ const payloads: Record<string, unknown> = {
   get_events: {
     ok: true,
     rows: [
-      { name: "E1", animal: "A039/26", current_herd: "Lactating group 1", new_herd: "STEAMERS", event_type: "Movement", event_date: "2026-09-12" },
-      { name: "E2", animal: "A101/23", current_herd: "Lactating group 2", new_herd: null, event_type: "Service", event_date: "2026-09-11" },
+      { name: "E1", animal: "A039/26", current_herd: "Finishing group 1", new_herd: "STEAMERS", event_type: "Movement", event_date: "2026-09-12" },
+      { name: "E2", animal: "A101/23", current_herd: "Finishing group 2", new_herd: null, event_type: "Service", event_date: "2026-09-11" },
     ],
     summary: { total: 2, by_type: { Movement: 1, Service: 1 } },
     filters: { types: ["Movement", "Service"] },
   },
-  get_production: { ok: true, rows: [], summary: { net_kg: 0, revenue: 0, discarded_kg: 0, records: 0 }, filters: {} },
   get_reports: {
     ok: true,
-    production: { month_kg: 0, prev_kg: 5400, delta_kg: -5400, month_rev: 0, prev_rev: 0 },
     health: { active_animals: 371, open_cases: 8, cases_month: 0, open_rate: 2.2 },
     reproduction: { pregnant: 0, served: 1, open: 393, births_month: 4, preg_rate: 0 },
     herds: [
       { name: "12 MONTHS-SERVICE (BULLYING HEIFERS)", animals: 94 },
-      { name: "Lactating group 1", animals: 69 },
+      { name: "Finishing group 1", animals: 69 },
     ],
   },
 };
@@ -44,7 +42,7 @@ vi.mock("@/lib/frappe", async () => {
   return { ...actual, call };
 });
 
-const { Events, Production, Reports } = await import("@/pages/Insights");
+const { Events, Reports } = await import("@/pages/Insights");
 
 const draw = (Page: () => React.ReactElement) =>
   render(
@@ -62,7 +60,7 @@ describe("the read-only screens", () => {
     // Every event the farm has recorded, written as a table with nothing to
     // bound it, was a page you scrolled for a minute to get past.
     draw(Events);
-    await waitFor(() => expect(screen.getByText("Lactating group 1 → STEAMERS")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("Finishing group 1 → STEAMERS")).toBeTruthy());
     const box = document.querySelector("div[class*='max-h-'][class*='overflow-auto']");
     expect(box).toBeTruthy();
     // And the column names stay put while the rows move under them.
@@ -71,25 +69,18 @@ describe("the read-only screens", () => {
 
   it("shows a move as where it came from and where it went", async () => {
     draw(Events);
-    await waitFor(() => expect(screen.getByText("Lactating group 1 → STEAMERS")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("Finishing group 1 → STEAMERS")).toBeTruthy());
   });
 
   it("filters events by kind without asking the server again", async () => {
     draw(Events);
     // "Movement" is both a filter pill and a table cell, which is the point of
     // the screen — wait on the row, not the ambiguous word.
-    await waitFor(() => expect(screen.getByText("Lactating group 1 → STEAMERS")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("Finishing group 1 → STEAMERS")).toBeTruthy());
     const before = call.mock.calls.length;
     fireEvent.click(screen.getByRole("button", { name: "Service" }));
-    await waitFor(() => expect(screen.queryByText("Lactating group 1 → STEAMERS")).toBeNull());
+    await waitFor(() => expect(screen.queryByText("Finishing group 1 → STEAMERS")).toBeNull());
     expect(call.mock.calls.length).toBe(before);
-  });
-
-  it("says nothing has been milked rather than drawing an empty table", async () => {
-    draw(Production);
-    await waitFor(() =>
-      expect(screen.getByText(/No milking has been recorded yet/)).toBeTruthy(),
-    );
   });
 
   it("reports the herd counts the herd records use", async () => {
@@ -98,15 +89,6 @@ describe("the read-only screens", () => {
     draw(Reports);
     await waitFor(() => expect(screen.getByText("94")).toBeTruthy());
     expect(screen.getByText("69")).toBeTruthy();
-  });
-
-  it("says which way production moved, not just the number", async () => {
-    draw(Reports);
-    // fmt() carries two decimals everywhere in this app, so the hint reads
-    // "-5,400.00 on last month" — matched as rendered rather than as imagined.
-    await waitFor(() =>
-      expect(screen.getByText((t) => t.includes("5,400.00 on last month"))).toBeTruthy(),
-    );
   });
 
   // The health screens moved out of this module: the tab is a dashboard now and

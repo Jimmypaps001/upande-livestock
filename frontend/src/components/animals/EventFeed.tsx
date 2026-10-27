@@ -18,7 +18,7 @@ import { MILESTONE_TONE, type Milestone, type MilestoneKind } from "@/lib/animal
  * "when, and how far apart"; this answers "what, exactly" — and it is the one
  * a person scrolls when they already know roughly when and want the detail.
  *
- * Grouped by year, because an animal with six lactations behind her has sixty
+ * Grouped by year, because an animal with six calvings behind her has sixty
  * rows and an ungrouped sixty-row list is a wall.
  */
 
@@ -29,7 +29,6 @@ const ICON: Record<MilestoneKind, LucideIcon> = {
   confirmed: HeartPulse,
   calving: Baby,
   abortion: CircleSlash,
-  drying: Activity,
   health: HeartPulse,
   weight: Scale,
 };

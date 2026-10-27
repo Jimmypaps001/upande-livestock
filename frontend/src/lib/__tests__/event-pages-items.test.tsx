@@ -39,8 +39,8 @@ const call = vi.fn(async (method?: string, args?: Record<string, unknown>) => {
   if (m.includes("health_options"))
     return { ok: true, animals: [cow], carrying: [cow], abortion_causes: ["Disease"], employee: "E1", ...items };
   if (m.includes("event_options"))
-    return { ok: true, animals: [], dry_off_animals: [], calving_animals: [cow], herds: [],
-      calving_outcomes: [], dry_off_herd: null, employee: "E1", ...items };
+    return { ok: true, animals: [], calving_animals: [cow], herds: [],
+      calving_outcomes: [], employee: "E1", ...items };
   if (m.includes("calving_destinations"))
     return { ok: true, dam: { from_herd: "H1", to_herd: "H2", will_move: true, reason: "r" },
       female_calf: { to_herd: "H3", reason: "r" }, male_calf: { to_herd: "H4", reason: "r" } };

@@ -16,16 +16,16 @@ function iso(daysAgo: number): string {
 }
 
 export const SAMPLE_HERD: AnimalSummary[] = [
-  { id: "A048/19", name: "HASSAN", sex: "Female", herd: "Lactating group 1", breed: "Ayrshire", bornOn: iso(2630), status: "Active", stage: "confirmed", photo: null },
-  { id: "A028/19", name: "DAGMAR", sex: "Female", herd: "Lactating group 1", breed: "Ayrshire", bornOn: iso(2700), status: "Active", stage: "open", photo: null },
-  { id: "A061/19", name: "BELLA", sex: "Female", herd: "STEAMERS", breed: "Friesian", bornOn: iso(2560), status: "Active", stage: "dry", photo: null },
-  { id: "A054/19", name: "IDD", sex: "Female", herd: "LACTATION GROUP 2", breed: "Ayrshire", bornOn: iso(2610), status: "Active", stage: "served", photo: null },
-  { id: "A019/20", name: "DORIS SXI", sex: "Female", herd: "Lactating group 1", breed: "Ayrshire", bornOn: iso(2310), status: "Active", stage: "fresh", photo: null },
+  { id: "A048/19", name: "HASSAN", sex: "Female", herd: "Finishing group 1", breed: "Ayrshire", bornOn: iso(2630), status: "Active", stage: "confirmed", photo: null },
+  { id: "A028/19", name: "DAGMAR", sex: "Female", herd: "Finishing group 1", breed: "Ayrshire", bornOn: iso(2700), status: "Active", stage: "open", photo: null },
+  { id: "A061/19", name: "BELLA", sex: "Female", herd: "BREEDING", breed: "Friesian", bornOn: iso(2560), status: "Active", stage: "confirmed", photo: null },
+  { id: "A054/19", name: "IDD", sex: "Female", herd: "FINISHING GROUP 2", breed: "Ayrshire", bornOn: iso(2610), status: "Active", stage: "served", photo: null },
+  { id: "A019/20", name: "DORIS SXI", sex: "Female", herd: "Finishing group 1", breed: "Ayrshire", bornOn: iso(2310), status: "Active", stage: "fresh", photo: null },
   { id: "A027/24", name: "FAVORITE", sex: "Female", herd: "INCALF HEIFERS", breed: "Ayrshire", bornOn: iso(760), status: "Active", stage: "confirmed", photo: null },
   { id: "A013/24", name: "BACARY", sex: "Female", herd: "12 MONTHS-SERVICE (BULLYING HEIFERS)", breed: "Friesian", bornOn: iso(560), status: "Active", stage: "heifer", photo: null },
   { id: "A039/26", name: "NIKKI", sex: "Female", herd: "0-2", breed: "Ayrshire", bornOn: iso(18), status: "Active", stage: "heifer", photo: null },
   { id: "B013/26", name: "B013/26", sex: "Male", herd: "BULLS", breed: "Ayrshire", bornOn: iso(110), status: "Active", stage: "heifer", photo: null },
-  { id: "A084/19", name: "BBI", sex: "Female", herd: "Lactation Group 3 TEST HERD", breed: "Friesian", bornOn: iso(2440), status: "Active", stage: "open", photo: null },
+  { id: "A084/19", name: "BBI", sex: "Female", herd: "Finishing group 3 TEST HERD", breed: "Friesian", bornOn: iso(2440), status: "Active", stage: "open", photo: null },
 ];
 
 const PROFILES: Record<string, Omit<AnimalProfile, keyof AnimalSummary>> = {
@@ -37,14 +37,12 @@ const PROFILES: Record<string, Omit<AnimalProfile, keyof AnimalSummary>> = {
     cycle: {
       stage: "confirmed",
       dayInStage: 147,
-      daysInMilk: 212,
-      nextUp: "Dry off",
+      nextUp: "Calving",
       nextOn: iso(-3),
     },
     kpis: {
       parity: 5, services: 9, conceptions: 5, abortions: 1,
-      conceptionRate: 56, calvingInterval: 398, lactationYield: 6140,
-      yieldIndex: 118, treatments: 2,
+      conceptionRate: 56, calvingInterval: 398, treatments: 2,
     },
     spells: [
       { herd: "0-2", from: iso(2630), to: iso(2570) },
@@ -53,7 +51,7 @@ const PROFILES: Record<string, Omit<AnimalProfile, keyof AnimalSummary>> = {
       { herd: "12 MONTHS-SERVICE (BULLYING HEIFERS)", from: iso(2270), to: iso(1960) },
       { herd: "INCALF HEIFERS", from: iso(1960), to: iso(1760) },
       { herd: "STEAMERS", from: iso(1760), to: iso(1670) },
-      { herd: "Lactating group 1", from: iso(1670), to: null },
+      { herd: "Finishing group 1", from: iso(1670), to: null },
     ],
     milestones: [
       { kind: "birth", on: iso(2630), label: "Born", detail: "Out of A012/16" },
@@ -87,12 +85,11 @@ export function sampleProfile(summary: AnimalSummary): AnimalProfile {
     dam: heifer ? null : "A040/20",
     sire: heifer ? null : "Semen · NORDIC RED 4471",
     lastCalving: heifer ? null : iso(180),
-    expectedCalving: summary.stage === "confirmed" || summary.stage === "dry" ? iso(-90) : null,
+    expectedCalving: summary.stage === "confirmed" ? iso(-90) : null,
     cycle: {
       stage: summary.stage,
       dayInStage: heifer ? 0 : 62,
-      daysInMilk: heifer ? null : 180,
-      nextUp: heifer ? "First service" : summary.stage === "dry" ? "Calving" : "Pregnancy check",
+      nextUp: heifer ? "First service" : "Pregnancy check",
       nextOn: heifer ? null : iso(-24),
     },
     kpis: {
@@ -102,8 +99,6 @@ export function sampleProfile(summary: AnimalSummary): AnimalProfile {
       abortions: 0,
       conceptionRate: heifer ? null : 67,
       calvingInterval: heifer ? null : 402,
-      lactationYield: heifer ? null : 4980,
-      yieldIndex: heifer ? null : 96,
       treatments: 1,
     },
     spells: [{ herd: summary.herd, from: born, to: null }],

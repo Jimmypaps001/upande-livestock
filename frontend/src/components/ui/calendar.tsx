@@ -7,8 +7,8 @@ import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
 
 export type CalendarProps = React.ComponentProps<typeof DayPicker> & {
-  /** Show the ISO week column down the left edge. Off here: a dairy records
-   *  by the day a cow was milked, not by week number, so the column would be
+  /** Show the ISO week column down the left edge. Off here: a farm records
+   *  by the day something happened, not by week number, so the column would be
    *  a column of numbers nobody reads. */
   showWeeks?: boolean;
 };

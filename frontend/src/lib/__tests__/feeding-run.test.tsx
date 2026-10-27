@@ -16,10 +16,10 @@ const state = vi.hoisted(() => ({
 const program = {
   ok: true,
   herd: "H1",
-  herd_label: "Lactating group 1",
+  herd_label: "Finishing group 1",
   bom_no: "BOM-1",
   production_item: "RATION",
-  production_item_name: "Lactating Ration",
+  production_item_name: "Finishing Ration",
   heads: 10,
   per_head_qty: 18,
   total_manufacture_qty: 180,
@@ -46,7 +46,7 @@ const call = vi.fn(async (method?: string, args?: { payload?: Record<string, unk
       employees: [{ value: "HR-EMP-1", label: "JOSIAH KIPTOO", detail: "HR-EMP-1 · Herdsman" }],
     };
   if (m.includes("feed_options"))
-    return { ok: true, herds: [{ name: "H1", label: "Lactating group 1", heads: 10, bom: "BOM-1" }] };
+    return { ok: true, herds: [{ name: "H1", label: "Finishing group 1", heads: 10, bom: "BOM-1" }] };
   if (m.includes("herd_recipes")) return { ok: true, recipes: [], standing_bom: "BOM-1" };
   if (m.includes("record_feeding") && action === "info") return program;
   if (m.includes("record_feeding") && action === "day") return { error: "no day" };
@@ -76,7 +76,7 @@ const draw = () =>
 
 async function pickHerd() {
   fireEvent.click(await screen.findByLabelText("Herd"));
-  fireEvent.click(await screen.findByRole("option", { name: "Lactating group 1" }));
+  fireEvent.click(await screen.findByRole("option", { name: "Finishing group 1" }));
 }
 
 async function pickOperator() {
@@ -133,7 +133,7 @@ describe("a feed run", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Mix & feed" }));
     // The page says what was fed; the draft itself is announced by the app
     // (lib/stock-drafts) — once, not twice.
-    expect(await within(toasts()).findByText(/Fed 90.00 Kg to Lactating group 1 and recorded on Work Order WO-2/)).toBeTruthy();
+    expect(await within(toasts()).findByText(/Fed 90.00 Kg to Finishing group 1 and recorded on Work Order WO-2/)).toBeTruthy();
     expect(within(toasts()).queryByText(/waits as a draft/)).toBeNull();
   });
 });

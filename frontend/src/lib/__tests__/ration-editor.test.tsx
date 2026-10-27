@@ -16,11 +16,11 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 
 const herds = [
   {
-    herd: "Lactating group 1",
+    herd: "Finishing group 1",
     heads: 69,
-    bom: "BOM-Lactating Group 1-016",
-    ration_item: "Lactating Group 1",
-    ration_name: "Lactating Group 1",
+    bom: "BOM-Finishing group 1-016",
+    ration_item: "Finishing group 1",
+    ration_name: "Finishing group 1",
     per_head_kg: 40.65,
     day_kg: 2804.85,
     lines: [
@@ -53,9 +53,9 @@ const feeds = [
 const call = vi.fn(async (method?: string) =>
   (method || "").includes("set_herd_ration")
     ? {
-        ok: true, bom: "BOM-Lactating Group 1-017", changed: true,
-        superseded: "BOM-Lactating Group 1-016", per_head_kg: 26.5,
-        item: "Lactating Group 1", herd: "Lactating group 1", heads: 69, day_kg: 1828.5,
+        ok: true, bom: "BOM-Finishing group 1-017", changed: true,
+        superseded: "BOM-Finishing group 1-016", per_head_kg: 26.5,
+        item: "Finishing group 1", herd: "Finishing group 1", heads: 69, day_kg: 1828.5,
         differences: [
           { item_code: "4040010082", item_name: "Silage - Farm Produced", was: 23, now: 25, what: "raised" },
         ],
@@ -89,8 +89,8 @@ describe("the ration editor", () => {
 
   it("will not save until something has actually changed", async () => {
     draw();
-    await waitFor(() => expect(screen.getByText("Lactating group 1")).toBeTruthy());
-    fireEvent.click(screen.getByText("Lactating group 1"));
+    await waitFor(() => expect(screen.getByText("Finishing group 1")).toBeTruthy());
+    fireEvent.click(screen.getByText("Finishing group 1"));
     const save = await screen.findByRole("button", { name: /Save as a new revision/ });
     expect((save as HTMLButtonElement).disabled).toBe(true);
     expect(screen.getByText("Nothing has changed yet.")).toBeTruthy();
@@ -98,8 +98,8 @@ describe("the ration editor", () => {
 
   it("enables the save once a quantity moves, and totals the herd", async () => {
     draw();
-    await waitFor(() => expect(screen.getByText("Lactating group 1")).toBeTruthy());
-    fireEvent.click(screen.getByText("Lactating group 1"));
+    await waitFor(() => expect(screen.getByText("Finishing group 1")).toBeTruthy());
+    fireEvent.click(screen.getByText("Finishing group 1"));
     // One "Amount" per ingredient — the silage line is the first.
     const amounts = await screen.findAllByLabelText("Amount");
     fireEvent.change(amounts[0], { target: { value: "25" } });
@@ -116,8 +116,8 @@ describe("the ration editor", () => {
   it("calls out a recipe whose output and ingredients disagree", async () => {
     // It issues less feed than it consumes — the live site's actual defect.
     draw();
-    await waitFor(() => expect(screen.getByText("Lactating group 1")).toBeTruthy());
-    fireEvent.click(screen.getByText("Lactating group 1"));
+    await waitFor(() => expect(screen.getByText("Finishing group 1")).toBeTruthy());
+    fireEvent.click(screen.getByText("Finishing group 1"));
     await waitFor(() =>
       expect(screen.getByText(/issues less feed than it consumes/)).toBeTruthy(),
     );
@@ -133,14 +133,14 @@ describe("the ration editor", () => {
 
   it("reports the revision it made and what it superseded", async () => {
     draw();
-    await waitFor(() => expect(screen.getByText("Lactating group 1")).toBeTruthy());
-    fireEvent.click(screen.getByText("Lactating group 1"));
+    await waitFor(() => expect(screen.getByText("Finishing group 1")).toBeTruthy());
+    fireEvent.click(screen.getByText("Finishing group 1"));
     fireEvent.change((await screen.findAllByLabelText("Amount"))[0], {
       target: { value: "25" },
     });
     fireEvent.click(screen.getByRole("button", { name: /Save as a new revision/ }));
     await waitFor(() =>
-      expect(screen.getByText(/superseding BOM-Lactating Group 1-016/)).toBeTruthy(),
+      expect(screen.getByText(/superseding BOM-Finishing group 1-016/)).toBeTruthy(),
     );
     expect(screen.getByText(/Silage - Farm Produced raised from 23 to 25/)).toBeTruthy();
   });

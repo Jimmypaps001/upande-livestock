@@ -2,7 +2,7 @@
  * What the Animals page needs to know about an animal.
  *
  * Shapes first, data later. Every field here maps onto something the server
- * already holds — Animal, Livestock Event, Milk Recording — so wiring this up
+ * already holds — Animal, Livestock Event — so wiring this up
  * is a matter of filling these in rather than redesigning the page around what
  * the endpoints happen to return. The sample below is real Kaitet register
  * numbers and real herd names, because a layout tested on "Animal 1 / Herd A"
@@ -15,7 +15,6 @@ export type CycleStage =
   | "open"       // eligible to serve, not yet in calf
   | "served"     // inseminated, awaiting the check
   | "confirmed"  // carrying
-  | "dry"        // dried off, steaming up
   | "heifer"     // never calved
   | "retired";   // left the herd
 
@@ -23,8 +22,6 @@ export interface CycleState {
   stage: CycleStage;
   /** Days since the event that started this stage. */
   dayInStage: number;
-  /** Days since her last calving — the number that drives everything else. */
-  daysInMilk: number | null;
   /** What the farm should be watching for next, in the farm's own words. */
   nextUp: string;
   /** When that is expected. Null when nothing is pending. */
@@ -38,7 +35,6 @@ export type MilestoneKind =
   | "confirmed"
   | "calving"
   | "abortion"
-  | "drying"
   | "health"
   | "weight";
 
@@ -66,10 +62,6 @@ export interface AnimalKpis {
   conceptionRate: number | null;
   /** Mean days between calvings. Null until she has calved twice. */
   calvingInterval: number | null;
-  /** Kilograms in her current or most recent lactation. */
-  lactationYield: number | null;
-  /** Her yield as a percentage of the herd's median. 100 is the median cow. */
-  yieldIndex: number | null;
   /** Treatments in the last twelve months. */
   treatments: number;
 }
@@ -107,12 +99,11 @@ export const STAGES: Record<
   open: { label: "Open", note: "ready to serve", tone: "var(--sd-data-amber)" },
   served: { label: "Served", note: "awaiting the check", tone: "var(--sd-data-purple)" },
   confirmed: { label: "In calf", note: "carrying", tone: "var(--sd-data-green)" },
-  dry: { label: "Dry", note: "steaming up", tone: "var(--sd-data-pink)" },
   retired: { label: "Left the herd", note: "no longer on the farm", tone: "var(--sd-quiet)" },
 };
 
 /** The loop, in the order a cow travels it. `retired` and `heifer` sit outside. */
-export const CYCLE_ORDER: CycleStage[] = ["fresh", "open", "served", "confirmed", "dry"];
+export const CYCLE_ORDER: CycleStage[] = ["fresh", "open", "served", "confirmed"];
 
 export const MILESTONE_TONE: Record<MilestoneKind, string> = {
   birth: "var(--sd-data-indigo)",
@@ -121,7 +112,6 @@ export const MILESTONE_TONE: Record<MilestoneKind, string> = {
   confirmed: "var(--sd-data-green)",
   calving: "var(--sd-data-cyan)",
   abortion: "var(--sd-data-red)",
-  drying: "var(--sd-data-pink)",
   health: "var(--sd-data-amber)",
   weight: "var(--sd-muted)",
 };

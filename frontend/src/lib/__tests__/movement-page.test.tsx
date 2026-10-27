@@ -25,11 +25,10 @@ const suggestions = {
     { animal: "A013/25", label: "SITA (A013/25)", from_herd: "0-2", to_herd: "2-4",
       days_in_herd: 61, days_expected: 60, overdue: false, days_over: 1,
       reason: "61 days in the herd" },
-    { animal: "A039/26", label: "APIJA (A039/26)", from_herd: "Lactating group 1",
-      to_herd: "LACTATION GROUP 2", days_in_herd: 124, days_expected: 120,
+    { animal: "A039/26", label: "APIJA (A039/26)", from_herd: "Finishing group 1",
+      to_herd: "FINISHING GROUP 2", days_in_herd: 124, days_expected: 120,
       overdue: false, days_over: 4, reason: "124 days in calf", days_to_calving: 146 },
   ],
-  lactation: [],
   counts: {},
 };
 
@@ -42,10 +41,10 @@ const call = vi.fn(async (method?: string, _args?: unknown): Promise<Record<stri
   return {
     ok: true,
     animals: [
-      { name: "A039/26", label: "APIJA (A039/26)", herd: "Lactating group 1",
-        herd_label: "Lactating group 1", repro: "Open" },
+      { name: "A039/26", label: "APIJA (A039/26)", herd: "Finishing group 1",
+        herd_label: "Finishing group 1", repro: "Open" },
       { name: "A101/23", label: "SITA (A101/23)", herd: "STEAMERS",
-        herd_label: "STEAMERS", repro: "Dry" },
+        herd_label: "STEAMERS", repro: "Served" },
     ],
     herds: [{ name: "STEAMERS", label: "STEAMERS" }, { name: "2-4", label: "2-4" }],
     calving_outcomes: [],
@@ -90,7 +89,7 @@ describe("the movement page", () => {
   it("groups them by where they are going", async () => {
     draw();
     await waitFor(() => expect(screen.getByText("2-4")).toBeTruthy());
-    expect(screen.getByText("LACTATION GROUP 2")).toBeTruthy();
+    expect(screen.getByText("FINISHING GROUP 2")).toBeTruthy();
   });
 
   it("keeps each herd's due list inside its own scroller", async () => {

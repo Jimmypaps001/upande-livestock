@@ -6,7 +6,7 @@ import { fmt } from "@/lib/utils";
 /**
  * Stock falling to nothing, one line per feed, drawn by hand in SVG.
  *
- * Why not a charting library: the same trade the milk chart made. Under 200
+ * Why not a charting library: the same trade the other hand-drawn charts make. Under 200
  * lines, no dependency, on a page a farm opens over a rural connection.
  *
  * WHY THE Y AXIS IS PER-LINE AND NOT SHARED. Silage is drawn at 3,800 kg a day

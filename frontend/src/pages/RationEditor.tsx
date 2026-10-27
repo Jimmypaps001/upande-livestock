@@ -251,7 +251,7 @@ export function RationEditor() {
                     id="r-name"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="e.g. Lactating Group 1"
+                    placeholder="e.g. Finishing group 1"
                   />
                   <p className="text-[12px] text-[var(--sd-muted)]">
                     {chosen.bom

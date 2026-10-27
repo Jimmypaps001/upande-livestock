@@ -28,11 +28,6 @@ import { cn } from "@/lib/utils";
  * looking at were buried under four hundred that are fine; a manager can still
  * raise a case against any animal on the farm from the tab next door, and a
  * cow on this list is not thereby condemned.
- *
- * PER-ANIMAL MILK IS NOT RECORDED ON THIS FARM. Milk Recording is a herd and a
- * session, so "low produce" cannot honestly mean litres. It means the milk a
- * health case cost her where somebody wrote the figure down, and the interval
- * between her calvings — which is what the farm actually gets out of her.
  */
 export function CullSuggestions({
   onPick,
@@ -132,14 +127,6 @@ export function CullSuggestions({
           </ul>
         )}
 
-        {data && !data.per_animal_milk && (
-          <p className="border-t border-[var(--sd-line)] pt-3 text-[11.5px] leading-relaxed text-[var(--sd-quiet)]">
-            Milk is recorded per herd per session on this farm, not per cow, so
-            no ranking here is based on litres. What stands in for it is the
-            interval between her calvings and the milk a health case is recorded
-            as having cost her.
-          </p>
-        )}
       </CardContent>
     </Card>
   );
