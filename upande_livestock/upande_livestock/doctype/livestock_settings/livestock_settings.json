@@ -99,6 +99,7 @@
   "sb_first_pregnancy",
   "incalf_heifer_herd",
   "sb_breeding_herds",
+  "cow_herd",
   "heifer_herds",
   "in_calf_herds",
   "calf_herds",
@@ -832,6 +833,13 @@
    "fieldtype": "HTML",
    "label": "Event stock rules",
    "options": "<p>Whether an event posts a Stock Entry, the item groups it draws on, its default store and whether it must name an item are set per event type — on each <a href='/app/livestock-event-type'>Livestock Event Type</a>, or all together on the app's <b>Settings → Stock</b> tab.</p>"
+  },
+  {
+   "description": "Where a cow goes the moment she calves, and where she is served again from. Leave blank to keep her in the herd she is in.",
+   "fieldname": "cow_herd",
+   "fieldtype": "Link",
+   "label": "Cow herd (after calving)",
+   "options": "Herds"
   }
  ],
  "grid_page_length": 50,

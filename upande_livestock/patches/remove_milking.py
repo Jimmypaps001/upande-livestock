@@ -52,20 +52,43 @@ SETTINGS_DROPPED = (
 )
 
 
-def _is_milk_field(fieldname):
-	return fieldname.startswith(("custom_milk", "custom_milking")) or fieldname == "custom_cows_milked"
+#: Custom Fields this app put on Stock Entry for milking. Exact names, never a
+#: prefix: custom_milk_feeding_pct_of_body_weight is a kept calf setting.
+STOCK_ENTRY_MILK_FIELDS = (
+	"custom_milking_details_section",
+	"custom_milking_time",
+	"custom_cows_milked",
+	"custom_milking_end_section",
+)
+
+
+def _milk_custom_fields():
+	"""(doctype, fieldname) pairs of the Custom Fields to remove."""
+	pairs = {("Stock Entry", f) for f in STOCK_ENTRY_MILK_FIELDS}
+	pairs |= {("Livestock Settings", f) for f in SETTINGS_DROPPED}
+	return pairs
+
+
+def _submitted_milk_recordings():
+	if not frappe.db.table_exists("Milk Recording"):
+		return 0
+	return frappe.db.sql("select count(*) from `tabMilk Recording` where docstatus = 1")[0][0]
+
+
+def _submitted_milking_entries():
+	if not frappe.db.exists("Stock Entry Type", "Milking"):
+		return 0
+	return frappe.db.count("Stock Entry", {"stock_entry_type": "Milking", "docstatus": 1})
 
 
 def _refuse_if_ledger_history():
 	problems = []
-	if frappe.db.table_exists("Milk Recording"):
-		n = frappe.db.sql("select count(*) from `tabMilk Recording` where docstatus = 1")[0][0]
-		if n:
-			problems.append(f"{n} submitted Milk Recording(s)")
-	if frappe.db.exists("Stock Entry Type", "Milking"):
-		n = frappe.db.count("Stock Entry", {"stock_entry_type": "Milking", "docstatus": 1})
-		if n:
-			problems.append(f"{n} submitted Stock Entry(ies) of type Milking")
+	n = _submitted_milk_recordings()
+	if n:
+		problems.append(f"{n} submitted Milk Recording(s)")
+	n = _submitted_milking_entries()
+	if n:
+		problems.append(f"{n} submitted Stock Entry(ies) of type Milking")
 	if problems:
 		frappe.throw(
 			"Cannot remove milking: " + " and ".join(problems) + " exist. "
@@ -89,6 +112,11 @@ def _carry_withdrawal_dates():
 			"where slaughter_safe_date is null and milk_safe_date is not null"
 		)
 	frappe.db.sql_ddl(f"alter table `{table}` drop column milk_safe_date")
+
+
+def _drop_milk_discarded():
+	if frappe.db.has_column("Livestock Health Case", "production_loss_kg"):
+		frappe.db.sql_ddl("alter table `tabLivestock Health Case` drop column production_loss_kg")
 
 
 def _drop_desk_entries():
@@ -116,10 +144,11 @@ def execute():
 			if frappe.db.exists(doctype, name):
 				frappe.delete_doc(doctype, name, force=True, ignore_missing=True)
 
-	for cf in frappe.get_all("Custom Field", fields=["name", "dt", "fieldname"]):
-		if _is_milk_field(cf.fieldname):
-			frappe.db.delete("Property Setter", {"doc_type": cf.dt, "field_name": cf.fieldname})
-			frappe.delete_doc("Custom Field", cf.name, force=True, ignore_missing=True)
+	for dt, fieldname in _milk_custom_fields():
+		frappe.db.delete("Property Setter", {"doc_type": dt, "field_name": fieldname})
+		name = frappe.db.exists("Custom Field", {"dt": dt, "fieldname": fieldname})
+		if name:
+			frappe.delete_doc("Custom Field", name, force=True, ignore_missing=True)
 
 	frappe.db.delete("Has Role", {"role": MILKER_ROLE})
 	frappe.db.delete("Custom DocPerm", {"role": MILKER_ROLE})
@@ -130,6 +159,7 @@ def execute():
 		frappe.db.delete("Singles", {"doctype": "Livestock Settings", "field": fieldname})
 
 	_carry_withdrawal_dates()
+	_drop_milk_discarded()
 	_drop_desk_entries()
 
 	# A table can outlive its DocType row if an earlier run was interrupted.

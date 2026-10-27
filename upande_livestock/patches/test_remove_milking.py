@@ -3,6 +3,8 @@
 
 """The beef app has no milking. The patch removes what a dairy install left."""
 
+from unittest.mock import patch
+
 import frappe
 from frappe.tests import IntegrationTestCase
 
@@ -39,12 +41,35 @@ class TestRemoveMilking(IntegrationTestCase):
 		self.assertFalse(frappe.db.exists("DocType", "Milk Recording"))
 		self.assertFalse(frappe.db.exists("DocType", "Livestock Milking Herd"))
 
-	def test_refuses_with_submitted_milk_data(self):
-		if not frappe.db.table_exists("Milk Recording"):
-			self.skipTest("no Milk Recording table on this site")
-		count = frappe.db.sql("select count(*) from `tabMilk Recording` where docstatus = 1")[0][0]
-		if not count:
-			self.skipTest("no submitted Milk Recording to refuse on")
-		with self.assertRaises(frappe.ValidationError) as ctx:
-			remove_milking.execute()
-		self.assertIn(str(count), str(ctx.exception))
+	def test_refuses_with_submitted_milk_recordings(self):
+		with patch.object(remove_milking, "_submitted_milk_recordings", return_value=7), patch.object(
+			remove_milking, "_submitted_milking_entries", return_value=0
+		):
+			with self.assertRaises(frappe.ValidationError) as ctx:
+				remove_milking.execute()
+		self.assertIn("7 submitted Milk Recording", str(ctx.exception))
+
+	def test_refuses_with_submitted_milking_stock_entries(self):
+		with patch.object(remove_milking, "_submitted_milk_recordings", return_value=0), patch.object(
+			remove_milking, "_submitted_milking_entries", return_value=3
+		):
+			with self.assertRaises(frappe.ValidationError) as ctx:
+				remove_milking.execute()
+		self.assertIn("3 submitted Stock Entry", str(ctx.exception))
+
+	def test_the_milking_entry_count_reads_submitted_entries_of_that_type(self):
+		with patch.object(frappe.db, "exists", return_value=True), patch.object(
+			frappe.db, "count", return_value=5
+		) as count:
+			self.assertEqual(remove_milking._submitted_milking_entries(), 5)
+		count.assert_called_once_with("Stock Entry", {"stock_entry_type": "Milking", "docstatus": 1})
+
+	def test_the_recording_count_reads_submitted_rows(self):
+		with patch.object(frappe.db, "table_exists", return_value=True), patch.object(
+			frappe.db, "sql", return_value=[(4,)]
+		):
+			self.assertEqual(remove_milking._submitted_milk_recordings(), 4)
+
+	def test_the_kept_calf_field_is_never_a_removal_target(self):
+		names = {f for _dt, f in remove_milking._milk_custom_fields()}
+		self.assertNotIn("custom_milk_feeding_pct_of_body_weight", names)

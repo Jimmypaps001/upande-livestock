@@ -153,6 +153,57 @@ class LivestockEvent(Document):
 			return False
 		return bool(frappe.db.get_value("Livestock Event Type", self.event_type, "creates_animal"))
 
+	def move_dam_after_calving(self):
+		"""Put the dam in Livestock Settings' cow herd, as a real Movement.
+
+		A Movement event and not a bare db.set_value, because the move IS the
+		history: days_in_current_herd measures from the last Movement into a
+		herd. Does nothing when no cow herd is set.
+
+		NOT DONE WHEN SHE HAS MOVED SINCE. Backdating a calving from six months
+		ago must not drag a cow out of the herd she is standing in today — she
+		may have been served and confirmed again since. The calving
+		is still recorded; only the move is skipped, and the reason is said out
+		loud rather than left as silence.
+		"""
+		from upande_livestock.serverscripts.common import herd_movement
+
+		if not self.animal:
+			return
+		destination = herd_movement.cow_herd()
+		if not destination:
+			return
+		current = frappe.db.get_value("Animal", self.animal, "current_herd")
+		if current == destination:
+			return
+
+		moved_since = frappe.db.exists("Livestock Event", {
+			"animal": self.animal,
+			"event_type": "Movement",
+			"docstatus": 1,
+			"event_date": [">", self.event_date],
+		})
+		if moved_since:
+			frappe.msgprint(
+				_("{0} has moved herds since {1}, so this calving leaves her where she is.").format(
+					self.animal, frappe.utils.formatdate(self.event_date)),
+				alert=True, indicator="orange")
+			return
+
+		move = frappe.new_doc("Livestock Event")
+		move.event_type = "Movement"
+		move.animal = self.animal
+		move.event_date = self.event_date
+		move.new_herd = destination
+		move.current_herd = current or ""
+		move.operator = self.operator
+		move.remarks = _("Calved on {0} — {1}").format(
+			frappe.utils.formatdate(self.event_date), self.name)
+		if self.meta.has_field("custom_is_backdated"):
+			move.custom_is_backdated = self.get("custom_is_backdated") or 0
+		move.insert(ignore_permissions=True)
+		move.submit()
+
 	def create_calf_if_needed(self):
 		"""For a Birth event with no animal yet, create the calf and point at it.
 
@@ -1156,6 +1207,10 @@ class LivestockEvent(Document):
 		self.refresh_calving_birth_count()
 		self.close_pregnancy_after_abortion()
 		self.post_stock_issue()
+		# On submit, not validate: a draft calving is somebody still typing, and
+		# validate runs twice (insert and submit), which would race the move.
+		if self.event_type == "Calving":
+			self.move_dam_after_calving()
 
 	def on_cancel(self):
 		self.refresh_calving_birth_count()

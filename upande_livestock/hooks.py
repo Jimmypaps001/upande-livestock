@@ -131,7 +131,7 @@ fixtures = [
 		"filters": [["name", "in", ["Livestock Dashboard", "Livestock Operations"]]],
 	},
 	{
-		# Reference master data, not demo scaffolding: these are the dairy diseases a
+		# Reference master data, not demo scaffolding: these are the cattle diseases a
 		# Kenyan herd is actually managed against, and Livestock Diagnosis /
 		# Livestock Health Case both link to them. Shipping them means a fresh site
 		# has something to diagnose against instead of an empty dropdown.
