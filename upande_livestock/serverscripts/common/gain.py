@@ -31,9 +31,9 @@ def period_days(value):
 
 
 def latest_weight(animal, on_date=None):
-	"""Kg of the latest weighing on or before `on_date` (today by default), else None."""
+	"""Kg of the latest weighing (never the birth weight) on or before `on_date` (today by default), else None."""
 	on = getdate(on_date)
-	points = [p for p in weights_for(animal) if p[0] <= on]
+	points = [p for p in weights_for_many([animal], birth=False)[animal] if p[0] <= on]
 	return points[-1][1] if points else None
 
 

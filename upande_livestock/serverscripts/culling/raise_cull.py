@@ -52,6 +52,9 @@ def raise_cull(payload):
 		if flow == culling.MORTALITY and not d.get("death_cause"):
 			frappe.throw(_("Say what she died of. A death with no cause cannot be counted."))
 
+		if flow == culling.SALE and flt(d.get("price_per_kg")) <= 0:
+			frappe.throw(_("Enter the price per kg the animal is to be sold at."))
+
 		evidence = cull_evidence(animal=animal)
 		if evidence.get("error"):
 			frappe.throw(evidence["error"])

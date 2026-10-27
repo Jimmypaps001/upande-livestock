@@ -40,6 +40,8 @@ def approve_cull(payload):
 		}
 		if needs["price"]:
 			per_kg = flt(d.get("price_per_kg") or doc.price_per_kg)
+			if per_kg <= 0:
+				frappe.throw(_("Set the price per kg before approving the sale."))
 			if per_kg > 0:
 				# Priced by the kilogram: the approval fixes the rate and the weight
 				# it is applied to, and the amount follows from them.

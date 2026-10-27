@@ -157,6 +157,39 @@ class TestBeefExits(IntegrationTestCase):
 		invoice = frappe.get_doc("Sales Invoice", posted["sales_invoice"])
 		self.assertEqual((invoice.items[0].qty, invoice.items[0].uom, invoice.items[0].rate), (412, "Kg", 380))
 
+	def test_a_cull_sale_without_a_price_per_kg_is_refused(self):
+		from upande_livestock.serverscripts.common import culling
+		from upande_livestock.serverscripts.culling.raise_cull import raise_cull
+
+		a = make_animal(self.herd, 412)
+		got = raise_cull({"animal": a.name, "flow": culling.SALE, "customer": self.customer,
+		                  "sale_price": 150000, "operator": _employee()})
+		self.assertFalse(got.get("ok"))
+		self.assertIn("price per kg", got["error"])
+
+	def test_an_animal_with_only_a_birth_weight_has_no_exit_weight(self):
+		a = make_animal(self.herd, None, date_of_birth=add_days(today(), -300), birth_weight_kg=30)
+		got = record_disposal({"animal": a.name, "disposal_type": "Sold", "customer": self.customer, "price_per_kg": 380})
+		self.assertFalse(got.get("ok"))
+		self.assertIn("exit weight", got["error"])
+
+	def test_a_stock_item_is_not_re_denominated_to_kg(self):
+		from upande_livestock.serverscripts.disposal.sell_livestock_asset import _sell_in_kg
+
+		stock = frappe.get_doc({"doctype": "Item", "item_code": "ZZ Stock " + frappe.generate_hash(length=6),
+		                        "item_group": "All Item Groups", "stock_uom": "Nos", "is_stock_item": 1}).insert(ignore_permissions=True)
+		with self.assertRaises(frappe.ValidationError) as ctx:
+			_sell_in_kg(stock.name, "Kg")
+		self.assertIn("non-stock", str(ctx.exception))
+		self.assertEqual(frappe.db.get_value("Item", stock.name, "stock_uom"), "Nos")
+
+	def test_a_fresh_non_stock_item_switches_to_kg(self):
+		from upande_livestock.serverscripts.disposal.sell_livestock_asset import _sell_in_kg
+
+		self.assertEqual(frappe.db.get_value("Item", self.item, "stock_uom"), "Nos")
+		_sell_in_kg(self.item, "Kg")
+		self.assertEqual(frappe.db.get_value("Item", self.item, "stock_uom"), "Kg")
+
 	def test_capitalised_bull_sale_disposes_asset(self):
 		a = make_animal(self.herd, 412)
 		asset = _capitalise(a.name)

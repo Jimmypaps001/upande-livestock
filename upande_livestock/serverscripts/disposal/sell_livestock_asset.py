@@ -72,6 +72,18 @@ def _sale_lines(animal_doc, asset, asset_name, amount, per_kg, weight, rate_per_
 	return lines
 
 
+def _has_history(item):
+	"""True when re-denominating the item's unit would rewrite real records."""
+	if frappe.db.get_value("Item", item, "is_stock_item"):
+		return True
+	if frappe.db.exists("Bin", {"item_code": item}) or frappe.db.exists("Stock Ledger Entry", {"item_code": item}):
+		return True
+	for child in ("Sales Invoice Item", "Delivery Note Item", "Purchase Invoice Item", "Purchase Receipt Item"):
+		if frappe.db.exists(child, {"item_code": item, "docstatus": 1}):
+			return True
+	return False
+
+
 def _sell_in_kg(item, uom):
 	"""Make the sale item's stock UOM kilograms (idempotent) and return it.
 
@@ -81,6 +93,12 @@ def _sell_in_kg(item, uom):
 	if frappe.db.get_value("UOM", uom, "must_be_whole_number"):
 		frappe.db.set_value("UOM", uom, "must_be_whole_number", 0)
 	if frappe.db.get_value("Item", item, "stock_uom") != uom:
+		if _has_history(item):
+			frappe.throw(_(
+				"The Animal Sale Item {0} is a stock item or already has transactions in another unit, "
+				"so it cannot be switched to kilograms. Set a non-stock Animal Sale Item counted in {1} "
+				"in Livestock Settings."
+			).format(item, uom))
 		frappe.db.set_value("Item", item, "stock_uom", uom)
 		frappe.get_doc("Item", item).clear_cache()
 	if not frappe.db.exists("UOM Conversion Detail", {"parent": item, "uom": uom}):
