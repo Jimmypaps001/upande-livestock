@@ -84,6 +84,15 @@ class TestBullPerformance(IntegrationTestCase):
 		row = get_bull_performance(herd, 365)["rows"][0]
 		self.assertAlmostEqual(row["period_adg"], 0.75, places=3)
 
+	def test_no_target_means_below_target_is_none(self):
+		herd = make_herd("ZZ Perf H", "Fattening").name
+		frappe.db.set_single_value("Livestock Settings", "custom_target_growth_gday", 0)
+		_bull(herd, 200, 260)
+		row = get_bull_performance(herd)["rows"][0]
+		self.assertIsNone(get_bull_performance(herd)["target_adg_kg"])
+		self.assertIsNotNone(row["period_adg"])
+		self.assertIsNone(row["below_target"])
+
 	def test_list_performance_herds(self):
 		fat = make_herd("ZZ Perf F", "Fattening").name
 		other = make_herd("ZZ Perf G", "Cow").name

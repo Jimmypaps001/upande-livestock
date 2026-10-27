@@ -45,3 +45,13 @@ class TestGain(IntegrationTestCase):
 	def test_herd_target_prefers_herd_then_farm(self):
 		with_target = make_herd("ZZ Gain T", "Fattening", target_adg_kg=0.9).name
 		self.assertEqual(herd_target_adg(with_target), 0.9)
+
+	def test_herd_target_falls_back_to_farm_gday(self):
+		herd = make_herd("ZZ Gain F", "Fattening").name
+		frappe.db.set_single_value("Livestock Settings", "custom_target_growth_gday", 850)
+		self.assertAlmostEqual(herd_target_adg(herd), 0.85)
+
+	def test_herd_target_none_when_neither_set(self):
+		herd = make_herd("ZZ Gain N", "Fattening").name
+		frappe.db.set_single_value("Livestock Settings", "custom_target_growth_gday", 0)
+		self.assertIsNone(herd_target_adg(herd))

@@ -84,7 +84,7 @@ def get_bull_performance(herd: str, period_days: int = DEFAULT_PERIOD_DAYS) -> d
 		if r["period_adg"] != previous:
 			previous, previous_rank = r["period_adg"], i
 		r["rank"] = previous_rank
-		r["below_target"] = bool(target_adg is not None and r["period_adg"] < target_adg)
+		r["below_target"] = None if target_adg is None else r["period_adg"] < target_adg
 	unranked = sorted((r for r in rows if r["period_adg"] is None), key=lambda r: r["label"])
 
 	weights = [r["latest_weight_kg"] for r in rows if r["latest_weight_kg"] is not None]

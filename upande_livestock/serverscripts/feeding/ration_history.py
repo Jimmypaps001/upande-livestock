@@ -136,12 +136,18 @@ def _feed_modes(herds, first, last):
 
 
 def _ration_periods(herds):
-	"""{(herd, day): (start, end)} — the stretch of unbroken days on the same
-	recipe that each fed day belongs to.
+	"""{(herd, day, bom_no): (start, end)} — the period each fed row belongs to.
 
-	A period ends when the herd's recipe changes. Read from every submitted
-	Work Order of those herds, not from the page's rows, so a page cut by a date
-	filter or the row limit still reports the whole period's gain.
+	A period is a run of the herd's consecutive feed days on which that recipe
+	was fed; it ends on the first feed day of the herd where the recipe is
+	absent. "Consecutive" means consecutive feed days, not calendar days: a
+	skipped day with no feeding at all does not end a run, a day fed on another
+	recipe does. A herd fed two recipes every day therefore has two long
+	overlapping periods, one per recipe.
+
+	Read from every submitted Work Order of those herds, not from the page's
+	rows, so a page cut by a date filter or the row limit still reports the
+	whole period's gain.
 	"""
 	if not herds:
 		return {}
@@ -149,17 +155,32 @@ def _ration_periods(herds):
 		"""SELECT DISTINCT custom_herd AS herd, DATE(planned_start_date) AS day, bom_no
 		   FROM `tabWork Order`
 		   WHERE docstatus = 1 AND custom_herd IN %(herds)s
-		   ORDER BY custom_herd, day""",
+		   ORDER BY custom_herd, day, bom_no""",
 		{"herds": tuple(herds)},
 		as_dict=True,
 	)
 	periods = {}
-	# Consecutive rows of one herd on one recipe are one period.
-	for (herd, _bom), group in groupby(rows, key=lambda r: (r.herd, r.bom_no)):
-		days = [getdate(r.day) for r in group]
-		for day in days:
-			periods[(herd, day)] = (days[0], days[-1])
+	for herd, herd_rows in groupby(rows, key=lambda r: r.herd):
+		by_day = {}
+		for r in herd_rows:
+			by_day.setdefault(getdate(r.day), set()).add(r.bom_no)
+		open_run = {}  # bom_no -> [start, end]
+		for day in sorted(by_day):
+			for bom in list(open_run):
+				if bom not in by_day[day]:
+					start, end = open_run.pop(bom)
+					_close_run(periods, herd, bom, start, end, by_day)
+			for bom in by_day[day]:
+				open_run.setdefault(bom, [day, day])[1] = day
+		for bom, (start, end) in open_run.items():
+			_close_run(periods, herd, bom, start, end, by_day)
 	return periods
+
+
+def _close_run(periods, herd, bom, start, end, by_day):
+	for day, boms in by_day.items():
+		if start <= day <= end and bom in boms:
+			periods[(herd, day, bom)] = (start, end)
 
 
 def _herds_with_history():
@@ -218,7 +239,7 @@ def ration_history(herd=None, from_date=None, to_date=None, limit=None):
 		gains = {}
 		out = []
 		for r in rows:
-			span = periods.get((r["herd"], r["fed_on"]), (r["fed_on"], r["fed_on"]))
+			span = periods.get((r["herd"], r["fed_on"], r["bom_no"]), (r["fed_on"], r["fed_on"]))
 			if (r["herd"], span) not in gains:
 				gains[(r["herd"], span)] = herd_period_gain(r["herd"], *span)
 			avg_adg, weighed_head = gains[(r["herd"], span)]

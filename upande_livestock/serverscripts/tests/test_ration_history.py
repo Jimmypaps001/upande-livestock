@@ -291,3 +291,18 @@ class TestRationHistoryShowsGain(IntegrationTestCase):
 		late = self._row(herd, today())
 		self.assertIsNone(late["avg_adg_kg"])
 		self.assertEqual(late["weighed_head"], 0)
+
+	def test_two_recipes_fed_on_the_same_days_each_get_the_gain(self):
+		herd = make_herd("ZZ Ration Two", "Fattening").name
+		a = make_animal(herd)
+		submit_weight(a.name, 200, days_ago=30)
+		submit_weight(a.name, 230, days_ago=0)
+		for ago in (30, 15, 0):
+			_fed(herd, add_days(today(), -ago), "ZZ-BOM-A")
+			_fed(herd, add_days(today(), -ago), "ZZ-BOM-B")
+		res = ration_history(herd=herd, limit=50)
+		rows = [r for r in res["rows"] if r["fed_on"] == str(add_days(today(), -15))]
+		self.assertEqual({r["bom_no"] for r in rows}, {"ZZ-BOM-A", "ZZ-BOM-B"})
+		for r in rows:
+			self.assertAlmostEqual(r["avg_adg_kg"], 1.0, places=3)
+			self.assertEqual(r["weighed_head"], 1)
