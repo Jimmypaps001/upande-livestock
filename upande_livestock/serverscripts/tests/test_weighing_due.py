@@ -8,7 +8,7 @@ from frappe.tests import IntegrationTestCase
 from frappe.utils import add_days, today
 
 from upande_livestock.serverscripts.common.weighing import weighing_due
-from upande_livestock.serverscripts.tests.beef_fixtures import isolate, make_animal, make_herd, submit_weight
+from upande_livestock.serverscripts.tests.beef_fixtures import clear_bands, isolate, make_animal, make_herd, submit_weight
 
 
 def _due(animal):
@@ -18,6 +18,7 @@ def _due(animal):
 class TestWeighingDue(IntegrationTestCase):
 	def setUp(self):
 		isolate(self)
+		clear_bands()
 		frappe.db.set_single_value("Livestock Settings", "weighing_interval_days", 30)
 		frappe.db.set_single_value("Livestock Settings", "weighing_grace_days", 5)
 		self.herd = make_herd("ZZ Weigh", "Fattening", 0, 0).name
@@ -38,6 +39,21 @@ class TestWeighingDue(IntegrationTestCase):
 		self.assertEqual((row["days_since"], row["last_weight_date"]), (40, None))
 		self.assertIsNone(_due(new.name))
 
+	def test_a_movement_into_the_herd_beats_acquisition_and_birth(self):
+		animal = make_animal(self.herd, acquisition_date=add_days(today(), -300),
+		                     date_of_birth=add_days(today(), -400))
+		# Arrived 10 days ago: not overdue despite the old acquisition date.
+		frappe.get_doc({"doctype": "Livestock Event", "animal": animal.name, "event_type": "Movement",
+		                "event_date": add_days(today(), -10), "new_herd": self.herd,
+		                "docstatus": 1}).db_insert()
+		self.assertIsNone(_due(animal.name))
+		frappe.db.set_value("Livestock Event", {"animal": animal.name}, "event_date", add_days(today(), -50))
+		self.assertEqual(_due(animal.name)["days_since"], 50)
+
+	def test_birth_date_is_the_last_resort(self):
+		animal = make_animal(self.herd, date_of_birth=add_days(today(), -45))
+		self.assertEqual(_due(animal.name)["days_since"], 45)
+		self.assertIsNone(_due(make_animal(self.herd).name), "no date at all is not flagged on a guess")
 	def test_zero_grace_honoured(self):
 		frappe.db.set_single_value("Livestock Settings", "weighing_grace_days", 0)
 		animal = make_animal(self.herd)

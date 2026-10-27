@@ -36,6 +36,11 @@ def update_herd(
 		if not frappe.db.exists("Herds", herd):
 			frappe.throw(_("There is no herd called {0}.").format(herd))
 		doc = frappe.get_doc("Herds", herd)
+		# create_herd submits the herds it makes (docstatus 1), and Frappe asks
+		# for the "submit" permission to edit a submitted document — which a
+		# doctype that is not submittable never grants to anyone. guard_write
+		# above is the real check.
+		doc.flags.ignore_permissions = True
 		for field, value in given.items():
 			if value is not None and value != "":
 				doc.set(field, value)

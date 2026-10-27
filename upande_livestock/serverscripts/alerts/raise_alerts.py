@@ -122,7 +122,8 @@ def band_alert(c):
 	"""A weight_bands.band_check result, as an alert."""
 	weight = f"{c['label']} weighs {_kg(c['weight_kg'])} kg"
 	if c["kind"] == "Ready for Exit":
-		message = f"{weight} — ready for exit from {c['herd']} ({_band_range(c['from_min_kg'], c['from_max_kg'])})."
+		band = f" ({_band_range(c['from_min_kg'], c['from_max_kg'])})" if c["from_min_kg"] is not None else ""
+		message = f"{weight} — ready for exit from {c['herd']}{band}."
 	elif c["from_min_kg"] is None:
 		message = f"{weight} — ready to leave {c['herd']}; suggest {c['to_herd']}."
 	else:

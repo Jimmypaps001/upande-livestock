@@ -82,7 +82,10 @@ def _check(row, herd_classes, bands):
 		        "from_min_kg": own["min_kg"], "from_max_kg": own["max_kg"]}
 
 	if cls == "Calf" and weight >= bands[0]["min_kg"]:
-		return {**base, "kind": MOVE_DUE, "to_herd": destination(weight) or bands[0]["herd"],
+		top = bands[-1]
+		if top["max_kg"] is not None and weight >= top["max_kg"]:
+			return {**base, "kind": READY_FOR_EXIT, "to_herd": None, "from_min_kg": None, "from_max_kg": None}
+		return {**base, "kind": MOVE_DUE, "to_herd": destination(weight),
 		        "from_min_kg": None, "from_max_kg": None}
 	return None
 
@@ -104,6 +107,10 @@ def band_check(animal):
 	row = frappe.db.get_value("Animal", animal, _ANIMAL_FIELDS + ["status", "disabled"], as_dict=True)
 	if not row or row.disabled or row.status in RETIRED_STATUSES:
 		return None
+	# last_weight_kg is a snapshot the weight record leaves alone when its last
+	# record is cancelled; a weight no submitted record carries is not evidence.
+	if not frappe.db.exists("Livestock Weight Record", {"animal": animal, "docstatus": 1}):
+		return None
 	return _check(row, _classes(), fattening_bands())
 
 
@@ -124,6 +131,9 @@ def band_suggestions():
 		fields=_ANIMAL_FIELDS,
 		limit=5000,
 	)
-	out = [c for c in (_check(r, classes, bands) for r in rows) if c]
+	weighed = set(frappe.get_all(
+		"Livestock Weight Record", filters={"docstatus": 1, "animal": ["in", [r.name for r in rows] or [""]]},
+		pluck="animal"))
+	out = [c for c in (_check(r, classes, bands) for r in rows if r.name in weighed) if c]
 	out.sort(key=lambda c: (c["kind"], c["herd"], c["label"]))
 	return out

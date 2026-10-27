@@ -30,7 +30,7 @@ def make_animal(herd, weight_kg=None, sex="Male", **extra):
 		"status": "Active", "current_herd": herd, **extra,
 	}).insert(ignore_permissions=True)
 	if weight_kg:
-		frappe.db.set_value("Animal", doc.name, "last_weight_kg", weight_kg, update_modified=False)
+		submit_weight(doc.name, weight_kg)
 	return doc
 
 

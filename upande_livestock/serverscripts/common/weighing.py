@@ -10,7 +10,8 @@ grace of 0 means no slack.
 
 An animal that has never been weighed is counted from when it entered its
 current herd, so a newcomer is not flagged on its first day and a forgotten one
-is not exempt forever.
+is not exempt forever. Entry is its latest Movement into the herd, else its
+acquisition date, else its date of birth.
 """
 
 import frappe
@@ -25,16 +26,21 @@ def weighing_limit_days():
 	return get_timing("weighing_interval_days") + get_timing("weighing_grace_days")
 
 
-def _entered_herd(animal, herd, acquisition_date, creation):
-	"""When the animal arrived where it stands: its latest Movement into the
-	herd, else its acquisition date, else when it was entered on the system."""
-	moved = frappe.db.get_value(
-		"Livestock Event",
-		{"animal": animal, "event_type": "Movement", "new_herd": herd, "docstatus": 1},
-		"event_date",
-		order_by="event_date desc",
-	)
-	return moved or acquisition_date or getdate(creation)
+def _movements_into_herds(animals):
+	"""{(animal, herd): date of the latest submitted Movement of that animal into that herd}."""
+	if not animals:
+		return {}
+	return {
+		(r.animal, r.new_herd): r.arrived
+		for r in frappe.db.sql(
+			"""SELECT animal, new_herd, MAX(event_date) AS arrived
+			   FROM `tabLivestock Event`
+			   WHERE event_type = 'Movement' AND docstatus = 1 AND animal IN %(animals)s
+			   GROUP BY animal, new_herd""",
+			{"animals": tuple(animals)},
+			as_dict=True,
+		)
+	}
 
 
 def weighing_due(animal=None):
@@ -48,7 +54,8 @@ def weighing_due(animal=None):
 	limit = weighing_limit_days()
 	last = dict(frappe.db.sql(
 		"""SELECT animal, MAX(weight_date) FROM `tabLivestock Weight Record`
-		   WHERE docstatus = 1 GROUP BY animal"""
+		   WHERE docstatus = 1 AND (%(animal)s IS NULL OR animal = %(animal)s) GROUP BY animal""",
+		{"animal": animal},
 	))
 	extra = [["name", "=", animal]] if animal else []
 	animals = frappe.get_all(
@@ -58,13 +65,17 @@ def weighing_due(animal=None):
 			["status", "not in", list(RETIRED_STATUSES)],
 			["disabled", "=", 0],
 		],
-		fields=["name", "tag_number", "burn_name", "current_herd", "acquisition_date", "creation"],
+		fields=["name", "tag_number", "burn_name", "current_herd", "acquisition_date", "date_of_birth"],
 		limit=5000,
 	)
+	moved = _movements_into_herds([a.name for a in animals if a.name not in last])
 	out = []
 	for a in animals:
 		last_date = last.get(a.name)
-		since = last_date or _entered_herd(a.name, a.current_herd, a.acquisition_date, a.creation)
+		since = last_date or moved.get((a.name, a.current_herd)) or a.acquisition_date or a.date_of_birth
+		if not since:
+			# Nothing says when it arrived: not flagged on a guess.
+			continue
 		days = date_diff(today(), getdate(since))
 		if days <= limit:
 			continue

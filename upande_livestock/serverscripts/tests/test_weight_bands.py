@@ -78,3 +78,19 @@ class TestWeightBands(IntegrationTestCase):
 		refresh_weight_alerts(animal.name)
 		self.assertEqual(frappe.get_all("Livestock Alert", filters={
 			"animal": animal.name, "alert_kind": "Weight Band Move Due", "status": "Open"}), [])
+
+	def test_calf_heavier_than_a_closed_top_band_is_ready_for_exit(self):
+		self._ladder()
+		calves = make_herd("ZZ Calves", "Calf").name
+		self.assertEqual(wb.band_check(make_animal(calves, 460).name)["kind"], "Ready for Exit")
+		self.assertEqual(wb.band_check(make_animal(calves, 300).name)["to_herd"], self.b)
+
+	def test_a_cancelled_only_weight_withdraws_the_alert(self):
+		self._ladder()
+		animal = make_animal(self.a)
+		record = submit_weight(animal.name, 262)
+		self.assertIsNotNone(wb.band_check(animal.name))
+		record.cancel()
+		self.assertIsNone(wb.band_check(animal.name))
+		self.assertEqual(frappe.get_all("Livestock Alert", filters={
+			"animal": animal.name, "alert_kind": "Weight Band Move Due", "status": "Open"}), [])
