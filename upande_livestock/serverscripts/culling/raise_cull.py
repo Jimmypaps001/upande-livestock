@@ -22,10 +22,10 @@ def raise_cull(payload):
 	she was bottom of the herd should not quietly stop being a candidate
 	because two worse ones were bought in since.
 
-	A PRODUCTIVE ANIMAL IS NOT REFUSED. She may be lame, or bad-tempered, or
-	the farm may need her space. The record says in as many words that she was
-	performing, which is what somebody reviewing it needs to see — a block here
-	would only teach people to raise the case under a different flow.
+	A GOOD GAINER IS NOT REFUSED. It may be lame, or vicious, or the farm may
+	need its space. The evidence says in as many words how it is gaining, which
+	is what somebody reviewing it needs to see — a block here would only teach
+	people to raise the case under a different flow.
 	"""
 
 	def go():
@@ -70,7 +70,6 @@ def raise_cull(payload):
 		doc.custom_cull_flow = flow
 		doc.custom_review_status = culling.FIRST_GATE[flow]
 		doc.custom_evidence = evidence["case"]
-		doc.custom_was_productive = 1 if evidence["was_productive"] else 0
 		doc.custom_death_cause = d.get("death_cause") or None
 		doc.book_value = flt(evidence.get("book_value"))
 		doc.reason_details = d.get("reason") or None
@@ -91,7 +90,6 @@ def raise_cull(payload):
 			"flow": flow,
 			"status": doc.custom_review_status,
 			"evidence": evidence["case"],
-			"was_productive": bool(doc.custom_was_productive),
 			"policy": evidence.get("policy"),
 		}
 

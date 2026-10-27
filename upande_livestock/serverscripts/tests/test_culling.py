@@ -326,3 +326,25 @@ class TestADeathIsRecordedNotApproved(IntegrationTestCase):
 			"death_date": add_days(today(), 3), "operator": _employee(),
 		})
 		self.assertTrue(got.get("error"))
+
+
+class TestACullCaseArguesFromGain(IntegrationTestCase):
+	"""The evidence frozen on a case is the animal's gain against its herd's
+	target and its health history — there is no milk, and no 'was productive'."""
+
+	def setUp(self):
+		from upande_livestock.serverscripts.tests.beef_fixtures import isolate, make_animal, make_herd, submit_weight
+
+		isolate(self)
+		herd = make_herd("ZZ Culling Herd", "Fattening", min_kg=0, max_kg=900, target_adg_kg=1.0).name
+		self.animal = make_animal(herd).name
+		submit_weight(self.animal, 200, days_ago=60)
+		submit_weight(self.animal, 218, days_ago=0)
+
+	def test_the_frozen_evidence_names_the_gain_against_the_target(self):
+		got = raise_cull({"animal": self.animal, "flow": culling.DISPOSAL})
+		self.assertTrue(got.get("ok"), got.get("error"))
+		self.assertIn("0.30", got["evidence"])
+		self.assertIn("1.00", got["evidence"])
+		self.assertNotIn("was_productive", got)
+		self.assertFalse(frappe.get_meta("Livestock Disposal").has_field("custom_was_productive"))

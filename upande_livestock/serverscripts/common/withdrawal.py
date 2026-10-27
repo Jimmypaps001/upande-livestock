@@ -9,6 +9,7 @@ so the answer is the latest date over her cases, open or closed.
 """
 
 import frappe
+from frappe import _
 from frappe.utils import getdate
 
 
@@ -26,3 +27,16 @@ def slaughter_safe_date(animal):
 		(animal,),
 	)
 	return getdate(row[0][0]) if row and row[0][0] else None
+
+
+def withdrawal_warning(animal, on_date):
+	"""A sentence saying the animal is still in withdrawal on `on_date`, or None.
+
+	A warning, never a block: the farm decides, the system makes sure it knew.
+	"""
+	safe = slaughter_safe_date(animal)
+	if safe and safe > getdate(on_date):
+		return _("{0} is in drug withdrawal until {1}. Her meat is not safe before then.").format(
+			animal, frappe.utils.formatdate(safe)
+		)
+	return None

@@ -1,14 +1,12 @@
 # Copyright (c) 2026, Upande and contributors
 # For license information, please see license.txt
 
-"""Which cows the figures put forward, and why each one is there.
+"""Which animals the figures put forward, and why each one is there.
 
-The suggestion list is the one part of culling that nobody signs — it only
-decides what a manager reads first. That makes two things worth protecting:
-that a cow with a clean record is never on it, and that a cow who IS on it
-carries the facts that put her there. A ranked list with no reasons is an
-oracle, and the whole point of this endpoint is that the argument can be read
-rather than trusted.
+The suggestion list is the one part of culling that nobody signs: it only
+decides what a manager reads first. So an animal gaining on target with a clean
+health record is never on it, and one who is carries the gain and health facts
+that put it there. Nothing here is about milk.
 """
 
 import frappe
@@ -16,38 +14,8 @@ from frappe.tests import IntegrationTestCase
 from frappe.utils import add_days, today
 
 from upande_livestock.serverscripts.culling.cull_candidates import cull_candidates
-from upande_livestock.serverscripts.tests.test_operations import (
-	_make_cow,
-	_purge,
-	_purge_events_for,
-)
-
-
-def _tidy(animal):
-	for row in frappe.get_all("Livestock Health Case", filters={"animal": animal}, pluck="name"):
-		_purge("Livestock Health Case", row)
-	_purge_events_for(animal)
-	if frappe.db.exists("Animal", animal):
-		frappe.delete_doc("Animal", animal, force=True, ignore_permissions=True)
-	frappe.db.commit()
-
-
-def _employee():
-	"""Every hand-entered event says who recorded it, fixtures included."""
-	return frappe.db.get_value("Employee", {"status": "Active"}, "name")
-
-
-def _event(animal, kind, on, **kw):
-	doc = frappe.get_doc({
-		"doctype": "Livestock Event",
-		"animal": animal,
-		"event_type": kind,
-		"event_date": on,
-		"operator": _employee(),
-		**kw,
-	}).insert(ignore_permissions=True)
-	doc.submit()
-	return doc
+from upande_livestock.serverscripts.culling.cull_evidence import cull_evidence
+from upande_livestock.serverscripts.tests.beef_fixtures import isolate, make_animal, make_herd, submit_weight
 
 
 def _find(got, animal):
@@ -61,173 +29,122 @@ def _reasons(row):
 	return {r["key"] for r in (row or {}).get("reasons", [])}
 
 
-class TestOnlyCowsWithSomethingOnTheirRecordAreSuggested(IntegrationTestCase):
+def _gainer(herd, start_kg, end_kg, days=60):
+	animal = make_animal(herd)
+	submit_weight(animal.name, start_kg, days_ago=days)
+	submit_weight(animal.name, end_kg, days_ago=0)
+	return animal
+
+
+class CullTestCase(IntegrationTestCase):
 	def setUp(self):
-		self.clean = "CAND-CLEAN-1"
-		_tidy(self.clean)
-		_make_cow(self.clean, herd="Breeding Cows")
-		self.addCleanup(_tidy, self.clean)
+		isolate(self)
+		self.herd = make_herd("ZZ Cull Herd", "Fattening", min_kg=0, max_kg=900, target_adg_kg=1.0).name
 
-	def test_a_cow_with_nothing_against_her_is_not_on_the_list(self):
-		"""No calvings, no losses, no illness — nothing to argue about.
 
-		The list exists because four cows worth looking at were buried under
-		four hundred that are fine. A cow who is merely present must not be one
-		of the four.
-		"""
+class TestOnlyAnimalsWithSomethingAgainstThemAreSuggested(CullTestCase):
+	def test_an_animal_gaining_on_target_is_not_on_the_list(self):
+		good = _gainer(self.herd, 200, 270)  # 1.17 kg/day
 		got = cull_candidates()
 		self.assertTrue(got.get("ok"), got.get("error"))
-		self.assertIsNone(_find(got, self.clean))
+		self.assertIsNone(_find(got, good.name))
+
+	def test_an_animal_with_no_weighings_is_not_on_the_list(self):
+		bare = make_animal(self.herd)
+		self.assertIsNone(_find(cull_candidates(), bare.name))
 
 	def test_the_whole_herd_is_still_counted(self):
-		"""`considered` is every cow looked at, not every cow suggested."""
+		_gainer(self.herd, 200, 270)
 		got = cull_candidates()
 		self.assertGreaterEqual(got["considered"], got["flagged_count"])
 
 
-class TestLostPregnanciesPutHerForward(IntegrationTestCase):
+class TestPoorGainPutsAnimalForward(CullTestCase):
+	def test_poor_gainer_is_candidate(self):
+		slow = _gainer(self.herd, 200, 218)  # 0.3 kg/day against a target of 1.0
+		row = _find(cull_candidates(), slow.name)
+		self.assertIsNotNone(row, "an animal gaining 0.3 against 1.0 is not on the list")
+		self.assertIn("poor_gain", _reasons(row))
+		self.assertEqual(row["period_adg"], 0.3)
+		self.assertEqual(row["target_adg"], 1.0)
+
+	def test_the_reason_says_the_gain_and_the_target(self):
+		slow = _gainer(self.herd, 200, 218)
+		reason = next(r for r in _find(cull_candidates(), slow.name)["reasons"] if r["key"] == "poor_gain")
+		self.assertIn("0.30", reason["label"])
+		self.assertIn("1.00", reason["label"])
+
+	def test_a_herd_with_no_target_puts_nobody_forward_on_gain(self):
+		herd = make_herd("ZZ Cull Untargeted").name
+		frappe.db.set_single_value("Livestock Settings", "custom_target_growth_gday", 0)
+		slow = _gainer(herd, 200, 218)
+		self.assertIsNone(_find(cull_candidates(), slow.name))
+
+	def test_a_weight_loser_outranks_a_slow_gainer(self):
+		losing = _gainer(self.herd, 250, 220)
+		slow = _gainer(self.herd, 200, 230)  # 0.5
+		got = cull_candidates()
+		self.assertGreater(_find(got, losing.name)["score"], _find(got, slow.name)["score"])
+
+	def test_the_score_is_the_sum_of_the_reasons(self):
+		slow = _gainer(self.herd, 200, 218)
+		row = _find(cull_candidates(), slow.name)
+		self.assertEqual(row["score"], sum(r["weight"] for r in row["reasons"]))
+
+	def test_no_milk_evidence(self):
+		slow = _gainer(self.herd, 200, 218)
+		got = cull_candidates()
+		row = _find(got, slow.name)
+		text = repr(row).lower() + repr(got["herd"]).lower()
+		for word in ("milk", "calving", "abortion", "lactation", "service"):
+			self.assertNotIn(word, text)
+		evidence = cull_evidence(animal=slow.name)
+		self.assertTrue(evidence.get("ok"), evidence.get("error"))
+		self.assertNotIn("was_productive", evidence)
+		self.assertNotIn("milk", repr(evidence).lower())
+
+	def test_the_evidence_sentence_names_the_gain(self):
+		slow = _gainer(self.herd, 200, 218)
+		evidence = cull_evidence(animal=slow.name)
+		self.assertIn("0.30", evidence["case"])
+		self.assertEqual(evidence["below"], 1)
+
+
+class TestDaysUnderTreatmentPutAnimalForward(CullTestCase):
 	def setUp(self):
-		self.animal = "CAND-LOSS-1"
-		_tidy(self.animal)
-		_make_cow(self.animal, herd="Breeding Cows")
-		for back in (400, 120):
-			_event(self.animal, "Abortion", add_days(today(), -back), abortion_cause="Unknown")
-		self.addCleanup(_tidy, self.animal)
+		super().setUp()
+		self.animal = _gainer(self.herd, 200, 270)  # gaining well; only health argues
 
-	def test_two_losses_are_a_reason(self):
-		row = _find(cull_candidates(), self.animal)
-		self.assertIsNotNone(row, "a cow with two lost pregnancies is not on the list")
-		self.assertIn("abortions", _reasons(row))
-
-	def test_the_reason_says_how_many_and_when(self):
-		row = _find(cull_candidates(), self.animal)
-		reason = next(r for r in row["reasons"] if r["key"] == "abortions")
-		self.assertIn("2", reason["label"])
-		self.assertTrue(reason["detail"], "no date given for the last loss")
-
-	def test_her_last_five_years_carry_the_losses(self):
-		row = _find(cull_candidates(), self.animal)
-		self.assertEqual(sum(y["abortions"] for y in row["years"]), 2)
-
-
-class TestServicesThatDoNotHoldPutHerForward(IntegrationTestCase):
-	def setUp(self):
-		self.animal = "CAND-OPEN-1"
-		_tidy(self.animal)
-		_make_cow(self.animal, herd="Breeding Cows")
-		# A calving needs a pregnancy to have ended, which needs a confirmed
-		# service before it — the same chain the farm actually records.
-		_event(
-			self.animal, "Service", add_days(today(), -580),
-			service_date=add_days(today(), -580),
-			pregnancy_confirmation_status="Confirmed",
-		)
-		_event(self.animal, "Calving", add_days(today(), -300), custom_calving_outcome="Live Birth")
-		# Each answered "Not Pregnant" before the next: the doctype refuses a
-		# second service while one is still pending a diagnosis, which is the
-		# same order the farm works in. Four services, four negatives.
-		for back in (200, 160, 120, 80):
-			_event(
-				self.animal, "Service", add_days(today(), -back),
-				service_date=add_days(today(), -back),
-				pregnancy_confirmation_status="Not Pregnant",
-			)
-		self.addCleanup(_tidy, self.animal)
-
-	def test_four_services_since_calving_without_holding_is_a_reason(self):
-		row = _find(cull_candidates(), self.animal)
-		self.assertIsNotNone(row)
-		self.assertIn("not_holding", _reasons(row))
-
-	def test_three_hundred_days_open_is_its_own_reason(self):
-		"""Days open and repeat services are different facts about her.
-
-		She may be served once and stay open for a year, or five times in three
-		months. Collapsing them would lose which of the two is happening, and
-		they call for different things being done about it.
-		"""
-		row = _find(cull_candidates(), self.animal)
-		self.assertIn("open", _reasons(row))
-
-	def test_a_confirmed_service_stops_the_count(self):
-		"""She held. Nothing since then is a service that failed."""
-		_event(
-			self.animal, "Service", add_days(today(), -30),
-			service_date=add_days(today(), -30),
-			pregnancy_confirmation_status="Confirmed",
-		)
-		row = _find(cull_candidates(), self.animal)
-		self.assertNotIn("not_holding", _reasons(row))
-		self.assertNotIn("open", _reasons(row))
-
-
-class TestDaysUnderTreatmentPutHerForward(IntegrationTestCase):
-	def setUp(self):
-		self.animal = "CAND-SICK-1"
-		_tidy(self.animal)
-		_make_cow(self.animal, herd="Breeding Cows")
-		self.addCleanup(_tidy, self.animal)
-
-	def _case(self, opened_back, **kw):
+	def _case(self, opened_back):
 		frappe.get_doc({
-			"doctype": "Livestock Health Case",
-			"animal": self.animal,
-			"opened_date": add_days(today(), -opened_back),
-			"case_status": "Open",
-			"presenting_symptoms": "Off her feed",
-			**kw,
-		}).insert(ignore_permissions=True).submit()  # as create_health_case does; a draft is not a case
+			"doctype": "Livestock Health Case", "animal": self.animal.name,
+			"opened_date": add_days(today(), -opened_back), "case_status": "Open",
+			"presenting_symptoms": "Off his feed",
+		}).insert(ignore_permissions=True).submit()
 
 	def test_a_long_illness_is_a_reason(self):
 		self._case(60)
-		row = _find(cull_candidates(), self.animal)
-		self.assertIsNotNone(row, "sixty days under treatment did not put her forward")
+		row = _find(cull_candidates(), self.animal.name)
+		self.assertIsNotNone(row, "sixty days under treatment did not put him forward")
 		self.assertIn("sick", _reasons(row))
+		self.assertNotIn("poor_gain", _reasons(row))
 
 	def test_an_open_case_counts_its_days_to_today(self):
-		"""Nobody closes a case that is not over.
-
-		Taking `duration_days` at face value reported a cow six weeks into
-		treatment as having been ill for no days at all, because the field is
-		only filled in when the case is closed.
-		"""
 		self._case(60)
-		row = _find(cull_candidates(), self.animal)
-		reason = next(r for r in row["reasons"] if r["key"] == "sick")
+		reason = next(r for r in _find(cull_candidates(), self.animal.name)["reasons"] if r["key"] == "sick")
 		self.assertIn("60", reason["label"])
 
 	def test_a_short_illness_is_not_a_reason_on_its_own(self):
 		self._case(3)
-		self.assertIsNone(_find(cull_candidates(), self.animal))
+		self.assertIsNone(_find(cull_candidates(), self.animal.name))
 
-	def test_her_years_carry_the_days_ill(self):
+	def test_the_years_carry_the_days_ill(self):
 		self._case(60)
-		row = _find(cull_candidates(), self.animal)
+		row = _find(cull_candidates(), self.animal.name)
 		self.assertGreater(sum(y["sick_days"] for y in row["years"]), 0)
 
-
-class TestTheRankingCanBeReadRatherThanTrusted(IntegrationTestCase):
-	def setUp(self):
-		self.worse = "CAND-RANK-WORSE"
-		self.milder = "CAND-RANK-MILDER"
-		for tag in (self.worse, self.milder):
-			_tidy(tag)
-			_make_cow(tag, herd="Breeding Cows")
-			self.addCleanup(_tidy, tag)
-		for back in (500, 300, 100):
-			_event(self.worse, "Abortion", add_days(today(), -back), abortion_cause="Unknown")
-		_event(self.milder, "Abortion", add_days(today(), -100), abortion_cause="Unknown")
-		_event(self.milder, "Abortion", add_days(today(), -400), abortion_cause="Unknown")
-
-	def test_the_score_is_the_sum_of_the_reasons(self):
-		"""So a number nobody can take apart never drives the order."""
-		row = _find(cull_candidates(), self.worse)
-		self.assertEqual(row["score"], sum(r["weight"] for r in row["reasons"]))
-
-	def test_three_losses_outrank_two(self):
-		got = cull_candidates()
-		worse = _find(got, self.worse)
-		milder = _find(got, self.milder)
-		self.assertIsNotNone(worse)
-		self.assertIsNotNone(milder)
-		self.assertGreater(worse["score"], milder["score"])
+	def test_the_evidence_includes_the_health_history(self):
+		self._case(60)
+		evidence = cull_evidence(animal=self.animal.name)
+		self.assertEqual(evidence["health_cases"], 1)
+		self.assertIn("60 days ill", evidence["case"])

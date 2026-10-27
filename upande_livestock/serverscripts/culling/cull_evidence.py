@@ -4,34 +4,21 @@
 """The case for culling one animal, in figures."""
 
 import frappe
-from frappe.utils import flt
+from frappe.utils import add_days, date_diff, flt, getdate, today
 
-from upande_livestock.serverscripts.common.animal import RETIRED_STATUSES, service_record
 from upande_livestock.serverscripts.common.envelope import guard_read, run
-
-
-def _median(values):
-	rows = sorted(v for v in values if v is not None)
-	if not rows:
-		return None
-	mid = len(rows) // 2
-	return rows[mid] if len(rows) % 2 else (rows[mid - 1] + rows[mid]) / 2.0
+from upande_livestock.serverscripts.common.gain import adg_between, herd_target_adg, weights_for
+from upande_livestock.serverscripts.performance.bull_performance import _period
 
 
 @frappe.whitelist()
-def cull_evidence(animal=None):
-	"""Her figures beside the herd's, and a sentence saying what they amount to.
+def cull_evidence(animal=None, period_days=None):
+	"""Its gain beside its herd's target, its health history, and a sentence
+	saying what they amount to.
 
-	MEDIAN, NOT MEAN, and taken over the animals that have each measure. One
-	nine-calf matriarch drags a mean far enough that half the herd reads
-	as below average, which is exactly the comparison this exists to make
-	honest; and a maiden heifer counted as a zero calving interval would make
-	every cow that has calved look good.
-
-	It never returns a verdict. A productive cow may still be culled — she may
-	be lame, or bad-tempered, or the farm may simply need the space — so this
-	says what is true and leaves the decision to a person. `was_productive` is
-	there to be written on the record, not to block anything.
+	It never returns a verdict. A fast-growing bull may still be culled — it
+	may be lame, or vicious, or the farm may simply need the space — so this
+	says what is true and leaves the decision to a person.
 	"""
 
 	def go():
@@ -42,50 +29,36 @@ def cull_evidence(animal=None):
 		her = frappe.db.get_value(
 			"Animal", animal,
 			["name", "burn_name", "current_herd", "sex", "date_of_birth", "status",
-			 "parity", "last_calving_date", "is_capitalised", "asset_link"],
+			 "is_capitalised", "asset_link"],
 			as_dict=True,
 		)
 		if not her:
 			frappe.throw(frappe._("{0} is not an animal on this farm.").format(animal))
 
-		herd = frappe.get_all(
-			"Animal",
-			filters=[["status", "not in", list(RETIRED_STATUSES)], ["disabled", "=", 0],
-			         ["sex", "=", "Female"]],
-			fields=["name", "parity"], limit_page_length=0,
-		)
-		record = service_record([r.name for r in herd] + [her.name])
-		med_parity = _median([flt(r.parity) for r in herd if flt(r.parity) > 0])
-		med_rate = _median(
-			[record[r.name]["conception_rate"] for r in herd if r.name in record]
-		)
-		her_rate = (record.get(her.name) or {}).get("conception_rate")
+		days = _period(period_days)
+		adg = adg_between(weights_for(animal), add_days(today(), -days), today())
+		target = herd_target_adg(her.current_herd)
+		sick_days, cases = _health_history(animal)
 
 		measures = []
 		below = 0
-		for label, mine, theirs, unit in (
-			("Calvings", flt(her.parity), med_parity, ""),
-			("Conception rate", her_rate, med_rate, "%"),
-		):
-			if mine is None or theirs is None:
-				continue
-			is_below = mine < theirs
+		if adg is not None and target:
+			is_below = adg < target
 			below += 1 if is_below else 0
 			measures.append({
-				"label": label, "hers": mine, "herd": theirs,
-				"unit": unit, "below": is_below,
+				"label": f"Daily gain ({days} days)", "hers": round(adg, 3),
+				"herd": round(target, 3), "unit": "kg/d", "below": is_below,
 			})
-
 		measured = len(measures)
-		was_productive = measured > 0 and below == 0
+
 		if not measured:
-			case = "There are no figures on her yet to compare."
-		elif below == 0:
-			case = "She is at or above the herd on every measure there is."
-		elif below == measured:
-			case = "She is below the herd on every measure there is."
+			case = "There are not enough weighings, or no gain target, to compare its gain."
+		elif below:
+			case = f"It is gaining {adg:.2f} kg/day against a target of {target:.2f}."
 		else:
-			case = f"She is below the herd on {below} of {measured} measures."
+			case = f"It is gaining {adg:.2f} kg/day, at or above the target of {target:.2f}."
+		if cases:
+			case += f" {int(sick_days)} days ill over {cases} health case{'' if cases == 1 else 's'} in the last year."
 
 		claim = _open_policy(animal)
 		return {
@@ -97,7 +70,10 @@ def cull_evidence(animal=None):
 			"measures": measures,
 			"below": below,
 			"measured": measured,
-			"was_productive": was_productive,
+			"period_adg": None if adg is None else round(adg, 3),
+			"target_adg": None if not target else round(target, 3),
+			"sick_days": sick_days,
+			"health_cases": cases,
 			"case": case,
 			"book_value": _book_value(her.asset_link),
 			"is_capitalised": bool(her.is_capitalised),
@@ -106,6 +82,24 @@ def cull_evidence(animal=None):
 		}
 
 	return run(go, "livestock cull_evidence failed")
+
+
+def _health_history(animal):
+	"""Days under treatment, and the number of cases, over the last year."""
+	year_ago = getdate(add_days(today(), -365))
+	days, cases = 0.0, 0
+	for row in frappe.db.sql(
+		"""SELECT opened_date, closed_date, duration_days FROM `tabLivestock Health Case`
+		   WHERE docstatus = 1 AND animal = %s AND opened_date >= %s""",
+		(animal, year_ago), as_dict=True,
+	):
+		cases += 1
+		if row.duration_days:
+			days += flt(row.duration_days)
+		else:
+			end = getdate(row.closed_date) if row.closed_date else getdate(today())
+			days += max(date_diff(end, getdate(row.opened_date)), 0)
+	return days, cases
 
 
 def _book_value(asset):

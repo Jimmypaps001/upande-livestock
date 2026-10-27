@@ -19,9 +19,12 @@ uncapitalised animal is still recordable as dead or sold.
 import frappe
 from frappe import _
 from frappe.model.document import Document
+from frappe.utils import flt, getdate
 
 from upande_livestock.serverscripts.common import backdate, culling
 from upande_livestock.serverscripts.common.animal import recompute_herd_count, retire_animal
+from upande_livestock.serverscripts.common.gain import adg_between, weights_for, weights_for_many
+from upande_livestock.serverscripts.common.withdrawal import withdrawal_warning
 from upande_livestock.serverscripts.disposal.scrap_livestock_asset import (
 	_scrap_livestock_asset,
 	restore_scrapped_asset,
@@ -29,6 +32,8 @@ from upande_livestock.serverscripts.disposal.scrap_livestock_asset import (
 from upande_livestock.serverscripts.disposal.sell_livestock_asset import _sell_livestock_asset
 
 SALE_TYPES = ("Sold",)
+#: Exits whose gain over the animal's whole life is worth keeping.
+EXIT_TYPES = ("Sold", "Slaughtered")
 
 
 class LivestockDisposal(Document):
@@ -39,6 +44,38 @@ class LivestockDisposal(Document):
 		# the flag stays stored, never derived, so this only ever unsets a false one.
 		backdate.assert_not_future(self.disposal_date, "Disposal Date")
 		backdate.sanitise(self, "disposal_date")
+		if self.disposal_type in SALE_TYPES:
+			self.price_the_sale()
+		if self.disposal_type in EXIT_TYPES:
+			self.set_final_adg()
+			self.flags.warnings = self.withdrawal_warnings()
+
+	def price_the_sale(self):
+		"""A per-kg sale is worth its exit weight times the price per kg.
+
+		The weight defaults to the latest weighing. With no price per kg the
+		sale_price stays as typed — a cull case is priced by its approver.
+		"""
+		if flt(self.price_per_kg) <= 0:
+			return
+		if flt(self.exit_weight_kg) <= 0:
+			points = weights_for_many([self.animal], birth=False)[self.animal]
+			if not points:
+				frappe.throw(_("{0} has no weighing to take an exit weight from. Enter the exit weight.").format(self.animal))
+			self.exit_weight_kg = points[-1][1]
+		self.sale_price = round(flt(self.exit_weight_kg) * flt(self.price_per_kg), 2)
+
+	def set_final_adg(self):
+		"""Lifetime ADG up to the exit, counting the exit weight as the last point."""
+		on = getdate(self.disposal_date)
+		points = [p for p in weights_for(self.animal) if p[0] <= on]
+		if flt(self.exit_weight_kg) > 0 and (not points or points[-1][0] < on):
+			points.append((on, flt(self.exit_weight_kg)))
+		self.final_adg_kg = adg_between(points)
+
+	def withdrawal_warnings(self):
+		warning = withdrawal_warning(self.animal, self.disposal_date)
+		return [warning] if warning else []
 
 	def before_submit(self):
 		# A cull case is submitted by post_cull once it is Approved. Submitting
@@ -148,12 +185,18 @@ class LivestockDisposal(Document):
 					customer=self.customer,
 					selling_amount=self.sale_price,
 					posting_date=self.disposal_date,
+					exit_weight_kg=self.exit_weight_kg,
+					price_per_kg=self.price_per_kg,
 				)
 				# A sale posts a Sales Invoice, not a Journal Entry. The old
 				# sale_journal_entry field (Link -> Journal Entry) could never hold
 				# this name, which is why it sat empty on every disposal ever made.
 				if (result or {}).get("sales_invoice"):
 					self.db_set("sales_invoice", result["sales_invoice"], update_modified=False)
+			elif not frappe.db.get_value("Animal", self.animal, "asset_link"):
+				# Nothing on the books to write off: a bull that was never
+				# capitalised leaves with no posting, and no alert about one.
+				return
 			else:
 				result = _scrap_livestock_asset(
 					animal=self.animal,

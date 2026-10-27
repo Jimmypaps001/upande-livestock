@@ -68,6 +68,6 @@ def record_mortality(payload):
 		if not posted.get("ok"):
 			return posted
 
-		return {**posted, "death_cause": cause, "was_productive": raised["was_productive"]}
+		return {**posted, "death_cause": cause}
 
 	return run(go, "livestock record_mortality failed")

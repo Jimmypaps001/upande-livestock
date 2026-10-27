@@ -5,8 +5,9 @@ from frappe import _
 from frappe.utils import flt
 
 from upande_livestock.serverscripts.common import backdate
-from upande_livestock.serverscripts.common.envelope import as_dict, guard, run
+from upande_livestock.serverscripts.common.envelope import as_dict, guard, guard_read, run
 from upande_livestock.serverscripts.common.vet import resolve_vet
+from upande_livestock.serverscripts.common.withdrawal import withdrawal_warning
 
 
 @frappe.whitelist()
@@ -33,7 +34,15 @@ def record_disposal(payload):
 		doc.disposal_date = disposal_date
 		backdate.stamp(doc, is_backdated)
 		doc.disposal_type = d.get("disposal_type")
-		doc.sale_price = flt(d.get("sale_price")) or None
+		if doc.disposal_type == "Sold":
+			# Live cattle sell by the kilogram: the amount is worked out from the
+			# exit weight (the latest weighing when none is given) and the price.
+			if flt(d.get("price_per_kg")) <= 0:
+				frappe.throw(_("Enter the price per kg the animal was sold at."))
+			doc.price_per_kg = flt(d.get("price_per_kg"))
+		else:
+			doc.sale_price = flt(d.get("sale_price")) or None
+		doc.exit_weight_kg = flt(d.get("exit_weight_kg")) or None
 		doc.customer = d.get("customer") or None
 		doc.buyer_name = d.get("buyer_name")
 		doc.buyer_contact = d.get("buyer_contact")
@@ -44,6 +53,7 @@ def record_disposal(payload):
 		doc.vet = resolve_vet(d)
 		doc.insert()
 		doc.submit()
+		warnings = list(doc.flags.get("warnings") or [])
 		doc.reload()
 		status, disabled = frappe.db.get_value("Animal", doc.animal, ["status", "disabled"])
 		return {
@@ -51,6 +61,18 @@ def record_disposal(payload):
 			"name": doc.name,
 			"animal_status": status,
 			"animal_disabled": int(disabled or 0),
+			"exit_weight_kg": doc.exit_weight_kg,
+			"sale_price": doc.sale_price,
+			"final_adg_kg": doc.final_adg_kg,
+			# Warned, not blocked: the farm decides, but it is told.
+			"warnings": warnings,
 		}
 
 	return run(go, "livestock record_disposal failed")
+
+
+@frappe.whitelist()
+def disposal_warning(animal, disposal_date=None):
+	"""The withdrawal warning the desk form shows before an exit is saved."""
+	guard_read("Livestock Disposal")
+	return withdrawal_warning(animal, disposal_date or frappe.utils.today())

@@ -40,7 +40,7 @@ def cull_board(payload=None):
 		cases = frappe.db.sql(
 			"""SELECT d.name, d.animal, d.animal_name, d.disposal_date, d.disposal_type,
 			          d.custom_cull_flow AS flow, d.custom_review_status AS status,
-			          d.custom_evidence AS evidence, d.custom_was_productive AS was_productive,
+			          d.custom_evidence AS evidence,
 			          d.custom_death_cause AS death_cause, d.custom_vet_verdict AS vet_verdict,
 			          d.custom_vet_on AS vet_on, d.sale_price, d.buyer_name,
 			          d.buyer_contact, d.gift_destination, d.gifted_to,
@@ -54,7 +54,6 @@ def cull_board(payload=None):
 		)
 		for c in cases:
 			c["waiting_on"] = WAITING_ON.get(c["status"], "nobody")
-			c["was_productive"] = bool(c["was_productive"])
 			c["sale_price"] = flt(c["sale_price"])
 
 		flagged = frappe.db.sql(

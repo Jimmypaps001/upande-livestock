@@ -1,78 +1,71 @@
 # Copyright (c) 2026, Upande and contributors
 # For license information, please see license.txt
 
-"""Which cows the figures argue against keeping, and the figures themselves."""
+"""Which animals the figures argue against keeping, and the figures themselves."""
 
 import frappe
 from frappe.utils import add_days, date_diff, flt, getdate, today
 
 from upande_livestock.serverscripts.common.animal import RETIRED_STATUSES
 from upande_livestock.serverscripts.common.envelope import as_dict, guard_read, run
+from upande_livestock.serverscripts.common.gain import adg_between, herd_target_adg, weights_for_many
+from upande_livestock.serverscripts.performance.bull_performance import _period
 
-#: How far back the yearly bars go. Five is a cow's working life on this farm;
-#: further back is a different animal in the same skin.
+#: How far back the yearly rows go.
 YEARS = 5
-
-#: What counts as a long time to be open. 120 days past calving with nothing
-#: holding is roughly one lost calf a year, which is the number a manager
-#: actually feels.
-OPEN_DAYS_CONCERN = 120
-
-#: Served this many times since she last held, and she is being paid for
-#: without answering.
-REPEAT_SERVICES = 3
 
 #: Days ill in the last year before it is worth saying out loud.
 SICK_DAYS_CONCERN = 21
 
+#: Most a shortfall in gain can weigh. A shortfall of the whole target (no gain
+#: at all) weighs this much; a smaller one weighs in proportion, never below
+#: the floor, so any animal under target is visibly on the list.
+GAIN_WEIGHT_MAX = 50
+GAIN_WEIGHT_MIN = 10
+
 
 @frappe.whitelist()
 def cull_candidates(payload=None):
-	"""Rank the herd by the case against each cow, worst first.
+	"""Rank the animals by the case against each, worst first.
 
 	A SUGGESTION, NEVER A DECISION. Everything here is read off records that
-	already exist — services that did not hold, pregnancies lost, days under
-	treatment, the interval between her calvings. No cow is culled by arithmetic
-	and none is protected by it either: the list exists so the four or five
-	worth looking at are not buried under four hundred that are fine, and the
+	already exist — weighings and health cases. No animal is culled by
+	arithmetic and none is protected by it either: the list exists so the few
+	worth looking at are not buried under the many that are fine, and the
 	screen lets a manager raise a case against any animal at all.
 
-	WHY EACH ONE IS HERE IS THE POINT. A ranked list with no reasons is an
-	oracle, and nobody signs a disposal on an oracle's say-so. Every candidate
-	carries the reasons that put her there, her own figures beside the herd's,
-	and her last five years, so the argument can be read rather than trusted.
+	WHY EACH ONE IS HERE IS THE POINT. Every candidate carries the reasons that
+	put it there, its own figures beside the herd's, and its last five years,
+	so the argument can be read rather than trusted.
 
-	The measures are the ones the records support: services that did not hold,
-	pregnancies lost, days ill, and the interval between her calvings.
+	The measures: average daily gain over the period (90 days by default)
+	against its herd's target, and days under treatment.
 	"""
 
 	def go():
 		guard_read("Animal")
 		d = as_dict(payload) if payload else {}
 		want = int(d.get("limit") or 25)
+		days = _period(d.get("period_days"))
 
 		animals = frappe.get_all(
 			"Animal",
-			filters=[
-				["status", "not in", list(RETIRED_STATUSES)],
-				["disabled", "=", 0],
-				["sex", "=", "Female"],
-			],
-			fields=["name", "burn_name", "tag_number", "current_herd", "date_of_birth",
-			        "status", "last_calving_date", "repro_status"],
+			filters=[["status", "not in", list(RETIRED_STATUSES)], ["disabled", "=", 0]],
+			fields=["name", "burn_name", "tag_number", "current_herd", "date_of_birth", "status"],
 			limit_page_length=0,
 		)
 		if not animals:
-			return {"ok": True, "candidates": [], "considered": 0, "herd": {}}
+			return {"ok": True, "candidates": [], "considered": 0, "herd": {}, "period_days": days}
 
-		facts = _facts([a.name for a in animals])
+		facts = _facts([a.name for a in animals], days)
+		targets = {h: herd_target_adg(h) for h in {a.current_herd for a in animals}}
 		herd = _medians(animals, facts)
 
 		out = []
 		for a in animals:
 			f = facts.get(a.name, _blank())
-			open_days = _open_days(a, f)
-			reasons = _reasons(a, f, open_days)
+			target = targets.get(a.current_herd)
+			reasons = _reasons(f, target, days)
 			if not reasons:
 				continue
 			out.append({
@@ -81,9 +74,11 @@ def cull_candidates(payload=None):
 				"herd": a.current_herd,
 				"status": a.status,
 				"age_days": date_diff(today(), getdate(a.date_of_birth)) if a.date_of_birth else None,
+				"period_adg": _round(f["period_adg"]),
+				"target_adg": _round(target),
 				"score": sum(r["weight"] for r in reasons),
 				"reasons": reasons,
-				"bars": _bars(f, herd, open_days),
+				"bars": _bars(f, target, herd),
 				"years": _years(f),
 			})
 
@@ -94,54 +89,31 @@ def cull_candidates(payload=None):
 			"considered": len(animals),
 			"flagged_count": len(out),
 			"herd": herd,
-			# Said in the payload so the screen does not have to know the farm's
-			# recording habits to caption its own chart honestly.
+			"period_days": days,
 		}
 
 	return run(go, "livestock cull_candidates failed")
 
 
+def _round(value, places=3):
+	return None if value is None else round(flt(value), places)
+
+
 def _blank():
-	return {
-		"calvings": [], "abortions": [], "services": [], "conceptions": [],
-		"sick_days": 0.0, "sick_days_year": 0.0, "sick_by_year": {}, "cases": 0,
-		"last_conception": None,
-	}
+	return {"period_adg": None, "sick_days": 0.0, "sick_days_year": 0.0, "sick_by_year": {}, "cases": 0}
 
 
-def _facts(names):
-	"""Everything the ranking needs, in four passes over the whole herd.
-
-	Per animal it would be four hundred round trips for a page nobody waits
-	for, so the queries are grouped and the arithmetic is done here.
-	"""
+def _facts(names, period_days):
+	"""Everything the ranking needs, in two passes over the whole herd."""
 	facts = {n: _blank() for n in names}
 	year_ago = add_days(today(), -365)
+	start = add_days(today(), -period_days)
+
+	for name, points in weights_for_many(names, birth=False).items():
+		facts[name]["period_adg"] = adg_between(points, start, today())
 
 	for row in frappe.db.sql(
-		"""SELECT animal, event_type, event_date, pregnancy_confirmation_status
-		   FROM `tabLivestock Event`
-		   WHERE docstatus = 1
-		     AND event_type IN ('Calving', 'Abortion', 'Service')
-		     AND event_date IS NOT NULL""",
-		as_dict=True,
-	):
-		f = facts.get(row.animal)
-		if not f:
-			continue
-		on = getdate(row.event_date)
-		if row.event_type == "Calving":
-			f["calvings"].append(on)
-		elif row.event_type == "Abortion":
-			f["abortions"].append(on)
-		else:
-			f["services"].append(on)
-			if (row.pregnancy_confirmation_status or "") == "Confirmed":
-				f["conceptions"].append(on)
-
-	for row in frappe.db.sql(
-		"""SELECT animal, opened_date, closed_date, case_status,
-		          duration_days
+		"""SELECT animal, opened_date, closed_date, duration_days
 		   FROM `tabLivestock Health Case`
 		   WHERE docstatus = 1 AND opened_date IS NOT NULL""",
 		as_dict=True,
@@ -151,9 +123,8 @@ def _facts(names):
 			continue
 		opened = getdate(row.opened_date)
 		# An open case is still costing days. Taking duration_days at face value
-		# would report a cow who has been under treatment for six weeks as
-		# having been ill for none, because nobody closes a case that is not
-		# over.
+		# would report an animal six weeks into treatment as having been ill for
+		# none, because nobody closes a case that is not over.
 		if row.duration_days:
 			days = flt(row.duration_days)
 		elif row.closed_date:
@@ -167,52 +138,7 @@ def _facts(names):
 		if opened >= getdate(year_ago):
 			f["sick_days_year"] += days
 
-	for f in facts.values():
-		f["calvings"].sort()
-		f["abortions"].sort()
-		f["services"].sort()
-		f["conceptions"].sort()
-		f["last_conception"] = f["conceptions"][-1] if f["conceptions"] else None
-
 	return facts
-
-
-def _interval(calvings):
-	"""Her average calving interval in days, or None if she has calved once."""
-	if len(calvings) < 2:
-		return None
-	# A zero or negative gap is two calvings entered on one day by the register
-	# load, not a cow who calved twice in a morning. Counting them would drag
-	# the herd median to nothing and make every real interval look terrible.
-	gaps = [date_diff(b, a) for a, b in zip(calvings, calvings[1:]) if date_diff(b, a) > 0]
-	if not gaps:
-		return None
-	return round(sum(gaps) / len(gaps))
-
-
-def _open_days(animal, facts):
-	"""Days since she last calved with nothing holding since."""
-	last = facts["calvings"][-1] if facts["calvings"] else None
-	if not last:
-		return None
-	if (animal.repro_status or "").strip().lower() in ("pregnant", "confirmed", "in calf"):
-		return None
-	if facts["last_conception"] and facts["last_conception"] > last:
-		return None
-	return date_diff(today(), last)
-
-
-def _services_since(facts):
-	"""Services since she last held — the ones the farm paid for and got nothing."""
-	# The LATER of the two. A cow who conceived and then calved has answered
-	# for every service up to the calving; counting from the conception would
-	# hold three-year-old failures against her forever.
-	marks = [d for d in (facts["last_conception"],
-	                     facts["calvings"][-1] if facts["calvings"] else None) if d]
-	since = max(marks) if marks else None
-	if since:
-		return sum(1 for s in facts["services"] if s > since)
-	return len(facts["services"])
 
 
 def _median(values):
@@ -224,66 +150,34 @@ def _median(values):
 
 
 def _medians(animals, facts):
-	"""The herd she is being measured against, over the cows that have each measure.
+	"""The herd each is measured against, over the animals that have each measure.
 
-	Median, not mean: one nine-calving matriarch drags a mean far enough that
-	half the herd reads as below it, which is precisely the comparison this
-	exists to make honest.
+	Median, not mean: one outlier drags a mean far enough that half the herd
+	reads as below it, which is precisely the comparison this exists to make
+	honest.
 	"""
-	intervals, opens, sick = [], [], []
-	for a in animals:
-		f = facts.get(a.name, _blank())
-		intervals.append(_interval(f["calvings"]))
-		opens.append(_open_days(a, f))
-		sick.append(f["sick_days_year"])
-	return {
-		"calving_interval": _median(intervals),
-		"open_days": _median(opens),
-		"sick_days": _median(sick),
-	}
+	gains = [facts.get(a.name, _blank())["period_adg"] for a in animals]
+	sick = [facts.get(a.name, _blank())["sick_days_year"] for a in animals]
+	return {"period_adg": _round(_median(gains)), "sick_days": _median(sick)}
 
 
-def _reasons(animal, facts, open_days):
-	"""The case against her, in as many sentences as there are facts for.
+def _reasons(facts, target, period_days):
+	"""The case against it, in as many sentences as there are facts for.
 
 	Each carries its own weight so the ranking can be read off the reasons
 	rather than off a number nobody can take apart.
 	"""
 	out = []
-	interval = _interval(facts["calvings"])
-	repeats = _services_since(facts)
-	losses = len(facts["abortions"])
+	adg = facts["period_adg"]
 
-	if losses >= 2:
+	if adg is not None and target and adg < target:
+		shortfall = (target - adg) / target
+		weight = max(GAIN_WEIGHT_MIN, min(GAIN_WEIGHT_MAX, int(shortfall * GAIN_WEIGHT_MAX)))
 		out.append({
-			"key": "abortions",
-			"label": f"{losses} pregnancies lost",
-			"detail": "The last on " + str(facts["abortions"][-1]) + ".",
-			"weight": 25 + 10 * (losses - 2),
-		})
-	elif losses == 1 and facts["abortions"][-1] >= getdate(add_days(today(), -365)):
-		out.append({
-			"key": "abortions",
-			"label": "Lost a pregnancy this year",
-			"detail": "On " + str(facts["abortions"][-1]) + ".",
-			"weight": 10,
-		})
-
-	if repeats >= REPEAT_SERVICES:
-		out.append({
-			"key": "not_holding",
-			"label": f"Served {repeats} times without holding",
-			"detail": "Since she last conceived." if facts["last_conception"]
-			          else "She has never held.",
-			"weight": 15 + 5 * (repeats - REPEAT_SERVICES),
-		})
-
-	if open_days is not None and open_days > OPEN_DAYS_CONCERN:
-		out.append({
-			"key": "open",
-			"label": f"{open_days} days open",
-			"detail": f"Calved {facts['calvings'][-1]} and nothing has held since.",
-			"weight": min(40, (open_days - OPEN_DAYS_CONCERN) // 30 * 8 + 8),
+			"key": "poor_gain",
+			"label": f"Gaining {adg:.2f} kg/day against a target of {target:.2f}",
+			"detail": f"Over the last {period_days} days." + (" It is losing weight." if adg < 0 else ""),
+			"weight": weight,
 		})
 
 	if facts["sick_days_year"] >= SICK_DAYS_CONCERN:
@@ -295,57 +189,29 @@ def _reasons(animal, facts, open_days):
 			"weight": min(35, int(facts["sick_days_year"]) // 10 * 6),
 		})
 
-	if interval and interval > 450:
-		out.append({
-			"key": "interval",
-			"label": f"{interval} days between calvings",
-			"detail": "A year and a quarter of feed for one calf.",
-			"weight": min(30, (interval - 450) // 30 * 5 + 5),
-		})
-
 	return out
 
 
-def _bars(facts, herd, open_days):
-	"""Her figures beside the herd's, for the chart. Higher is worse on all three."""
+def _bars(facts, target, herd):
+	"""Its figures beside the herd's, for the chart."""
 	out = []
-	for key, label, hers, unit in (
-		("calving_interval", "Calving interval", _interval(facts["calvings"]), "d"),
-		("open_days", "Days open", open_days, "d"),
-		("sick_days", "Days ill this year", facts["sick_days_year"], "d"),
-	):
-		theirs = herd.get(key)
-		if hers is None or theirs is None:
-			continue
-		# Nought against nought is not a comparison, it is a blank bar taking up
-		# the room the real ones need.
-		if not flt(hers) and not flt(theirs):
-			continue
+	if facts["period_adg"] is not None and target:
 		out.append({
-			"label": label, "hers": round(flt(hers), 1), "herd": round(flt(theirs), 1),
-			"unit": unit, "worse": flt(hers) > flt(theirs),
+			"label": "Daily gain", "hers": _round(facts["period_adg"]), "herd": _round(target),
+			"unit": "kg/d", "worse": facts["period_adg"] < target,
+		})
+	theirs = herd.get("sick_days")
+	hers = facts["sick_days_year"]
+	if theirs is not None and (flt(hers) or flt(theirs)):
+		out.append({
+			"label": "Days ill this year", "hers": round(flt(hers), 1), "herd": round(flt(theirs), 1),
+			"unit": "d", "worse": flt(hers) > flt(theirs),
 		})
 	return out
 
 
 def _years(facts):
-	"""Her last five years, one row each — what happened and what it cost."""
+	"""The last five years, one row each — the days it was ill."""
 	this_year = getdate(today()).year
 	span = list(range(this_year - YEARS + 1, this_year + 1))
-	rows = {
-		y: {"year": y, "calvings": 0, "abortions": 0, "services": 0, "sick_days": 0}
-		for y in span
-	}
-	for on in facts["calvings"]:
-		if on.year in rows:
-			rows[on.year]["calvings"] += 1
-	for on in facts["abortions"]:
-		if on.year in rows:
-			rows[on.year]["abortions"] += 1
-	for on in facts["services"]:
-		if on.year in rows:
-			rows[on.year]["services"] += 1
-	for year, days in facts["sick_by_year"].items():
-		if year in rows:
-			rows[year]["sick_days"] = int(days)
-	return [rows[y] for y in span]
+	return [{"year": y, "sick_days": int(facts["sick_by_year"].get(y, 0))} for y in span]
