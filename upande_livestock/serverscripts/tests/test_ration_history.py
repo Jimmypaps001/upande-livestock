@@ -12,9 +12,10 @@ import unittest
 
 import frappe
 from frappe.tests import IntegrationTestCase
-from frappe.utils import flt, getdate
+from frappe.utils import add_days, flt, getdate, today
 
 from upande_livestock.serverscripts.feeding.ration_history import ration_history
+from upande_livestock.serverscripts.tests.beef_fixtures import isolate, make_animal, make_herd, submit_weight
 
 
 def _submitted_herd_work_orders():
@@ -235,3 +236,58 @@ class TestRationHistoryCarriesTheRecipeLines(IntegrationTestCase):
 			checked += 1
 		if not checked:
 			raise unittest.SkipTest("no row in the recent history carries hay in a non-stock UOM")
+
+
+def _fed(herd, day, bom="ZZ-BOM-A", qty=100):
+	"""A submitted Work Order row, written directly: a real one needs an item,
+	a BOM and warehouses, none of which this page reads beyond these columns."""
+	name = "ZZ-WO-" + frappe.generate_hash(length=8)
+	now = frappe.utils.now()
+	frappe.db.sql(
+		"""INSERT INTO `tabWork Order`
+		   (name, creation, modified, owner, modified_by, docstatus, custom_herd,
+		    planned_start_date, bom_no, production_item, qty, custom_no_of_cows)
+		   VALUES (%s, %s, %s, 'Administrator', 'Administrator', 1, %s, %s, %s, 'ZZ-ITEM', %s, 5)""",
+		(name, now, now, herd, f"{day} 08:00:00", bom, qty),
+	)
+
+
+class TestRationHistoryShowsGain(IntegrationTestCase):
+	def setUp(self):
+		isolate(self)
+
+	def _row(self, herd, day):
+		res = ration_history(herd=herd, limit=50)
+		self.assertTrue(res.get("ok"), res.get("error"))
+		return next(r for r in res["rows"] if r["fed_on"] == str(day))
+
+	def test_period_shows_herd_gain(self):
+		herd = make_herd("ZZ Ration Gain", "Fattening").name
+		a = make_animal(herd)
+		b = make_animal(herd)
+		make_animal(herd, 300)  # weighed once: not counted
+		submit_weight(a.name, 200, days_ago=30)
+		submit_weight(a.name, 230, days_ago=0)  # 1.0
+		submit_weight(b.name, 200, days_ago=30)
+		submit_weight(b.name, 218, days_ago=0)  # 0.6
+		for ago in (30, 15, 0):
+			_fed(herd, add_days(today(), -ago))
+		row = self._row(herd, add_days(today(), -15))
+		self.assertAlmostEqual(row["avg_adg_kg"], 0.8, places=3)
+		self.assertEqual(row["weighed_head"], 2)
+
+	def test_period_ends_where_the_recipe_changes(self):
+		herd = make_herd("ZZ Ration Switch", "Fattening").name
+		a = make_animal(herd)
+		submit_weight(a.name, 200, days_ago=40)
+		submit_weight(a.name, 220, days_ago=20)  # 1.0 across the first recipe
+		submit_weight(a.name, 280, days_ago=0)
+		_fed(herd, add_days(today(), -40), "ZZ-BOM-A")
+		_fed(herd, add_days(today(), -20), "ZZ-BOM-A")
+		_fed(herd, add_days(today(), -19), "ZZ-BOM-B")
+		_fed(herd, today(), "ZZ-BOM-B")
+		self.assertAlmostEqual(self._row(herd, add_days(today(), -40))["avg_adg_kg"], 1.0, places=3)
+		# Second recipe: only the 20-days-ago weighing is outside it, so one point.
+		late = self._row(herd, today())
+		self.assertIsNone(late["avg_adg_kg"])
+		self.assertEqual(late["weighed_head"], 0)

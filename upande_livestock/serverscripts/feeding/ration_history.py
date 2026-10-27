@@ -25,11 +25,14 @@ not per row: the page returns up to a thousand rows and the same recipe fills
 most of them.
 """
 
+from itertools import groupby
+
 import frappe
 from frappe.utils import add_days, flt, getdate
 
 from upande_livestock.serverscripts.common.choices import herd_label_map
 from upande_livestock.serverscripts.common.envelope import guard_read, run
+from upande_livestock.serverscripts.common.gain import herd_period_gain
 from upande_livestock.serverscripts.feeding import _recipe_lines
 
 # An unbounded history is a slow page: this site already holds 5,168 Work
@@ -132,6 +135,33 @@ def _feed_modes(herds, first, last):
 	return {key: ", ".join(sorted(found)) for key, found in modes.items()}
 
 
+def _ration_periods(herds):
+	"""{(herd, day): (start, end)} — the stretch of unbroken days on the same
+	recipe that each fed day belongs to.
+
+	A period ends when the herd's recipe changes. Read from every submitted
+	Work Order of those herds, not from the page's rows, so a page cut by a date
+	filter or the row limit still reports the whole period's gain.
+	"""
+	if not herds:
+		return {}
+	rows = frappe.db.sql(
+		"""SELECT DISTINCT custom_herd AS herd, DATE(planned_start_date) AS day, bom_no
+		   FROM `tabWork Order`
+		   WHERE docstatus = 1 AND custom_herd IN %(herds)s
+		   ORDER BY custom_herd, day""",
+		{"herds": tuple(herds)},
+		as_dict=True,
+	)
+	periods = {}
+	# Consecutive rows of one herd on one recipe are one period.
+	for (herd, _bom), group in groupby(rows, key=lambda r: (r.herd, r.bom_no)):
+		days = [getdate(r.day) for r in group]
+		for day in days:
+			periods[(herd, day)] = (days[0], days[-1])
+	return periods
+
+
 def _herds_with_history():
 	"""Every herd that appears anywhere in the ration history, for the filter.
 
@@ -184,8 +214,14 @@ def ration_history(herd=None, from_date=None, to_date=None, limit=None):
 		# cite it — see the module docstring.
 		lines_by_bom = _recipe_lines.lines_for([r["bom_no"] for r in rows])
 
+		periods = _ration_periods(herds)
+		gains = {}
 		out = []
 		for r in rows:
+			span = periods.get((r["herd"], r["fed_on"]), (r["fed_on"], r["fed_on"]))
+			if (r["herd"], span) not in gains:
+				gains[(r["herd"], span)] = herd_period_gain(r["herd"], *span)
+			avg_adg, weighed_head = gains[(r["herd"], span)]
 			out.append(
 				{
 					"fed_on": str(r["fed_on"]),
@@ -205,6 +241,10 @@ def ration_history(herd=None, from_date=None, to_date=None, limit=None):
 					"runs": int(r["runs"]),
 					"heads": int(r["heads"] or 0),
 					"feed_mode": modes.get((r["herd"], r["fed_on"]), ""),
+					# Gain of the herd's animals over the whole stretch on this
+					# recipe; None (not 0) when too few were weighed to say.
+					"avg_adg_kg": round(avg_adg, 3) if avg_adg is not None else None,
+					"weighed_head": weighed_head,
 				}
 			)
 

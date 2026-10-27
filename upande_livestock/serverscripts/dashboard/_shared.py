@@ -14,6 +14,12 @@ from frappe.utils import add_days, flt, today
 from upande_livestock.serverscripts.common.animal import live_herd_count
 from upande_livestock.serverscripts.common.choices import RETIRED_STATUSES
 from upande_livestock.serverscripts.common.health_case import TREATING_STATUSES
+from upande_livestock.serverscripts.performance.bull_performance import (
+	DEFAULT_PERIOD_DAYS,
+	PERFORMANCE_CLASSES,
+	active_animals,
+	herd_rows,
+)
 
 # Chronic is a way a case ENDS (common.health_case.CLOSED_STATUSES); counting it
 # open kept every case closed as Chronic on the dashboard for good.
@@ -46,6 +52,45 @@ def _zeros() -> dict:
 			"births": 0,
 		},
 		"herds": [],
+		"beef": {"herds": [], "weighings_overdue": 0, "band_moves_due": 0, "ready_for_exit": 0},
+	}
+
+
+def _open_alerts(kind) -> int:
+	return frappe.db.count("Livestock Alert", {"alert_kind": kind, "status": "Open"})
+
+
+def _beef() -> dict:
+	"""The beef tiles: per performance herd, and the open weight alerts.
+
+	Counts are the OPEN Livestock Alerts of the three weight kinds — the alert
+	engine already decides who is overdue, due a band move or ready to leave,
+	and a second opinion computed here could only disagree with it.
+	"""
+	herds = []
+	for h in frappe.get_all(
+		"Herds",
+		filters={"herd_class": ["in", PERFORMANCE_CLASSES]},
+		fields=["name", "herd_class"],
+		order_by="herd_class asc, name asc",
+	):
+		rows = herd_rows(h.name, active_animals(h.name), DEFAULT_PERIOD_DAYS)
+		weights = [r["latest_weight_kg"] for r in rows if r["latest_weight_kg"] is not None]
+		gains = [r["period_adg"] for r in rows if r["period_adg"] is not None]
+		herds.append(
+			{
+				"herd": h.name,
+				"herd_class": h.herd_class,
+				"head_count": len(rows),
+				"avg_weight_kg": round(sum(weights) / len(weights), 1) if weights else None,
+				"avg_adg_kg": round(sum(gains) / len(gains), 3) if gains else None,
+			}
+		)
+	return {
+		"herds": herds,
+		"weighings_overdue": _open_alerts("Weighing Overdue"),
+		"band_moves_due": _open_alerts("Weight Band Move Due"),
+		"ready_for_exit": _open_alerts("Ready for Exit"),
 	}
 
 
@@ -104,4 +149,5 @@ def _build() -> dict:
 			}
 		)
 
+	out["beef"] = _beef()
 	return out

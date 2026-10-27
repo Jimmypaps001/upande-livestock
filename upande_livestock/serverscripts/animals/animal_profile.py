@@ -28,6 +28,7 @@ from frappe.utils import add_days, date_diff, flt, getdate, today
 
 from upande_livestock.serverscripts.common import animal_stage
 from upande_livestock.serverscripts.common.envelope import as_dict, guard_read, run
+from upande_livestock.serverscripts.common.gain import adg_between, herd_target_adg, weights_for, weights_for_many
 
 RETIRED = animal_stage.RETIRED
 
@@ -98,9 +99,37 @@ def animal_profile(payload=None):
 			"kpis": _kpis(name, events, a),
 			"milestones": _milestones(events),
 			"spells": _spells(a, events),
+			"gain": _gain(name, a),
 		}
 
 	return run(go, "livestock animal_profile failed")
+
+
+def _gain(name, a):
+	"""Weight and daily-gain trend. ADG is null until two weighings exist.
+
+	`trend` has one point per weighing: the weight, and the gain since the
+	weighing before it (null for the first). `lifetime_adg` is birth weight (or
+	first weighing) to the latest; `herd_adg` is from the first weighing in the
+	current herd.
+	"""
+	points = weights_for(name)
+	trend = []
+	for i, (day, kg) in enumerate(points):
+		trend.append({
+			"date": str(day),
+			"weight_kg": kg,
+			"adg_kg": adg_between(points[i - 1:i + 1]) if i else None,
+		})
+	herd_points = weights_for_many([name], herd=a.current_herd)[name] if a.current_herd else []
+	lifetime = adg_between(points)
+	in_herd = adg_between(herd_points)
+	return {
+		"trend": trend,
+		"lifetime_adg": round(lifetime, 3) if lifetime is not None else None,
+		"herd_adg": round(in_herd, 3) if in_herd is not None else None,
+		"target_adg_kg": herd_target_adg(a.current_herd),
+	}
 
 
 def _last(events, event_type):
