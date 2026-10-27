@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Figure, FigureRow } from "@/components/Figure";
 import { Notice } from "@/components/feeding/Notice";
 import { HEADER_PILL } from "@/components/header-controls";
@@ -75,10 +75,15 @@ export function Performance() {
     };
   }, []);
 
+  // Only the newest request may write: a slow answer for the herd or period
+  // you have already left must not land on top of the one you are looking at.
+  const latest = useRef(0);
   const load = useCallback(async () => {
     if (!herd) return;
+    const mine = ++latest.current;
     setLoading(true);
     const r = await getBullPerformance(herd, period);
+    if (mine !== latest.current) return;
     setLoading(false);
     if (isError(r)) {
       setFailure(r.error);
@@ -94,7 +99,7 @@ export function Performance() {
 
   const rows = useMemo(() => sortRows(view?.rows || []), [view]);
   const target = view?.target_adg_kg ?? null;
-  const showing = view && view.herd === herd;
+  const showing = !!view && view.herd === herd && view.period_days === period;
 
   return (
     <Page>
@@ -178,7 +183,11 @@ export function Performance() {
             <RowsSkeleton rows={6} />
           ) : rows.length === 0 ? (
             <p className="px-1 py-6 text-center text-[13px] text-[var(--sd-muted)]">
-              {herd ? "No animals in this herd." : "No beef herds to rank yet."}
+              {failure
+                ? "The ranking could not be loaded."
+                : herd
+                  ? "No animals in this herd."
+                  : "No beef herds to rank yet."}
             </p>
           ) : (
             <div
@@ -260,6 +269,26 @@ export function Performance() {
                     );
                   })}
                 </tbody>
+                {showing && (
+                  <tfoot>
+                    <tr
+                      data-testid="herd-summary-row"
+                      className="border-t border-[var(--sd-line)] bg-[var(--sd-bg-soft)] font-medium text-[var(--sd-ink)]"
+                    >
+                      <td className="px-3 py-2.5" />
+                      <td className="px-3 py-2.5">Herd · {view.summary.head_count} head</td>
+                      <td className="px-3 py-2.5 text-right tabular-nums">
+                        {formatWeight(view.summary.avg_weight_kg)}
+                      </td>
+                      <td className="px-3 py-2.5" />
+                      <td className="px-3 py-2.5 text-right tabular-nums">
+                        {formatAdg(view.summary.avg_period_adg)}
+                      </td>
+                      <td className="px-3 py-2.5" />
+                      <td className="px-3 py-2.5" />
+                    </tr>
+                  </tfoot>
+                )}
               </table>
             </div>
           )}

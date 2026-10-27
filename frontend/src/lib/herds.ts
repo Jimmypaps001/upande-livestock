@@ -54,16 +54,23 @@ export function showsBandFields(herdClass: string): boolean {
   return herdClass === "Fattening" || herdClass === "Calf";
 }
 
-/** A blank max means open-ended (the top band), which the server stores as 0. */
+/** A blank max means open-ended (the top band), which the server stores as 0.
+ *  A class without a band clears the band (0/0); the target gain is kept as entered. */
 export function bandPayload(d: HerdDetails): Partial<BandPayload> {
   const out: Partial<BandPayload> = {
     herd_class: d.herd_class,
     weigh_monthly: d.weigh_monthly ? 1 : 0,
   };
-  if (!showsBandFields(d.herd_class)) return out;
-  out.min_weight_kg = Number(d.min_weight_kg) || 0;
-  out.max_weight_kg = Number(d.max_weight_kg) || 0;
   out.target_adg_kg = Number(d.target_adg_kg) || 0;
+  if (showsBandFields(d.herd_class)) {
+    out.min_weight_kg = Number(d.min_weight_kg) || 0;
+    out.max_weight_kg = Number(d.max_weight_kg) || 0;
+  } else {
+    // A class with no band sends 0 explicitly, so a band left over from the
+    // herd's old class is cleared on the server rather than silently kept.
+    out.min_weight_kg = 0;
+    out.max_weight_kg = 0;
+  }
   return out;
 }
 

@@ -9,11 +9,13 @@ describe("band fields", () => {
     for (const c of ["Breeding", "Cow", "Other"] as const) expect(showsBandFields(c)).toBe(false);
   });
 
-  it("are not sent for a herd whose class has no band", () => {
+  it("clears the old band (explicit 0/0) when the class has none, keeping the target as entered", () => {
     const d: HerdDetails = {
       herd_class: "Breeding", min_weight_kg: "300", max_weight_kg: "400", target_adg_kg: "0.9", weigh_monthly: true,
     };
-    expect(bandPayload(d)).toEqual({ herd_class: "Breeding", weigh_monthly: 1 });
+    expect(bandPayload(d)).toEqual({
+      herd_class: "Breeding", weigh_monthly: 1, min_weight_kg: 0, max_weight_kg: 0, target_adg_kg: 0.9,
+    });
   });
 
   it("sends numbers for a Fattening herd, blank max as 0 (open-ended)", () => {

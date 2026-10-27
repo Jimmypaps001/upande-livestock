@@ -84,7 +84,7 @@ describe("Bull Performance page", () => {
     wrap(<Performance />);
     await waitFor(() => expect(screen.getByText("B-FAST")).toBeTruthy());
 
-    const tags = screen.getAllByRole("row").slice(1).map((r) => r.querySelector("td:nth-child(2)")?.textContent);
+    const tags = screen.getAllByRole("row").slice(1, 4).map((r) => r.querySelector("td:nth-child(2)")?.textContent);
     expect(tags).toEqual(["B-FAST", "B-SLOW", "B-UNRANKED"]);
 
     expect(screen.getByText("1.10 kg/day")).toBeTruthy();
@@ -139,12 +139,65 @@ describe("Herds editor", () => {
   });
 });
 
+describe("Herds editor refusal", () => {
+  it("shows the server's refusal verbatim", async () => {
+    const msg = "Band 250-360 kg overlaps Finishing 2 (340-450 kg).";
+    const prev = payloads.update_herd;
+    payloads.update_herd = { error: msg };
+    try {
+      wrap(<Herds />);
+      fireEvent.click(await screen.findByLabelText("Which herd"));
+      fireEvent.click(await screen.findByRole("option", { name: "Finishing 1" }));
+      fireEvent.click(await screen.findByText("Save the herd"));
+      expect(await screen.findByText(msg)).toBeTruthy();
+    } finally {
+      payloads.update_herd = prev;
+    }
+  });
+});
+
+describe("Performance summary row and stale responses", () => {
+  it("renders the herd summary as the table's footer row", async () => {
+    wrap(<Performance />);
+    const row = await screen.findByTestId("herd-summary-row");
+    expect(row.textContent).toContain("3 head");
+    expect(row.textContent).toContain("312 kg");
+    expect(row.textContent).toContain("0.85 kg/day");
+  });
+
+  it("lets only the newest request write when the period changes quickly", async () => {
+    let release!: (v: unknown) => void;
+    const slow = new Promise((r) => { release = r; });
+    const original = call.getMockImplementation()!;
+    call.mockImplementation(async (method?: string, args?: Record<string, unknown>) => {
+      if ((method || "").includes("get_bull_performance")) {
+        if (args?.period_days === 90) return slow; // the first, slow request
+        return { ...performance, period_days: 30, summary: { ...performance.summary, head_count: 7 } };
+      }
+      return original(method, args);
+    });
+    try {
+      wrap(<Performance />);
+      fireEvent.click(await screen.findByLabelText("Period"));
+      fireEvent.click(await screen.findByRole("option", { name: "Last 30 days" }));
+      await waitFor(() =>
+        expect(screen.getByTestId("herd-summary-row").textContent).toContain("7 head"));
+      release({ ...performance, summary: { ...performance.summary, head_count: 3 } });
+      await new Promise((r) => setTimeout(r, 20));
+      expect(screen.getByTestId("herd-summary-row").textContent).toContain("7 head");
+    } finally {
+      call.mockImplementation(original);
+    }
+  });
+});
+
 describe("Dashboard beef tiles", () => {
   it("shows the herd tile and the three work counts", async () => {
     wrap(<Dashboard />);
     await waitFor(() => expect(screen.getByText("Finishing 1")).toBeTruthy());
     expect(screen.getByText("Weighings overdue")).toBeTruthy();
     expect(screen.getByText("312 kg")).toBeTruthy();
-    expect(screen.getByText("4")).toBeTruthy();
+    const overdue = screen.getByText("Weighings overdue").parentElement!;
+    expect(overdue.textContent).toContain("4");
   });
 });

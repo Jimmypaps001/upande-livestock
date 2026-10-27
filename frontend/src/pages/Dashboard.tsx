@@ -131,7 +131,7 @@ function BeefTiles() {
                 <Figure label="Avg weight" value={formatWeight(h.avg_weight_kg)} />
                 <Figure
                   label="Avg gain"
-                  value={h.avg_adg_kg === null ? "—" : h.avg_adg_kg.toFixed(2)}
+                  value={h.avg_adg_kg == null ? "—" : h.avg_adg_kg.toFixed(2)}
                   unit="kg/d"
                 />
               </div>
