@@ -23,7 +23,7 @@ from frappe.utils import flt, getdate
 
 from upande_livestock.serverscripts.common import backdate, culling
 from upande_livestock.serverscripts.common.animal import recompute_herd_count, retire_animal
-from upande_livestock.serverscripts.common.gain import adg_between, weights_for, weights_for_many
+from upande_livestock.serverscripts.common.gain import adg_between, latest_weight, weights_for
 from upande_livestock.serverscripts.common.withdrawal import withdrawal_warning
 from upande_livestock.serverscripts.disposal.scrap_livestock_asset import (
 	_scrap_livestock_asset,
@@ -59,10 +59,10 @@ class LivestockDisposal(Document):
 		if flt(self.price_per_kg) <= 0:
 			return
 		if flt(self.exit_weight_kg) <= 0:
-			points = weights_for_many([self.animal], birth=False)[self.animal]
-			if not points:
+			latest = latest_weight(self.animal, self.disposal_date)
+			if not latest:
 				frappe.throw(_("{0} has no weighing to take an exit weight from. Enter the exit weight.").format(self.animal))
-			self.exit_weight_kg = points[-1][1]
+			self.exit_weight_kg = latest
 		self.sale_price = round(flt(self.exit_weight_kg) * flt(self.price_per_kg), 2)
 
 	def set_final_adg(self):
@@ -178,6 +178,7 @@ class LivestockDisposal(Document):
 			)
 			return
 
+		frappe.db.savepoint("asset_posting")
 		try:
 			if self.disposal_type in SALE_TYPES:
 				result = _sell_livestock_asset(
@@ -206,6 +207,8 @@ class LivestockDisposal(Document):
 				if (result or {}).get("journal_entry"):
 					self.db_set("writeoff_journal_entry", result["journal_entry"], update_modified=False)
 		except Exception as e:
+			# Leave no half-posted ledger rows behind a failed invoice or journal.
+			frappe.db.rollback(save_point="asset_posting")
 			frappe.log_error(message=frappe.get_traceback(), title="Livestock disposal asset error")
 			frappe.msgprint(
 				_("Asset postings failed and were skipped: {0}").format(str(e)),

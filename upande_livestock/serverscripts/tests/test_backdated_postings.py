@@ -57,6 +57,8 @@ class TestBackdatedDisposal(IntegrationTestCase):
 		_set_window(1)
 		self.animal = _an_animal()
 		self.addCleanup(frappe.db.rollback)
+		# A death only reaches the write-off for an animal that is on the books.
+		frappe.db.set_value("Animal", self.animal.name, "asset_link", "ZZ-ASSET")
 
 	def _a_customer(self):
 		"""post_asset_disposal returns early on a Sold disposal with no customer
@@ -100,7 +102,8 @@ class TestBackdatedDisposal(IntegrationTestCase):
 			add_days(today(), -60),
 			disposal_type="Sold",
 			customer=self._a_customer(),
-			sale_price=45000,
+			price_per_kg=380,
+			exit_weight_kg=400,
 		)
 		self.assertNotIn("error", res, res.get("error"))
 		self.sold.assert_not_called()
@@ -110,7 +113,7 @@ class TestBackdatedDisposal(IntegrationTestCase):
 		"""The control that makes the assertion above mean something: with a
 		customer and a price present, today's sale DOES reach the posting."""
 		res = self._dispose(
-			today(), disposal_type="Sold", customer=self._a_customer(), sale_price=45000
+			today(), disposal_type="Sold", customer=self._a_customer(), price_per_kg=380, exit_weight_kg=400
 		)
 		self.assertNotIn("error", res, res.get("error"))
 		self.sold.assert_called_once()

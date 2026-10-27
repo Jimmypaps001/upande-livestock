@@ -147,6 +147,7 @@ class TestLivestockDisposal(IntegrationTestCase):
 		"upande_livestock.upande_livestock.doctype.livestock_disposal.livestock_disposal._scrap_livestock_asset"
 	)
 	def test_died_routes_to_scrap(self, mock_scrap):
+		frappe.db.set_value("Animal", self.animal.name, "asset_link", "ZZ-ASSET")
 		self._disposal("Died — Disease")
 		mock_scrap.assert_called_once()
 

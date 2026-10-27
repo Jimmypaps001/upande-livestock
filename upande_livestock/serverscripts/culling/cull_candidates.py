@@ -9,7 +9,7 @@ from frappe.utils import add_days, date_diff, flt, getdate, today
 from upande_livestock.serverscripts.common.animal import RETIRED_STATUSES
 from upande_livestock.serverscripts.common.envelope import as_dict, guard_read, run
 from upande_livestock.serverscripts.common.gain import adg_between, herd_target_adg, weights_for_many
-from upande_livestock.serverscripts.performance.bull_performance import _period
+from upande_livestock.serverscripts.common.gain import period_days as _period
 
 #: How far back the yearly rows go.
 YEARS = 5

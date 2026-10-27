@@ -36,7 +36,7 @@ def withdrawal_warning(animal, on_date):
 	"""
 	safe = slaughter_safe_date(animal)
 	if safe and safe > getdate(on_date):
-		return _("{0} is in drug withdrawal until {1}. Her meat is not safe before then.").format(
+		return _("{0} is in drug withdrawal until {1}. Its meat is not safe before then.").format(
 			animal, frappe.utils.formatdate(safe)
 		)
 	return None

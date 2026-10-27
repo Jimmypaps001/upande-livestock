@@ -39,6 +39,16 @@ def _sale_item():
 	return item
 
 
+def _employee():
+	name = frappe.db.get_value("Employee", {"status": "Active"}, "name")
+	if name:
+		return name
+	return frappe.get_doc({
+		"doctype": "Employee", "first_name": "ZZ Stockman", "gender": "Male", "company": COMPANY,
+		"date_of_birth": "1990-01-01", "date_of_joining": "2020-01-01",
+	}).insert(ignore_permissions=True).name
+
+
 def _capitalise(animal):
 	"""Put the animal on the books as an Asset, the way a bought-in animal is."""
 	tag = frappe.generate_hash(length=6)
@@ -114,6 +124,39 @@ class TestBeefExits(IntegrationTestCase):
 		self.assertEqual(frappe.db.get_value("Animal", a.name, ["status", "disabled"], as_dict=True),
 		                 {"status": "Sold", "disabled": 1})
 
+	def test_a_fractional_exit_weight_is_invoiced(self):
+		a = make_animal(self.herd, 400)
+		got = self._sell(a.name, exit_weight_kg=412.5)
+		invoice = frappe.get_doc("Sales Invoice", frappe.db.get_value("Livestock Disposal", got["name"], "sales_invoice"))
+		self.assertEqual((invoice.items[0].qty, invoice.grand_total), (412.5, 156750.00))
+
+	def test_default_exit_weight_ignores_weighings_after_the_exit_date(self):
+		frappe.db.set_single_value("Livestock Settings", "custom_backdating_open", 1)
+		a = make_animal(self.herd, 350)
+		submit_weight(a.name, 412, days_ago=10)
+		submit_weight(a.name, 450, days_ago=0)
+		got = self._sell(a.name, disposal_date=add_days(today(), -5))
+		self.assertEqual(got["exit_weight_kg"], 412)
+
+	def test_a_cull_flow_sale_is_per_kg_for_a_never_capitalised_bull(self):
+		from upande_livestock.serverscripts.common import culling
+		from upande_livestock.serverscripts.culling.approve_cull import approve_cull
+		from upande_livestock.serverscripts.culling.post_cull import post_cull
+		from upande_livestock.serverscripts.culling.raise_cull import raise_cull
+
+		a = make_animal(self.herd, 412)
+		raised = raise_cull({"animal": a.name, "flow": culling.SALE, "customer": self.customer, "price_per_kg": 380, "operator": _employee()})
+		self.assertTrue(raised.get("ok"), raised.get("error"))
+		frappe.db.set_value("Livestock Disposal", raised["name"], "custom_review_status", culling.AWAITING_APPROVAL)
+		approved = approve_cull({"case": raised["name"]})
+		self.assertTrue(approved.get("ok"), approved.get("error"))
+		self.assertEqual(frappe.db.get_value("Livestock Disposal", raised["name"], "sale_price"), 156560.00)
+		frappe.db.set_value("Livestock Disposal", raised["name"], "custom_review_status", culling.APPROVED)
+		posted = post_cull({"case": raised["name"], "operator": _employee()})
+		self.assertTrue(posted.get("ok"), posted.get("error"))
+		invoice = frappe.get_doc("Sales Invoice", posted["sales_invoice"])
+		self.assertEqual((invoice.items[0].qty, invoice.items[0].uom, invoice.items[0].rate), (412, "Kg", 380))
+
 	def test_capitalised_bull_sale_disposes_asset(self):
 		a = make_animal(self.herd, 412)
 		asset = _capitalise(a.name)
@@ -123,6 +166,14 @@ class TestBeefExits(IntegrationTestCase):
 		self.assertEqual([(r.qty, r.rate) for r in kg], [(412, 380)])
 		self.assertEqual(invoice.grand_total, 156560.00)
 		self.assertEqual(frappe.db.get_value("Asset", asset, "status"), "Sold")
+		# Gain on disposal = proceeds - book value, not sales income.
+		gl = frappe.get_all("GL Entry", filters={"voucher_no": invoice.name, "is_cancelled": 0},
+		                    fields=["account", "debit", "credit"])
+		self.assertFalse([g for g in gl if g.account == frappe.db.get_value("Company", COMPANY, "default_income_account")])
+		disposal = frappe.db.get_value("Company", COMPANY, "disposal_account") or \
+			frappe.db.get_value("Company", COMPANY, "gain_loss_on_asset_disposal")
+		net = sum(flt(g.credit) - flt(g.debit) for g in gl if g.account == disposal)
+		self.assertAlmostEqual(net, 66560.0, places=2)
 
 	def test_slaughter_records_final_adg(self):
 		a = make_animal(self.herd)

@@ -78,6 +78,10 @@ def raise_cull(payload):
 			doc.customer = d.get("customer") or None
 			doc.buyer_name = d.get("buyer_name") or None
 			doc.buyer_contact = d.get("buyer_contact") or None
+			# Live cattle sell by the kilogram: price per kg (and, optionally, the
+			# exit weight; blank takes the latest weighing) price the case.
+			doc.price_per_kg = flt(d.get("price_per_kg")) or None
+			doc.exit_weight_kg = flt(d.get("exit_weight_kg")) or None
 			doc.sale_price = flt(d.get("sale_price"))
 		if flow == culling.GIFT:
 			doc.gifted_to = d.get("gifted_to") or None

@@ -8,7 +8,7 @@ from frappe.utils import add_days, date_diff, flt, getdate, today
 
 from upande_livestock.serverscripts.common.envelope import guard_read, run
 from upande_livestock.serverscripts.common.gain import adg_between, herd_target_adg, weights_for
-from upande_livestock.serverscripts.performance.bull_performance import _period
+from upande_livestock.serverscripts.common.gain import period_days as _period
 
 
 @frappe.whitelist()

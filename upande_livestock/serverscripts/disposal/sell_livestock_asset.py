@@ -35,7 +35,7 @@ def _sale_lines(animal_doc, asset, asset_name, amount, per_kg, weight, rate_per_
 	if per_kg:
 		kg_item = _sale_item()
 		uom = _kg_uom()
-		stock_uom = frappe.db.get_value("Item", kg_item, "stock_uom") or uom
+		stock_uom = _sell_in_kg(kg_item, uom)
 		lines.append({
 			"item_code": kg_item,
 			"description": "Livestock sale: " + label,
@@ -70,6 +70,24 @@ def _sale_lines(animal_doc, asset, asset_name, amount, per_kg, weight, rate_per_
 			"cost_center": cost_center,
 		})
 	return lines
+
+
+def _sell_in_kg(item, uom):
+	"""Make the sale item's stock UOM kilograms (idempotent) and return it.
+
+	A kilogram quantity is fractional; ERPNext rejects fractions on a
+	whole-number stock UOM such as Nos, so the item must count in kg itself.
+	"""
+	if frappe.db.get_value("UOM", uom, "must_be_whole_number"):
+		frappe.db.set_value("UOM", uom, "must_be_whole_number", 0)
+	if frappe.db.get_value("Item", item, "stock_uom") != uom:
+		frappe.db.set_value("Item", item, "stock_uom", uom)
+		frappe.get_doc("Item", item).clear_cache()
+	if not frappe.db.exists("UOM Conversion Detail", {"parent": item, "uom": uom}):
+		doc = frappe.get_doc("Item", item)
+		doc.append("uoms", {"uom": uom, "conversion_factor": 1})
+		doc.save(ignore_permissions=True)
+	return uom
 
 
 def _sale_item():
@@ -214,7 +232,9 @@ def _sell_livestock_asset(
 			"items": _sale_lines(
 				animal_doc, asset, asset_name, selling_amount, per_kg,
 				flt(exit_weight_kg), flt(price_per_kg), income_account, expense_account, cost_center,
-				default_income,
+				# With an Asset line, proceeds go to the disposal account so the
+				# ledger shows gain = proceeds - book value, not sales income.
+				None if asset else default_income,
 			),
 		}
 	)

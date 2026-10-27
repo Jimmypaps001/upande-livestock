@@ -18,6 +18,25 @@ import frappe
 from frappe.utils import flt, getdate
 
 
+DEFAULT_PERIOD_DAYS = 90
+
+
+def period_days(value):
+	"""A ranking window in days: the value if it is a positive whole number, else the default."""
+	try:
+		days = int(value)
+	except (TypeError, ValueError):
+		days = DEFAULT_PERIOD_DAYS
+	return days if days > 0 else DEFAULT_PERIOD_DAYS
+
+
+def latest_weight(animal, on_date=None):
+	"""Kg of the latest weighing on or before `on_date` (today by default), else None."""
+	on = getdate(on_date)
+	points = [p for p in weights_for(animal) if p[0] <= on]
+	return points[-1][1] if points else None
+
+
 def weights_for_many(animals, herd=None, birth=True):
 	"""{animal: [(date, kg), ...]} ascending, for every animal asked about.
 

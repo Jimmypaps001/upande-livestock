@@ -15,18 +15,15 @@ from frappe.utils import add_days, date_diff, getdate, today
 
 from upande_livestock.serverscripts.common.animal import RETIRED_STATUSES, live_herd_count
 from upande_livestock.serverscripts.common.envelope import guard_read
-from upande_livestock.serverscripts.common.gain import adg_between, herd_target_adg, weights_for_many
+from upande_livestock.serverscripts.common.gain import (
+	DEFAULT_PERIOD_DAYS,
+	adg_between,
+	herd_target_adg,
+	period_days as _period,
+	weights_for_many,
+)
 
-DEFAULT_PERIOD_DAYS = 90
 PERFORMANCE_CLASSES = ("Fattening", "Breeding", "Calf")
-
-
-def _period(period_days):
-	try:
-		days = int(period_days)
-	except (TypeError, ValueError):
-		days = DEFAULT_PERIOD_DAYS
-	return days if days > 0 else DEFAULT_PERIOD_DAYS
 
 
 def _round(value, places=3):

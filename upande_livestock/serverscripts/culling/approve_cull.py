@@ -8,6 +8,7 @@ from frappe import _
 from frappe.utils import flt, today
 
 from upande_livestock.serverscripts.common import culling
+from upande_livestock.serverscripts.common.gain import latest_weight
 from upande_livestock.serverscripts.common.envelope import as_dict, guard_write, run
 
 
@@ -38,6 +39,16 @@ def approve_cull(payload):
 			"custom_approved_on": today(),
 		}
 		if needs["price"]:
+			per_kg = flt(d.get("price_per_kg") or doc.price_per_kg)
+			if per_kg > 0:
+				# Priced by the kilogram: the approval fixes the rate and the weight
+				# it is applied to, and the amount follows from them.
+				kg = flt(d.get("exit_weight_kg") or doc.exit_weight_kg) or latest_weight(doc.animal, doc.disposal_date)
+				if not kg:
+					frappe.throw(_("Enter the exit weight: there is no weighing to take it from."))
+				changes["price_per_kg"] = per_kg
+				changes["exit_weight_kg"] = kg
+				d["sale_price"] = round(kg * per_kg, 2)
 			price = flt(d.get("sale_price") or doc.sale_price)
 			buyer = d.get("buyer_name") or doc.buyer_name or d.get("customer") or doc.customer
 			if price <= 0:
