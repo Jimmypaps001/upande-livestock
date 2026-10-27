@@ -47,48 +47,51 @@ ARROW = """<g class="arrow">
     </g>
   </g>"""
 
-# One zebu bull, side on, after the reference set in doc references/livestock files/
-# icon: a realistic solid silhouette, not a cartoon — shoulder hump, loose dewlap, short horns, heavy forequarters,
-# slim legs with hocks, a tail with its switch — in the arrow's own grey,
-# standing on a strip of green grass, the one accent colour. Facing right.
-# Boran-type. Drawn in its own 560 × 380 box, placed on the disc by COW_AT.
-COW_INK = "#45433f"
+# One Boran (zebu) bull, side on, after the reference set in doc references/
+# livestock files/icon: a realistic solid silhouette, not a cartoon — shoulder
+# hump, loose dewlap, a large head with an upturned horn, slim legs with hocks,
+# a tail with its switch — in the arrow's own grey, standing on a strip of
+# green grass, the one accent colour. Facing right. Drawn in its own 560 × 380
+# box, placed on the disc by BULL_AT.
+BULL_INK = "#45433f"
 GRASS = "#6a9a4c"
-COW_AT = "translate(46 180) scale(1.15)"
+BULL_AT = "translate(50 195) scale(1.05)"
 
 BODY = (
     # rump -> back -> the shoulder hump (the defining zebu feature) -> neck
-    "M74 100 C110 88 196 94 246 90 C270 86 282 36 322 18 C354 8 384 28 398 62 "
-    "C410 74 420 92 424 112 "
-    # throat, the loose dewlap hanging to the brisket, deep chest
-    "C426 134 422 148 420 162 C424 186 418 214 406 240 C398 232 392 222 388 214 C386 236 388 250 388 262 "
+    "M74 112 C110 102 190 108 244 104 C270 100 280 52 316 40 C346 32 372 44 388 66 "
+    "C402 72 416 82 428 92 "
+    # throat, the loose dewlap hanging to the brisket, chest
+    "C436 120 440 140 432 160 C436 190 424 218 408 242 C398 236 392 232 388 228 "
     # near foreleg, far foreleg, belly
-    "L384 318 C384 326 376 330 368 326 L362 266 C358 256 350 254 344 258 "
-    "L340 318 C340 326 332 330 324 326 L322 262 "
-    "C290 252 240 252 190 244 C170 242 158 248 150 262 C142 278 140 292 142 302 "
-    "L146 318 C146 326 138 330 130 326 L124 302 C118 286 114 272 112 258 "
-    "C106 270 104 284 106 300 L110 318 C110 326 102 330 94 326 L88 300 "
-    "C80 272 76 244 70 214 C62 176 60 128 66 108 C68 102 70 100 74 100 Z"
+    "C390 250 390 262 388 272 L384 318 C384 326 376 330 368 326 L362 276 "
+    "C358 266 350 264 344 268 L340 318 C340 326 332 330 324 326 L322 262 "
+    "C290 240 240 240 192 236 C172 236 160 244 152 258 C146 274 144 292 146 304 "
+    "L148 318 C148 326 140 330 132 326 L126 304 C120 288 116 272 114 258 "
+    "C108 270 106 284 108 300 L112 318 C112 326 104 330 96 326 L90 300 "
+    "C82 272 78 244 72 216 C64 180 62 140 66 122 C68 116 70 112 74 112 Z"
 )
-# head carried low and forward, small droopy ear, short upturned horn
+# a large head carried forward on a visible neck, drooping ear, and a clear
+# upturned horn (readable at the 54px desk size)
 HEAD = (
-    "M408 84 C418 74 432 76 442 88 C458 106 480 128 490 146 C494 158 486 168 474 168 "
-    "C460 168 446 158 436 150 C424 144 412 128 408 112 C406 100 406 90 408 84 Z "
-    "M420 80 C416 66 422 52 434 46 C430 58 432 70 438 80 Z "
-    "M412 98 C398 94 388 100 382 108 C394 114 406 112 414 108 Z"
+    "M424 78 C436 68 452 72 462 84 C480 104 504 130 514 150 C518 164 510 176 "
+    "496 176 C480 176 464 166 452 156 C436 148 424 130 420 112 C418 98 420 86 "
+    "424 78 Z "
+    "M428 82 C420 62 422 38 440 18 C440 40 448 60 456 80 Z "
+    "M424 100 C406 94 394 100 388 110 C400 118 414 116 426 110 Z"
 )
 
-COW = f"""<g transform="{COW_AT}">
+BULL = f"""<g transform="{BULL_AT}">
     <path class="ground" d="M30 334 C120 326 420 326 530 334" fill="none" stroke="{GRASS}"
           stroke-width="12" stroke-linecap="round" pathLength="1" stroke-dasharray="1"/>
-    <g class="cow">
+    <g class="bull">
       <g class="tail">
-        <path d="M70 104 C52 140 48 196 52 246 C53 260 56 270 60 278" fill="none" stroke="{COW_INK}"
+        <path d="M70 104 C52 140 48 196 52 246 C53 260 56 270 60 278" fill="none" stroke="{BULL_INK}"
               stroke-width="8" stroke-linecap="round"/>
-        <path d="M60 268 C51 277 51 296 60 305 C69 296 69 277 60 268 Z" fill="{COW_INK}"/>
+        <path d="M60 268 C51 277 51 296 60 305 C69 296 69 277 60 268 Z" fill="{BULL_INK}"/>
       </g>
-      <path d="{BODY}" fill="{COW_INK}"/>
-      <path class="head" d="{HEAD}" fill="{COW_INK}"/>
+      <path d="{BODY}" fill="{BULL_INK}"/>
+      <path class="head" d="{HEAD}" fill="{BULL_INK}"/>
     </g>
   </g>"""
 
@@ -102,7 +105,7 @@ def body(rest_hidden: bool) -> str:
   <circle cx="344.5" cy="344.5" r="340" fill="#ffffff" stroke="#1c1b19" stroke-opacity=".3" stroke-width="7"/>
   <g clip-path="url(#lv-disc)">
   <g class="scene"{hide}>
-  {COW}
+  {BULL}
   </g>
   {ARROW}
   </g>
@@ -136,7 +139,7 @@ ENTER = [
         (1, {"strokeDashoffset": 0}),
     ]),
     # he walks in from the left onto the grass
-    (".cow", None, [
+    (".bull", None, [
         (0, {"transform": "translate(-120px, 0px)", "opacity": 0}),
         (0.25, {"transform": "translate(-120px, 0px)", "opacity": 0}),
         (0.45, {"opacity": 1}),
@@ -147,9 +150,9 @@ ENTER = [
 
 # The round, quiet: he lowers his head toward the grass and lifts it again;
 # the tail swishes once. Pivots are the parts' own boxes (fill-box), so they
-# hold however the cow is placed on the disc.
+# hold however the bull is placed on the disc.
 LOOP = [
-    (".head", "fill-box|10% 70%", [
+    (".head", "fill-box|30% 60%", [
         (0, {"transform": "rotate(0deg)"}),
         (0.15, {"transform": "rotate(0deg)"}),
         (0.38, {"transform": "rotate(16deg)"}),
