@@ -2,10 +2,9 @@
 //
 // At rest the tile is the plain Upande mark (livestock_logo.svg draws exactly
 // upande_logo.png). On hover Livestock's own scene eases in — the arrow steps
-// aside, a Friesian cow's head (ear tag and all) rises into the disc and a milk
-// pail slides in beside her — and the herd's round plays: milk drops fall and
-// the pail fills, a sprig of grass at her mouth is chewed away, a heart beats
-// above her head. The round loops while the pointer (or keyboard focus) stays;
+// aside, a strip of grass draws across and a humped Boran bull walks in onto
+// it — and his round plays: he lowers his head toward the grass and lifts it,
+// and his tail swishes. The round loops while the pointer (or keyboard focus) stays;
 // on leave everything eases back out to the plain mark, reversing from
 // wherever it had got to, never snapping.
 //
@@ -103,7 +102,7 @@
 
 		function on() {
 			hovered = true;
-			// A round only ever starts from its beginning (pail empty, no drops).
+			// A round only ever starts from its beginning (head up, tail still).
 			if (at(enter) <= 0) {
 				loop.forEach(function (l) {
 					l.pause();
