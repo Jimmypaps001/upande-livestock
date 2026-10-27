@@ -21,6 +21,8 @@ import {
 import { isError } from "@/lib/frappe";
 import {
   ALL_HERDS,
+  averageGain,
+  gainLabel,
   groupByHerd,
   rationHistory,
   recipesUsed,
@@ -65,7 +67,7 @@ function RationTable({
       return next;
     });
   }
-  const dataCols = showHerd ? 6 : 5;
+  const dataCols = showHerd ? 7 : 6;
 
   return (
     <div className="overflow-x-auto rounded-[var(--sd-radius-lg)] border border-[var(--sd-line)]">
@@ -79,7 +81,7 @@ function RationTable({
             <th className="px-3 py-2.5 text-right font-medium">Mixed</th>
             <th className="px-3 py-2.5 text-right font-medium">Head</th>
             <th className="px-3 py-2.5 font-medium">Mode</th>
-            {/* beef: weight gain beside the ration (Task 7) */}
+            <th className="px-3 py-2.5 text-right font-medium">Avg gain kg/day</th>
           </tr>
         </thead>
         <tbody>
@@ -130,6 +132,9 @@ function RationTable({
                   <td className="px-3 py-2.5 text-[var(--sd-muted)]">
                     {row.feed_mode || <span className="text-[var(--sd-quiet)]">—</span>}
                   </td>
+                  <td className="px-3 py-2.5 text-right tabular-nums text-[var(--sd-muted)]">
+                    {gainLabel(row) ?? <span className="text-[var(--sd-quiet)]">—</span>}
+                  </td>
                 </tr>
                 {isOpen && (
                   <tr className="border-b border-[var(--sd-line-soft)] bg-[var(--sd-bg-soft)] last:border-0">
@@ -176,6 +181,7 @@ export function Rations() {
   const oneHerd = herd !== ALL_HERDS;
   const grouped = useMemo(() => groupByHerd(rows), [rows]);
   const recipes = useMemo(() => recipesUsed(rows), [rows]);
+  const gain = useMemo(() => averageGain(rows), [rows]);
   const herdOptions = data?.herds || [];
 
   return (
@@ -239,7 +245,12 @@ export function Rations() {
             <Figure label="Ration days" value={String(rows.length)} hint="herd × day × recipe" />
             <Figure label="Recipes used" value={String(recipes.length)} hint="distinct BOMs" />
             <Figure label="Herds fed" value={String(grouped.length)} />
-            {/* beef: weight gain beside the ration (Task 7) */}
+            <Figure
+              label="Avg gain"
+              value={gain === null ? "—" : gain.toFixed(2)}
+              unit="kg/day"
+              hint="weighted by head weighed"
+            />
           </FigureRow>
           {data?.truncated && (
             <Notice tone="info">

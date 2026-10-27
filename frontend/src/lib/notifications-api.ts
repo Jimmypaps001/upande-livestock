@@ -13,10 +13,9 @@
 
 import { call, isError } from "./frappe";
 
-export type LivestockCategory = "movement" | "breeding" | "feed";
+export type LivestockCategory = "movement" | "breeding" | "feed" | "weight";
 
 export type AlertKind =
-  | "Bull Cull Due"
   | "Move Due"
   | "Move Overdue"
   | "Cow Open Too Long"
@@ -26,7 +25,12 @@ export type AlertKind =
   // stops every herd that eats it, so it names an `item` where the rest name
   // an `animal`.
   | "Concentrate Low"
-  | "Concentrate Out";
+  | "Concentrate Out"
+  // Beef: the monthly weighing is late, an animal has outgrown (or grown into)
+  // its weight band, or the top band is full.
+  | "Weighing Overdue"
+  | "Weight Band Move Due"
+  | "Ready for Exit";
 
 export interface LivestockNotification {
   name: string;
@@ -51,6 +55,7 @@ export const CATEGORY_LABEL: Record<LivestockCategory, string> = {
   movement: "Movement",
   breeding: "Breeding",
   feed: "Feed",
+  weight: "Weight",
 };
 
 export async function fetchNotifications(

@@ -22,7 +22,19 @@ import { Picker } from "@/components/ui/picker";
 import { useToast } from "@/components/Toast";
 import { isError } from "@/lib/frappe";
 import { asSummaries, getCullBoard, type FarmAnimal } from "@/lib/culling";
-import { buyInAnimal, createHerd } from "@/lib/herds";
+import { HerdBandFields } from "@/components/herds/HerdBandFields";
+import {
+  bandPayload,
+  buyInAnimal,
+  createHerd,
+  detailsOf,
+  emptyDetails,
+  getHerdRations,
+  updateHerd,
+  validateBand,
+  type HerdBand,
+  type HerdDetails,
+} from "@/lib/herds";
 import { OperatorField } from "@/components/events/OperatorField";
 import { useOperator } from "@/lib/operator";
 import { cn, todayISO } from "@/lib/utils";
@@ -43,6 +55,7 @@ export function Herds() {
   const who = useOperator();
   const [roster, setRoster] = useState<FarmAnimal[]>([]);
   const [herds, setHerds] = useState<string[]>([]);
+  const [bands, setBands] = useState<HerdBand[]>([]);
   const [loading, setLoading] = useState(true);
   const [failure, setFailure] = useState<string | null>(null);
   const toast = useToast();
@@ -58,6 +71,16 @@ export function Herds() {
     setFailure(null);
     setRoster(r.animals);
     setHerds([...new Set(r.animals.map((a) => a.current_herd).filter(Boolean) as string[])].sort());
+    // The herd listing carries each herd's class, band and target gain. A
+    // failure here costs the editor, not the page, so it is not surfaced.
+    const h = await getHerdRations();
+    if (!isError(h)) {
+      setBands(
+        ((h as { herds?: Array<Partial<HerdBand> & { herd: string }> }).herds || []).map(
+          (x) => ({ ...detailsOfSource(x), herd: x.herd }) as HerdBand,
+        ),
+      );
+    }
   }, []);
 
   useEffect(() => {
@@ -99,8 +122,28 @@ export function Herds() {
           }}
         />
       </div>
+
+      <EditHerd
+        bands={bands}
+        loading={loading}
+        onDone={(m) => {
+          toast(m);
+          void load();
+        }}
+      />
     </Page>
   );
+}
+
+/** The listing's own fields, kept as numbers for the editor to read. */
+function detailsOfSource(x: Partial<HerdBand>): Omit<HerdBand, "herd"> {
+  return {
+    herd_class: x.herd_class || "Other",
+    min_weight_kg: x.min_weight_kg ?? null,
+    max_weight_kg: x.max_weight_kg ?? null,
+    target_adg_kg: x.target_adg_kg ?? null,
+    weigh_monthly: x.weigh_monthly ?? 0,
+  };
 }
 
 type Who = ReturnType<typeof useOperator>;
@@ -120,6 +163,7 @@ function SplitHerd({
 }) {
   const [name, setName] = useState("");
   const [picked, setPicked] = useState<string[]>([]);
+  const [details, setDetails] = useState<HerdDetails>(emptyDetails);
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
 
@@ -127,9 +171,19 @@ function SplitHerd({
   const chosen = useMemo(() => new Set(picked), [picked]);
 
   async function submit() {
+    const problem = validateBand(details);
+    if (problem) {
+      setFailure(problem);
+      return;
+    }
     setBusy(true);
     setFailure(null);
-    const r = await createHerd({ herd_name: name.trim(), animals: picked, operator: who.value });
+    const r = await createHerd({
+      herd_name: name.trim(),
+      animals: picked,
+      operator: who.value,
+      ...bandPayload(details),
+    });
     setBusy(false);
     if (isError(r)) {
       setFailure(r.error);
@@ -144,6 +198,7 @@ function SplitHerd({
     );
     setName("");
     setPicked([]);
+    setDetails(emptyDetails());
   }
 
   return (
@@ -170,6 +225,8 @@ function SplitHerd({
             placeholder="Finishing group 4"
           />
         </div>
+
+        <HerdBandFields idPrefix="h-new" value={details} onChange={setDetails} />
 
         <div className="flex max-h-[320px] flex-col gap-1.5 overflow-hidden">
           <Label>Who goes into it</Label>
@@ -381,6 +438,84 @@ function BuyIn({
           <PackagePlus className="mr-2 h-4 w-4" strokeWidth={1.75} />
           {busy ? "Bringing her in…" : "Bring her onto the farm"}
         </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+function EditHerd({
+  bands,
+  loading,
+  onDone,
+}: {
+  bands: HerdBand[];
+  loading: boolean;
+  onDone: (message: string) => void;
+}) {
+  const [herd, setHerd] = useState("");
+  const [details, setDetails] = useState<HerdDetails>(emptyDetails);
+  const [busy, setBusy] = useState(false);
+  const [failure, setFailure] = useState<string | null>(null);
+
+  const chosen = bands.find((b) => b.herd === herd);
+  // Re-read the form from the listing whenever the herd, or the listing, changes.
+  useEffect(() => {
+    setDetails(chosen ? detailsOf(chosen) : emptyDetails());
+    setFailure(null);
+  }, [chosen]);
+
+  async function submit() {
+    const problem = validateBand(details);
+    if (problem) {
+      setFailure(problem);
+      return;
+    }
+    setBusy(true);
+    setFailure(null);
+    const r = await updateHerd(herd, details);
+    setBusy(false);
+    // The server's words, unchanged: a band that overlaps its neighbour is
+    // named there, with the herd it collides with.
+    if (isError(r)) {
+      setFailure(r.error);
+      return;
+    }
+    onDone(`${r.herd} is a ${r.herd_class.toLowerCase()} herd.`);
+  }
+
+  return (
+    <Card>
+      <CardHeaderRow>
+        <CardHeading>
+          <CardTitle>Herd class and weight band</CardTitle>
+          <CardDescription>
+            A fattening herd holds animals between two weights. When one outgrows the
+            band, the farm is told to move her up.
+          </CardDescription>
+        </CardHeading>
+      </CardHeaderRow>
+      <CardContent className="flex flex-col gap-4 pt-0">
+        <div className="flex max-w-sm flex-col gap-1.5">
+          <Label htmlFor="eh-herd">Which herd</Label>
+          <Picker
+            id="eh-herd"
+            value={herd}
+            onChange={setHerd}
+            options={bands.map((b) => b.herd)}
+            label="Which herd"
+            placeholder={loading ? "Reading herds…" : "Choose a herd…"}
+          />
+        </div>
+
+        {herd && <HerdBandFields idPrefix="eh" value={details} onChange={setDetails} />}
+
+        {failure && <Notice tone="error">{failure}</Notice>}
+
+        <div>
+          <Button onClick={submit} disabled={busy || !herd}>
+            {busy ? "Saving…" : "Save the herd"}
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );

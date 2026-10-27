@@ -29,6 +29,7 @@ export const VIEWS = [
   "abortion",
   "heat",
   "weight",
+  "performance",
   "check-up",
   "treatment",
   "health-case",

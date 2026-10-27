@@ -35,6 +35,7 @@ const TABS: Array<{ value: LivestockCategory | ""; label: string }> = [
   { value: "movement", label: CATEGORY_LABEL.movement },
   { value: "breeding", label: CATEGORY_LABEL.breeding },
   { value: "feed", label: CATEGORY_LABEL.feed },
+  { value: "weight", label: CATEGORY_LABEL.weight },
 ];
 
 function Pill({

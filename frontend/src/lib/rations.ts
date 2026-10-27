@@ -41,6 +41,11 @@ export type RationRow = {
    *  has not been extended to carry them (as opposed to `[]`, a run with none
    *  recorded) — the Rations page tells those two apart. */
   lines?: RecipeLine[];
+  /** Beef: the average daily gain, kg/day, of the animals weighed in this herd
+   *  during the period the ration was fed. `null` when too few were weighed. */
+  avg_adg_kg?: number | null;
+  /** How many head that average rests on. */
+  weighed_head?: number;
 };
 
 export type RationHistory = {
@@ -125,4 +130,23 @@ export function recipesUsed(
     if (row.fed_on > seen.last_fed) seen.last_fed = row.fed_on;
   }
   return [...by.values()].sort((a, b) => b.last_fed.localeCompare(a.last_fed));
+}
+
+/** How a ration period's gain reads beside it: "0.92 (14 weighed)". */
+export function gainLabel(row: Pick<RationRow, "avg_adg_kg" | "weighed_head">): string | null {
+  if (row.avg_adg_kg === null || row.avg_adg_kg === undefined) return null;
+  return `${Number(row.avg_adg_kg).toFixed(2)} (${row.weighed_head ?? 0} weighed)`;
+}
+
+/** The gain across a set of ration periods, each weighted by the animals behind it. */
+export function averageGain(rows: RationRow[]): number | null {
+  let sum = 0;
+  let head = 0;
+  for (const r of rows || []) {
+    const n = Number(r.weighed_head) || 0;
+    if (r.avg_adg_kg === null || r.avg_adg_kg === undefined || n <= 0) continue;
+    sum += Number(r.avg_adg_kg) * n;
+    head += n;
+  }
+  return head ? sum / head : null;
 }

@@ -8,6 +8,7 @@
  */
 import { call, type Envelope } from "@/lib/frappe";
 
+const UPDATE = "upande_livestock.serverscripts.herds.update_herd.update_herd";
 const CREATE = "upande_livestock.serverscripts.herds.create_herd.create_herd";
 const BUY_IN = "upande_livestock.serverscripts.herds.buy_in_animal.buy_in_animal";
 const RATION = "upande_livestock.serverscripts.feeding.set_herd_ration.set_herd_ration";
@@ -25,6 +26,89 @@ export interface RationResult {
   item: string;
 }
 
+export const HERD_CLASSES = ["Breeding", "Fattening", "Calf", "Cow", "Other"] as const;
+export type HerdClass = (typeof HERD_CLASSES)[number];
+
+/** What the editor holds while it is being typed: strings, because a number
+ *  box hands back text and a blank has to stay blank. */
+export type HerdDetails = {
+  herd_class: HerdClass;
+  min_weight_kg: string;
+  max_weight_kg: string;
+  target_adg_kg: string;
+  weigh_monthly: boolean;
+};
+
+/** What the server takes. */
+export type BandPayload = {
+  herd_class: HerdClass;
+  min_weight_kg: number;
+  max_weight_kg: number;
+  target_adg_kg: number;
+  weigh_monthly: 0 | 1;
+};
+
+/** Only a herd that is fattened, or reared up to the fattening bands, has a
+ *  weight band; asking a breeding herd for one would invent a limit for it. */
+export function showsBandFields(herdClass: string): boolean {
+  return herdClass === "Fattening" || herdClass === "Calf";
+}
+
+/** A blank max means open-ended (the top band), which the server stores as 0. */
+export function bandPayload(d: HerdDetails): Partial<BandPayload> {
+  const out: Partial<BandPayload> = {
+    herd_class: d.herd_class,
+    weigh_monthly: d.weigh_monthly ? 1 : 0,
+  };
+  if (!showsBandFields(d.herd_class)) return out;
+  out.min_weight_kg = Number(d.min_weight_kg) || 0;
+  out.max_weight_kg = Number(d.max_weight_kg) || 0;
+  out.target_adg_kg = Number(d.target_adg_kg) || 0;
+  return out;
+}
+
+/** The one rule the form can say before the server does. Overlaps and gaps
+ *  between herds are the server's to judge — it sees all the herds. */
+export function validateBand(d: HerdDetails): string | null {
+  if (!showsBandFields(d.herd_class)) return null;
+  const min = Number(d.min_weight_kg) || 0;
+  const max = Number(d.max_weight_kg) || 0;
+  if (max && max <= min) return "The top of the band must be above its bottom.";
+  return null;
+}
+
+export const emptyDetails = (): HerdDetails => ({
+  herd_class: "Other",
+  min_weight_kg: "",
+  max_weight_kg: "",
+  target_adg_kg: "",
+  weigh_monthly: false,
+});
+
+export type HerdBand = {
+  herd: string;
+  herd_class: HerdClass;
+  min_weight_kg: number | null;
+  max_weight_kg: number | null;
+  target_adg_kg: number | null;
+  weigh_monthly: 0 | 1 | boolean;
+};
+
+export function detailsOf(h: Partial<HerdBand>): HerdDetails {
+  const s = (v: number | null | undefined) => (v ? String(v) : "");
+  return {
+    herd_class: (h.herd_class as HerdClass) || "Other",
+    min_weight_kg: s(h.min_weight_kg),
+    max_weight_kg: s(h.max_weight_kg),
+    target_adg_kg: s(h.target_adg_kg),
+    weigh_monthly: !!h.weigh_monthly,
+  };
+}
+
+export function updateHerd(herd: string, d: HerdDetails) {
+  return call<HerdBand>(UPDATE, { herd, ...bandPayload(d) });
+}
+
 export function createHerd(args: {
   herd_name: string;
   animals: string[];
@@ -32,7 +116,7 @@ export function createHerd(args: {
   ration_item?: string;
   lines?: RationLine[];
   operator?: string;
-}) {
+} & Partial<BandPayload>) {
   return call<{
     herd: string;
     heads: number;
