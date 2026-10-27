@@ -86,36 +86,36 @@ class TestCalfIntake(IntegrationTestCase):
 		self.assertEqual(hm.calf_herd(""), s.get("female_calf_herd"))
 
 
-class TestBullCullWindow(IntegrationTestCase):
-	def test_no_window_when_the_farm_does_not_sell_bulls(self):
-		s = hm.settings()
-		if s.get("cull_bulls_after_birth"):
-			raise unittest.SkipTest("this site does sell bull calves off")
-		animal = frappe.db.get_value("Animal", {"sex": "Male"}, "name")
-		if animal:
-			self.assertIsNone(hm.bull_cull_status(animal))
+class TestGrowthLadderIsForHeifers(IntegrationTestCase):
+	def _rungs(self, first, second):
+		return [
+			{"idx": 1, "herd": first, "days_in_herd": 1, "max_days_in_herd": 0, "exits_on_service": False},
+			{"idx": 2, "herd": second, "days_in_herd": 0, "max_days_in_herd": 0, "exits_on_service": True},
+		]
 
-	def test_the_warning_point_is_a_share_of_the_window(self):
-		s = hm.settings()
-		if not s.get("cull_bulls_after_birth"):
-			raise unittest.SkipTest("bull culling is off on this site")
-		window = int(s.get("bull_cull_max_days"))
-		pct = float(s.get("bull_cull_warn_percent") or 75)
-		animal = frappe.db.get_value(
-			"Animal", {"sex": "Male", "current_herd": s.get("male_calf_herd")}, "name"
-		)
-		if not animal:
-			raise unittest.SkipTest("no bull calf in the male calf herd")
-		st = hm.bull_cull_status(animal)
-		self.assertAlmostEqual(st["warn_after_days"], window * pct / 100.0, places=4)
-		self.assertEqual(st["window_days"], window)
-		self.assertEqual(st["warn"], st["days_on_farm"] >= st["warn_after_days"])
+	def test_growth_ladder_skips_males(self):
+		from unittest import mock
 
-	def test_a_female_is_never_in_a_cull_window(self):
-		animal = frappe.db.get_value("Animal", {"sex": "Female"}, "name")
-		if not animal:
-			raise unittest.SkipTest("no female animal on this site")
-		self.assertIsNone(hm.bull_cull_status(animal))
+		from upande_livestock.serverscripts.tests.beef_fixtures import make_animal, make_herd
+
+		first, second = make_herd("ZZ Rung 1").name, make_herd("ZZ Rung 2").name
+		born = add_days(today(), -100)
+		heifer = make_animal(first, sex="Female", date_of_birth=born)
+		steer = make_animal(first, sex="Male", date_of_birth=born)
+		with mock.patch.object(hm, "growth_ladder", return_value=self._rungs(first, second)):
+			moving = [r["animal"] for r in hm.growth_suggestions()]
+		self.assertIn(heifer.name, moving)
+		self.assertNotIn(steer.name, moving)
+
+	def test_suggestions_no_longer_carry_bulls(self):
+		self.assertNotIn("bulls", hm.suggestions())
+		self.assertNotIn("bulls", hm.suggestions()["counts"])
+
+	def test_service_herds_include_every_cow_class_herd(self):
+		from upande_livestock.serverscripts.tests.beef_fixtures import make_herd
+
+		cows = make_herd("ZZ Cows South", "Cow").name
+		self.assertIn(cows, hm.service_herds())
 
 
 class TestEligibility(IntegrationTestCase):

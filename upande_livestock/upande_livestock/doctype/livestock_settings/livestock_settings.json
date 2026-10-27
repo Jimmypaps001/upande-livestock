@@ -39,6 +39,8 @@
   "max_dehorning_age_months",
   "weight_section",
   "min_weight_recording_interval_days",
+  "weighing_interval_days",
+  "weighing_grace_days",
   "default_weight_method",
   "weighbridge_available",
   "hoof_section",
@@ -89,11 +91,6 @@
   "female_calf_herd",
   "cb_calf_intake",
   "male_calf_herd",
-  "sb_bull_cull",
-  "cull_bulls_after_birth",
-  "bull_cull_max_days",
-  "cb_bull_cull",
-  "bull_cull_warn_percent",
   "sb_growth_ladder",
   "growth_ladder",
   "sb_first_pregnancy",
@@ -331,6 +328,20 @@
    "label": "Min Weight Recording Interval (Days)"
   },
   {
+   "default": "30",
+   "description": "A herd that is weighed monthly is flagged when an animal has gone longer than this plus the grace days without a weighing.",
+   "fieldname": "weighing_interval_days",
+   "fieldtype": "Int",
+   "label": "Weighing Interval (Days)"
+  },
+  {
+   "default": "5",
+   "description": "Days of slack after the weighing interval before an animal counts as overdue. 0 means no slack.",
+   "fieldname": "weighing_grace_days",
+   "fieldtype": "Int",
+   "label": "Weighing Grace (Days)"
+  },
+  {
    "default": "Platform Scale",
    "description": "The method the Weights screens (web and mobile) start on.",
    "fieldname": "default_weight_method",
@@ -475,43 +486,11 @@
    "fieldtype": "Column Break"
   },
   {
-   "description": "Bull calves. Culling settings below apply to this herd.",
+   "description": "Male calves.",
    "fieldname": "male_calf_herd",
    "fieldtype": "Link",
    "label": "Male Calf Herd",
    "options": "Herds"
-  },
-  {
-   "fieldname": "sb_bull_cull",
-   "fieldtype": "Section Break",
-   "label": "Bull Culling"
-  },
-  {
-   "default": "0",
-   "description": "Some farms sell a bull calf almost as soon as it is born. Tick this and the system will warn before the window closes.",
-   "fieldname": "cull_bulls_after_birth",
-   "fieldtype": "Check",
-   "label": "Cull Bulls After Birth"
-  },
-  {
-   "default": "14",
-   "depends_on": "cull_bulls_after_birth",
-   "description": "Longest a bull calf should remain before it is sold.",
-   "fieldname": "bull_cull_max_days",
-   "fieldtype": "Int",
-   "label": "Maximum Days on Farm"
-  },
-  {
-   "fieldname": "cb_bull_cull",
-   "fieldtype": "Column Break"
-  },
-  {
-   "default": "75",
-   "depends_on": "cull_bulls_after_birth",
-   "description": "At 75% of 14 days the warning fires on day 10.5.",
-   "fieldname": "bull_cull_warn_percent",
-   "fieldtype": "Percent",
-   "label": "Warn At (% of window)"
   },
   {
    "description": "The herds a heifer climbs before she is old enough to serve, in order. The first row is where female calves land; the last should be marked 'exits on service'.",

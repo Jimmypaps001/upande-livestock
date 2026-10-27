@@ -93,13 +93,16 @@ TIMING_DEFAULTS = {
 	# belong in this dict for the same reason.
 	"min_dehorning_age_months": 1,
 	"max_dehorning_age_months": 6,
-	# Herd-movement thresholds. Every one is a day count on which 0 means
-	# nothing real — a bull culled 0 days after birth, a cow flagged open the
-	# day she calves — so they belong here rather than in the disable-capable
-	# set, and the values match the DocType's own defaults so a seeded site and
-	# a fresh install agree.
-	"bull_cull_max_days": 14,
+	# Herd-movement thresholds. A day count on which 0 means nothing real — a
+	# cow flagged open the day she calves — so it belongs here rather than in
+	# the disable-capable set, and the value matches the DocType's own default
+	# so a seeded site and a fresh install agree.
 	"max_open_days": 200,
+	# Weighing cadence for herds ticked "weigh monthly". An animal is overdue
+	# once it has gone more than interval + grace days without a weighing. The
+	# interval cannot be 0; the grace can (no slack) — see ZERO_MEANS_DISABLED.
+	"weighing_interval_days": 30,
+	"weighing_grace_days": 5,
 	# Health files. Both are lines the farm draws about its own record-keeping
 	# rather than about an animal's biology, and 0 on either legitimately means
 	# "do not tell me" — so both are in ZERO_MEANS_DISABLED, which is what keeps

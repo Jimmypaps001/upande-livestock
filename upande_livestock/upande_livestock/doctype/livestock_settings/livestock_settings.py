@@ -16,6 +16,8 @@ ZERO_MEANS_DISABLED = {
 	"post_abortion_min_service_days",
 	"health_case_concern_days",
 	"health_case_stale_days",
+	# No slack after the weighing interval is a fair choice.
+	"weighing_grace_days",
 }
 
 # Every other timing: 0 cannot mean anything real (a 0-day gestation period,

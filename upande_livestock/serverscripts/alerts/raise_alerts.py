@@ -12,7 +12,8 @@ import frappe
 from frappe.utils import today
 
 from upande_livestock.serverscripts.alerts._concentrate import concentrate_alerts
-from upande_livestock.serverscripts.common import herd_movement, notifications
+from upande_livestock.serverscripts.alerts._shared import WEIGHT_KINDS
+from upande_livestock.serverscripts.common import herd_movement, notifications, weight_bands, weighing
 
 #: How far either side of the expected date a calving is worth mentioning, when
 #: Livestock Settings has no `calving_alert_lead_days`. Seven days is the value
@@ -109,29 +110,69 @@ def calving_due(lead_days=None):
 	return out
 
 
+def _kg(value):
+	return f"{value:g}"
+
+
+def _band_range(low, high):
+	return f"{_kg(low)}+ kg" if not high else f"{_kg(low)}–{_kg(high)} kg"
+
+
+def band_alert(c):
+	"""A weight_bands.band_check result, as an alert."""
+	weight = f"{c['label']} weighs {_kg(c['weight_kg'])} kg"
+	if c["kind"] == "Ready for Exit":
+		message = f"{weight} — ready for exit from {c['herd']} ({_band_range(c['from_min_kg'], c['from_max_kg'])})."
+	elif c["from_min_kg"] is None:
+		message = f"{weight} — ready to leave {c['herd']}; suggest {c['to_herd']}."
+	else:
+		message = f"{weight} — outgrown {c['herd']} ({_band_range(c['from_min_kg'], c['from_max_kg'])}); " + (
+			f"suggest {c['to_herd']}." if c["to_herd"] else "no weight band fits.")
+	return {
+		"kind": c["kind"],
+		"animal": c["animal"],
+		"label": c["label"],
+		"herd": c["herd"],
+		"severity": "Due",
+		"message": message,
+		"detail": {"weight_kg": c["weight_kg"], "to_herd": c["to_herd"]},
+	}
+
+
+def overdue_alert(r, limit):
+	"""A weighing.weighing_due row, as an alert."""
+	if r["last_weight_date"]:
+		message = f"{r['label']} not weighed for {r['days_since']} days (limit {limit})."
+	else:
+		message = (f"{r['label']} has never been weighed — {r['days_since']} days in "
+		           f"{r['herd']} (limit {limit}).")
+	return {
+		"kind": "Weighing Overdue",
+		"animal": r["animal"],
+		"label": r["label"],
+		"herd": r["herd"],
+		"severity": "Overdue",
+		"message": message,
+		"detail": {
+			"days_since": r["days_since"], "limit": limit, "overdue_by": r["overdue_by"],
+			"last_weight_date": str(r["last_weight_date"]) if r["last_weight_date"] else None,
+		},
+	}
+
+
+def weight_alerts():
+	"""Every weighing and weight-band alert due today."""
+	limit = weighing.weighing_limit_days()
+	return (
+		[band_alert(c) for c in weight_bands.band_suggestions()]
+		+ [overdue_alert(r, limit) for r in weighing.weighing_due()]
+	)
+
+
 def collect():
 	"""Everything worth telling someone, as data. Writes nothing."""
 	s = herd_movement.suggestions()
 	out = []
-
-	for r in s["bulls"]:
-		out.append({
-			"kind": "Bull Cull Due",
-			"animal": r["animal"],
-			"label": r["label"],
-			"herd": r["herd"],
-			"severity": "Overdue" if r["overdue"] else "Due",
-			"message": "{} is {} — {}.".format(
-				r["label"],
-				"past its selling window" if r["overdue"] else "approaching its selling window",
-				r["reason"],
-			),
-			"detail": {
-				"days_on_farm": r["days_on_farm"],
-				"window_days": r["window_days"],
-				"days_remaining": r["days_remaining"],
-			},
-		})
 
 	for r in s["growth"]:
 		out.append({
@@ -165,6 +206,8 @@ def collect():
 		})
 
 	out += calving_due()
+
+	out += weight_alerts()
 
 	# The store, not an animal. These carry `item` where the rest carry
 	# `animal` — see alerts/_concentrate.py for why they are here at all.
@@ -201,9 +244,9 @@ def already_open(kind, animal, item=None):
 #: The kinds `collect()` decides. Its sweep is the whole truth about these, so
 #: an open one it no longer reports has stopped being true.
 SWEPT_KINDS = (
-	"Bull Cull Due", "Move Due", "Move Overdue", "Cow Open Too Long", "Calving Due",
+	"Move Due", "Move Overdue", "Cow Open Too Long", "Calving Due",
 	"Concentrate Low", "Concentrate Out",
-)
+) + WEIGHT_KINDS
 
 
 def alert_key(kind, animal=None, item=None):
@@ -224,7 +267,7 @@ def settle_open_alerts(kinds, current):
 	  * dismisses older copies of one that is (rows from before the
 	    one-open-per-kind rule);
 	  * refreshes the severity, message and detail of one that has moved on —
-	    a bull cull that went from Due to Overdue kept saying "approaching".
+	    a move that went from Due to Overdue kept saying "due".
 	"""
 	seen = set()
 	for row in frappe.get_all(
@@ -251,6 +294,63 @@ def settle_open_alerts(kinds, current):
 			}, update_modified=False)
 
 
+def _insert_alert(a):
+	doc = frappe.new_doc("Livestock Alert")
+	doc.alert_kind = a["kind"]
+	doc.alert_date = today()
+	doc.animal = a.get("animal")
+	doc.herd = a.get("herd")
+	doc.item = a.get("item")
+	doc.severity = a["severity"]
+	doc.message = a["message"]
+	doc.detail = frappe.as_json(a["detail"])
+	doc.insert(ignore_permissions=True)
+	return doc
+
+
+def refresh_weight_alerts(animal):
+	"""Bring one animal's weight alerts into line with its latest weight.
+
+	Called when a weight record is submitted or cancelled, so a move that the
+	new weight makes necessary is said straight away and one it makes moot is
+	closed without waiting for the nightly sweep. Settles with the same rules
+	as `settle_open_alerts`, but scoped to this animal.
+	"""
+	limit = weighing.weighing_limit_days()
+	current = {}
+	band = weight_bands.band_check(animal)
+	if band:
+		current[band["kind"]] = band_alert(band)
+	for r in weighing.weighing_due(animal=animal):
+		current["Weighing Overdue"] = overdue_alert(r, limit)
+
+	seen = set()
+	for row in frappe.get_all(
+		"Livestock Alert",
+		filters={"status": "Open", "animal": animal, "alert_kind": ["in", list(WEIGHT_KINDS)]},
+		fields=["name", "alert_kind", "severity", "message"],
+		order_by="creation desc",
+	):
+		now = current.get(row.alert_kind)
+		if now is None or row.alert_kind in seen:
+			frappe.db.set_value("Livestock Alert", row.name, {
+				"status": "Dismissed",
+				"action_notes": "Cleared automatically on {}: {}.".format(
+					today(), "no longer due" if now is None else "a newer copy is open"),
+			}, update_modified=False)
+			continue
+		seen.add(row.alert_kind)
+		if (now["severity"], now["message"]) != (row.severity, row.message):
+			frappe.db.set_value("Livestock Alert", row.name, {
+				"severity": now["severity"],
+				"message": now["message"],
+				"detail": frappe.as_json(now["detail"]),
+			}, update_modified=False)
+	for kind, alert in current.items():
+		if kind not in seen:
+			_insert_alert(alert)
+
+
 def raise_alerts():
 	"""Record today's alerts, then deliver whatever is still open.
 
@@ -266,16 +366,7 @@ def raise_alerts():
 		if already_open(a["kind"], a.get("animal"), a.get("item")):
 			skipped += 1
 			continue
-		doc = frappe.new_doc("Livestock Alert")
-		doc.alert_kind = a["kind"]
-		doc.alert_date = today()
-		doc.animal = a.get("animal")
-		doc.herd = a.get("herd")
-		doc.item = a.get("item")
-		doc.severity = a["severity"]
-		doc.message = a["message"]
-		doc.detail = frappe.as_json(a["detail"])
-		doc.insert(ignore_permissions=True)
+		_insert_alert(a)
 		raised += 1
 	delivery = notifications.deliver_open_alerts()
 	frappe.db.commit()

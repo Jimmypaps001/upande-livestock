@@ -31,7 +31,7 @@
    "reqd": 1,
    "in_list_view": 1,
    "in_standard_filter": 1,
-   "options": "Bull Cull Due\nMove Due\nMove Overdue\nCow Open Too Long\nCalving Due\nPregnancy Check Overdue\nConcentrate Low\nConcentrate Out"
+   "options": "Move Due\nMove Overdue\nCow Open Too Long\nCalving Due\nPregnancy Check Overdue\nConcentrate Low\nConcentrate Out\nWeighing Overdue\nWeight Band Move Due\nReady for Exit"
   },
   {
    "fieldname": "severity",

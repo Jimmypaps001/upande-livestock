@@ -39,7 +39,9 @@ def herd_rations(payload=None):
 	def go():
 		guard_read("BOM")
 		herds = frappe.get_all(
-			"Herds", fields=["name", "bom", "number_of_animals"], order_by="name asc")
+			"Herds", fields=["name", "bom", "number_of_animals", "herd_class", "min_weight_kg",
+			        "max_weight_kg", "target_adg_kg", "weigh_monthly"],
+			order_by="name asc")
 		lines = lines_for([h.bom for h in herds if h.bom])
 		boms = {
 			b.name: b
@@ -58,6 +60,11 @@ def herd_rations(payload=None):
 				"herd": h.name,
 				"heads": heads,
 				"bom": h.bom,
+				"herd_class": h.herd_class or "Other",
+				"min_weight_kg": flt(h.min_weight_kg),
+				"max_weight_kg": flt(h.max_weight_kg),
+				"target_adg_kg": flt(h.target_adg_kg),
+				"weigh_monthly": int(h.weigh_monthly or 0),
 				"ration_item": bom.item if bom else None,
 				"ration_name": (bom.item_name or bom.item) if bom else None,
 				"per_head_kg": per_head,

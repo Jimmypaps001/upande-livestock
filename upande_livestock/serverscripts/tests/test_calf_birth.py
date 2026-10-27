@@ -186,12 +186,12 @@ class TestBirthOutcomes(IntegrationTestCase):
 class TestMovementSuggestions(IntegrationTestCase):
 	"""Read-only: it proposes, a person decides."""
 
-	def test_it_returns_the_three_kinds(self):
+	def test_it_returns_growth_and_open_cow_suggestions(self):
 		s = hm.suggestions()
-		for key in ("growth", "bulls", "open_cows", "counts"):
+		for key in ("growth", "open_cows", "counts"):
 			self.assertIn(key, s)
 		self.assertEqual(s["counts"]["growth"], len(s["growth"]))
-		self.assertEqual(s["counts"]["bulls"], len(s["bulls"]))
+		self.assertEqual(s["counts"]["open_cows"], len(s["open_cows"]))
 
 	def test_a_growth_suggestion_names_both_ends(self):
 		for r in hm.growth_suggestions():

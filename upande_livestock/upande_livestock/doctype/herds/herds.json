@@ -14,6 +14,12 @@
   "number_of_animals",
   "sb_class",
   "custom_is_calf_rearing",
+  "herd_class",
+  "weigh_monthly",
+  "cb_class",
+  "min_weight_kg",
+  "max_weight_kg",
+  "target_adg_kg",
   "section_break_69rv",
   "bom",
   "sb_acct",
@@ -62,6 +68,47 @@
    "fieldname": "custom_is_calf_rearing",
    "fieldtype": "Check",
    "label": "Is Calf-Rearing Herd"
+  },
+  {
+   "default": "Other",
+   "description": "What the herd is for. Fattening herds form the weight ladder animals climb as they grow.",
+   "fieldname": "herd_class",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Herd Class",
+   "options": "Breeding\nFattening\nCalf\nCow\nOther"
+  },
+  {
+   "default": "0",
+   "description": "Animals in this herd are weighed on the monthly cycle and flagged when overdue. Ticked by default for Fattening and Breeding herds.",
+   "fieldname": "weigh_monthly",
+   "fieldtype": "Check",
+   "label": "Weigh Monthly"
+  },
+  {
+   "fieldname": "cb_class",
+   "fieldtype": "Column Break"
+  },
+  {
+   "depends_on": "eval:['Fattening','Calf'].includes(doc.herd_class)",
+   "description": "Lower weight limit of this herd's band. An animal at exactly this weight belongs here.",
+   "fieldname": "min_weight_kg",
+   "fieldtype": "Float",
+   "label": "Band From (kg)"
+  },
+  {
+   "depends_on": "eval:['Fattening','Calf'].includes(doc.herd_class)",
+   "description": "Upper weight limit (exclusive). Leave blank or 0 on the top band only.",
+   "fieldname": "max_weight_kg",
+   "fieldtype": "Float",
+   "label": "Band To (kg)"
+  },
+  {
+   "description": "Target average daily gain in kg/day.",
+   "fieldname": "target_adg_kg",
+   "fieldtype": "Float",
+   "label": "Target Daily Gain (kg/day)"
   },
   {
    "fieldname": "section_break_69rv",

@@ -14,7 +14,7 @@ enough to serve. Past that point movement is driven by breeding events.
 """
 
 import frappe
-from frappe.utils import add_days, date_diff, flt, getdate, today
+from frappe.utils import add_days, date_diff, getdate, today
 
 from upande_livestock.serverscripts.common.animal import RETIRED_STATUSES
 from upande_livestock.serverscripts.common.timings import get_timing
@@ -170,46 +170,6 @@ def growth_move_due(animal):
 
 
 # ---------------------------------------------------------------------------
-# bull calves
-# ---------------------------------------------------------------------------
-
-
-def bull_cull_status(animal):
-	"""How far through its selling window a bull calf is.
-
-	None when the farm does not sell bull calves off, or the animal is not one.
-	"""
-	s = settings()
-	if not s.get("cull_bulls_after_birth"):
-		return None
-	window = get_timing("bull_cull_max_days")
-	if window <= 0:
-		return None
-	row = frappe.db.get_value(
-		"Animal", animal, ["sex", "current_herd", "date_of_birth", "status"], as_dict=True
-	)
-	if not row or not row.date_of_birth:
-		return None
-	if not (row.sex or "").strip().lower().startswith("m"):
-		return None
-	if row.current_herd != s.get("male_calf_herd"):
-		return None
-
-	days = date_diff(today(), getdate(row.date_of_birth))
-	warn_at = window * flt(s.get("bull_cull_warn_percent") or 75) / 100.0
-	return {
-		"animal": animal,
-		"herd": row.current_herd,
-		"days_on_farm": days,
-		"window_days": window,
-		"warn_after_days": warn_at,
-		"days_remaining": window - days,
-		"warn": days >= warn_at,
-		"overdue": days > window,
-	}
-
-
-# ---------------------------------------------------------------------------
 # eligibility — derived from where an animal stands, never set by hand
 # ---------------------------------------------------------------------------
 
@@ -243,14 +203,15 @@ def calf_group_herds():
 
 
 def service_herds():
-	"""The rungs of the ladder that are left by being served, plus the cow herd.
+	"""The rungs of the ladder that are left by being served, plus the cow herd
+	and every herd whose class is Cow.
 
 	A heifer becomes servable at the top of the ladder; a cow becomes servable
 	again once she is far enough past calving, which `service_wait_days` covers.
 	"""
 	herds = [r["herd"] for r in growth_ladder() if r["exits_on_service"]]
-	cows = cow_herd()
-	return herds + [cows] if cows and cows not in herds else herds
+	cows = [cow_herd()] + frappe.get_all("Herds", filters={"herd_class": "Cow"}, pluck="name")
+	return herds + [h for h in dict.fromkeys(cows) if h and h not in herds]
 
 
 def service_wait_days():
@@ -420,7 +381,8 @@ def _label(a):
 def growth_suggestions():
 	"""Heifers whose time on their rung is up.
 
-	Only the growth ladder — everything past it moves on breeding events, which
+	Males are skipped: bulls and steers do not climb the heifer ladder — their
+	moves are driven by weight (see weight_bands). Only the growth ladder — everything past it moves on breeding events, which
 	a day count cannot predict.
 	"""
 	out = []
@@ -431,6 +393,8 @@ def growth_suggestions():
 		if not nxt:
 			continue
 		for a in _animals_in(rung["herd"]):
+			if (a.get("sex") or "").strip().lower().startswith("m"):
+				continue
 			state = growth_move_due(a["name"])
 			if not state or not (state["due"] or state["overdue"]):
 				continue
@@ -448,33 +412,6 @@ def growth_suggestions():
 					state["days_in_herd"], state["days_expected"]),
 			})
 	out.sort(key=lambda r: (not r["overdue"], -r["days_in_herd"]))
-	return out
-
-
-def bull_cull_warnings():
-	"""Bull calves running out of selling window."""
-	s = settings()
-	herd = s.get("male_calf_herd")
-	if not (s.get("cull_bulls_after_birth") and herd):
-		return []
-	out = []
-	for a in _animals_in(herd):
-		st = bull_cull_status(a["name"])
-		if not st or not st["warn"]:
-			continue
-		out.append({
-			"animal": a["name"],
-			"label": _label(a),
-			"herd": herd,
-			"days_on_farm": st["days_on_farm"],
-			"window_days": st["window_days"],
-			"days_remaining": st["days_remaining"],
-			"overdue": st["overdue"],
-			"reason": "past the {}-day window by {} day(s)".format(
-				st["window_days"], -st["days_remaining"])
-			if st["overdue"] else "day {} of {}".format(st["days_on_farm"], st["window_days"]),
-		})
-	out.sort(key=lambda r: r["days_remaining"])
 	return out
 
 
@@ -528,17 +465,13 @@ def conception_date(animal):
 def suggestions():
 	"""Everything the farm should look at, in one call."""
 	growth = growth_suggestions()
-	bulls = bull_cull_warnings()
 	open_cows = open_cow_warnings()
 	return {
 		"growth": growth,
-		"bulls": bulls,
 		"open_cows": open_cows,
 		"counts": {
 			"growth": len(growth),
 			"growth_overdue": sum(1 for r in growth if r["overdue"]),
-			"bulls": len(bulls),
-			"bulls_overdue": sum(1 for r in bulls if r["overdue"]),
 			"open_cows": len(open_cows),
 		},
 	}

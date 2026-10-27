@@ -12,9 +12,8 @@ any case — that field is a fixed Frappe enum (Alert / Share / Assignment /
 Mention / Energy Point) and "movement" is not one of its values.
 """
 
-#: Movement and culling — an animal is in the wrong place, or has outstayed
-#: its window.
-MOVEMENT_KINDS = ("Bull Cull Due", "Move Due", "Move Overdue")
+#: Movement — an animal is in the wrong place, or has outstayed its window.
+MOVEMENT_KINDS = ("Move Due", "Move Overdue")
 
 #: The breeding calendar — something is due, overdue, or has stalled.
 BREEDING_KINDS = ("Cow Open Too Long", "Calving Due", "Pregnancy Check Overdue")
@@ -24,14 +23,19 @@ BREEDING_KINDS = ("Cow Open Too Long", "Calving Due", "Pregnancy Check Overdue")
 #: carry `item` instead of `animal` and are deduplicated on it.
 FEED_KINDS = ("Concentrate Low", "Concentrate Out")
 
-KINDS = MOVEMENT_KINDS + BREEDING_KINDS + FEED_KINDS
+#: Weighing and the weight ladder — an animal is overdue for the scale, has
+#: outgrown its band, or is heavy enough to leave the farm.
+WEIGHT_KINDS = ("Weighing Overdue", "Weight Band Move Due", "Ready for Exit")
 
-CATEGORIES = ("movement", "breeding", "feed")
+KINDS = MOVEMENT_KINDS + BREEDING_KINDS + FEED_KINDS + WEIGHT_KINDS
+
+CATEGORIES = ("movement", "breeding", "feed", "weight")
 
 CATEGORY_OF_KIND = {
 	**{k: "movement" for k in MOVEMENT_KINDS},
 	**{k: "breeding" for k in BREEDING_KINDS},
 	**{k: "feed" for k in FEED_KINDS},
+	**{k: "weight" for k in WEIGHT_KINDS},
 }
 
 

@@ -70,9 +70,18 @@ class LivestockWeightRecord(Document):
 
 	def on_submit(self):
 		self.update_animal_snapshot()
+		self.refresh_alerts()
 
 	def on_cancel(self):
 		self.update_animal_snapshot()
+		self.refresh_alerts()
+
+	def refresh_alerts(self):
+		"""A new (or withdrawn) weight can make a band move or an overdue
+		weighing true or moot; say so now rather than at the nightly sweep."""
+		from upande_livestock.serverscripts.alerts.raise_alerts import refresh_weight_alerts
+
+		refresh_weight_alerts(self.animal)
 
 	def update_animal_snapshot(self):
 		"""Set Animal.last_weight_kg/last_bcs from the chronologically latest

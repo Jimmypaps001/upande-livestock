@@ -13,6 +13,10 @@ from upande_livestock.serverscripts.common.events import new_livestock_event
 from upande_livestock.serverscripts.feeding._standing_ration import set_standing_ration
 
 
+#: Class, band and weighing fields a herd may be created with, all optional.
+BAND_FIELDS = ("herd_class", "min_weight_kg", "max_weight_kg", "target_adg_kg", "weigh_monthly")
+
+
 @frappe.whitelist()
 def create_herd(payload):
 	"""Create a herd and walk animals into it.
@@ -48,6 +52,11 @@ def create_herd(payload):
 		herd.herd_name = name
 		if d.get("description"):
 			herd.description = d["description"]
+		for field in BAND_FIELDS:
+			if d.get(field) is not None:
+				herd.set(field, d[field])
+		# Said outright, "no weighing" must survive the Fattening/Breeding default.
+		herd.flags.weigh_monthly_explicit = d.get("weigh_monthly") is not None
 		herd.insert()
 		herd.submit()
 

@@ -62,12 +62,11 @@ LIVESTOCK_ROLES = (
 )
 
 #: Who hears about what. Deliberately narrower than LIVESTOCK_ROLES: an attendant
-#: has no say in whether a bull is past its selling window, and a store keeper
+#: has no say in whether a cow has been open too long, and a store keeper
 #: does not decide when a cow is served. Notifying all five would be the fastest
 #: way to teach the farm to ignore the bell.
 ROLES_FOR_KIND = {
 	# Where an animal belongs. The attendant walks it; the manager approves it.
-	"Bull Cull Due": ("Livestock Manager", "Livestock Attendant"),
 	"Move Due": ("Livestock Manager", "Livestock Attendant"),
 	"Move Overdue": ("Livestock Manager", "Livestock Attendant"),
 	# The breeding calendar. The breeder acts, the vet is who a stalled cow
@@ -83,6 +82,12 @@ ROLES_FOR_KIND = {
 	# the one that teaches him to ignore the rest.
 	"Concentrate Low": ("Livestock Manager", "Livestock Stores"),
 	"Concentrate Out": ("Livestock Manager", "Livestock Stores"),
+	# The weight ladder. The attendant is who runs animals over the scale, so
+	# an overdue weighing reaches him; moving an animal up a band or sending it
+	# to market is the manager's call.
+	"Weighing Overdue": ("Livestock Manager", "Livestock Attendant"),
+	"Weight Band Move Due": ("Livestock Manager",),
+	"Ready for Exit": ("Livestock Manager",),
 }
 
 #: A kind nobody thought to map still reaches the person accountable for the

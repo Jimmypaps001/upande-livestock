@@ -10,7 +10,7 @@ Three promises, because each one failing is how a notification feature dies:
     week, so the tests here run delivery twice and insist the second run sends
     nothing.
   * THE AUDIENCE IS THE PEOPLE RESPONSIBLE, NOT EVERYBODY. A store keeper has no say
-    in whether a bull is past its selling window. "Notify all livestock roles"
+    in whether a cow has been open too long. "Notify all livestock roles"
     would pass a naive test and fail the farm.
   * THE BADGE AND THE PAGE AGREE. An unread count that does not go down when
     something is read is the same as no count at all.
@@ -136,6 +136,12 @@ class TestTheAudienceIsTheRightPeople(IntegrationTestCase):
 		audience = notif.audience_for_alert("Cow Open Too Long")
 		self.assertIn(self.vet, audience)
 		self.assertNotIn(self.attendant, audience)
+
+	def test_an_overdue_weighing_reaches_the_attendant_but_a_band_move_does_not(self):
+		"""The attendant runs animals over the scale; where they move to is the manager's call."""
+		self.assertIn(self.attendant, notif.audience_for_alert("Weighing Overdue"))
+		for kind in ("Weight Band Move Due", "Ready for Exit"):
+			self.assertNotIn(self.attendant, notif.audience_for_alert(kind), kind)
 
 	def test_system_accounts_are_never_notified(self):
 		for kind in KINDS:
@@ -272,7 +278,7 @@ class TestOneUserCannotTouchAnother(IntegrationTestCase):
 	def setUp(self):
 		self.mine = make_user("mine", ["Livestock Manager"])
 		self.yours = make_user("yours", ["Livestock Manager"])
-		self.alert = make_alert("Bull Cull Due")
+		self.alert = make_alert("Move Due")
 		notif.deliver_open_alerts()
 		self.addCleanup(frappe.set_user, "Administrator")
 
