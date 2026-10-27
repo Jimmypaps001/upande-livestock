@@ -4,7 +4,7 @@
  "allow_rename": 1,
  "autoname": "field:tag_number",
  "creation": "2026-06-08 16:14:19.831598",
- "description": "Primary livestock animal record. Book number is the system ID, burn name is the display name used on herd lists. Every event, cost, milk record, and disposal links here.",
+ "description": "Primary livestock animal record. Book number is the system ID, burn name is the display name used on herd lists. Every event, cost, and disposal links here.",
  "doctype": "DocType",
  "document_type": "Document",
  "editable_grid": 1,
@@ -227,7 +227,7 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Status",
-   "options": "Active\nDry\nDead\nSold\nCulled\nTransferred Out",
+   "options": "Active\nDead\nSold\nCulled\nTransferred Out",
    "search_index": 1
   },
   {
@@ -249,7 +249,7 @@
    "fieldname": "repro_status",
    "fieldtype": "Select",
    "label": "Reproductive Status",
-   "options": "Open\nServed\nPregnant\nDry\nHeifer\nBull\nCalf"
+   "options": "Open\nServed\nPregnant\nHeifer\nBull\nCalf"
   },
   {
    "fieldname": "parity",
@@ -483,15 +483,6 @@
    "read": 1,
    "report": 1,
    "role": "Livestock Attendant"
-  },
-  {
-   "email": 1,
-   "idx": 6,
-   "permlevel": 0,
-   "print": 1,
-   "read": 1,
-   "report": 1,
-   "role": "Livestock Milker"
   },
   {
    "email": 1,

@@ -138,7 +138,7 @@
    "options": "Employee"
   },
   {
-   "depends_on": "eval:['Treatment','Check Up','Vaccination','Deworming','Hoof Trimming','Dehorning','Pregnancy Diagnosis','Drying Off'].includes(doc.event_type)",
+   "depends_on": "eval:['Treatment','Check Up','Vaccination','Deworming','Hoof Trimming','Dehorning','Pregnancy Diagnosis'].includes(doc.event_type)",
    "description": "The vet who did this. Chosen from the farm's vets.",
    "fieldname": "vet",
    "fieldtype": "Link",
@@ -651,11 +651,6 @@
    "print": 1,
    "email": 1,
    "share": 1
-  },
-  {
-   "read": 1,
-   "report": 1,
-   "role": "Livestock Milker"
   },
   {
    "read": 1,

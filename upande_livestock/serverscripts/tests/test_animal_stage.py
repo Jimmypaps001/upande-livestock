@@ -22,7 +22,7 @@ COW = "ZZ STAGE COW"
 
 
 def _facts(**kw):
-	return {"calving": None, "service": None, "drying": None, "confirmed": None, **kw}
+	return {"calving": None, "service": None, "confirmed": None, **kw}
 
 
 def _a(**kw):
@@ -40,7 +40,6 @@ class TestTheRule(IntegrationTestCase):
 		self.assertEqual(self.stage({"calving": d(61)}), "open")
 		self.assertEqual(self.stage({"calving": d(100), "service": d(30)}), "served")
 		self.assertEqual(self.stage({"calving": d(100), "service": d(60), "confirmed": d(20)}), "confirmed")
-		self.assertEqual(self.stage({"calving": d(300), "confirmed": d(200), "drying": d(20)}), "dry")
 		self.assertEqual(self.stage({}, status="Sold"), "retired")
 		self.assertEqual(self.stage({}, disabled=1), "retired")
 

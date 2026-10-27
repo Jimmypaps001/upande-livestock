@@ -32,7 +32,7 @@ def record_mortality(payload):
 
 	NOBODY APPROVES A DEATH. The other three flows ask permission because the
 	farm is choosing to lose the animal; a death has already happened, and a
-	dead cow sitting in Lactating 1 waiting for a signature is how feed gets
+	dead cow sitting in her herd waiting for a signature is how feed gets
 	mixed for her the next morning. Who may record one is still a permission
 	question — see culling.assert_may_post — and on the shipped permissions
 	that is management, the same as every other departure.

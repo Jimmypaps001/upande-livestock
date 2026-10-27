@@ -23,7 +23,7 @@ def cull_evidence(animal=None):
 	"""Her figures beside the herd's, and a sentence saying what they amount to.
 
 	MEDIAN, NOT MEAN, and taken over the animals that have each measure. One
-	nine-lactation matriarch drags a mean far enough that half the herd reads
+	nine-calf matriarch drags a mean far enough that half the herd reads
 	as below average, which is exactly the comparison this exists to make
 	honest; and a maiden heifer counted as a zero calving interval would make
 	every cow that has calved look good.

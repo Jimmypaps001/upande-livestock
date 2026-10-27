@@ -86,7 +86,7 @@ def _delete_and_commit(doctype, name):
 	herd = frappe.db.get_value("Animal", name, "current_herd") if doctype == "Animal" else None
 	frappe.db.delete(doctype, {"name": name})
 	# A raw delete skips Animal.after_delete, which is what recomputes the
-	# headcount. A calving now moves the dam into the milking herd, so a fixture
+	# headcount. Deleting an animal this way leaves her herd counting her, so a fixture
 	# torn down this way left that herd counting a cow who no longer exists —
 	# and the feeding tests size a ration from that count.
 	if herd:
@@ -499,8 +499,7 @@ class TestLivestockEventMultipleBirths(IntegrationTestCase):
 			self.addCleanup(_delete_and_commit, "Herds", "TEST-BIRTH-CALVES")
 		self.dam = make_animal("TEST-TRIPLET-DAM").name
 		self.addCleanup(_delete_and_commit, "Animal", self.dam)
-		# A submitted calving moves the dam into the milking herd as a Movement
-		# of its own. Registered here rather than in _calving so it fires whether
+		# A calving fixture can leave Movement events of its own behind. Registered here rather than in _calving so it fires whether
 		# or not a case gets that far; 23 of these had already accumulated on
 		# kaitet.local, each pointing at an animal that no longer existed.
 		self.addCleanup(self._purge_spawned_movements)

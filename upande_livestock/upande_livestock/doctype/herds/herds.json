@@ -84,7 +84,7 @@
    "fieldtype": "Link",
    "label": "Cost Center",
    "options": "Cost Center",
-   "description": "Charged for every stock movement this herd causes — feed, milk, drugs and husbandry. Falls back to Livestock Settings > Default Cost Centres by Company, which says so when it is used. Must be a leaf cost centre of the company the movement posts under."
+   "description": "Charged for every stock movement this herd causes — feed, drugs and husbandry. Falls back to Livestock Settings > Default Cost Centres by Company, which says so when it is used. Must be a leaf cost centre of the company the movement posts under."
   }
  ],
  "grid_page_length": 50,
@@ -147,15 +147,6 @@
    "role": "Livestock Attendant",
    "permlevel": 0,
    "idx": 5,
-   "read": 1,
-   "report": 1,
-   "print": 1,
-   "email": 1
-  },
-  {
-   "role": "Livestock Milker",
-   "permlevel": 0,
-   "idx": 6,
    "read": 1,
    "report": 1,
    "print": 1,

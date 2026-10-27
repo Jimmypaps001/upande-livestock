@@ -9,31 +9,17 @@ DAYS COME FROM SETTINGS, NEVER FROM A HERD'S NAME. "2-4" and "4-12 MONTHS
 (WEANERS)" read like rules but they are labels somebody chose; a farm that
 renames a herd must not silently change how long its animals stay in it.
 
-A HERD'S DURATION CAN BELONG TO THE ROUTE RATHER THAN THE HERD. Steamers takes
-two streams — a first-time heifer arriving from Incalf Heifers with three months
-to calving, and a cow arriving from the low-yield herd with two. Same herd,
-different dry period, so `days_in_herd` is asked of the journey, not the place.
-
 The growth ladder is ordered and time-driven, and ends the moment a heifer is old
-enough to serve. Past that point movement is driven by breeding events, which is
-why the lactation cycle is expressed as settings rather than as more rungs.
+enough to serve. Past that point movement is driven by breeding events.
 """
 
 import frappe
-from frappe import _
 from frappe.utils import add_days, date_diff, flt, getdate, today
 
 from upande_livestock.serverscripts.common.animal import RETIRED_STATUSES
 from upande_livestock.serverscripts.common.timings import get_timing
 
 SETTINGS = "Livestock Settings"
-
-
-#: How far past the farm's own number counts as LATE rather than merely due.
-#: The calf ladder carries a `max_days_in_herd` for this; the lactation
-#: settings have one number each, so the grace is stated here instead of being
-#: invented differently at each call site.
-LACTATION_GRACE_DAYS = 7
 
 
 def settings():
@@ -77,33 +63,17 @@ def next_growth_herd(herd):
 	return rungs[i + 1]["herd"]
 
 
-def post_calving_herd():
-	"""Where a cow goes the moment she calves.
-
-	A fresh cow is a milking cow, so this is the high-yield herd unless the farm
-	says otherwise. The explicit setting exists because "high yield" is this
-	farm's arrangement, not a rule — a farm that sends fresh cows to a transition
-	group for a fortnight needs somewhere to say so.
-	"""
-	s = settings()
-	explicit = s.get("post_calving_herd")
-	if explicit and frappe.db.exists("Herds", explicit):
-		return explicit
-	high = s.get("high_yield_herd")
-	return high if high and frappe.db.exists("Herds", high) else None
-
-
 def calving_destinations(dam):
 	"""Where the dam and each kind of calf stand once this calving is recorded.
 
 	Answered before anything is written, so the person at the pen can see it and
 	stop if it is wrong. Sex decides the calves and nothing else does; the dam
-	goes wherever a fresh cow goes.
+	stays in the herd she is in: a beef cow calves and rears the calf at foot.
 	"""
 	row = frappe.db.get_value("Animal", dam, ["current_herd", "burn_name", "sex"], as_dict=True) \
 		if dam else None
 	from_herd = row.current_herd if row else None
-	to_herd = post_calving_herd()
+	to_herd = from_herd
 
 	return {
 		"dam": {
@@ -111,8 +81,8 @@ def calving_destinations(dam):
 			"label": (row.burn_name if row else None) or dam,
 			"from_herd": from_herd,
 			"to_herd": to_herd,
-			"will_move": bool(to_herd and from_herd != to_herd),
-			"reason": _dam_reason(from_herd, to_herd),
+			"will_move": False,
+			"reason": "a cow stays in her herd with her calf",
 		},
 		"female_calf": {
 			"to_herd": calf_herd("Female"),
@@ -123,17 +93,6 @@ def calving_destinations(dam):
 			"reason": "a bull calf goes to the bull herd",
 		},
 	}
-
-
-def _dam_reason(from_herd, to_herd):
-	if not to_herd:
-		return ("no herd is set for a cow that has just calved — "
-		        "set High Yield Herd in Livestock Settings")
-	if from_herd == to_herd:
-		return "already in the herd a fresh cow belongs to"
-	if not from_herd:
-		return "joins the milking herd"
-	return "a fresh cow is a milking cow"
 
 
 def calf_herd(sex):
@@ -276,36 +235,13 @@ def calf_group_herds():
 	return _settings_herds("calf_herds")
 
 
-def milking_herds():
-	"""The herds that are milked: Livestock Settings' Milking Herds table.
-
-	A farm can milk more herds than the two the lactation ladder moves cows
-	between (the live site milks three), so the list is the farm's to write.
-	It replaced a "Is Milking Herd" box ticked on each Herd, which disagreed
-	with the settings the moment a herd was renamed or added. Until the table
-	is filled in, the high- and low-yield herds stand in for it, as before.
-	"""
-	s = settings()
-	listed = [r.herd for r in (s.get("milking_herds") or []) if r.herd]
-	if listed:
-		return list(dict.fromkeys(listed))
-	return [h for h in (s.get("high_yield_herd"), s.get("low_yield_herd")) if h]
-
-
-def dry_herds():
-	"""The herds cows stand in between drying off and calving."""
-	s = settings()
-	return [h for h in dict.fromkeys((s.get("drying_off_herd"), s.get("steamer_herd"))) if h]
-
-
 def service_herds():
-	"""The last rung of the ladder, plus cows already in milk.
+	"""The rungs of the ladder that are left by being served.
 
 	A heifer becomes servable at the top of the ladder; a cow becomes servable
 	again once she is far enough past calving, which `service_wait_days` covers.
 	"""
-	herds = [r["herd"] for r in growth_ladder() if r["exits_on_service"]]
-	return herds + milking_herds()
+	return [r["herd"] for r in growth_ladder() if r["exits_on_service"]]
 
 
 def service_wait_days():
@@ -318,11 +254,6 @@ def service_wait_days():
 	them; the floor stays where it is, guarding a deliberate override.
 	"""
 	return get_timing("post_calving_optimal_service_days") or get_timing("post_calving_min_service_days")
-
-
-def is_milkable(animal):
-	herd = frappe.db.get_value("Animal", animal, "current_herd")
-	return bool(herd and herd in milking_herds())
 
 
 def is_servable(animal):
@@ -433,8 +364,7 @@ def open_days(animal):
 
 
 def open_too_long(animal):
-	"""A cow that has not conceived within the farm's limit has expired from the
-	high-yield herd on productivity grounds."""
+	"""A cow that has not conceived within the farm's limit is open too long."""
 	limit = get_timing("max_open_days")
 	if not limit:
 		return None
@@ -445,21 +375,8 @@ def open_too_long(animal):
 
 
 # ---------------------------------------------------------------------------
-# the dry herd, whose duration belongs to the route
+# gestation
 # ---------------------------------------------------------------------------
-
-
-def steamer_days_for(previous_herd):
-	"""Dry days for an animal arriving in Steamers from `previous_herd`.
-
-	Two streams meet here. A first-time heifer arrives with three months to
-	calving; a cow from the low-yield herd arrives with two. Asking the herd
-	would give one answer for both, which is why the journey is asked instead.
-	"""
-	s = settings()
-	if previous_herd and previous_herd == s.get("incalf_heifer_herd"):
-		return get_timing("steamer_days_from_heifers")
-	return get_timing("steamer_days_from_lactation")
 
 
 def expected_calving_date(conception_date):
@@ -558,7 +475,7 @@ def open_cow_warnings():
 	if not limit:
 		return []
 	out = []
-	for herd in milking_herds():
+	for herd in service_herds():
 		for a in _animals_in(herd):
 			st = open_too_long(a["name"])
 			if not st:
@@ -582,7 +499,7 @@ def conception_date(animal):
 
 	The SERVICE date, not the date of the diagnosis: a cow scanned at 45 days
 	conceived 45 days before somebody looked at her, and counting from the scan
-	would keep her in the high-yield herd six weeks past the farm's own rule.
+	would put her calving date six weeks late.
 	"""
 	row = frappe.db.sql(
 		"""SELECT s.service_date
@@ -599,122 +516,18 @@ def conception_date(animal):
 	return getdate(row[0][0]) if row and row[0][0] else None
 
 
-def lactation_move_due(animal):
-	"""Is this cow due out of the herd she is milking in?
-
-	THE LACTATING HERDS ARE NOT ON A CLOCK THE WAY THE CALF PENS ARE. A weaner
-	leaves her pen because she has been in it long enough; a high yielder leaves
-	because she is four months in calf and her yield is falling away, and those
-	are not the same question. The farm's rule is written from CONCEPTION —
-	`high_yield_days_from_conception` — so a cow served late stays where she is
-	and a cow that caught early steps down early, which is the whole point.
-
-	A cow who is not carrying is not due anywhere on this rule. She may be
-	overdue on another (see `open_too_long`, which is about a cow who has failed
-	to conceive at all) but she is not late for a move she has no reason to
-	make.
-	"""
-	herd = frappe.db.get_value("Animal", animal, "current_herd")
-	if not herd:
-		return None
-	s = settings()
-	high, low = s.get("high_yield_herd"), s.get("low_yield_herd")
-	steamers, incalf = s.get("steamer_herd"), s.get("incalf_heifer_herd")
-
-	if herd not in (high, low, incalf) or not herd:
-		return None
-
-	conceived = conception_date(animal)
-	if not conceived:
-		return None
-	days = date_diff(today(), conceived)
-	calving = expected_calving_date(conceived)
-	to_calving = date_diff(getdate(calving), today()) if calving else None
-
-	if herd == high and low:
-		limit = get_timing("high_yield_days_from_conception")
-		return _lactation_row(animal, herd, low, days, limit, to_calving,
-		                      f"{days} days in calf") if limit else None
-
-	if herd == low and steamers:
-		# Two months in the low-yield herd, which the farm states as its own
-		# number rather than as a second offset from conception — so it is read
-		# as one, from the day she arrived.
-		in_herd = days_in_current_herd(animal)
-		limit = get_timing("low_yield_days")
-		if not limit or in_herd is None:
-			return None
-		return _lactation_row(animal, herd, steamers, in_herd, limit, to_calving,
-		                      f"{in_herd} days in the low-yield herd")
-
-	if herd == incalf and steamers:
-		# A heifer is due out when calving is close, not when she has waited
-		# long enough — she arrived already carrying.
-		lead = get_timing("steamer_days_from_heifers")
-		if not lead or to_calving is None:
-			return None
-		return _lactation_row(
-			animal, herd, steamers, lead - to_calving, 0, to_calving,
-			f"{to_calving} days to calving", due=to_calving <= lead)
-	return None
-
-
-def _lactation_row(animal, herd, nxt, progress, limit, to_calving, reason, due=None):
-	over = max(0, progress - limit) if limit else max(0, progress)
-	return {
-		"animal": animal,
-		"herd": herd,
-		"next_herd": nxt,
-		"days_in_herd": progress,
-		"days_expected": limit,
-		"due": bool(due) if due is not None else bool(limit and progress >= limit),
-		# A week past the farm's own number is late, not merely due. The calf
-		# ladder has a `max_days_in_herd` for this; the lactation settings have
-		# no second number, so the grace is stated here rather than invented per
-		# call site.
-		"overdue": (over > LACTATION_GRACE_DAYS) if (due is None or due) else False,
-		"days_over": over,
-		"days_to_calving": to_calving,
-		"reason": reason,
-	}
-
-
-def lactation_suggestions():
-	"""Every milking or in-calf animal whose move is due, soonest first."""
-	s = settings()
-	out = []
-	for herd in [h for h in (s.get("high_yield_herd"), s.get("low_yield_herd"),
-	                         s.get("incalf_heifer_herd")) if h]:
-		for a in _animals_in(herd):
-			row = lactation_move_due(a.name)
-			if not row or not row["due"]:
-				continue
-			row["label"] = _label(a)
-			row["from_herd"] = row.pop("herd")
-			row["to_herd"] = row.pop("next_herd")
-			out.append(row)
-	out.sort(key=lambda r: (-r["days_over"], r["from_herd"]))
-	return out
-
-
 def suggestions():
 	"""Everything the farm should look at, in one call."""
 	growth = growth_suggestions()
 	bulls = bull_cull_warnings()
 	open_cows = open_cow_warnings()
-	lactation = lactation_suggestions()
 	return {
-		# One list for the movement screen: a herdsman moving animals does not
-		# care whether the rule behind a row counted days in a pen or days in
-		# calf, only that she is due out.
-		"growth": growth + lactation,
-		"lactation": lactation,
+		"growth": growth,
 		"bulls": bulls,
 		"open_cows": open_cows,
 		"counts": {
-			"growth": len(growth) + len(lactation),
-			"growth_overdue": sum(1 for r in growth + lactation if r["overdue"]),
-			"lactation": len(lactation),
+			"growth": len(growth),
+			"growth_overdue": sum(1 for r in growth if r["overdue"]),
 			"bulls": len(bulls),
 			"bulls_overdue": sum(1 for r in bulls if r["overdue"]),
 			"open_cows": len(open_cows),
@@ -727,30 +540,16 @@ def suggestions():
 #
 # EVERY LIST HERE IS A NARROWING, and every threshold in it comes from Livestock
 # Settings rather than from a number typed into this file. The farm moves its
-# dry-off window or its gestation length on the Settings page and these lists
+# gestation length or its calving alert lead on the Settings page and these lists
 # move with it; a 60 written in here would be a second, disagreeing copy of the
 # farm's own rule, which is exactly how api/reproduction.py came to answer 8
 # animals ready where this package answered 2.
 #
 # The point of narrowing is not tidiness. An event recorded against an animal it
-# cannot biologically have happened to does not stay a bad row: a drying-off
-# moves her out of the milking herd and out of that herd's ration, a calving
+# cannot biologically have happened to does not stay a bad row: a calving
 # creates a calf, a confirmed pregnancy drives the feed forecast for months. The
 # cheapest place to prevent all of that is the list the screen offers.
 # ---------------------------------------------------------------------------
-
-
-def dry_off_window_days(previous_herd=None):
-	"""How long before calving a cow is taken out of milk.
-
-	The same two streams `steamer_days_for` distinguishes: a first-time heifer
-	dries off earlier than a cow coming off the low-yield herd. Asked by the
-	herd she is standing in, because that is what the farm knows about her.
-	"""
-	s = settings()
-	if previous_herd and previous_herd == s.get("incalf_heifer_herd"):
-		return get_timing("heifer_dry_off_before_calving_days") or get_timing("steamer_days_from_heifers")
-	return get_timing("steamer_days_from_lactation") or get_timing("heifer_dry_off_before_calving_days")
 
 
 def _carrying_rows():
@@ -758,101 +557,8 @@ def _carrying_rows():
 	return {r["animal"]: r for r in carrying_animals()}
 
 
-def dried_off_on(animal, since=None):
-	"""The day she was taken out of milk on this pregnancy, if she has been."""
-	filters = {"animal": animal, "event_type": "Drying Off", "docstatus": 1}
-	if since:
-		filters["event_date"] = [">=", str(since)]
-	row = frappe.get_all(
-		"Livestock Event", filters=filters, fields=["event_date"],
-		order_by="event_date desc", limit_page_length=1,
-	)
-	return str(row[0].event_date) if row and row[0].event_date else None
-
-
-def dry_off_destination():
-	"""Where the farm says a cow goes when she is dried off, and why.
-
-	A SUGGESTION, NEVER A RULE. A farm moves a cow somewhere else for reasons
-	this app does not know — a quarter it wants watched, a pen nearer the
-	parlour, a gate that is broken this week. So the destination is offered,
-	a different choice is warned about, and nothing is refused.
-
-	Falls back to the Steamer Herd, which is where dry cows went before this
-	setting existed. A farm that has configured only Steamers should not have to
-	discover a new field before the screen works.
-	"""
-	s = settings()
-	chosen = s.get("drying_off_herd")
-	if chosen:
-		return {"herd": chosen, "from": "drying_off_herd"}
-	steamers = s.get("steamer_herd")
-	if steamers:
-		return {"herd": steamers, "from": "steamer_herd"}
-	return {"herd": None, "from": None}
-
-
-def dry_off_destination_note(chosen):
-	"""What to say about a destination that is not the one the farm set.
-
-	None when there is nothing worth saying: no setting, or the two agree. The
-	wording names both herds, because "this is not where she should go" without
-	saying where is a warning nobody can act on.
-	"""
-	suggested = dry_off_destination()["herd"]
-	if not suggested or not chosen or chosen == suggested:
-		return None
-	return _(
-		"{0} is where this farm dries cows off to. She is being moved to {1} "
-		"instead — recorded as it stands."
-	).format(suggested, chosen)
-
-
-def dry_off_candidates():
-	"""Cows to take out of milk: carrying, still milking, and near enough calving.
-
-	THREE CONDITIONS AND ALL THREE MATTER. She has to be in calf, because drying
-	off a cow who is not is throwing away a lactation for nothing. She has to be
-	in milk, because there is nothing to dry off otherwise — and the screen
-	offering a cow already standing in Steamers is what produced the duplicate
-	drying-off events on this site. And she has to be close enough to calving,
-	which is the farm's own window, not a judgement made here.
-	"""
-	milking = set(milking_herds())
-	out = []
-	for animal, row in _carrying_rows().items():
-		herd = frappe.db.get_value("Animal", animal, "current_herd")
-		if herd not in milking:
-			continue
-		if dried_off_on(animal, row.get("served")):
-			continue
-		due = expected_calving_date(conception_date(animal) or row.get("served"))
-		if not due:
-			continue
-		window = dry_off_window_days(herd)
-		days_to_calving = date_diff(getdate(due), getdate(today()))
-		out.append({
-			"animal": animal,
-			"herd": herd,
-			"due": str(due),
-			"days_to_calving": days_to_calving,
-			# She is ready when she is inside the farm's window. Cows outside it
-			# still come back, marked, because a farm drying off early has a
-			# reason and the screen should not pretend she does not exist.
-			"ready": window and days_to_calving <= window,
-			"window": window,
-		})
-	out.sort(key=lambda r: r["days_to_calving"])
-	return out
-
-
 def calving_candidates():
-	"""Cows about to calve: carrying, dried off, and near their date.
-
-	DRIED OFF IS PART OF IT, because that is the farm's sequence — a cow calves
-	out of the dry herd, and one calving straight out of the milking herd is
-	either a record entered in the wrong order or a cow nobody dried off, and
-	both are worth seeing rather than silently accepting.
+	"""Cows about to calve: carrying, and near their date.
 
 	The window is the gestation length plus the farm's calving alert lead, both
 	from Settings. A cow past her date is still here, and first: overdue is the
@@ -866,18 +572,15 @@ def calving_candidates():
 		if not due:
 			continue
 		days_to_calving = date_diff(getdate(due), getdate(today()))
-		dry_on = dried_off_on(animal, row.get("served"))
 		out.append({
 			"animal": animal,
 			"herd": frappe.db.get_value("Animal", animal, "current_herd"),
 			"due": str(due),
 			"days_to_calving": days_to_calving,
-			"dried_off_on": dry_on,
-			"dried_off": bool(dry_on),
 			# Ready to calve, by the farm's own lead time. Never a refusal —
 			# calves arrive early, and a screen that refused to record one would
 			# send the herdsman to the desk to do it anyway.
-			"ready": bool(dry_on) and days_to_calving <= max(lead, 0),
+			"ready": days_to_calving <= max(lead, 0),
 		})
 	out.sort(key=lambda r: r["days_to_calving"])
 	return out

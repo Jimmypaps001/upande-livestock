@@ -5,14 +5,13 @@
 
 THE HERD IS NOT A CONSTANT. Today's draw times thirty days assumes the calves
 in the 0-2 pen are still there next month — they are not, they will have aged
-into 2-4 — and that the cows in the milking herd are still milking, which the
-ones calving in a fortnight are not. Feed is bought on a lead time, so the
+into 2-4 — and that no calf is about to arrive, which the cows calving in a
+fortnight will make. Feed is bought on a lead time, so the
 number worth having is what the herd will look like when the feed arrives.
 
 The case that prompted this, and the one these tests are built around: TWO COWS
 ABORT. Their pregnancies stop being confirmed, so no calving is scheduled, no
-calf arrives in the calf pen and the dams never leave the milking herd. The
-forecast for the calf pen falls and the milking draw stays up — scenario B
+calf arrives in the calf pen. The forecast for the calf pen falls — scenario B
 instead of scenario A — and nobody edited a forecast, because the forecast is
 not a document. It is read from the events every time it is asked for.
 """
@@ -24,10 +23,25 @@ from frappe.utils import add_days, today
 from upande_livestock.serverscripts.common import herd_movement as hm
 from upande_livestock.serverscripts.feeding.feed_forecast import feed_forecast
 from upande_livestock.serverscripts.tests.test_culling import _employee, _tidy
-from upande_livestock.serverscripts.tests.test_lactation_moves import _confirmed_service
 from upande_livestock.serverscripts.tests.test_operations import _make_cow
 
 COW = "FORECAST-DAM-1"
+
+
+def _confirmed_service(animal, served_on):
+	"""A service that has been answered, which is what the forecast counts from."""
+	doc = frappe.new_doc("Livestock Event")
+	doc.event_type = "Service"
+	doc.animal = animal
+	doc.event_date = served_on
+	doc.service_date = served_on
+	doc.operator = _employee()
+	doc.pregnancy_confirmation_status = "Confirmed"
+	doc.flags.ignore_validate = True
+	doc.insert(ignore_permissions=True)
+	doc.db_set("docstatus", 1, update_modified=False)
+	frappe.db.commit()
+	return doc.name
 
 
 def _draw_for(result, item):
@@ -89,11 +103,11 @@ class TestAPregnancyChangesTheForecastAndAnAbortionChangesItBack(IntegrationTest
 		self.pen, self.calf_feed = _calf_ration_item()
 		if not self.calf_feed:
 			self.skipTest("the calf pen has no ration on this site")
-		self.milking = hm.post_calving_herd()
-		if not self.milking:
-			self.skipTest("no post-calving herd configured")
+		self.herd = (hm.service_herds() or [None])[0]
+		if not (self.herd and _employee()):
+			self.skipTest("no servable herd or no active Employee on this site")
 		_tidy(COW)
-		_make_cow(COW, herd=self.milking)
+		_make_cow(COW, herd=self.herd)
 		frappe.db.commit()
 		self.addCleanup(_tidy, COW)
 		self.gestation = int(hm.settings().get("gestation_period_days") or 0) or 280
@@ -118,23 +132,14 @@ class TestAPregnancyChangesTheForecastAndAnAbortionChangesItBack(IntegrationTest
 		kinds = {w["kind"] for e in feed_forecast({"days": 60})["events"] for w in e["what"]}
 		self.assertIn("birth", kinds)
 
-	def test_she_leaves_the_milking_herd_before_she_calves(self):
-		"""Drying off is a move the farm's own settings already describe, and it
-		takes her draw out of the milking herd weeks before the calf arrives.
-
-		She has to be far enough out for the dry-off to still be ahead of her: a
-		cow calving in twenty days is already forty days past it on this farm's
-		sixty-day rule, and a forecast cannot move an animal backwards. One
-		standing in the milking herd past her own dry-off date is OVERDUE, which
-		is the movement screen's business and not this one's.
-		"""
-		lead = hm.steamer_days_for(self.milking)
-		self._carrying(lead + 30)
+	def test_the_dam_stays_in_her_herd(self):
+		"""A beef cow rears her calf at foot: only the calf is a new mouth."""
+		self._carrying(20)
 		moves = [
-			w for e in feed_forecast({"days": lead + 60})["events"] for w in e["what"]
-			if w["kind"] == "move" and w["from_herd"] == self.milking
+			w for e in feed_forecast({"days": 60})["events"] for w in e["what"]
+			if w["kind"] == "move" and w["from_herd"] == self.herd
 		]
-		self.assertTrue(moves, "a cow with her dry-off still ahead never leaves the milking herd")
+		self.assertFalse(moves, "the forecast moved a dam out of her herd")
 
 	def test_an_abortion_takes_the_calf_back_out_of_the_forecast(self):
 		"""THE CASE THIS WAS BUILT FOR. Nothing is edited — the pregnancy simply

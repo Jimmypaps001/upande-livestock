@@ -4,21 +4,16 @@
 """How one animal stands against the others on the farm.
 
 Two comparisons, both over the animals that HAVE the measure: her herd, and her
-group — the milking cows if she is one, otherwise the animals at the same stage
-(heifers with heifers, dry cows with dry cows). A heifer measured against the
-milking string would read as "bottom of the farm" on every figure she cannot have
-yet.
-
-PER-ANIMAL MILK IS NOT RECORDED ON THIS FARM — Milk Recording is per herd per
-session — so there is no 30-day average or lactation yield to rank, and none is
-invented here. `per_animal_milk` says so; the phone shows the note.
+group — the breeding cows if she is one, otherwise the animals at the same stage
+(heifers with heifers). A heifer measured against the breeding cows would read as
+"bottom of the farm" on every figure she cannot have yet.
 
 Every measure is read for every live animal in a handful of grouped queries (the
 animals, their stage facts, their service counts, their calving dates), then
 compared in memory — never one query per animal.
 
 `top` is her rank among those compared, as a share: 10 means the best tenth. It
-is None for the measures with no better end (days in milk, weight, parity), which
+is None for the measures with no better end (weight, parity), which
 are shown against the average and not ranked. Ties share the better rank.
 """
 
@@ -29,11 +24,10 @@ from upande_livestock.serverscripts.common import animal_stage
 from upande_livestock.serverscripts.common.animal import RETIRED_STATUSES, service_record
 from upande_livestock.serverscripts.common.envelope import as_dict, guard_read, run
 
-MILKING_STAGES = ("fresh", "open", "served", "confirmed")
+BREEDING_STAGES = ("fresh", "open", "served", "confirmed")
 
 #: key, label, unit, which end is better (None: neither).
 MEASURES = (
-	("days_in_milk", "Days in milk", "d", None),
 	("parity", "Parity", "", None),
 	("services_per_conception", "Services per conception", "", "lower"),
 	("calving_interval", "Calving interval", "d", "lower"),
@@ -42,8 +36,8 @@ MEASURES = (
 
 
 def _group_of(stage, has_calving):
-	if stage in MILKING_STAGES and has_calving:
-		return "milking", "the milking cows"
+	if stage in BREEDING_STAGES and has_calving:
+		return "breeding", "the breeding cows"
 	return stage, f"{stage} animals"
 
 
@@ -112,7 +106,6 @@ def animal_standing(payload=None):
 			groups[r.name] = g
 			s = record.get(r.name)
 			figures[r.name] = {
-				"days_in_milk": cyc["daysInMilk"],
 				"parity": flt(r.parity) or None,
 				# Only a cow with a confirmed conception has a ratio; one that has
 				# been served and not yet held has none, not an infinite one.
@@ -141,7 +134,6 @@ def animal_standing(payload=None):
 			"animal": name,
 			"herd": {"name": mine.current_herd or "no herd", "n": len(herd_names)},
 			"group": {"key": group_key, "label": group_label, "n": len(group_names)},
-			"per_animal_milk": False,
 			"metrics": metrics,
 		}
 

@@ -135,7 +135,7 @@ class TestStampingTheRows(unittest.TestCase):
 #
 # The chain above answered "some cost centre exists" but not "the right one".
 # On live, nine of eleven herds already name `Dairy - KR` and nothing read it,
-# so feed, milk, drugs and husbandry all posted to whatever the company default
+# so feed, drugs and husbandry all posted to whatever the company default
 # happened to be — `Main - KR`, which is the flower side. That is the quiet
 # accounting error this module's own docstring warned about, arriving by a
 # different door.
@@ -150,7 +150,7 @@ class TestTheHerdComesFirst(unittest.TestCase):
 		with patch.object(CC, "herd_cost_center", return_value="Dairy - KR"), patch.object(
 			CC, "company_cost_center", side_effect=AssertionError("must not be asked")
 		):
-			self.assertEqual(CC.resolve("Karen Roses", herd="STEAMERS"), "Dairy - KR")
+			self.assertEqual(CC.resolve("Karen Roses", herd="COW PEN"), "Dairy - KR")
 
 	def test_without_a_herd_the_per_company_row_answers(self):
 		with patch.object(CC, "herd_cost_center", return_value=None), patch.object(
@@ -167,7 +167,7 @@ class TestTheHerdComesFirst(unittest.TestCase):
 	def test_the_source_says_which_tier_answered(self):
 		"""`stamp` needs to know, because only the company tier is announced."""
 		with patch.object(CC, "herd_cost_center", return_value="Dairy - KR"):
-			self.assertEqual(CC.resolve_with_source("Karen Roses", herd="STEAMERS"), ("Dairy - KR", "herd"))
+			self.assertEqual(CC.resolve_with_source("Karen Roses", herd="COW PEN"), ("Dairy - KR", "herd"))
 		with patch.object(CC, "herd_cost_center", return_value=None), patch.object(
 			CC, "setting_cost_center", return_value="Dairy - KR"
 		):
@@ -208,7 +208,7 @@ class TestACostCentreHasToBeUsable(unittest.TestCase):
 		with patch.object(CC, "_herd_field", return_value="Some Group - KR"), patch.object(
 			CC, "usable", return_value=False
 		):
-			self.assertIsNone(CC.herd_cost_center("STEAMERS", "Karen Roses"))
+			self.assertIsNone(CC.herd_cost_center("COW PEN", "Karen Roses"))
 
 
 class TestTheFallbackAnnouncesItself(unittest.TestCase):
@@ -217,11 +217,11 @@ class TestTheFallbackAnnouncesItself(unittest.TestCase):
 		with patch.object(CC, "resolve_with_source", return_value=("Main - KR", "company")), patch.object(
 			CC.frappe, "msgprint"
 		) as said:
-			CC.stamp(Doc(rows, "Karen Roses"), herd="STEAMERS")
+			CC.stamp(Doc(rows, "Karen Roses"), herd="COW PEN")
 		self.assertTrue(said.called, "the farm must be told it is on the fallback")
 		msg = said.call_args.args[0] if said.call_args.args else said.call_args.kwargs["msg"]
 		self.assertIn("Main - KR", msg)
-		self.assertIn("STEAMERS", msg)
+		self.assertIn("COW PEN", msg)
 
 	def test_the_herds_own_centre_is_not_announced(self):
 		"""Nothing to say: this is the cost centre the farm asked for."""
@@ -229,7 +229,7 @@ class TestTheFallbackAnnouncesItself(unittest.TestCase):
 		with patch.object(CC, "resolve_with_source", return_value=("Dairy - KR", "herd")), patch.object(
 			CC.frappe, "msgprint"
 		) as said:
-			CC.stamp(Doc(rows, "Karen Roses"), herd="STEAMERS")
+			CC.stamp(Doc(rows, "Karen Roses"), herd="COW PEN")
 		self.assertFalse(said.called)
 
 	def test_the_per_company_setting_is_not_announced(self):
@@ -327,7 +327,7 @@ class TestTheCompanyDefaultIsNotADeliberateChoice(unittest.TestCase):
 		with patch.object(CC, "resolve_with_source", return_value=("Dairy - KR", "herd")), patch.object(
 			CC, "company_cost_center", return_value="Main - KR"
 		):
-			self.assertEqual(CC.stamp(self._doc(rows), herd="STEAMERS"), 1)
+			self.assertEqual(CC.stamp(self._doc(rows), herd="COW PEN"), 1)
 		self.assertEqual(rows[0]["cost_center"], "Dairy - KR")
 
 	def test_the_company_default_is_replaced_by_the_settings_row(self):
@@ -345,7 +345,7 @@ class TestTheCompanyDefaultIsNotADeliberateChoice(unittest.TestCase):
 		with patch.object(CC, "resolve_with_source", return_value=("Dairy - KR", "herd")), patch.object(
 			CC, "company_cost_center", return_value="Main - KR"
 		):
-			self.assertEqual(CC.stamp(self._doc(rows), herd="STEAMERS"), 0)
+			self.assertEqual(CC.stamp(self._doc(rows), herd="COW PEN"), 0)
 		self.assertEqual(rows[0]["cost_center"], "Post Harvest - KR")
 
 	def test_the_company_tier_never_overwrites_anything(self):
@@ -363,7 +363,7 @@ class TestTheCompanyDefaultIsNotADeliberateChoice(unittest.TestCase):
 		with patch.object(CC, "resolve_with_source", return_value=("Dairy - KR", "herd")), patch.object(
 			CC, "company_cost_center", return_value="Main - KR"
 		):
-			self.assertEqual(CC.stamp(self._doc(rows), herd="STEAMERS"), 1)
+			self.assertEqual(CC.stamp(self._doc(rows), herd="COW PEN"), 1)
 		self.assertEqual(rows[0]["cost_center"], "Dairy - KR")
 
 
@@ -429,7 +429,7 @@ class TestTheConcentrateHasACostCentreOfItsOwn(unittest.TestCase):
 			CC, "concentrate_cost_center", side_effect=AssertionError("must not be asked")
 		):
 			self.assertEqual(
-				CC.resolve_with_source("Karen Roses", herd="STEAMERS", concentrate=True),
+				CC.resolve_with_source("Karen Roses", herd="COW PEN", concentrate=True),
 				("Dairy - KR", "herd"),
 			)
 

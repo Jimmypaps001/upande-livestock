@@ -70,7 +70,7 @@ class TestCalfRouting(IntegrationTestCase):
 
 	def test_the_two_sexes_do_not_share_a_herd(self):
 		"""Sending both to one herd puts bull calves on a ladder built for animals
-		that will one day be milked."""
+		that will one day be served."""
 		self.assertNotEqual(resolve_calf_herd("Female"), resolve_calf_herd("Male"))
 
 	def test_an_unknown_sex_falls_back_rather_than_failing(self):

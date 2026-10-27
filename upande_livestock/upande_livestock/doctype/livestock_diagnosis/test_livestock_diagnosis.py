@@ -43,10 +43,10 @@ def make_disease():
 			"doctype": "Livestock Disease",
 			"disease_name": name,
 			"category": "Infectious - Bacterial",
-			"typical_symptoms": "Swollen quarter, clots in milk",
+			"typical_symptoms": "Swollen quarter, clots and heat",
 			"typical_severity": "Moderate",
 			"standard_protocol": "Intramammary antibiotic, 3 days",
-			"expected_milk_withdrawal_days": 4,
+			"expected_meat_withdrawal_days": 4,
 			"is_zoonotic": 0,
 			"is_notifiable": 1,
 			"is_active": 1,
@@ -111,10 +111,10 @@ class TestLivestockDiagnosisDiseaseReference(IntegrationTestCase):
 		self.addCleanup(
 			lambda: (frappe.delete_doc("Livestock Diagnosis", doc.name, force=True), frappe.db.commit())
 		)
-		self.assertEqual(doc.disease_typical_symptoms, "Swollen quarter, clots in milk")
+		self.assertEqual(doc.disease_typical_symptoms, "Swollen quarter, clots and heat")
 		self.assertEqual(doc.disease_typical_severity, "Moderate")
 		self.assertEqual(doc.disease_standard_protocol, "Intramammary antibiotic, 3 days")
-		self.assertEqual(doc.disease_milk_withdrawal_days, 4)
+		self.assertEqual(doc.disease_meat_withdrawal_days, 4)
 		self.assertEqual(doc.disease_is_zoonotic, 0)
 		self.assertEqual(doc.disease_is_notifiable, 1)
 
@@ -124,7 +124,7 @@ class TestLivestockDiagnosisDiseaseReference(IntegrationTestCase):
 			"disease_typical_symptoms",
 			"disease_typical_severity",
 			"disease_standard_protocol",
-			"disease_milk_withdrawal_days",
+			"disease_meat_withdrawal_days",
 			"disease_is_zoonotic",
 			"disease_is_notifiable",
 		):

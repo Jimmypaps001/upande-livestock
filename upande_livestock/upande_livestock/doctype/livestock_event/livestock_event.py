@@ -153,59 +153,6 @@ class LivestockEvent(Document):
 			return False
 		return bool(frappe.db.get_value("Livestock Event Type", self.event_type, "creates_animal"))
 
-	def move_dam_after_calving(self):
-		"""Put the dam in the herd a fresh cow belongs to, as a real Movement.
-
-		A Movement event and not a bare db.set_value, because the move IS the
-		history: days_in_current_herd measures from the last Movement into a
-		herd, and the dry period a cow gets in Steamers is decided by the herd
-		she arrived from. A cow teleported by a field write has no arrival, so
-		both of those questions get the wrong answer for the rest of her life.
-
-		NOT DONE WHEN SHE HAS MOVED SINCE. Backdating a calving from six months
-		ago must not drag a cow out of the herd she is standing in today — she
-		may have been served, confirmed and dried off again since. The calving
-		is still recorded; only the move is skipped, and the reason is said out
-		loud rather than left as silence.
-		"""
-		from upande_livestock.serverscripts.common import herd_movement
-
-		if not self.animal:
-			return
-		destination = herd_movement.post_calving_herd()
-		if not destination:
-			return
-		current = frappe.db.get_value("Animal", self.animal, "current_herd")
-		if current == destination:
-			return
-
-		moved_since = frappe.db.exists("Livestock Event", {
-			"animal": self.animal,
-			"event_type": "Movement",
-			"docstatus": 1,
-			"event_date": [">", self.event_date],
-		})
-		if moved_since:
-			frappe.msgprint(
-				_("{0} has moved herds since {1}, so this calving leaves her where she is.").format(
-					self.animal, frappe.utils.formatdate(self.event_date)),
-				alert=True, indicator="orange")
-			return
-
-		move = frappe.new_doc("Livestock Event")
-		move.event_type = "Movement"
-		move.animal = self.animal
-		move.event_date = self.event_date
-		move.new_herd = destination
-		move.current_herd = current or ""
-		move.operator = self.operator
-		move.remarks = _("Calved on {0} — {1}").format(
-			frappe.utils.formatdate(self.event_date), self.name)
-		if self.meta.has_field("custom_is_backdated"):
-			move.custom_is_backdated = self.get("custom_is_backdated") or 0
-		move.insert(ignore_permissions=True)
-		move.submit()
-
 	def create_calf_if_needed(self):
 		"""For a Birth event with no animal yet, create the calf and point at it.
 
@@ -312,10 +259,10 @@ class LivestockEvent(Document):
 			if animal.meta.has_field("last_calving_date"):
 				animal.db_set("last_calving_date", self.event_date, update_modified=False)
 
-			# Increment lactation number
+			# Increment parity
 			if animal.meta.has_field("parity"):
-				current_lactation = animal.parity or 0
-				animal.db_set("parity", current_lactation + 1, update_modified=False)
+				current_parity = animal.parity or 0
+				animal.db_set("parity", current_parity + 1, update_modified=False)
 
 			# Create re-breeding alert
 			if self.meta.has_field("ready_for_service_date") and self.ready_for_service_date:
@@ -1050,7 +997,7 @@ class LivestockEvent(Document):
 		empty when this block asked for it and the whole thing was skipped. On this
 		site that is thirty-four confirmed diagnoses and not one service marked
 		Confirmed, which is why the farm reads as having no pregnant cows at all:
-		`carrying_animals()` keys off the SERVICE, and so do the dry-off list, the
+		`carrying_animals()` keys off the SERVICE, and so do the
 		calving list and the whole feed forecast.
 
 		ON SUBMIT, NOT ON INSERT, for a second reason: a draft diagnosis is
@@ -1209,12 +1156,6 @@ class LivestockEvent(Document):
 		self.refresh_calving_birth_count()
 		self.close_pregnancy_after_abortion()
 		self.post_stock_issue()
-		# On submit, not validate: a draft calving is somebody still typing, and
-		# moving a cow out of the dry herd on a draft is a move nothing reverses.
-		# validate also runs twice — once at insert, once at submit — which would
-		# have made the move race its own second attempt.
-		if self.event_type == "Calving":
-			self.move_dam_after_calving()
 
 	def on_cancel(self):
 		self.refresh_calving_birth_count()

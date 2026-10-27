@@ -1,7 +1,6 @@
 """The options an event screen loads carry what each event type may use.
 
-One endpoint serves several screens (breeding: service, diagnosis, heat, drying
-off), so a single `items` key cannot say which screen's list it is. The map is
+One endpoint serves several screens (breeding: service, diagnosis, heat), so a single `items` key cannot say which screen's list it is. The map is
 keyed by event type and covers every type set to post stock, so a page has its
 picker list the moment it loads; it is built by the lookup every other picker
 uses.
@@ -15,7 +14,7 @@ from upande_livestock.serverscripts.common import event_items as EI
 from upande_livestock.serverscripts.health import health_options as HO
 from upande_livestock.serverscripts.movement import event_options as EO
 
-TYPES = ("Service", "Heat Detection", "Pregnancy Diagnosis", "Drying Off", "Abortion", "Calving", "Check Up")
+TYPES = ("Service", "Heat Detection", "Pregnancy Diagnosis", "Abortion", "Calving", "Check Up")
 SCREENS = ((BO, "breeding_options"), (HO, "health_options"), (EO, "event_options"))
 
 
@@ -37,11 +36,11 @@ class TestOptionsCarryItemsByEvent(unittest.TestCase):
 		for mod, fn in SCREENS:
 			m = _map(mod, fn)
 			self.assertEqual(set(m), set(TYPES), fn)
-			self.assertEqual(m["Drying Off"][0]["value"], "ITEM-Drying Off", fn)
+			self.assertEqual(m["Calving"][0]["value"], "ITEM-Calving", fn)
 
-	def test_breeding_carries_drying_off_and_diagnosis(self):
+	def test_breeding_carries_heat_and_diagnosis(self):
 		m = _map(BO, "breeding_options")
-		self.assertEqual(m["Drying Off"][0]["value"], "ITEM-Drying Off")
+		self.assertEqual(m["Heat Detection"][0]["value"], "ITEM-Heat Detection")
 		self.assertEqual(m["Pregnancy Diagnosis"][0]["value"], "ITEM-Pregnancy Diagnosis")
 
 	def test_health_carries_check_up(self):

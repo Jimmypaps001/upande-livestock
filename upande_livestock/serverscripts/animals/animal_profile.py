@@ -39,7 +39,6 @@ MILESTONES = {
 	"Pregnancy Diagnosis": ("confirmed", "Checked"),
 	"Calving": ("calving", "Calved"),
 	"Abortion": ("abortion", "Lost the pregnancy"),
-	"Drying Off": ("drying", "Dried off"),
 	"Check Up": ("health", "Seen"),
 	"Health Case": ("health", "Case opened"),
 	"Weight Recording": ("weight", "Weighed"),
@@ -161,10 +160,6 @@ def _kpis(name, events, a):
 		# 0% reads as a cow who has failed every service.
 		"conceptionRate": round(conceptions * 100.0 / services) if services else None,
 		"calvingInterval": interval,
-		# Per-animal milk is not recorded on this farm — Milk Recording is per
-		# herd per session — so these stay null rather than inventing a share.
-		"lactationYield": None,
-		"yieldIndex": None,
 		"treatments": treatments,
 	}
 
@@ -205,8 +200,8 @@ def _spells(a, events):
 	Movement put her. 64 animals on this site stand in a herd their movement
 	history does not account for — the register load and the holding-herd sweep
 	wrote `current_herd` directly, so the moves were never recorded. Drawing the
-	band from the last move would show a cow in Lactating group 1 while she is
-	standing in STEAMERS. The band says where she is and `unrecorded` says the
+	band from the last move would show a cow in one herd while she is
+	standing in another. The band says where she is and `unrecorded` says the
 	move behind it was never written down, so the gap is visible rather than
 	papered over.
 	"""

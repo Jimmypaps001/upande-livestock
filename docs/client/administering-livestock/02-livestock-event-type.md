@@ -34,12 +34,10 @@ the event date, so back-dated entries file under the year they happened.
 | **Check Up** | | DRUGS | Livestock Diagnosis |
 | Dehorning | | | |
 | **Deworming** | | DRUGS | |
-| **Drying Off** | | DRUGS | |
 | Feeding | | | |
 | Health Case | | | Livestock Health Case |
 | Heat Detection | | | |
 | Hoof Trimming | | | |
-| Milking | | | |
 | Movement | | | |
 | Pregnancy Diagnosis | | | |
 | **Service** | | Dairy Semen | |
@@ -93,7 +91,7 @@ one.
 This catches people out, so it is worth stating plainly.
 
 **Creates a Livestock Event:** everything booked from the Operations tabs for
-movement, drying off, calving and births, service, pregnancy diagnosis,
+movement, calving and births, service, pregnancy diagnosis,
 abortion, husbandry, heat detection — plus feeding (raised herd-level), and
 check-ups and health cases via `detail_doctype`.
 
@@ -101,7 +99,6 @@ check-ups and health cases via `detail_doctype`.
 
 | Doctype | Consequence |
 |---|---|
-| `Milk Recording` | Milkings are not on the animal or herd timeline |
 | `Livestock Weight Record` | Weighings are not on the timeline, and the minimum-interval guard never fires |
 | `Livestock Disposal` | The disposal itself is not an event, though its effects on the animal are permanent |
 

@@ -18,8 +18,7 @@ and the herd is pointed at the new one.
 A RECIPE IS ITS LINES AND ITS OUTPUT. `_engine` reads `per_head =
 flt(bom.quantity)` and scales the entire run by it, so two BOMs with identical
 lines and quantities of 1 and 100 make runs that differ by a hundredfold. Both
-halves are therefore part of what "the same recipe" means — see
-`build_feed_rations` for what happens when they disagree.
+halves are therefore part of what "the same recipe" means.
 
 The output is the sum of the lines, not a free parameter. One run of a herd's
 BOM makes one animal's ration for one day; the lines are the per-head amounts;

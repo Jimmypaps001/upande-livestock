@@ -63,9 +63,10 @@ NEW_ROLES = (
 	"Livestock Vet",
 	"Livestock Breeder",
 	"Livestock Attendant",
-	"Livestock Milker",
 	"Livestock Stores",
 )
+# "Livestock Milker" was the sixth role. The beef app does not milk and
+# remove_milking deletes the role, so it is no longer created here.
 
 # Evidence-led assignment. See the module docstring for what each is based on.
 ASSIGNMENTS = {

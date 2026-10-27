@@ -76,7 +76,6 @@ LIVESTOCK_ROLES = (
 	"Livestock Vet",
 	"Livestock Breeder",
 	"Livestock Attendant",
-	"Livestock Milker",
 	"Livestock Stores",
 )
 

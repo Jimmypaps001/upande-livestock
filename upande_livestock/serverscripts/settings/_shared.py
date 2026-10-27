@@ -53,10 +53,6 @@ NUMERIC_FIELDTYPES = frozenset({"Int", "Float", "Percent", "Currency"})
 POSTING_LINKS = frozenset(
 	{
 		"custom_feed_wip_warehouse",
-		"custom_milk_target_warehouse",
-		"custom_milk_discard_warehouse",
-		"custom_milk_item",
-		"custom_milking_stock_entry_type",
 		"semen_item",
 		"custom_default_company",
 		"custom_default_credit_account",

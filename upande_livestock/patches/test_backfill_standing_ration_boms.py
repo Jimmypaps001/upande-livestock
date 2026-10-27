@@ -130,11 +130,11 @@ class TestBackfillStandingRationBoms(IntegrationTestCase):
 		self.assertEqual(got.custom_ration_kind, "Standing")
 
 	def test_a_shared_bom_with_only_one_herd_ever_fed_resolves_to_that_herd(self):
-		"""The real case on kaitet.local: BOM-Dry/Steamers/Incalf Heifers-012
-		is the standing ration for both INCALF HEIFERS and STEAMERS, but only
+		"""The real case on kaitet.local: BOM-Cows/Incalf Heifers-012
+		is the standing ration for both INCALF HEIFERS and COW PEN, but only
 		INCALF HEIFERS has ever actually been fed it."""
-		bom_name = "BOM-Dry/Steamers/Incalf Heifers-012"
-		herds = ["INCALF HEIFERS", "STEAMERS"]
+		bom_name = "BOM-Cows/Incalf Heifers-012"
+		herds = ["INCALF HEIFERS", "COW PEN"]
 		if frappe.db.get_value("Herds", herds[0], "bom") != bom_name or frappe.db.get_value(
 			"Herds", herds[1], "bom"
 		) != bom_name:

@@ -46,11 +46,7 @@
   "tab_dairy",
   "custom_dairy_section",
   "custom_feed_wip_warehouse",
-  "custom_milk_item",
-  "custom_milking_stock_entry_type",
-  "custom_dairy_col",
-  "custom_milk_target_warehouse",
-  "custom_milk_discard_warehouse",
+  "custom_concentrate_cover_days",
   "sb_feed_sources",
   "feed_source_warehouses",
   "sb_concentrates",
@@ -65,7 +61,6 @@
   "custom_si_farm",
   "custom_disposal_farm",
   "cb_business",
-  "custom_milk_business_unit",
   "custom_disposal_business_unit",
   "custom_animal_sale_item",
   "sb_account_mapping",
@@ -75,16 +70,12 @@
   "cb_account_mapping",
   "custom_vet_expense_account",
   "custom_feed_expense_account",
-  "custom_milk_income_account",
   "sb_insurance",
   "custom_insurance_receivable_account",
   "custom_insurance_income_account",
   "cb_insurance",
   "custom_default_payout_percent",
-  "sb_milk_price",
-  "custom_default_milk_price",
-  "custom_milk_price_per_kg",
-  "cb_milk_price",
+  "sb_colostrum",
   "custom_colostrum_item",
   "custom_colostrum_warehouse",
   "tab_stock",
@@ -107,55 +98,20 @@
   "growth_ladder",
   "sb_first_pregnancy",
   "incalf_heifer_herd",
-  "cb_first_pregnancy",
-  "heifer_dry_off_before_calving_days",
-  "sb_lactation",
-  "milking_herds",
+  "sb_breeding_herds",
   "heifer_herds",
   "in_calf_herds",
   "calf_herds",
-  "high_yield_herd",
-  "post_calving_herd",
-  "high_yield_days_from_conception",
   "max_open_days",
-  "cb_lactation",
-  "low_yield_herd",
-  "low_yield_days",
-  "sb_steamers",
-  "drying_off_herd",
-  "steamer_herd",
-  "steamer_days_from_heifers",
-  "cb_steamers",
-  "steamer_days_from_lactation",
   "sb_backdating",
   "custom_backdating_open",
-  "allow_offline_milking_grace",
-  "sb_milk_quality",
-  "custom_milk_quality_capture",
-  "custom_quality_required_at_milking",
-  "cb_milk_quality",
-  "custom_quality_required_in_lab",
-  "custom_quality_scc_ceiling",
-  "custom_concentrate_cover_days",
   "tab_targets",
-  "sb_production_targets",
-  "custom_target_prod_group1",
-  "custom_target_prod_group2",
-  "custom_target_prod_group3",
-  "custom_target_prod_average",
-  "cb_production_targets",
-  "custom_target_mafc_group1",
-  "custom_target_mafc_group2",
-  "custom_target_mafc_group3",
   "sb_fertility_targets",
-  "custom_target_dim",
   "custom_target_calving_interval",
   "custom_target_first_insem",
   "custom_target_days_open",
   "cb_fertility_targets",
   "custom_target_straws_per_preg",
-  "custom_target_preg_100dim",
-  "custom_target_not_preg_200dim",
   "sb_youngstock_targets",
   "custom_target_growth_gday",
   "sb_calf_feeding",
@@ -403,50 +359,18 @@
   {
    "fieldname": "tab_dairy",
    "fieldtype": "Tab Break",
-   "label": "Dairy & Accounts"
+   "label": "Feed & Accounts"
   },
   {
    "fieldname": "custom_dairy_section",
    "fieldtype": "Section Break",
-   "label": "Feed & Milk Stock"
+   "label": "Feed Stock"
   },
   {
    "description": "Store where manufactured feed (TMR) is produced and held.",
    "fieldname": "custom_feed_wip_warehouse",
    "fieldtype": "Link",
    "label": "Feed WIP / Store Warehouse",
-   "options": "Warehouse"
-  },
-  {
-   "description": "Stock item representing raw milk.",
-   "fieldname": "custom_milk_item",
-   "fieldtype": "Link",
-   "label": "Milk Item",
-   "options": "Item"
-  },
-  {
-   "default": "Milking",
-   "fieldname": "custom_milking_stock_entry_type",
-   "fieldtype": "Link",
-   "label": "Milking Stock Entry Type",
-   "options": "Stock Entry Type"
-  },
-  {
-   "fieldname": "custom_dairy_col",
-   "fieldtype": "Column Break"
-  },
-  {
-   "description": "Warehouse net sellable milk is posted into.",
-   "fieldname": "custom_milk_target_warehouse",
-   "fieldtype": "Link",
-   "label": "Milk Target Warehouse",
-   "options": "Warehouse"
-  },
-  {
-   "description": "Warehouse discarded/withheld milk is posted into.",
-   "fieldname": "custom_milk_discard_warehouse",
-   "fieldtype": "Link",
-   "label": "Milk Discard Warehouse",
    "options": "Warehouse"
   },
   {
@@ -521,7 +445,7 @@
    "options": "Cost Center"
   },
   {
-   "description": "Charged for feed, milk, drug and husbandry stock movements when the herd names no cost centre of its own. One row per company — the dairy and the flower side do not share a centre. ERPNext refuses a stock entry outright when the item's expense account is a P&amp;L one and no cost centre can be found.",
+   "description": "Charged for feed, drug and husbandry stock movements when the herd names no cost centre of its own. One row per company — one company's centre is not another's. ERPNext refuses a stock entry outright when the item's expense account is a P&amp;L one and no cost centre can be found.",
    "fieldname": "custom_company_cost_centers",
    "fieldtype": "Table",
    "label": "Default Cost Centres by Company",
@@ -601,7 +525,7 @@
    "options": "Herd Growth Stage"
   },
   {
-   "description": "Where a served heifer waits out her first pregnancy. She gives no milk yet, which is why this herd is separate from the lactation groups.",
+   "description": "Where a served heifer waits out her first pregnancy.",
    "fieldname": "sb_first_pregnancy",
    "fieldtype": "Section Break",
    "label": "C · First Pregnancy"
@@ -614,102 +538,17 @@
    "options": "Herds"
   },
   {
-   "fieldname": "cb_first_pregnancy",
-   "fieldtype": "Column Break"
-  },
-  {
-   "default": "90",
-   "description": "3 months for a first pregnancy. Counted back from the calving date, which is the service date plus Gestation Period (General tab).",
-   "fieldname": "heifer_dry_off_before_calving_days",
-   "fieldtype": "Int",
-   "label": "Leaves for Steamers (days before calving)"
-  },
-  {
    "description": "After her first calving a cow never returns to the growth ladder. She cycles between these herds for the rest of her productive life.",
-   "fieldname": "sb_lactation",
+   "fieldname": "sb_breeding_herds",
    "fieldtype": "Section Break",
-   "label": "D · Lactation Cycle"
-  },
-  {
-   "fieldname": "high_yield_herd",
-   "fieldtype": "Link",
-   "label": "High Yield Herd",
-   "options": "Herds"
-  },
-  {
-   "description": "Where a cow goes the moment she calves. Falls back to High Yield Herd when blank.",
-   "fieldname": "post_calving_herd",
-   "fieldtype": "Link",
-   "label": "Herd After Calving",
-   "options": "Herds"
-  },
-  {
-   "default": "120",
-   "description": "4 months from conception, then she steps down to the low yield herd.",
-   "fieldname": "high_yield_days_from_conception",
-   "fieldtype": "Int",
-   "label": "Milked After Conceiving (days)"
+   "label": "D · Breeding Herds"
   },
   {
    "default": "200",
-   "description": "A cow that has not conceived in this many days has expired from the high yield herd on productivity grounds.",
+   "description": "A cow that has not conceived in this many days is flagged as open too long.",
    "fieldname": "max_open_days",
    "fieldtype": "Int",
    "label": "Maximum Open Days"
-  },
-  {
-   "fieldname": "cb_lactation",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "low_yield_herd",
-   "fieldtype": "Link",
-   "label": "Low Yield Herd",
-   "options": "Herds"
-  },
-  {
-   "default": "60",
-   "description": "2 months. Fixed — it does not vary with yield or anything else.",
-   "fieldname": "low_yield_days",
-   "fieldtype": "Int",
-   "label": "Days in Low Yield Herd"
-  },
-  {
-   "description": "Two streams meet here, and how long an animal stays depends on which one it came from — so the duration belongs to the route, not to the herd.",
-   "fieldname": "sb_steamers",
-   "fieldtype": "Section Break",
-   "label": "Steamers · the dry herd"
-  },
-  {
-   "fieldname": "drying_off_herd",
-   "fieldtype": "Link",
-   "label": "Drying Off Herd",
-   "options": "Herds",
-   "description": "Where a cow goes when she is dried off. Offered as the destination on the drying-off screen, and a different choice is warned about rather than refused — a farm moves a cow somewhere else for reasons the app does not know. Left empty, the Steamer Herd below is used."
-  },
-  {
-   "fieldname": "steamer_herd",
-   "fieldtype": "Link",
-   "label": "Steamer Herd",
-   "options": "Herds"
-  },
-  {
-   "default": "90",
-   "description": "A first-time heifer arrives with 3 months to calving.",
-   "fieldname": "steamer_days_from_heifers",
-   "fieldtype": "Int",
-   "label": "Dry Days · arriving from Incalf Heifers"
-  },
-  {
-   "fieldname": "cb_steamers",
-   "fieldtype": "Column Break"
-  },
-  {
-   "default": "60",
-   "description": "A cow arrives with 2 months to calving.",
-   "fieldname": "steamer_days_from_lactation",
-   "fieldtype": "Int",
-   "label": "Dry Days · arriving from Low Yield"
   },
   {
    "fieldname": "sb_backdating",
@@ -722,51 +561,6 @@
    "fieldname": "custom_backdating_open",
    "fieldtype": "Check",
    "label": "Backdating Open"
-  },
-  {
-   "default": "0",
-   "description": "When on, a milking recorded on the phone without signal is accepted if it syncs the next day, even with Backdating Open off. The record shows who posted it. Off: such a milking is refused like any backdated record.",
-   "fieldname": "allow_offline_milking_grace",
-   "fieldtype": "Check",
-   "label": "Allow offline milkings to sync one day late"
-  },
-  {
-   "fieldname": "sb_milk_quality",
-   "fieldtype": "Section Break",
-   "label": "Milk Quality"
-  },
-  {
-   "default": "At milking",
-   "description": "At milking puts the lab fields on the milking form. Afterwards hides them there and collects them on the Quality page instead.",
-   "fieldname": "custom_milk_quality_capture",
-   "fieldtype": "Select",
-   "label": "Milk Quality Captured",
-   "options": "At milking\nAfterwards"
-  },
-  {
-   "depends_on": "eval:doc.custom_milk_quality_capture=='At milking'",
-   "description": "Refuse a milking recorded from the desk with no lab figures. The handset is never blocked — it flags the recording as awaiting quality instead.",
-   "fieldname": "custom_quality_required_at_milking",
-   "fieldtype": "Check",
-   "label": "Quality Required At Milking"
-  },
-  {
-   "fieldname": "cb_milk_quality",
-   "fieldtype": "Column Break"
-  },
-  {
-   "default": "1",
-   "description": "Keep a recording on the Quality page until its lab figures are in. Off, the page still lists them but nothing chases.",
-   "fieldname": "custom_quality_required_in_lab",
-   "fieldtype": "Check",
-   "label": "Quality Required In The Lab Step"
-  },
-  {
-   "default": "400",
-   "description": "Above this a reading is called out on the Quality page. 0 turns the check off.",
-   "fieldname": "custom_quality_scc_ceiling",
-   "fieldtype": "Float",
-   "label": "Bulk Tank SCC Ceiling (× 1000)"
   },
   {
    "default": "7",
@@ -808,7 +602,7 @@
    "fieldname": "sb_business",
    "fieldtype": "Section Break",
    "label": "Business & Farm",
-   "description": "Where livestock sales and milk are booked."
+   "description": "Where livestock sales are booked."
   },
   {
    "fieldname": "custom_farm",
@@ -831,12 +625,6 @@
   {
    "fieldname": "cb_business",
    "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "custom_milk_business_unit",
-   "fieldtype": "Link",
-   "label": "Milk Business Unit",
-   "options": "Business Unit"
   },
   {
    "fieldname": "custom_disposal_business_unit",
@@ -892,12 +680,6 @@
    "options": "Account"
   },
   {
-   "fieldname": "custom_milk_income_account",
-   "fieldtype": "Link",
-   "label": "Milk Income Account",
-   "options": "Account"
-  },
-  {
    "fieldname": "sb_insurance",
    "fieldtype": "Section Break",
    "label": "Insurance & Claims"
@@ -925,24 +707,9 @@
    "description": "Used for a claim when its policy names no payout percentage."
   },
   {
-   "fieldname": "sb_milk_price",
+   "fieldname": "sb_colostrum",
    "fieldtype": "Section Break",
-   "label": "Milk Price & Colostrum"
-  },
-  {
-   "fieldname": "custom_default_milk_price",
-   "fieldtype": "Currency",
-   "label": "Default Milk Price (KES/kg)"
-  },
-  {
-   "fieldname": "custom_milk_price_per_kg",
-   "fieldtype": "Currency",
-   "label": "Milk Price per kg (KES)",
-   "description": "For revenue in KPI figures."
-  },
-  {
-   "fieldname": "cb_milk_price",
-   "fieldtype": "Column Break"
+   "label": "Colostrum"
   },
   {
    "fieldname": "custom_colostrum_item",
@@ -962,58 +729,9 @@
    "label": "Targets"
   },
   {
-   "fieldname": "sb_production_targets",
-   "fieldtype": "Section Break",
-   "label": "Production Targets (kg/cow/day)"
-  },
-  {
-   "fieldname": "custom_target_prod_group1",
-   "fieldtype": "Float",
-   "label": "Group 1 Target (kg/cow/day)"
-  },
-  {
-   "fieldname": "custom_target_prod_group2",
-   "fieldtype": "Float",
-   "label": "Group 2 Target (kg/cow/day)"
-  },
-  {
-   "fieldname": "custom_target_prod_group3",
-   "fieldtype": "Float",
-   "label": "Group 3 Target (kg/cow/day)"
-  },
-  {
-   "fieldname": "custom_target_prod_average",
-   "fieldtype": "Float",
-   "label": "Average Target (kg/cow/day)"
-  },
-  {
-   "fieldname": "cb_production_targets",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "custom_target_mafc_group1",
-   "fieldtype": "Currency",
-   "label": "MAFC Group 1 Target (KES)"
-  },
-  {
-   "fieldname": "custom_target_mafc_group2",
-   "fieldtype": "Currency",
-   "label": "MAFC Group 2 Target (KES)"
-  },
-  {
-   "fieldname": "custom_target_mafc_group3",
-   "fieldtype": "Currency",
-   "label": "MAFC Group 3 Target (KES)"
-  },
-  {
    "fieldname": "sb_fertility_targets",
    "fieldtype": "Section Break",
    "label": "Fertility Targets"
-  },
-  {
-   "fieldname": "custom_target_dim",
-   "fieldtype": "Int",
-   "label": "DIM Target (days)"
   },
   {
    "fieldname": "custom_target_calving_interval",
@@ -1038,16 +756,6 @@
    "fieldname": "custom_target_straws_per_preg",
    "fieldtype": "Float",
    "label": "Straws per Pregnancy Target"
-  },
-  {
-   "fieldname": "custom_target_preg_100dim",
-   "fieldtype": "Percent",
-   "label": "% Pregnant at 100 DIM Target"
-  },
-  {
-   "fieldname": "custom_target_not_preg_200dim",
-   "fieldtype": "Percent",
-   "label": "% Not Pregnant at 200 DIM Target"
   },
   {
    "fieldname": "sb_youngstock_targets",
@@ -1094,13 +802,6 @@
    "label": "Weaning Complete (days)"
   },
   {
-   "fieldname": "milking_herds",
-   "fieldtype": "Table",
-   "label": "Milking Herds",
-   "options": "Livestock Milking Herd",
-   "description": "The herds that are milked. The milking screens offer these herds and their cows, and the mobile app marks them as milking herds."
-  },
-  {
    "fieldname": "heifer_herds",
    "fieldtype": "Table",
    "label": "Heifer herds",
@@ -1112,7 +813,7 @@
    "fieldtype": "Table",
    "label": "In-calf herds",
    "options": "Livestock In-calf Herd",
-   "description": "The herds where in-calf animals go (for example the bullying heifers and the steamers). The mobile app's In-calf filter shows only the animals in these herds."
+   "description": "The herds where in-calf animals go. The mobile app's In-calf filter shows only the animals in these herds."
   },
   {
    "fieldname": "calf_herds",
@@ -1176,10 +877,6 @@
    "share": 1,
    "submit": 1,
    "write": 1
-  },
-  {
-   "read": 1,
-   "role": "Livestock Milker"
   },
   {
    "read": 1,

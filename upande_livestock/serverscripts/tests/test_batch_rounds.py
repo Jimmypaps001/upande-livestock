@@ -45,7 +45,7 @@ class TestAWeighingIsAMorningNotAMoment(IntegrationTestCase):
 		self.cows = ["WEIGH-BATCH-1", "WEIGH-BATCH-2", "WEIGH-BATCH-3"]
 		for tag in self.cows:
 			_tidy(tag)
-			_make_cow(tag, herd="Lactating group 1")
+			_make_cow(tag, herd="Breeding Cows")
 			self.addCleanup(_tidy, tag)
 		self.who = _employee()
 
@@ -145,7 +145,7 @@ class TestAPenIsWeighedTogether(IntegrationTestCase):
 		self.cows = ["WEIGH-PEN-1", "WEIGH-PEN-2", "WEIGH-PEN-3", "WEIGH-PEN-4"]
 		for tag in self.cows:
 			_tidy(tag)
-			_make_cow(tag, herd="Lactating group 1")
+			_make_cow(tag, herd="Breeding Cows")
 			self.addCleanup(_tidy, tag)
 		self.who = _employee()
 
@@ -214,7 +214,7 @@ class TestAPenIsWeighedTogether(IntegrationTestCase):
 
 class TestADrugRoundIsAHerdThroughACrush(IntegrationTestCase):
 	def setUp(self):
-		self.herd = "Lactating group 1"
+		self.herd = "Breeding Cows"
 		self.cows = ["ROUND-DOSE-1", "ROUND-DOSE-2"]
 		for tag in self.cows:
 			_tidy(tag)
@@ -235,8 +235,8 @@ class TestADrugRoundIsAHerdThroughACrush(IntegrationTestCase):
 		"""A withdrawal date is a fact about a cow, not about a pen.
 
 		The round is batched for the person at the crush; the record is not,
-		because 'this pen was dosed' cannot tell you in six days which cow's
-		milk may go in the tank.
+		because 'this pen was dosed' cannot tell you in six days which cow
+		may go to slaughter.
 		"""
 		create_husbandry_event({
 			"event_type": "Hoof Trimming",

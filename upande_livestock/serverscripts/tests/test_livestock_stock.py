@@ -5,8 +5,8 @@
 
 That is the property these tests defend, one flow at a time: vaccination and
 deworming issue their drug rows, a health case issues its treatments, a ticked
-service issues the straw on its items table (an unticked one issues nothing). Milking and feeding already posted theirs and are covered by
-their own modules.
+service issues the straw on its items table (an unticked one issues nothing). Feeding already posts its own and is covered by
+its own module.
 
 These tests need stock to draw down. The drug store is the Vaccination event
 type's Default Store and a drug is an item in a group its stock rule draws on.
@@ -148,7 +148,7 @@ class TestHusbandryStockIssue(StockSeededTestCase):
 
 	def test_an_unknown_type_is_rejected(self):
 		res = create_husbandry_event(
-			{"event_type": "Milking", "animal": self.cow.name, "operator": _employee()}
+			{"event_type": "Weight Recording", "animal": self.cow.name, "operator": _employee()}
 		)
 		self.assertFalse(res.get("ok"))
 

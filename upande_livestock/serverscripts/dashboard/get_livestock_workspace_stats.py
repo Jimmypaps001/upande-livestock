@@ -1,5 +1,4 @@
-"""The Overview dashboard's single payload: KPIs, the 30-day milk chart,
-top herds and herd tiles.
+"""The Overview dashboard's single payload: KPIs and herd tiles.
 
 One call on load, so the block renders from one response. Every read is
 defensive — thin data degrades to zeros rather than an error. Read-guarded on

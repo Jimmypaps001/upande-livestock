@@ -2,8 +2,8 @@
 
 Read-guarded on Livestock Event.
 
-`animals` is everyone; the two narrowed lists beside it are who a drying off and
-a calving may actually be recorded against. They are separate keys rather than a
+`animals` is everyone; the narrowed list beside it is who a calving may
+actually be recorded against. It is a separate key rather than a
 replacement because the general list still has honest uses — a movement is not a
 breeding event — and because a screen that silently swapped its list would leave
 nobody able to say why a cow had gone missing from it."""
@@ -44,20 +44,13 @@ def event_options():
 				choice["due"] = row.get("due")
 				choice["days_to_calving"] = row.get("days_to_calving")
 				choice["ready"] = bool(row.get("ready"))
-				if "dried_off" in row:
-					choice["dried_off"] = row["dried_off"]
 			return chosen
 
 		return {
 			"ok": True,
 			"animals": animal_choices(animals, labels),
-			# Cows in calf, still in milk, and inside the farm's dry-off window.
-			"dry_off_animals": narrowed(herd_movement.dry_off_candidates()),
-			# Cows in calf, dried off, and near their date.
+			# Cows in calf and near their date.
 			"calving_animals": narrowed(herd_movement.calving_candidates()),
-			# Where the farm says a dried-off cow goes. The screen offers it and
-			# warns about anything else rather than refusing it.
-			"dry_off_herd": herd_movement.dry_off_destination()["herd"],
 			"herds": [{"name": n, "label": l} for n, l in sorted(labels.items(), key=lambda x: x[1])],
 			"calving_outcomes": select_options("Livestock Event", "custom_calving_outcome")
 			or ["Live Birth", "Still Birth"],

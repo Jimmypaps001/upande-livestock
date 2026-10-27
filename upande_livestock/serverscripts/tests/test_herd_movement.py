@@ -3,14 +3,9 @@
 
 """What the herd movement rules promise.
 
-The two that matter most, because getting either wrong is invisible until an
-animal is in the wrong place:
-
-  * days come from settings, not from a herd's name — a farm that renames "2-4"
-    must not change how long its calves stay there;
-  * Steamers' duration belongs to the ROUTE. A first-time heifer arrives with
-    three months to calving and a cow from the low-yield herd with two, so
-    asking the herd alone would give one answer where two are needed.
+Days come from settings, not from a herd's name — a farm that renames "2-4"
+must not change how long its calves stay there. Getting that wrong is invisible
+until an animal is in the wrong place.
 """
 
 import unittest
@@ -66,34 +61,6 @@ class TestGrowthLadder(IntegrationTestCase):
 		if not animal:
 			raise unittest.SkipTest("no animal in the service rung")
 		self.assertIsNone(hm.growth_move_due(animal))
-
-
-class TestSteamersRoute(IntegrationTestCase):
-	"""The dry herd takes two streams with different dry periods."""
-
-	def test_a_heifer_gets_the_longer_dry_period(self):
-		s = hm.settings()
-		if not s.get("incalf_heifer_herd"):
-			raise unittest.SkipTest("no incalf heifer herd configured")
-		self.assertEqual(hm.steamer_days_for(s.get("incalf_heifer_herd")),
-		                 int(s.get("steamer_days_from_heifers")))
-
-	def test_a_cow_from_the_low_yield_herd_gets_the_shorter_one(self):
-		s = hm.settings()
-		self.assertEqual(hm.steamer_days_for(s.get("low_yield_herd")),
-		                 int(s.get("steamer_days_from_lactation")))
-
-	def test_the_two_routes_differ(self):
-		"""If they were the same the distinction would be decoration."""
-		s = hm.settings()
-		if not (s.get("steamer_days_from_heifers") and s.get("steamer_days_from_lactation")):
-			raise unittest.SkipTest("steamer durations not configured")
-		self.assertNotEqual(int(s.get("steamer_days_from_heifers")),
-		                    int(s.get("steamer_days_from_lactation")))
-
-	def test_an_unknown_origin_falls_back_to_the_lactation_route(self):
-		s = hm.settings()
-		self.assertEqual(hm.steamer_days_for(None), int(s.get("steamer_days_from_lactation")))
 
 
 class TestCalfIntake(IntegrationTestCase):
@@ -199,17 +166,7 @@ class TestEligibility(IntegrationTestCase):
 			self.assertTrue(all(h["is_in_calf"] == (h["name"] == "IC-A") for h in herds))
 			self.assertTrue(all(h["is_calf"] == (h["name"] == "C-A") for h in herds))
 
-	def test_milking_offers_only_the_lactation_groups(self):
-		s = hm.settings()
-		herds = hm.milking_herds()
-		if not herds:
-			raise unittest.SkipTest("lactation herds not configured")
-		self.assertIn(s.get("high_yield_herd"), herds)
-		self.assertIn(s.get("low_yield_herd"), herds)
-		for rung in hm.growth_ladder():
-			self.assertNotIn(rung["herd"], herds, "a growth herd is never in milk")
-
-	def test_service_offers_the_top_rung_and_cows_in_milk(self):
+	def test_service_offers_the_top_rung_only(self):
 		herds = hm.service_herds()
 		rungs = hm.growth_ladder()
 		if not (herds and rungs):
@@ -218,26 +175,25 @@ class TestEligibility(IntegrationTestCase):
 		for rung in rungs[:-1]:
 			self.assertNotIn(rung["herd"], herds, "a young calf is never offered for service")
 
-	def test_a_calf_is_neither_milkable_nor_servable(self):
+	def test_a_calf_is_not_servable(self):
 		rungs = hm.growth_ladder()
 		if not rungs:
 			raise unittest.SkipTest("no ladder")
 		animal = frappe.db.get_value("Animal", {"current_herd": rungs[0]["herd"]}, "name")
 		if not animal:
 			raise unittest.SkipTest("no animal in the first herd")
-		self.assertFalse(hm.is_milkable(animal))
 		self.assertFalse(hm.is_servable(animal))
 
 	def test_a_cow_is_not_servable_before_the_post_calving_wait(self):
 		wait = hm.service_wait_days()
 		if not wait:
 			raise unittest.SkipTest("no post-calving wait configured")
-		herds = hm.milking_herds()
+		herds = hm.service_herds()
 		animal = frappe.db.get_value(
 			"Animal", {"current_herd": ["in", herds]}, "name"
 		) if herds else None
 		if not animal:
-			raise unittest.SkipTest("no animal in a lactation herd")
+			raise unittest.SkipTest("no animal in a servable herd")
 		original = frappe.db.get_value("Animal", animal, "last_calving_date")
 		try:
 			frappe.db.set_value("Animal", animal, "last_calving_date",
@@ -256,7 +212,7 @@ class TestEligibility(IntegrationTestCase):
 class TestGestation(IntegrationTestCase):
 	def test_calving_is_gestation_after_conception(self):
 		"""Gestation comes from settings — this site runs 280 days, the standard
-		for dairy cattle, not the 270 that "nine months" rounds to."""
+		for cattle, not the 270 that "nine months" rounds to."""
 		days = int(hm.settings().get("gestation_period_days") or 0) or 270
 		self.assertEqual(
 			hm.expected_calving_date("2026-01-01"), getdate(add_days("2026-01-01", days))

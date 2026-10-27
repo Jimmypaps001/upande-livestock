@@ -178,3 +178,7 @@ upande_livestock.patches.vets_as_records
 
 # Every animal picture gets a ~240 px thumbnail for lists.
 upande_livestock.patches.thumbnail_animal_photos
+
+# Beef, not dairy: Milk Recording, the milking herds, the Milking/Drying Off
+# types, the milker role and the dairy settings go. Refuses over submitted milk data.
+upande_livestock.patches.remove_milking

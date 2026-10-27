@@ -21,19 +21,14 @@ So the app installs six named types, each with purpose `Material Issue`:
 |---|---|
 | `Vaccination` | Vaccination events |
 | `Deworming` | Deworming events |
-| `Animal Treatment` | Health case treatments **and** drying off |
+| `Animal Treatment` | Health case treatments |
 | `Animal Health Check` | Check-ups |
 | `Semen Issue` | Service |
 | `Animal Feeding` | Feed issues |
 
-Drying off shares `Animal Treatment` because sealing a dry cow's quarters *is* a
-treatment.
-
 An unknown kind falls back to the generic `Material Issue` rather than throwing —
 a new event type should not stop a drug leaving the store, only be labelled less
 precisely until someone adds it here.
-
-Milk uses its own type from Livestock Settings, defaulting to `Milking`.
 
 ## The blocking rule
 
@@ -111,32 +106,6 @@ Feeding event then fails to write, it warns rather than rolling back — undoing
 real movement to fix a timeline entry would leave the books disagreeing with the
 yard.
 
-## Milk
-
-On submitting a **Milk Recording**:
-
-1. A Stock Entry of type `Milking` receipts the milk, **posting-dated and timed to
-   the milking** so two milkings on the same day land in the right stock order
-   instead of both at midnight. Net yield goes to the target warehouse; any
-   discarded quantity goes to the discard warehouse as a second row.
-2. A revenue **Journal Entry** posts if there is revenue and both accounts
-   resolve.
-
-**Valuation:** milk has no purchase price. The item's own `valuation_rate` is
-used as standard cost; where a site has not set one, the row is flagged
-`allow_zero_valuation_rate` so the receipt still posts. Without either, ERPNext
-throws *"Valuation Rate for the Item is required"* and the whole entry is lost.
-
-**Income account resolution** follows Frappe 16's order — Item Defaults, then the
-Item Group's defaults — because `income_account` is not required on the record and
-nothing ever populated it. Before this, the revenue JE was silently skipped on
-every recording.
-
-Both postings are best-effort **and report their failure**: if the stock entry
-cannot post, the user is told the milk was recorded but no stock moved. It used
-to only write to the Error Log, so users were told "Stock Entry created" when
-nothing had moved.
-
 ## Animals as assets
 
 An animal may be capitalised (`is_capitalised`, `asset_link`, `purchase_value`).
@@ -147,12 +116,10 @@ Disposal then sells or scraps that Asset — see
 ## Checklist when stock is not moving
 
 1. Is the user's Employee linked? (`Employee.user_id`)
-2. Are the warehouses set in Livestock Settings — feed WIP, milk target, milk
-   discard, drug, semen?
-3. Is `custom_milk_item` set, and does it have a valuation rate?
-4. Is the default company set, and the credit account for milk revenue?
-5. Do the six named Stock Entry Types exist? (They are created by a patch; a site
+2. Are the warehouses set in Livestock Settings — feed WIP, drug, semen?
+3. Is the default company set, and the credit account?
+4. Do the six named Stock Entry Types exist? (They are created by a patch; a site
    that skipped it falls back to generic Material Issues.)
-6. For feed: does the herd have a BOM, and is its quantity the **per-head** amount?
-7. For feed: are the bought-in concentrates named, so the app does not try to
+5. For feed: does the herd have a BOM, and is its quantity the **per-head** amount?
+6. For feed: are the bought-in concentrates named, so the app does not try to
    manufacture something the farm buys?

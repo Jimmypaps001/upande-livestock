@@ -39,23 +39,15 @@ from upande_livestock.serverscripts.mobile._shared import digest, unchanged
 
 # The doctypes whose state this payload reflects. A change to any of them must
 # change the version, or the phone will keep serving a stale form.
-# Livestock Milking Herd: which herds are milking comes from Settings now, and a
-# herd added to or removed from that table must change what the phone holds.
-_SOURCES = ["Herds", "Livestock Milking Herd", "Livestock Event Type", "Livestock Event Type Item Group", "Employee", "Bin", "Item"]
+_SOURCES = ["Herds", "Livestock Event Type", "Livestock Event Type Item Group", "Employee", "Bin", "Item"]
 
 
-def herd_category(h, milking=(), dry=()):
+def herd_category(h):
 	"""The herd's category, worked out rather than stored.
 
-	Herds once carried a category select and "Is Milking" / "Is Dry" boxes,
-	all saying what Livestock Settings already says. Milking and dry come
-	from the settings now (herd_movement.milking_herds / dry_herds); the
-	phone still reads `category`, `is_milking` and `is_dry`.
+	Herds once carried a category select, which said what the herd's age band
+	already says; it is derived from `min_age` / `max_age` now.
 	"""
-	if h.name in milking:
-		return "Milking"
-	if h.name in dry:
-		return "Dry"
 	if h.custom_is_calf_rearing or 0 < (h.max_age or 0) <= 12:
 		return "Youngstock < 12m"
 	if (h.max_age or 0) > 12:
@@ -86,8 +78,6 @@ def get_bootstrap_bundle(version=None):
 			],
 			order_by="herd_name asc",
 		)
-		milking = set(herd_movement.milking_herds())
-		dry = set(herd_movement.dry_herds())
 		heifer = set(herd_movement.heifer_herds())
 		in_calf = set(herd_movement.in_calf_herds())
 		calf = set(herd_movement.calf_group_herds())
@@ -103,9 +93,7 @@ def get_bootstrap_bundle(version=None):
 					"name": h.name,
 					"label": labels.get(h.name, h.name),
 					"heads": int(h.number_of_animals or 0),
-					"category": herd_category(h, milking, dry),
-					"is_milking": h.name in milking,
-					"is_dry": h.name in dry,
+					"category": herd_category(h),
 					"is_heifer": h.name in heifer,
 					"is_in_calf": h.name in in_calf,
 					"is_calf": h.name in calf,

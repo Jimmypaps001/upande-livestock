@@ -7,7 +7,7 @@ The read half of `set_herd_ration`. One call rather than one per herd, because
 the editor's first question is "which herd" and a screen that fetched a ration
 only after the answer would blank and refill on every click.
 
-LINES ARE IN THE UNITS THE RECIPE IS WRITTEN IN. Hay is 1.5 kg on a lactating
+LINES ARE IN THE UNITS THE RECIPE IS WRITTEN IN. Hay is 1.5 kg on a cow
 ration and stocked in BALE at 0.07 — handing an operator "0.105 BALE" where the
 recipe says "1.5 Kilogram" is not the same fact in another unit, it is a
 fourteenth of the hay in a number they cannot check against the mixer. See

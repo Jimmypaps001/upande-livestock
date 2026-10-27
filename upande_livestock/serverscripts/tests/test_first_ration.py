@@ -15,7 +15,7 @@ so the throw is the only thing a farm with a new herd ever sees.
 THE PART THAT IS NOT OBVIOUS: `BOM.item` is `reqd=1`. ERPNext cannot store a
 recipe that is not a recipe FOR something, so "just name the ration" has to
 create an Item as well as a BOM. Every livestock BOM on this site already has
-one — `Lactating Group 1`, `TMR Calves Meal`, `Dry/Steamers/Incalf Heifers` —
+one — `Breeding Cows`, `TMR Calves Meal`, `Cows/Incalf Heifers` —
 sitting in the feed item group and named after the ration. Naming a new one
 does the same, in one step, without asking: choosing the product of a recipe
 you are in the middle of writing is not a decision to put in front of a farm.
@@ -108,13 +108,13 @@ class TestAHerdWithNoRationCanBeGivenOne(unittest.TestCase):
 			SR, "_adopt"
 		) as adopted, patch.object(SR, "_matching", return_value=None):
 			SR.set_standing_ration(
-				"Lactation Group 3 TEST HERD",
+				"Breeding Cows 3 TEST HERD",
 				[{"item_code": "Maize Germ", "qty": 2}],
 				ration_item="Fresh Calf TMR",
 			)
 		self.assertEqual(seen["named"], "Fresh Calf TMR")
 		self.assertTrue(built.called)
-		adopted.assert_called_once_with("BOM-Fresh Calf TMR-001", "Lactation Group 3 TEST HERD", None)
+		adopted.assert_called_once_with("BOM-Fresh Calf TMR-001", "Breeding Cows 3 TEST HERD", None)
 
 	def test_without_a_name_it_still_refuses(self):
 		"""Unchanged: a ration is a recipe FOR something and the farm names it.
@@ -123,12 +123,12 @@ class TestAHerdWithNoRationCanBeGivenOne(unittest.TestCase):
 		with patch.object(frappe.db, "get_value", return_value=None):
 			with self.assertRaises(frappe.ValidationError):
 				SR.set_standing_ration(
-					"Lactation Group 3 TEST HERD", [{"item_code": "Maize Germ", "qty": 2}]
+					"Breeding Cows 3 TEST HERD", [{"item_code": "Maize Germ", "qty": 2}]
 				)
 
 	def test_a_ration_still_needs_an_ingredient(self):
 		with self.assertRaises(frappe.ValidationError):
-			SR.set_standing_ration("Lactation Group 3 TEST HERD", [], ration_item="Fresh Calf TMR")
+			SR.set_standing_ration("Breeding Cows 3 TEST HERD", [], ration_item="Fresh Calf TMR")
 
 
 class TestTheConcentrateLineIsMarked(unittest.TestCase):

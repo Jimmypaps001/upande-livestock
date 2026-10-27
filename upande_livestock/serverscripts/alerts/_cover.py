@@ -13,7 +13,7 @@ and the page no longer asks anything of this.
 What survives is the one thing days genuinely answer, and it lives here with
 the alert that needs it: COVER IS COUNTED IN DAYS, NOT KILOGRAMS. "412 kg of
 calves meal" means nothing without the herd behind it — six weeks for the
-calves, two days for the milkers. A concentrate that runs out stops eight herds
+calves, two days for the cows. A concentrate that runs out stops eight herds
 at once, on a morning nobody chose, so the alert that says so keeps its
 arithmetic.
 

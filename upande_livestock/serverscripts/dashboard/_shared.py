@@ -14,7 +14,6 @@ from frappe.utils import add_days, flt, today
 from upande_livestock.serverscripts.common.animal import live_herd_count
 from upande_livestock.serverscripts.common.choices import RETIRED_STATUSES
 from upande_livestock.serverscripts.common.health_case import TREATING_STATUSES
-from upande_livestock.serverscripts.common.herd_movement import milking_herds
 
 # Chronic is a way a case ENDS (common.health_case.CLOSED_STATUSES); counting it
 # open kept every case closed as Chronic on the dashboard for good.
@@ -43,13 +42,9 @@ def _zeros() -> dict:
 		"kpis": {
 			"active_animals": 0,
 			"herds_count": 0,
-			"milk_value": 0.0,
-			"milk_date": None,
 			"health_events": 0,
 			"births": 0,
 		},
-		"milk_series": [],
-		"top_herds": [],
 		"herds": [],
 	}
 
@@ -66,17 +61,6 @@ def _build() -> dict:
 			   WHERE IFNULL(current_herd, '') != ''"""
 		)[0][0]
 	)
-
-	# ---- KPI: milk production (latest recording date total) --------------
-	milk_latest = frappe.db.sql(
-		"""SELECT recording_date, SUM(net_yield_kg)
-		   FROM `tabMilk Recording`
-		   WHERE recording_date = (SELECT MAX(recording_date) FROM `tabMilk Recording`)
-		   GROUP BY recording_date"""
-	)
-	if milk_latest:
-		k["milk_date"] = str(milk_latest[0][0])
-		k["milk_value"] = flt(milk_latest[0][1])
 
 	# ---- KPI: health events this week ------------------------------------
 	week_ago = add_days(today(), -7)
@@ -95,29 +79,6 @@ def _build() -> dict:
 		)[0][0]
 	)
 
-	# ---- Milk yield · last 30 days ---------------------------------------
-	series = frappe.db.sql(
-		"""SELECT recording_date, SUM(net_yield_kg)
-		   FROM `tabMilk Recording`
-		   WHERE recording_date >= %s
-		   GROUP BY recording_date
-		   ORDER BY recording_date""",
-		(add_days(today(), -30),),
-		as_dict=False,
-	)
-	out["milk_series"] = [{"date": str(d), "yield": flt(y)} for d, y in series]
-
-	# ---- Top Herds by yield (last 30 days) -------------------------------
-	top = frappe.db.sql(
-		"""SELECT herd, SUM(net_yield_kg) AS y
-		   FROM `tabMilk Recording`
-		   WHERE recording_date >= %s AND IFNULL(herd, '') != ''
-		   GROUP BY herd ORDER BY y DESC LIMIT 5""",
-		(add_days(today(), -30),),
-		as_dict=True,
-	)
-	out["top_herds"] = [{"name": r.herd, "yield": flt(r.y)} for r in top]
-
 	# ---- Herd tiles -------------------------------------------------------
 	herds = frappe.get_all(
 		"Herds",
@@ -125,26 +86,9 @@ def _build() -> dict:
 		order_by="number_of_animals desc",
 		limit_page_length=12,
 	)
-	# latest net-yield / cows-milked per herd, for an avg-per-cow figure
-	latest_yield = {
-		r.herd: (flt(r.net_yield_kg), flt(r.cows_milked))
-		for r in frappe.db.sql(
-			"""SELECT m.herd, m.net_yield_kg, m.cows_milked
-			   FROM `tabMilk Recording` m
-			   JOIN (SELECT herd, MAX(recording_date) rd FROM `tabMilk Recording`
-			         GROUP BY herd) x
-			     ON x.herd = m.herd AND x.rd = m.recording_date""",
-			as_dict=True,
-		)
-	}
-	# In milk = standing in a lactation group (Herd Movement settings). The old
-	# test matched "lact" against statuses that offer no such word, or a
-	# days_in_milk nothing ever set, so every tile read 0 milkers.
-	milking = set(milking_herds())
 	for h in herds:
 		hid = h["name"]
 		animals = flt(live_herd_count(hid))
-		milkers = animals if hid in milking else 0.0
 		pregnant = flt(
 			frappe.db.sql(
 				"""SELECT COUNT(*) FROM `tabAnimal`
@@ -152,15 +96,11 @@ def _build() -> dict:
 				(hid,),
 			)[0][0]
 		)
-		ny, cm = latest_yield.get(hid, (0.0, 0.0))
-		avg_yield = round(ny / cm, 1) if cm else 0.0
 		out["herds"].append(
 			{
 				"name": h.get("herd_name") or hid,
 				"animals": animals,
-				"milkers": milkers,
 				"pregnant": pregnant,
-				"avg_yield": avg_yield,
 			}
 		)
 

@@ -59,7 +59,7 @@ def health_cases(payload=None):
 			fields=["name", "animal", "animal_name", "current_herd", "case_status",
 			        "opened_date", "closed_date", "presenting_symptoms",
 			        "provisional_diagnosis", "confirmed_diagnosis", "severity",
-			        "duration_days", "production_loss_kg", "total_treatment_cost",
+			        "duration_days", "total_treatment_cost",
 			        "vet"],
 			order_by="opened_date desc, creation desc",
 			limit_page_length=PAGE,
@@ -192,7 +192,6 @@ def _counts(rows):
 		"closed": len([r for r in rows if r.case_status in CLOSED_STATUSES]),
 		"recovered": len([r for r in rows if r.case_status == "Recovered"]),
 		"died": len([r for r in rows if r.case_status in ("Died", "Culled")]),
-		"lost_kg": flt(sum(flt(r.production_loss_kg) for r in rows)),
 		"cost": flt(sum(flt(r.total_treatment_cost) for r in rows)),
 	}
 

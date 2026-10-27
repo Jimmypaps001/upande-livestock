@@ -145,7 +145,7 @@ class TestHeadCountsAgree(IntegrationTestCase):
 class TestTheNumberIsTheName(IntegrationTestCase):
 	"""Once the register has been loaded, an animal IS its number.
 
-	Skipped on a site that has not had demo/load_herd_register.py run against it,
+	Skipped on a site that has not had its register loaded,
 	because there is nothing to assert about a register that was never loaded.
 	"""
 
@@ -157,10 +157,10 @@ class TestTheNumberIsTheName(IntegrationTestCase):
 			if animal_id.parse(a.name)
 		]
 		if len(self.named) < 50:
-			raise unittest.SkipTest("register not loaded here (demo/load_herd_register.py)")
+			raise unittest.SkipTest("register not loaded here")
 
 	def test_the_letter_agrees_with_the_sex(self):
-		"""A bull in the heifer series would climb a ladder to the parlour."""
+		"""A bull in the heifer series would climb a ladder to the breeding herd."""
 		wrong = [
 			a.name for a in self.named
 			if animal_id.parse(a.name)["prefix"] != animal_id.PREFIX_BY_SEX.get(a.sex)

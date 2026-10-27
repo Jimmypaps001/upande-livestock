@@ -73,17 +73,17 @@ class TestDuplicateEventGuard(IntegrationTestCase):
 		self.addCleanup(_purge, "Animal", self.cow.name)
 		self.addCleanup(_purge_events_for, self.cow.name)
 
-	def test_a_second_same_day_drying_off_is_rejected(self):
-		first = _event(self.cow.name, "Drying Off", today())
+	def test_a_second_same_day_pregnancy_diagnosis_is_rejected(self):
+		first = _event(self.cow.name, "Pregnancy Diagnosis", today())
 		first.submit()
 		with self.assertRaises(frappe.DuplicateEntryError):
-			_event(self.cow.name, "Drying Off", today())
+			_event(self.cow.name, "Pregnancy Diagnosis", today())
 
 	def test_a_different_day_is_fine(self):
-		first = _event(self.cow.name, "Drying Off", add_days(today(), -10))
+		first = _event(self.cow.name, "Pregnancy Diagnosis", add_days(today(), -10))
 		first.submit()
-		second = _event(self.cow.name, "Drying Off", today())
-		self.assertEqual(second.event_type, "Drying Off")
+		second = _event(self.cow.name, "Pregnancy Diagnosis", today())
+		self.assertEqual(second.event_type, "Pregnancy Diagnosis")
 
 	def test_an_unguarded_type_may_repeat_in_a_day(self):
 		"""Vaccination is deliberately NOT guarded — several drugs in one visit is
@@ -95,6 +95,6 @@ class TestDuplicateEventGuard(IntegrationTestCase):
 
 	def test_a_draft_duplicate_does_not_block(self):
 		"""Only a submitted event counts — a draft is not yet a record of anything."""
-		_event(self.cow.name, "Drying Off", today())  # left in draft
-		second = _event(self.cow.name, "Drying Off", today())
-		self.assertEqual(second.event_type, "Drying Off")
+		_event(self.cow.name, "Pregnancy Diagnosis", today())  # left in draft
+		second = _event(self.cow.name, "Pregnancy Diagnosis", today())
+		self.assertEqual(second.event_type, "Pregnancy Diagnosis")

@@ -27,7 +27,7 @@ def create_pregnancy_diagnosis(payload):
 			frappe.throw(_("Select a diagnosis result."))
 		# A diagnosis answers a question a service asked. Without an open service
 		# there is nothing to diagnose, and a "Confirmed" would invent a pregnancy
-		# out of nothing — which then drives calving, herd moves and milk.
+		# out of nothing — which then drives calving and herd moves.
 		if not d.get("related_service") and not herd_movement.has_open_service(d["animal"]):
 			frappe.throw(
 				_("{0} has no service awaiting a pregnancy check. Record the service first.").format(

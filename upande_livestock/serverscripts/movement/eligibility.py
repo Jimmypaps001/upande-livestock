@@ -1,4 +1,4 @@
-"""The single answer to which herds may be milked and which animals may be served.
+"""The single answer to which animals may be served and where.
 
 One call, so a client cannot decide it differently — see the commit that
 introduced it. Read-guarded on Herds."""
@@ -15,9 +15,9 @@ def eligibility():
 
 	One call rather than several, because a mobile client on a farm network
 	should not need four round trips to work out whether it may show a cow in a
-	milking form. All of it is DERIVED from Herd Movement settings — a client
+	breeding form. All of it is DERIVED from Herd Movement settings — a client
 	that filters on its own hand-marked flags drifts the moment a herd is
-	renamed or added, which is what the app was doing with custom_is_milking.
+	renamed or added, which is what the app once did with hand-ticked herd flags.
 	"""
 
 	def go():
@@ -26,7 +26,6 @@ def eligibility():
 		ladder = herd_movement.growth_ladder()
 		return {
 			"ok": True,
-			"milking_herds": herd_movement.milking_herds(),
 			"heifer_herds": herd_movement.heifer_herds(),
 			"in_calf_herds": herd_movement.in_calf_herds(),
 			"calf_group_herds": herd_movement.calf_group_herds(),

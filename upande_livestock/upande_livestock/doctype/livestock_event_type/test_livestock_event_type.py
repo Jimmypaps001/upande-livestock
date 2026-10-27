@@ -37,7 +37,7 @@ class TestLivestockEventType(IntegrationTestCase):
 		"""
 		names = [s["name"] for s in SEED_EVENT_TYPES]
 		self.assertEqual(len(names), len(set(names)), "two seeds share a name")
-		self.assertGreaterEqual(len(SEED_EVENT_TYPES), 18)
+		self.assertGreaterEqual(len(SEED_EVENT_TYPES), 16)
 
 		# Delete two already-seeded rows and prove ensure_livestock_event_types()
 		# recreates them (with the right flags), rather than merely relying on

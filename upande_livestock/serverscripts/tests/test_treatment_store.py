@@ -192,15 +192,15 @@ class TestEachRoundPostsOnItsOwnDay(unittest.TestCase):
 		self.assertEqual([str(c["posting_date"]) for c in calls], [today()])
 
 
-class TestTheMilkSafeDate(unittest.TestCase):
+class TestTheSlaughterSafeDate(unittest.TestCase):
 	def test_it_is_the_latest_treatment_plus_its_withdrawal(self):
 		case = Case([
 			Row(treatment_date="2026-10-01", withdrawal_period_days=7),
 			Row(treatment_date="2026-10-03", withdrawal_period_days=3),
 			Row(treatment_date="2026-10-04", withdrawal_period_days=None),
 		])
-		LHC.LivestockHealthCase.recompute_milk_safe_date(case)
-		self.assertEqual(str(case.milk_safe_date), "2026-10-08")
+		LHC.LivestockHealthCase.recompute_slaughter_safe_date(case)
+		self.assertEqual(str(case.slaughter_safe_date), "2026-10-08")
 
 
 class TestCancellingGivesTheDrugsBack(unittest.TestCase):

@@ -6,8 +6,8 @@ order: 1
 
 # Using Upande Livestock
 
-This book is for the people who record the dairy's day: the herdsman feeding
-and milking, the person handling health cases, and whoever books calvings,
+This book is for the people who record the farm's day: the herdsman feeding
+and weighing, the person handling health cases, and whoever books calvings,
 services and disposals.
 
 ## Where this app lives
@@ -33,10 +33,9 @@ front end to learn. If you can reach Desk, you can do everything in this book.
 1. [The two workspaces](01-the-two-workspaces.md) — Home and Operations
 2. [The Operations screen](02-the-operations-screen.md) — recording a day's work
 3. [Animals and Herds](03-animals-and-herds.md)
-4. [Milk Recording](04-milk-recording.md)
-5. [Health — cases, treatments and drug issues](05-health.md)
-6. [Feeding](06-feeding.md)
-7. [Events — how everything is tied together](07-events.md)
+4. [Health — cases, treatments and drug issues](05-health.md)
+5. [Feeding](06-feeding.md)
+6. [Events — how everything is tied together](07-events.md)
 
 ## Two rules that explain most surprises
 

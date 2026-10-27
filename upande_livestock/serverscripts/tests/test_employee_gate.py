@@ -20,7 +20,6 @@ from upande_livestock.serverscripts.common import guards
 from upande_livestock.serverscripts.common.envelope import LIVESTOCK_ROLES, guard, guard_stock
 from upande_livestock.serverscripts.mobile.record_animal_event import record_animal_event
 from upande_livestock.serverscripts.mobile.record_feeding import record_feeding
-from upande_livestock.serverscripts.mobile.record_milking import record_milking
 from upande_livestock.serverscripts.settings.posting_day import posting_day
 
 PREFIX = "zz-gate-"
@@ -104,11 +103,6 @@ class TestNonEmployeeIsViewOnly(_AsUser):
 			self.assertEqual(out.get("code"), "not_employee", out)
 			self.assertEqual(out["error"], guards.NOT_EMPLOYEE)
 
-	def test_milking_has_its_own_words(self):
-		out = record_milking({"herd": "x", "total_yield_kg": 1})
-		self.assertEqual(out["error"], "You're not registered as an employee, so you can't record milkings.")
-		self.assertEqual(out["code"], "not_employee")
-
 	def test_the_shared_guard_is_where_it_lives(self):
 		with self.assertRaises(guards.NotEmployee):
 			guard("Livestock Event")
@@ -122,19 +116,19 @@ class TestNonEmployeeIsViewOnly(_AsUser):
 
 
 class TestAnEmployeePassesTheGate(_AsUser):
-	def test_milker_with_employee_is_not_stopped_by_the_gate(self):
-		email = _user("Livestock Milker")
+	def test_attendant_with_employee_is_not_stopped_by_the_gate(self):
+		email = _user("Livestock Attendant")
 		frappe.db.commit()
 		frappe.set_user(email)
 		out = posting_day()
 		self.assertTrue(out["is_employee"])
 		self.assertTrue(out["employee"])
 		self.assertTrue(out["employee_name"])
-		res = record_milking({"herd": "no such herd", "total_yield_kg": 1})
+		res = record_animal_event({"type": "Heat Detection", "animal": "x", "event_date": "2026-01-01"})
 		self.assertNotEqual(res.get("code"), "not_employee")
 
 	def test_a_left_employee_does_not_count(self):
-		email = _user("Livestock Milker")
+		email = _user("Livestock Attendant")
 		frappe.db.set_value("Employee", {"user_id": email}, "status", "Left")
 		frappe.set_user(email)
 		self.assertFalse(guards.employee_status()["is_employee"])
@@ -156,7 +150,7 @@ class TestEachRoleHasWhatItsScreensRead(_AsUser):
 	def test_employee_lookup_goes_through_the_server(self):
 		from upande_livestock.serverscripts.people.employee_options import employee_options
 
-		email = _user("Livestock Milker")
+		email = _user("Livestock Attendant")
 		frappe.db.commit()
 		frappe.set_user(email)
 		out = employee_options({})
@@ -167,7 +161,7 @@ class TestEachRoleHasWhatItsScreensRead(_AsUser):
 	def test_stock_is_booked_by_stores_and_managers_only(self):
 		for role, allowed in (
 			("Livestock Stores", True), ("Livestock Manager", True),
-			("Livestock Milker", False), ("Livestock Attendant", False),
+			("Livestock Attendant", False),
 			("Livestock Breeder", False), ("Livestock Vet", False),
 		):
 			frappe.set_user("Administrator")
@@ -180,7 +174,6 @@ class TestEachRoleHasWhatItsScreensRead(_AsUser):
 
 	def test_each_role_may_create_what_it_records(self):
 		for role, doctype in (
-			("Livestock Milker", "Milk Recording"),
 			("Livestock Attendant", "Livestock Event"),
 			("Livestock Breeder", "Livestock Event"),
 			("Livestock Vet", "Livestock Diagnosis"),
@@ -194,6 +187,6 @@ class TestEachRoleHasWhatItsScreensRead(_AsUser):
 			guard(doctype)  # raises if refused
 
 	def test_a_role_cannot_record_another_roles_thing(self):
-		frappe.set_user(_user("Livestock Milker"))
+		frappe.set_user(_user("Livestock Attendant"))
 		with self.assertRaises(frappe.PermissionError):
 			guard("Livestock Diagnosis")

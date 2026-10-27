@@ -24,7 +24,7 @@ from upande_livestock.serverscripts.movement.move_animals import move_animals
 from upande_livestock.serverscripts.tests.test_culling import _employee, _tidy
 from upande_livestock.serverscripts.tests.test_operations import _make_cow
 
-FROM_HERD, TO_HERD = "Lactating group 1", "STEAMERS"
+FROM_HERD, TO_HERD = "Breeding Cows", "COW PEN"
 COWS = ["MOVE-BATCH-1", "MOVE-BATCH-2", "MOVE-BATCH-3"]
 
 
@@ -99,11 +99,11 @@ class TestMovingASet(IntegrationTestCase):
 			frappe.db.get_value("Animal", COWS[0], "current_herd"), FROM_HERD)
 
 	def test_the_reason_travels_with_every_one_of_them(self):
-		self._move(COWS, remarks="Coming into milk")
+		self._move(COWS, remarks="Moving to the breeding herd")
 		for tag in COWS:
 			self.assertEqual(
 				frappe.db.get_value(
 					"Livestock Event",
 					{"animal": tag, "event_type": "Movement", "new_herd": TO_HERD},
 					"remarks"),
-				"Coming into milk")
+				"Moving to the breeding herd")

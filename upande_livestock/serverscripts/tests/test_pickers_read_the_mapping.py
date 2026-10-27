@@ -149,7 +149,7 @@ class TestTheRuleIsTheWholeAnswer(unittest.TestCase):
 			"upande_livestock.serverscripts.common.event_items.has_mapping",
 			return_value=mapping_exists,
 		), unittest.mock.patch("frappe.db.get_value", return_value=1) as gv:
-			out = _shared._type_consumes_drugs("Drying Off")
+			out = _shared._type_consumes_drugs("Service")
 		gv.assert_not_called()  # no per-type box is consulted
 		return out
 

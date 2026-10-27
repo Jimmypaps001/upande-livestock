@@ -25,7 +25,7 @@ class LivestockHealthCase(Document):
 		backdate.assert_not_future(self.opened_date, "Opened Date")
 		backdate.sanitise(self, "opened_date")
 		self.recompute_treatment_cost()
-		self.recompute_milk_safe_date()
+		self.recompute_slaughter_safe_date()
 		self.require_named_drugs()
 
 	def recompute_treatment_cost(self):
@@ -59,7 +59,7 @@ class LivestockHealthCase(Document):
 		assignment would never reach the row.
 		"""
 		self.recompute_treatment_cost()
-		self.recompute_milk_safe_date()
+		self.recompute_slaughter_safe_date()
 		self.require_named_drugs()
 
 	def require_named_drugs(self):
@@ -71,8 +71,8 @@ class LivestockHealthCase(Document):
 			frappe.throw(_("Each treatment must name the drug it used, picked from the store."),
 			             title=_("Drug required"))
 
-	def recompute_milk_safe_date(self):
-		"""The first day her milk may be sold again, from the drugs she was given.
+	def recompute_slaughter_safe_date(self):
+		"""The first day she may go to slaughter, from the drugs she was given.
 
 		Each treatment carries its drug's withdrawal period, and nothing ever
 		turned them into a date: the case file showed "—" and staff counted
@@ -83,7 +83,7 @@ class LivestockHealthCase(Document):
 			for t in (self.treatments or [])
 			if t.get("treatment_date") and t.get("withdrawal_period_days")
 		]
-		self.milk_safe_date = max(ends) if ends else None
+		self.slaughter_safe_date = max(ends) if ends else None
 
 	def on_update_after_submit(self):
 		# A case is treated over days, not once. Treatments are allow_on_submit so

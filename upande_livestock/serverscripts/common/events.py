@@ -1,6 +1,6 @@
 """The one place every write endpoint builds a Livestock Event.
 
-Movement, Heat Detection, Drying Off, Service, Pregnancy Diagnosis and
+Movement, Heat Detection, Service, Pregnancy Diagnosis and
 Abortion are all the same doctype with a different `event_type`, so
 `new_livestock_event` is what keeps their common fields — the operator, the
 canonical `event_date` — from being set five slightly different ways.
@@ -17,7 +17,7 @@ from upande_livestock.serverscripts.common.vet import resolve_vet
 #: these). Keep in step with that field's depends_on.
 VET_EVENT_TYPES = (
 	"Treatment", "Check Up", "Vaccination", "Deworming", "Hoof Trimming",
-	"Dehorning", "Pregnancy Diagnosis", "Drying Off",
+	"Dehorning", "Pregnancy Diagnosis",
 )
 
 

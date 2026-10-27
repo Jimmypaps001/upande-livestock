@@ -10,7 +10,7 @@ before what, and what the system refuses to do without a signature.
 
 The single behaviour these tests protect above the others: A DEPARTED ANIMAL
 LEAVES HER HERD. `current_herd` is deliberately not cleared on a disposal, so
-without the move to the holding herd she stays listed under Lactating 1 with
+without the move to the holding herd she stays listed under Breeding Cows with
 her status set to Dead — and the feed run mixes for her in the morning.
 """
 
@@ -65,7 +65,7 @@ class TestACaseStartsAtTheRightGate(IntegrationTestCase):
 	def setUp(self):
 		self.animal = "CULL-GATE-1"
 		_tidy(self.animal)
-		_make_cow(self.animal, herd="Lactating group 1")
+		_make_cow(self.animal, herd="Breeding Cows")
 		self.addCleanup(_tidy, self.animal)
 
 	def _raise(self, flow, **kw):
@@ -116,7 +116,7 @@ class TestTheVetsVerdictIsFinalOnHealth(IntegrationTestCase):
 	def setUp(self):
 		self.animal = "CULL-VET-1"
 		_tidy(self.animal)
-		_make_cow(self.animal, herd="Lactating group 1")
+		_make_cow(self.animal, herd="Breeding Cows")
 		self.addCleanup(_tidy, self.animal)
 
 	def test_not_fit_for_sale_ends_a_sale(self):
@@ -176,7 +176,7 @@ class TestAnApprovalIsOfTerms(IntegrationTestCase):
 	def setUp(self):
 		self.animal = "CULL-APPROVE-1"
 		_tidy(self.animal)
-		_make_cow(self.animal, herd="Lactating group 1")
+		_make_cow(self.animal, herd="Breeding Cows")
 		self.addCleanup(_tidy, self.animal)
 		self.case = raise_cull({"animal": self.animal, "flow": culling.SALE})["name"]
 		vet_verdict({"case": self.case, "verdict": "Fit for sale"})
@@ -215,7 +215,7 @@ class TestPostingActuallyRemovesHerFromTheFarm(IntegrationTestCase):
 	def setUp(self):
 		self.animal = "CULL-POST-1"
 		_tidy(self.animal)
-		_make_cow(self.animal, herd="Lactating group 1")
+		_make_cow(self.animal, herd="Breeding Cows")
 		self.addCleanup(_tidy, self.animal)
 
 	def _approved_gift(self):
@@ -228,10 +228,10 @@ class TestPostingActuallyRemovesHerFromTheFarm(IntegrationTestCase):
 	def _post(self, case):
 		return post_cull({"case": case, "operator": _employee()})
 
-	def test_she_leaves_her_milking_herd(self):
+	def test_she_leaves_her_herd(self):
 		got = self._post(self._approved_gift())
 		self.assertTrue(got.get("ok"), got.get("error"))
-		self.assertEqual(got["herd_before"], "Lactating group 1")
+		self.assertEqual(got["herd_before"], "Breeding Cows")
 		self.assertEqual(got["herd_now"], HERD)
 
 	def test_she_is_disabled_and_given_a_terminal_status(self):
@@ -248,9 +248,9 @@ class TestPostingActuallyRemovesHerFromTheFarm(IntegrationTestCase):
 			"animal": self.animal, "event_type": "Movement", "new_herd": HERD}))
 
 	def test_her_old_herd_stops_counting_her(self):
-		before = frappe.db.get_value("Herds", "Lactating group 1", "number_of_animals")
+		before = frappe.db.get_value("Herds", "Breeding Cows", "number_of_animals")
 		self._post(self._approved_gift())
-		after = frappe.db.get_value("Herds", "Lactating group 1", "number_of_animals")
+		after = frappe.db.get_value("Herds", "Breeding Cows", "number_of_animals")
 		self.assertEqual(after, before - 1)
 
 	def test_the_holding_herd_does_not_count_her_either(self):
@@ -292,7 +292,7 @@ class TestADeathIsRecordedNotApproved(IntegrationTestCase):
 	def setUp(self):
 		self.animal = "CULL-DEAD-1"
 		_tidy(self.animal)
-		_make_cow(self.animal, herd="Lactating group 1")
+		_make_cow(self.animal, herd="Breeding Cows")
 		self.addCleanup(_tidy, self.animal)
 
 	def test_one_call_records_and_posts_it(self):

@@ -58,8 +58,7 @@ def create_feed_request(payload):
 			"Livestock Settings", "custom_default_company") or doc.company
 		# SCP's mandatory fields on Material Request, on the parent and on every
 		# line. `custom_farm` is taken from the store the feed is delivered
-		# into, so it follows the site rather than being hardcoded — the same
-		# rule build_feed_rations uses for a BOM's farm.
+		# into, so it follows the site rather than being hardcoded.
 		farm = frappe.db.get_value("Warehouse", warehouse, "custom_farm")
 		if doc.meta.has_field("custom_farm"):
 			if not farm:

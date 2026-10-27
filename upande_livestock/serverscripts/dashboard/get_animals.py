@@ -6,7 +6,6 @@ import frappe
 
 from upande_livestock.serverscripts.common.choices import is_active
 from upande_livestock.serverscripts.common.envelope import guard_read
-from upande_livestock.serverscripts.common.herd_movement import milking_herds
 from upande_livestock.serverscripts.dashboard._shared import _herd_labels
 
 
@@ -38,11 +37,9 @@ def get_animals() -> dict:
 		for r in rows:
 			r["herd_label"] = herds.get(r.get("current_herd") or "", r.get("current_herd") or "")
 		active = [r for r in rows if is_active(r)]
-		in_milk = set(milking_herds())
 		summary = {
 			"total": len(rows),
 			"active": len(active),
-			"milking": sum(1 for r in active if r.get("current_herd") in in_milk),
 			"pregnant": sum(1 for r in rows if "pregn" in (r.get("repro_status") or "").lower()),
 		}
 		return {

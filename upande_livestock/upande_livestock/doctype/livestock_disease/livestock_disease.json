@@ -25,7 +25,6 @@
   "standard_protocol",
   "typical_duration_days",
   "cb_treatment",
-  "expected_milk_withdrawal_days",
   "expected_meat_withdrawal_days",
   "sb_notes",
   "notes",
@@ -132,12 +131,6 @@
   {
    "fieldname": "cb_treatment",
    "fieldtype": "Column Break"
-  },
-  {
-   "description": "Default; actual depends on drugs administered",
-   "fieldname": "expected_milk_withdrawal_days",
-   "fieldtype": "Int",
-   "label": "Typical Milk Withdrawal (days)"
   },
   {
    "fieldname": "expected_meat_withdrawal_days",

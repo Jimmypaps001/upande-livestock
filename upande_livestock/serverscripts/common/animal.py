@@ -27,7 +27,7 @@ def resolve_calf_herd(sex=None):
 	ladder and climbs it; a bull calf goes to the bull herd, where a selling
 	window may be running against it. Sending both to one herd — which is what
 	happened before the Herd Movement settings existed — puts bull calves on a
-	ladder built for animals that will one day be milked.
+	ladder built for animals that will one day be served.
 
 	Falling back through: the sex-specific herd, the old single Default Calf
 	Herd, the calf-rearing flag, the age bracket, and finally the herd with the

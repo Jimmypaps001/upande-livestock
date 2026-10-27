@@ -9,45 +9,14 @@ from frappe import _
 
 from upande_livestock.serverscripts.common.timings import ALL_TIMING_DEFAULTS, read_setting
 
-MILKING_STOCK_ENTRY_TYPE = "Milking"
-
-
-def ensure_milking_stock_entry_type():
-	"""Create the "Milking" Stock Entry Type if it's missing.
-
-	Livestock Settings.custom_milking_stock_entry_type defaults to "Milking"
-	and Milk Recording posts its milk Stock Entry under that type. Neither
-	ERPNext nor our fixtures ship the record, so on a fresh deploy the first
-	save of Livestock Settings fails with:
-
-	    LinkValidationError: Could not find Milking Stock Entry Type: Milking
-
-	Milk is received into a warehouse (t_warehouse only), so the entry type is a
-	Material Receipt. Idempotent — safe to run on every install and migrate.
-	"""
-	# Stock Entry Type is an ERPNext core doctype; skip if unavailable.
-	if not frappe.db.table_exists("Stock Entry Type"):
-		return
-	if frappe.db.exists("Stock Entry Type", MILKING_STOCK_ENTRY_TYPE):
-		return
-
-	doc = frappe.new_doc("Stock Entry Type")
-	doc.name = MILKING_STOCK_ENTRY_TYPE  # autoname is Prompt
-	doc.purpose = "Material Receipt"
-	doc.insert(ignore_permissions=True)
-	frappe.db.commit()
-
-
 SEED_EVENT_TYPES = [
 	{"name": "Feeding", "creates_animal": 0, "detail_doctype": None},
-	{"name": "Milking", "creates_animal": 0, "detail_doctype": None},
 	{"name": "Movement", "creates_animal": 0, "detail_doctype": None},
 	{"name": "Service", "creates_animal": 0, "detail_doctype": None},
 	{"name": "Pregnancy Diagnosis", "creates_animal": 0, "detail_doctype": None},
 	{"name": "Calving", "creates_animal": 0, "detail_doctype": None},
 	{"name": "Birth", "creates_animal": 1, "detail_doctype": None},
 	{"name": "Abortion", "creates_animal": 0, "detail_doctype": None},
-	{"name": "Drying Off", "creates_animal": 0, "detail_doctype": None},
 	{"name": "Vaccination", "creates_animal": 0, "detail_doctype": None},
 	{"name": "Deworming", "creates_animal": 0, "detail_doctype": None},
 	{"name": "Heat Detection", "creates_animal": 0, "detail_doctype": None},
@@ -179,6 +148,5 @@ def before_install():
 
 
 def after_install():
-	ensure_milking_stock_entry_type()
 	ensure_livestock_event_types()
 	ensure_livestock_timing_defaults()

@@ -178,7 +178,7 @@ class TestTheDaysAreGone(unittest.TestCase):
 	def test_the_cover_alert_keeps_its_arithmetic(self):
 		"""Deliberately NOT deleted with the rest. Cover is counted in days —
 		412 kg of calves meal is six weeks for the calves and two days for the
-		milkers — and a concentrate running out stops eight herds at once. It
+		cows — and a concentrate running out stops eight herds at once. It
 		moved to the alert that needs it instead of dying with the page."""
 		from upande_livestock.serverscripts.alerts._cover import concentrate_plan
 

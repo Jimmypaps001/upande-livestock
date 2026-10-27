@@ -124,7 +124,7 @@ class TestManufactureFeedBomNo(IntegrationTestCase):
 
 
 class TestManufactureFeedSharedStandingBom(IntegrationTestCase):
-	"""2-4 and STEAMERS each hold a standing BOM that is shared with, and
+	"""2-4 and COW PEN each hold a standing BOM that is shared with, and
 	`custom_herd`-attributed to, their partner herd. A validation that only
 	checked `custom_herd == herd` would refuse them their own standing
 	ration — this proves it does not."""
@@ -148,5 +148,5 @@ class TestManufactureFeedSharedStandingBom(IntegrationTestCase):
 	def test_2_4_can_run_its_own_shared_standing_ration(self):
 		self._run("2-4")
 
-	def test_steamers_can_run_its_own_shared_standing_ration(self):
-		self._run("STEAMERS")
+	def test_cow_pen_can_run_its_own_shared_standing_ration(self):
+		self._run("COW PEN")

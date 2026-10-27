@@ -8,8 +8,8 @@
 badge works offline. Both ask here, so the stage a farmer sees on the phone is
 the stage the desk shows.
 
-The stage is a function of five facts, all from submitted events (plus the
-animal's own row): the last calving, last service and last drying off, the
+The stage is a function of four facts, all from submitted events (plus the
+animal's own row): the last calving, last service, the
 latest CONFIRMED pregnancy diagnosis after that calving, and today. `facts_for`
 reads them for many animals in a few grouped queries; `facts_from_events` reads
 them from an event list already in hand.
@@ -25,7 +25,7 @@ from frappe.utils import add_days, date_diff, getdate, today
 RETIRED = ("Dead", "Deceased", "Sold", "Culled", "Disposed", "Transferred Out")
 
 #: Livestock Event types the stage is read from.
-STAGE_EVENT_TYPES = ("Calving", "Service", "Drying Off", "Pregnancy Diagnosis")
+STAGE_EVENT_TYPES = ("Calving", "Service", "Pregnancy Diagnosis")
 
 FRESH_DAYS = 60
 
@@ -36,13 +36,13 @@ def _d(value):
 
 def facts_from_events(events):
 	"""The stage facts from one animal's submitted events (any order)."""
-	facts = {"calving": None, "service": None, "drying": None, "confirmed": None}
+	facts = {"calving": None, "service": None, "confirmed": None}
 	confirmed_dates = []
 	for e in events:
 		if not e.event_date:
 			continue
 		date = str(e.event_date)
-		key = {"Calving": "calving", "Service": "service", "Drying Off": "drying"}.get(e.event_type)
+		key = {"Calving": "calving", "Service": "service"}.get(e.event_type)
 		if key:
 			facts[key] = max(facts[key] or date, date)
 		elif e.event_type == "Pregnancy Diagnosis" and e.diagnosis_result == "Confirmed":
@@ -54,7 +54,7 @@ def facts_from_events(events):
 
 def facts_for(names):
 	"""{animal: facts} for many animals, in two queries however many there are."""
-	out = {n: {"calving": None, "service": None, "drying": None, "confirmed": None} for n in names}
+	out = {n: {"calving": None, "service": None, "confirmed": None} for n in names}
 	if not names:
 		return out
 	rows = frappe.db.sql(
@@ -65,7 +65,7 @@ def facts_for(names):
 		{"names": tuple(names), "types": STAGE_EVENT_TYPES},
 		as_dict=True,
 	)
-	key = {"Calving": "calving", "Service": "service", "Drying Off": "drying"}
+	key = {"Calving": "calving", "Service": "service"}
 	for r in rows:
 		if not r.last:
 			continue
@@ -81,12 +81,12 @@ def cycle(a, facts, expected=None, on=None):
 	"""The cycle dict for animal row `a` (disabled, status, date_of_birth) and `facts`."""
 	on = on or today()
 	if a.get("disabled") or a.get("status") in RETIRED:
-		return {"stage": "retired", "dayInStage": 0, "daysInMilk": None,
+		return {"stage": "retired", "dayInStage": 0,
 		        "nextUp": "She has left the farm", "nextOn": None}
 
 	last_calving = facts.get("calving")
-	served, dried = facts.get("service"), facts.get("drying")
-	dim = date_diff(on, getdate(last_calving)) if last_calving else None
+	served = facts.get("service")
+	since_calving = date_diff(on, getdate(last_calving)) if last_calving else None
 	confirmed = facts.get("confirmed")
 	if confirmed and last_calving and getdate(confirmed) <= getdate(last_calving):
 		confirmed = None  # that pregnancy ended in the calving
@@ -94,22 +94,19 @@ def cycle(a, facts, expected=None, on=None):
 	def since(d):
 		return date_diff(on, getdate(d)) if d else 0
 
-	if dried and (not last_calving or getdate(dried) > getdate(last_calving)):
-		return {"stage": "dry", "dayInStage": since(dried), "daysInMilk": dim,
-		        "nextUp": "Calving", "nextOn": expected}
 	if confirmed:
-		return {"stage": "confirmed", "dayInStage": since(confirmed), "daysInMilk": dim,
-		        "nextUp": "Drying off, then calving", "nextOn": expected}
+		return {"stage": "confirmed", "dayInStage": since(confirmed),
+		        "nextUp": "Calving", "nextOn": expected}
 	if served and (not last_calving or getdate(served) > getdate(last_calving)):
-		return {"stage": "served", "dayInStage": since(served), "daysInMilk": dim,
+		return {"stage": "served", "dayInStage": since(served),
 		        "nextUp": "Pregnancy check", "nextOn": add_days(served, 35)}
 	if not last_calving:
-		return {"stage": "heifer", "dayInStage": since(a.get("date_of_birth")), "daysInMilk": None,
+		return {"stage": "heifer", "dayInStage": since(a.get("date_of_birth")),
 		        "nextUp": "First service", "nextOn": None}
-	if dim is not None and dim <= FRESH_DAYS:
-		return {"stage": "fresh", "dayInStage": dim, "daysInMilk": dim,
+	if since_calving is not None and since_calving <= FRESH_DAYS:
+		return {"stage": "fresh", "dayInStage": since_calving,
 		        "nextUp": "Ready to serve", "nextOn": add_days(last_calving, FRESH_DAYS)}
-	return {"stage": "open", "dayInStage": dim or 0, "daysInMilk": dim,
+	return {"stage": "open", "dayInStage": since_calving or 0,
 	        "nextUp": "Service", "nextOn": None}
 
 

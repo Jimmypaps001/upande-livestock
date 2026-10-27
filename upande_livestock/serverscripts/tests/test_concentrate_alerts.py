@@ -9,7 +9,7 @@ once, on a morning nobody chose.
 
 Two judgements are pinned here. COVER IS COUNTED IN DAYS, because "412 kg of
 calves meal" means nothing without the herd behind it — six weeks for the
-calves, two days for the milkers. And "LOW" AND "OUT" ARE DIFFERENT NEWS: a
+calves, two days for the cows. And "LOW" AND "OUT" ARE DIFFERENT NEWS: a
 farm told "low" when the truth is "you cannot fix this by mixing" mixes, fails,
 and finds out a day later.
 """

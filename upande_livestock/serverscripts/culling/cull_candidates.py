@@ -14,7 +14,7 @@ from upande_livestock.serverscripts.common.envelope import as_dict, guard_read, 
 YEARS = 5
 
 #: What counts as a long time to be open. 120 days past calving with nothing
-#: holding is roughly one lost lactation a year, which is the number a manager
+#: holding is roughly one lost calf a year, which is the number a manager
 #: actually feels.
 OPEN_DAYS_CONCERN = 120
 
@@ -42,11 +42,8 @@ def cull_candidates(payload=None):
 	carries the reasons that put her there, her own figures beside the herd's,
 	and her last five years, so the argument can be read rather than trusted.
 
-	PER-ANIMAL MILK IS NOT RECORDED ON THIS FARM — Milk Recording is per herd
-	per session — so "low produce" cannot mean litres. It means what the records
-	can actually support: the milk a health case cost her where somebody wrote
-	it down, and the interval between her calvings, which is the farm's real
-	measure of how much lactation it got out of her.
+	The measures are the ones the records support: services that did not hold,
+	pregnancies lost, days ill, and the interval between her calvings.
 	"""
 
 	def go():
@@ -99,7 +96,6 @@ def cull_candidates(payload=None):
 			"herd": herd,
 			# Said in the payload so the screen does not have to know the farm's
 			# recording habits to caption its own chart honestly.
-			"per_animal_milk": False,
 		}
 
 	return run(go, "livestock cull_candidates failed")
@@ -108,7 +104,7 @@ def cull_candidates(payload=None):
 def _blank():
 	return {
 		"calvings": [], "abortions": [], "services": [], "conceptions": [],
-		"sick_days": 0.0, "sick_days_year": 0.0, "sick_by_year": {}, "cases": 0, "lost_kg": 0.0,
+		"sick_days": 0.0, "sick_days_year": 0.0, "sick_by_year": {}, "cases": 0,
 		"last_conception": None,
 	}
 
@@ -145,7 +141,7 @@ def _facts(names):
 
 	for row in frappe.db.sql(
 		"""SELECT animal, opened_date, closed_date, case_status,
-		          duration_days, production_loss_kg
+		          duration_days
 		   FROM `tabLivestock Health Case`
 		   WHERE docstatus = 1 AND opened_date IS NOT NULL""",
 		as_dict=True,
@@ -170,7 +166,6 @@ def _facts(names):
 		f["sick_by_year"][opened.year] = f["sick_by_year"].get(opened.year, 0.0) + days
 		if opened >= getdate(year_ago):
 			f["sick_days_year"] += days
-		f["lost_kg"] += flt(row.production_loss_kg)
 
 	for f in facts.values():
 		f["calvings"].sort()
@@ -304,16 +299,8 @@ def _reasons(animal, facts, open_days):
 		out.append({
 			"key": "interval",
 			"label": f"{interval} days between calvings",
-			"detail": "A year and a quarter of feed for one lactation.",
+			"detail": "A year and a quarter of feed for one calf.",
 			"weight": min(30, (interval - 450) // 30 * 5 + 5),
-		})
-
-	if facts["lost_kg"] > 0:
-		out.append({
-			"key": "produce",
-			"label": f"{int(facts['lost_kg'])} kg of milk lost to illness",
-			"detail": "Recorded against her health cases.",
-			"weight": min(20, int(facts["lost_kg"]) // 100 * 4 + 4),
 		})
 
 	return out

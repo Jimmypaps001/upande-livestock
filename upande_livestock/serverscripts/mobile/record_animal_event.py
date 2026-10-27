@@ -26,9 +26,6 @@ key does — a phone in the field is still calling it.
 import frappe
 
 from upande_livestock.serverscripts.breeding.create_abortion_event import create_abortion_event
-from upande_livestock.serverscripts.breeding.create_drying_off_event import (
-	create_drying_off_event,
-)
 from upande_livestock.serverscripts.breeding.create_heat_event import create_heat_event
 from upande_livestock.serverscripts.breeding.create_pregnancy_diagnosis import (
 	create_pregnancy_diagnosis,
@@ -50,7 +47,6 @@ ROUTES = {
 	"Pregnancy Diagnosis": create_pregnancy_diagnosis,
 	"Calving": record_birth,
 	"Birth": record_birth,
-	"Drying Off": create_drying_off_event,
 	"Weight Recording": create_weight_record,
 	"Heat Detection": create_heat_event,
 	"Abortion": create_abortion_event,

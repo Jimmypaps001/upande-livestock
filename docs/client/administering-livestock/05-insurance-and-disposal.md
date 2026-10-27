@@ -76,7 +76,7 @@ Old records still show nothing there.
 ### It is not reversible in the ordinary sense
 
 The animal is disabled and drops out of every dropdown and head count. History is
-kept — the animal, its events, milk and treatments all stay readable — but
+kept — the animal, its events, weights and treatments all stay readable — but
 putting an animal back means cancelling the disposal and unwinding the asset
 posting. Make sure staff understand the Disposal tab is the end of the line.
 

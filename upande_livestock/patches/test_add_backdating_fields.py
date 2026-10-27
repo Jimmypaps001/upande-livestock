@@ -7,7 +7,6 @@ MARKED = [
 	"Livestock Health Case",
 	"Livestock Diagnosis",
 	"Livestock Weight Record",
-	"Milk Recording",
 ]
 
 

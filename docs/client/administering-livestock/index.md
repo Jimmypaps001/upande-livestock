@@ -7,11 +7,11 @@ order: 1
 # Administering Upande Livestock
 
 This book is for whoever configures the app: the person who decides what a herd
-is fed, which store drugs come out of, who may record what, and how a dairy
+is fed, which store drugs come out of, who may record what, and how a livestock
 transaction reaches the accounts.
 
 It assumes you know Frappe/ERPNext. If you are looking for how to record a
-milking or open a health case, that is the other book —
+weighing or open a health case, that is the other book —
 [Using Livestock](/livestock/using).
 
 ## What the app is, structurally
@@ -54,10 +54,3 @@ it is fixed.
 **An empty or misconfigured store.** A short drug store blocks the event
 entirely rather than warning. See
 [Stock and accounts integration](06-stock-integration.md).
-
-## A note on what is deliberately switched off
-
-The **Milking Parlour Checksheet** doctype still exists and still holds its
-submitted records, but it is off the app's surface — no sidebar entry, no
-workspace shortcut, and only System Manager holds permissions on it. The records
-were kept on purpose. Do not treat its absence from the UI as a bug.

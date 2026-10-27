@@ -117,10 +117,6 @@ FOLDED = {
 		"insurance_policy": "Insurance policy", "insured_value": "Insured value",
 		"insurance_claim_amount": "Claim amount", "payment_entry": "Payment entry",
 	}, None),
-	"Milk Recording": ("remarks", {
-		"is_colostrum": "Colostrum", "colostrum_yield_kg": "Colostrum (kg)",
-		"colostrum_stock_entry": "Colostrum stock entry",
-	}, None),
 	"Livestock Insurance Policy": ("remarks", {
 		"custom_insurer_supplier": "Insurer (supplier)", "custom_insurer_customer": "Insurer (customer)",
 	}, None),

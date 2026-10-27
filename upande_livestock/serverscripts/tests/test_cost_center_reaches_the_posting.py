@@ -1,17 +1,16 @@
 """Every livestock stock movement charges the herd it was for.
 
 `test_cost_center` pins the chain itself. This pins the wiring: that each of
-the four places this app posts stock actually TELLS the chain which herd the
+the three places this app posts stock actually TELLS the chain which herd the
 movement was for. A perfect chain that nobody passes a herd to charges
 everything to the company default, which is the bug the chain was written to
 fix — nine of eleven herds already named `Dairy - KR` and every posting still
 landed on `Main - KR`.
 
-The four:
+The three:
 
     feeding   _engine._run_manufacture   transfer + manufacture
     feeding   _engine._issue_feed        the Material Issue
-    milking   Milk Recording             its own Stock Entry
     drugs     common.stock.issue_items   husbandry and health treatment
 
 Husbandry and health issue drugs for a set of animals rather than for a herd,
@@ -40,14 +39,14 @@ from upande_livestock.serverscripts.common import stock as ST
 
 class TestWhichHerdADrugRoundIsFor(unittest.TestCase):
 	def test_one_herd_when_every_animal_agrees(self):
-		with patch.object(frappe.db, "get_value", return_value="STEAMERS"):
-			self.assertEqual(CC.herd_of(["A1", "A2"]), "STEAMERS")
+		with patch.object(frappe.db, "get_value", return_value="COW PEN"):
+			self.assertEqual(CC.herd_of(["A1", "A2"]), "COW PEN")
 
 	def test_nothing_when_the_round_spans_two_herds(self):
 		"""The rows are per drug, not per animal, so there is no honest way to
 		split one entry between herds. Falling through is better than charging
 		one herd for the other's drugs."""
-		herds = {"A1": "STEAMERS", "A2": "BULLS"}
+		herds = {"A1": "COW PEN", "A2": "BULLS"}
 		with patch.object(frappe.db, "get_value", side_effect=lambda dt, n, f: herds[n]):
 			self.assertIsNone(CC.herd_of(["A1", "A2"]))
 
@@ -60,8 +59,8 @@ class TestWhichHerdADrugRoundIsFor(unittest.TestCase):
 		self.assertIsNone(CC.herd_of(None))
 
 	def test_a_single_animal_is_its_own_herd(self):
-		with patch.object(frappe.db, "get_value", return_value="STEAMERS"):
-			self.assertEqual(CC.herd_of("A1"), "STEAMERS")
+		with patch.object(frappe.db, "get_value", return_value="COW PEN"):
+			self.assertEqual(CC.herd_of("A1"), "COW PEN")
 
 
 class TestIssueItemsChargesTheHerd(unittest.TestCase):
@@ -149,25 +148,3 @@ def _stamp_calls(module, func_name):
 			continue
 		out.extend(f"{k.arg}={ast.unparse(k.value)}" for k in node.keywords)
 	return out
-
-
-class TestMilkRecordingChargesTheHerd(unittest.TestCase):
-	def test_its_stock_entry_goes_through_the_chain(self):
-		"""Milk Recording builds its own Stock Entry and had its own
-		cost-centre logic; four `Milk Recording Stock Entry creation failed`
-		errors on 2026-09-22 died on the same throw feeding did."""
-		import ast
-		import inspect
-		import textwrap
-
-		from upande_livestock.upande_livestock.doctype.milk_recording import milk_recording
-
-		src = textwrap.dedent(inspect.getsource(milk_recording))
-		calls = [
-			n
-			for n in ast.walk(ast.parse(src))
-			if isinstance(n, ast.Call) and getattr(n.func, "attr", "") == "stamp"
-		]
-		self.assertTrue(calls, "milk recording must stamp its rows through cost_center")
-		passed = {k.arg for c in calls for k in c.keywords}
-		self.assertIn("herd", passed)

@@ -13,7 +13,6 @@ DOCTYPES = [
 	"livestock_health_case",
 	"livestock_diagnosis",
 	"livestock_weight_record",
-	"milk_recording",
 ]
 
 

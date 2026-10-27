@@ -112,7 +112,7 @@ class TestConcentratePlanCarriesTheRecipeLines(IntegrationTestCase):
 	total without `batch_qty` beside them read as one enormous load.
 	"""
 
-	# The lactating concentrate on this site.
+	# A bought-in concentrate on this site.
 	CONCENTRATE = "4040010086"
 
 	def test_every_row_carries_its_recipe_in_recipe_units(self):

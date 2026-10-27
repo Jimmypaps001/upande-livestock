@@ -1,10 +1,10 @@
 # Copyright (c) 2026, Upande and contributors
 # For license information, please see license.txt
 
-"""The five non-event writes stamp custom_is_backdated too.
+"""The four non-event writes stamp custom_is_backdated too.
 
 Every event-shaped write (new_livestock_event) already stamps and is covered by
-test_backdated_events.py. These five — weight, milk recording, health case,
+test_backdated_events.py. These four — weight, health case,
 check-up and disposal — build their own document directly rather than going
 through new_livestock_event, so each needed the same three lines added by hand:
 resolve, assert_allowed, stamp. Each is asserted here on two points: the stamp
@@ -20,7 +20,6 @@ from frappe.utils import add_days, add_months, today
 from upande_livestock.serverscripts.disposal.record_disposal import record_disposal
 from upande_livestock.serverscripts.health.create_check_up import create_check_up
 from upande_livestock.serverscripts.health.create_health_case import create_health_case
-from upande_livestock.serverscripts.milking.create_milk_recording import create_milk_recording
 from upande_livestock.serverscripts.weights.create_weight_record import create_weight_record
 
 
@@ -72,24 +71,6 @@ class TestBackdatedRecords(IntegrationTestCase):
 		self.assertNotIn("error", res, res.get("error"))
 		doc = frappe.get_doc("Livestock Weight Record", res["name"])
 		self.assertEqual(doc.custom_is_backdated, 0)
-
-	def test_a_backdated_milk_recording_is_stamped(self):
-		herd = frappe.db.get_value("Herds", {}, "name")
-		if not herd:
-			self.skipTest("no Herds row on this site")
-		past = add_days(today(), -7)
-		res = create_milk_recording(
-			{
-				"herd": herd,
-				"recording_date": past,
-				"milking_time": "06:00:00",
-				"total_yield_kg": 120,
-				"operator": self.operator,
-			}
-		)
-		self.assertNotIn("error", res, res.get("error"))
-		doc = frappe.get_doc("Milk Recording", res["name"])
-		self.assertEqual(doc.custom_is_backdated, 1)
 
 	def test_a_backdated_health_case_is_stamped(self):
 		past = add_days(today(), -12)

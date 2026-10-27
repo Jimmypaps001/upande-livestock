@@ -1,9 +1,9 @@
-"""The dashboard's report tab: production, health, reproduction and herd rollups.
+"""The dashboard's report tab: health, reproduction and herd rollups.
 
 Read-guarded on Animal."""
 
 import frappe
-from frappe.utils import add_months, flt, get_first_day, today
+from frappe.utils import flt, get_first_day, today
 
 from upande_livestock.serverscripts.common.animal import RETIRED_STATUSES
 from upande_livestock.serverscripts.common.envelope import guard_read
@@ -20,20 +20,6 @@ def get_reports() -> dict:
 	guard_read("Animal")
 	try:
 		this_start = get_first_day(today())
-		next_start = add_months(this_start, 1)
-		last_start = add_months(this_start, -1)
-
-		def _milk_between(a, b):
-			r = frappe.db.sql(
-				"""SELECT IFNULL(SUM(net_yield_kg), 0), IFNULL(SUM(milk_revenue), 0)
-				   FROM `tabMilk Recording`
-				   WHERE recording_date >= %s AND recording_date < %s""",
-				(a, b),
-			)
-			return flt(r[0][0]), flt(r[0][1])
-
-		m_now_kg, m_now_rev = _milk_between(this_start, next_start)
-		m_prev_kg, m_prev_rev = _milk_between(last_start, this_start)
 
 		active = _active_animal_count()
 
@@ -84,13 +70,6 @@ def get_reports() -> dict:
 		herd_cmp = [{"name": herds.get(r.h, r.h), "animals": int(r.c)} for r in herd_rows]
 
 		return {
-			"production": {
-				"month_kg": round(m_now_kg, 1),
-				"prev_kg": round(m_prev_kg, 1),
-				"delta_kg": round(m_now_kg - m_prev_kg, 1),
-				"month_rev": round(m_now_rev, 2),
-				"prev_rev": round(m_prev_rev, 2),
-			},
 			"health": {
 				"active_animals": active,
 				"open_cases": open_cases,
@@ -109,7 +88,6 @@ def get_reports() -> dict:
 	except Exception:
 		frappe.log_error(title="livestock get_reports failed")
 		return {
-			"production": {},
 			"health": {},
 			"reproduction": {},
 			"herds": [],

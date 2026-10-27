@@ -18,7 +18,7 @@ def post_cull(payload):
 	Order matters, and it is: MOVE HER FIRST, THEN SUBMIT. The move is a
 	Livestock Event whose processor refuses a herd change on an animal that is
 	no longer active, and submitting the Disposal is what retires her. Posting
-	first would leave her disabled inside Lactating 1, which is exactly the
+	first would leave her disabled inside her old herd, which is exactly the
 	state the holding herd exists to prevent.
 
 	The Disposal's own on_submit does the asset posting and the retirement; none

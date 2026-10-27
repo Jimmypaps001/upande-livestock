@@ -3,8 +3,8 @@
 
 """Who gets offered what, and what the farm gets told.
 
-The offer lists used to be "every active animal", which invited a milking
-against a calf and a service against a weaner. They are now derived from where
+The offer lists used to be "every active animal", which invited a service
+against a weaner. They are now derived from where
 an animal stands in the herd structure — derived, because a list marked by hand
 drifts the first time a herd is renamed or added.
 
@@ -26,34 +26,6 @@ from upande_livestock.serverscripts.alerts._shared import KINDS
 from upande_livestock.serverscripts.common import herd_movement as hm
 from upande_livestock.serverscripts.breeding.breeding_options import breeding_options
 from upande_livestock.serverscripts.breeding.create_pregnancy_diagnosis import create_pregnancy_diagnosis
-from upande_livestock.serverscripts.milking.milking_options import milking_options
-
-
-class TestMilkingIsOfferedOnlyForLactatingHerds(IntegrationTestCase):
-	def test_the_list_is_the_lactation_groups(self):
-		res = milking_options()
-		if res.get("error"):
-			raise unittest.SkipTest(res["error"][:120])
-		offered = {h["name"] for h in res["herds"]}
-		self.assertTrue(offered, "some herd must be offered")
-		self.assertEqual(offered, set(hm.milking_herds()))
-
-	def test_no_growth_herd_is_offered(self):
-		"""A calf is never in milk."""
-		res = milking_options()
-		if res.get("error"):
-			raise unittest.SkipTest(res["error"][:120])
-		offered = {h["name"] for h in res["herds"]}
-		for rung in hm.growth_ladder():
-			self.assertNotIn(rung["herd"], offered)
-
-	def test_it_narrows_rather_than_offering_everything(self):
-		res = milking_options()
-		if res.get("error"):
-			raise unittest.SkipTest(res["error"][:120])
-		total = frappe.db.count("Herds")
-		self.assertLess(len(res["herds"]), total,
-		                "if every herd is offered the restriction is not doing anything")
 
 
 class TestServiceIsOfferedOnlyForServableAnimals(IntegrationTestCase):
@@ -102,8 +74,8 @@ class TestDiagnosisNeedsAService(IntegrationTestCase):
 			self.assertTrue(hm.has_open_service(a["name"]))
 
 	def test_recording_one_without_a_service_is_refused(self):
-		"""A 'Confirmed' invented from nothing then drives calving, herd moves
-		and milk — so it is stopped at the door."""
+		"""A 'Confirmed' invented from nothing then drives calving and herd
+		moves — so it is stopped at the door."""
 		rungs = hm.growth_ladder()
 		if not rungs:
 			raise unittest.SkipTest("no ladder configured")

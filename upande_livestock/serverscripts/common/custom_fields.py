@@ -1,6 +1,6 @@
 """Declarative owner for this app's custom fields on borrowed doctypes.
 
-Work Order, BOM and Stock Entry belong to ERPNext and are shared with three
+Work Order and BOM belong to ERPNext and are shared with three
 other installed apps here. Nothing this app adds to them may be assumed to
 exist, and nothing it adds may get in anyone else's way.
 
@@ -32,10 +32,6 @@ Work Order now carries the same gate, on the same fact: `custom_is_livestock_fee
 **fetched from the BOM**, never typed. Not gated on the herd, because a
 concentrate run has no herd — it is mixed for the store, not for a group of
 cows — and its Work Order is still one of ours.
-
-Stock Entry's milking fields keep the gate they already had
-(`stock_entry_type == "Milking"`), which is the same idea expressed against a
-field Stock Entry already has.
 """
 
 import frappe
@@ -45,11 +41,10 @@ TAB = "custom_livestock_tab"
 
 #: Doctypes this app borrows. A field of ours on one of these that is no longer
 #: in the spec is stale and gets removed — see `ensure_livestock_custom_fields`.
-MANAGED_DOCTYPES = ("Work Order", "BOM", "Stock Entry", "File")
+MANAGED_DOCTYPES = ("Work Order", "BOM", "File")
 
 #: Shown only on a document that is ours.
 LIVESTOCK_ONLY = "eval:doc.custom_is_livestock_feed"
-MILKING_ONLY = 'eval:doc.stock_entry_type == "Milking"'
 
 
 def field_spec():
@@ -143,40 +138,6 @@ def field_spec():
 					"Concentrate = a mix made for the store, not for a herd."
 				),
 				"insert_after": "custom_is_livestock_feed",
-				"module": MODULE,
-			},
-		],
-		"Stock Entry": [
-			{
-				"fieldname": "custom_milking_details_section",
-				"label": "Milking",
-				"fieldtype": "Section Break",
-				"insert_after": "posting_time",
-				"depends_on": MILKING_ONLY,
-				"module": MODULE,
-			},
-			{
-				"fieldname": "custom_milking_time",
-				"label": "Milking Time",
-				"fieldtype": "Time",
-				"insert_after": "custom_milking_details_section",
-				"depends_on": MILKING_ONLY,
-				"module": MODULE,
-			},
-			{
-				"fieldname": "custom_cows_milked",
-				"label": "Cows Milked",
-				"fieldtype": "Int",
-				"insert_after": "custom_milking_time",
-				"depends_on": MILKING_ONLY,
-				"module": MODULE,
-			},
-			{
-				# Closes the Milking section so the fields after it — which are
-				# not ours and are not about milking — stay where they were.
-				"fieldname": "custom_milking_end_section",
-				"fieldtype": "Section Break",
-				"insert_after": "custom_cows_milked",
 				"module": MODULE,
 			},
 		],

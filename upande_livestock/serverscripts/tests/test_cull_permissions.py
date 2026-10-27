@@ -77,7 +77,7 @@ class TestTheGatesHoldForTheRolesTheyName(IntegrationTestCase):
 	def setUp(self):
 		self.animal = "CULL-PERM-1"
 		_tidy(self.animal)
-		_make_cow(self.animal, herd="Lactating group 1")
+		_make_cow(self.animal, herd="Breeding Cows")
 		frappe.db.commit()
 		self.addCleanup(self._restore)
 		self.addCleanup(_tidy, self.animal)

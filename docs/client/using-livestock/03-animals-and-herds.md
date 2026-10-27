@@ -61,28 +61,22 @@ circulation.
 
 ### Reproductive status
 
-**Reproductive status** — Open, Served, Pregnant, Dry, Heifer, Bull and so on —
+**Reproductive status** — Open, Served, Pregnant, Heifer, Bull and so on —
 is moved along by the events you record: a service sets it to Served, a
 positive pregnancy diagnosis to Pregnant, a calving or an abortion resets it.
 You rarely need to set it by hand.
 
-### Milk safe date
+### Slaughter safe date
 
-**Milk safe date** is meant to hold the date a treated animal's milk may go
-back into the bulk tank.
-
-> **Do not rely on this field today.** The withdrawal days you enter against
-> each drug *are* recorded, on the treatment or drug row itself — but nothing
-> currently calculates Milk safe date from them, so the field on the Animal
-> stays blank. Until that is connected, read the withdrawal days off the
-> animal's most recent treatment and count forward yourself. Raise it with your
-> administrator if the farm needs it working.
+The date a treated animal may go to slaughter is worked out on her **health
+case**, from the withdrawal days entered against each drug. Read it there; it is
+not held on the Animal record.
 
 ## Herds
 
 **Sidebar → Animals & Herds → Herds.**
 
-A herd is a group of animals managed together — milking group, dry group, a
+A herd is a group of animals managed together — breeding cows, a
 calf-rearing group, youngstock. The herd's name is the record's name.
 
 | Field | What it is for |
@@ -90,7 +84,7 @@ calf-rearing group, youngstock. The herd's name is the record's name.
 | Herd name | The identity of the herd |
 | Min age / Max age | The age bracket this herd covers, used when placing calves |
 | Number of animals | The head count. Maintained by the app |
-| Is milking / Is dry / Is calf rearing | Flags that mark a herd's role |
+| Is calf rearing | Flag that marks the calf-rearing herd |
 | BOM | What this herd is fed — see [Feeding](06-feeding.md) |
 | Cost center | Where this herd's costs land in the accounts |
 

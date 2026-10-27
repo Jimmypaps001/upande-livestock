@@ -76,13 +76,13 @@ def set_setting(case, field, value):
 
 	The companion to `reset_livestock_timings` for every field that dict cannot
 	cover. `ALL_TIMING_DEFAULTS` knows the true default of each Int and Float,
-	so those can be wiped and reseeded — but a Link has no such default. The
-	Steamer Herd is whatever this farm called its dry pen, and nothing can
+	so those can be wiped and reseeded — but a Link has no such default. A
+	herd link is whatever this farm called its pen, and nothing can
 	reconstruct it after the fact.
 
-	That gap is not hypothetical. A test that set `steamer_herd` to None and
+	That gap is not hypothetical. A test that set a herd link to None and
 	registered a cleanup which cleared the document cache — but never restored
-	the VALUE — wiped it off this site, and every drying-off suggestion answered
+	the VALUE — wiped it off this site, and every movement suggestion answered
 	None until somebody noticed and put it back by hand. The module docstring
 	above describes that exact failure for the timing fields; this closes the
 	same hole for the rest.

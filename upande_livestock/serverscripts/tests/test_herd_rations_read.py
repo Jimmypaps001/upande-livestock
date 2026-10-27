@@ -5,7 +5,7 @@
 
 The read half of `set_herd_ration`, and it carries one judgement worth
 defending: LINES COME BACK IN THE UNITS THE RECIPE IS WRITTEN IN. Hay is 1.5 kg
-on a lactating ration and stocked in BALE at 0.07. Handing an operator "0.105
+on a cow ration and stocked in BALE at 0.07. Handing an operator "0.105
 BALE" where the recipe says "1.5 Kilogram" is not the same fact in another unit
 — it is a fourteenth of the hay, in a number they cannot check against the
 mixer.

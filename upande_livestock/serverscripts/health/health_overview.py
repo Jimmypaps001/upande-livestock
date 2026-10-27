@@ -39,11 +39,10 @@ def health_overview(payload=None):
 	  see whether the farm is catching up or falling behind;
 	* what she is being treated FOR, ranked — the one number that changes what
 	  a farm does next season rather than this morning;
-	* what it is costing, in drugs and in milk that did not come.
+	* what it is costing, in drugs.
 
 	EVERY LINE IS READ OFF RECORDS, none of it estimated. Where the record is
-	silent — no response written against a treatment, no production loss
-	entered — the answer says so instead of filling the gap in.
+	silent — no response written against a treatment — the answer says so instead of filling the gap in.
 	"""
 
 	def go():
@@ -57,7 +56,7 @@ def health_overview(payload=None):
 			filters=[["docstatus", "=", 1], ["opened_date", ">=", str(since)]],
 			fields=["name", "animal", "animal_name", "current_herd", "case_status",
 			        "opened_date", "closed_date", "severity", "provisional_diagnosis",
-			        "confirmed_diagnosis", "production_loss_kg", "total_treatment_cost"],
+			        "confirmed_diagnosis", "total_treatment_cost"],
 			limit_page_length=0,
 		)
 		# Open files can be older than the window and still be this morning's
@@ -104,7 +103,6 @@ def health_overview(payload=None):
 			"herds": _by_herd(rows),
 			"cost": {
 				"treatment": flt(sum(flt(r.total_treatment_cost) for r in rows)),
-				"lost_kg": flt(sum(flt(r.production_loss_kg) for r in rows)),
 				# How much of the window's cost was actually written down. A
 				# total drawn from three cases out of ninety is a number that
 				# should carry its own warning.

@@ -38,7 +38,7 @@
   "disease_typical_severity",
   "disease_standard_protocol",
   "cb_disease_ref",
-  "disease_milk_withdrawal_days",
+  "disease_meat_withdrawal_days",
   "disease_is_zoonotic",
   "disease_is_notifiable",
   "cb_dx",
@@ -254,10 +254,10 @@
    "fieldtype": "Column Break"
   },
   {
-   "fetch_from": "suggested_disease.expected_milk_withdrawal_days",
-   "fieldname": "disease_milk_withdrawal_days",
+   "fetch_from": "suggested_disease.expected_meat_withdrawal_days",
+   "fieldname": "disease_meat_withdrawal_days",
    "fieldtype": "Int",
-   "label": "Typical Milk Withdrawal (days)",
+   "label": "Typical Meat Withdrawal (days)",
    "read_only": 1
   },
   {

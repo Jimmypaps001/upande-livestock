@@ -99,11 +99,11 @@
    "options": "\nIM (Intramuscular)\nIV (Intravenous)\nSC (Subcutaneous)\nOral / PO\nTopical\nIntramammary\nIntrauterine\nOphthalmic\nOther"
   },
   {
-   "description": "Days milk must be discarded after this drug. Drives milk_safe_date on the parent case.",
+   "description": "Days after this drug before the animal may go to slaughter. Drives slaughter_safe_date on the parent case.",
    "fieldname": "withdrawal_period_days",
    "fieldtype": "Int",
    "in_list_view": 1,
-   "label": "Milk Withdrawal (days)"
+   "label": "Meat Withdrawal (days)"
   },
   {
    "fieldname": "col_break_2",

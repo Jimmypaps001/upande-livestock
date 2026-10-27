@@ -106,7 +106,6 @@ frappe.ui.form.on("Livestock Event", {
         let isCalving     = (et === "Calving");
         let isAbortion    = (et === "Abortion");
         let isBirth       = (et === "Birth");
-        let isDryingOff   = (et === "Drying Off");
         let isVaccination = (et === "Vaccination");
         let isDeworming   = (et === "Deworming");
         let isDehorning   = (et === "Dehorning");
@@ -393,7 +392,6 @@ function toggle_event_fields(frm) {
     let isCalving     = (et === "Calving");
     let isAbortion    = (et === "Abortion");
     let isBirth       = (et === "Birth");
-    let isDryingOff   = (et === "Drying Off");
     let isVaccination = (et === "Vaccination");
     let isDeworming   = (et === "Deworming");
     let isDehorning   = (et === "Dehorning");

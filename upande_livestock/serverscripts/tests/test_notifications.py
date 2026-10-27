@@ -9,15 +9,15 @@ Three promises, because each one failing is how a notification feature dies:
     nobody has actioned. If that re-sent, the bell would be worthless inside a
     week, so the tests here run delivery twice and insist the second run sends
     nothing.
-  * THE AUDIENCE IS THE PEOPLE RESPONSIBLE, NOT EVERYBODY. A milker has no say
+  * THE AUDIENCE IS THE PEOPLE RESPONSIBLE, NOT EVERYBODY. A store keeper has no say
     in whether a bull is past its selling window. "Notify all livestock roles"
     would pass a naive test and fail the farm.
   * THE BADGE AND THE PAGE AGREE. An unread count that does not go down when
     something is read is the same as no count at all.
 
 Everything is created here rather than assumed: the site's own users all hold
-several livestock roles at once, so proving that a milker is left out needs a
-user who is ONLY a milker.
+several livestock roles at once, so proving that a store keeper is left out needs a
+user who is ONLY a store keeper.
 """
 
 import unittest
@@ -121,17 +121,15 @@ class TestTheTaxonomyIsWhole(IntegrationTestCase):
 class TestTheAudienceIsTheRightPeople(IntegrationTestCase):
 	def setUp(self):
 		self.attendant = make_user("attendant", ["Livestock Attendant"])
-		self.milker = make_user("milker", ["Livestock Milker"])
 		self.vet = make_user("vet", ["Livestock Vet"])
 		self.storeman = make_user("storeman", ["Livestock Stores"])
 
 	def test_a_movement_alert_reaches_the_attendant(self):
 		self.assertIn(self.attendant, notif.audience_for_alert("Move Overdue"))
 
-	def test_a_movement_alert_does_not_reach_the_milker_or_the_store(self):
+	def test_a_movement_alert_does_not_reach_the_store(self):
 		"""Whether a heifer has outstayed her rung is not their call."""
 		audience = notif.audience_for_alert("Move Overdue")
-		self.assertNotIn(self.milker, audience)
 		self.assertNotIn(self.storeman, audience)
 
 	def test_a_breeding_alert_reaches_the_vet_and_not_the_attendant(self):

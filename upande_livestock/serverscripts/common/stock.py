@@ -55,10 +55,10 @@ def default_semen_item():
 # it.
 #
 # EVERY EVENT IS ITS OWN TYPE: "Livestock " + the event type — Livestock
-# Vaccination, Livestock Drying Off, Livestock Check Up — made the first time
+# Vaccination, Livestock Service, Livestock Check Up — made the first time
 # that event posts (and for every posting type on migrate), so a type the farm
 # adds in Settings is labelled honestly without a code change. It replaced a
-# hand-kept map where Drying Off shared "Animal Treatment" and a new event fell
+# hand-kept map where two events shared "Animal Treatment" and a new event fell
 # through to the bare "Material Issue".
 EVENT_TYPE_PREFIX = "Livestock "
 

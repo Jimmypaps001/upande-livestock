@@ -8,18 +8,11 @@ create, delete, submit and cancel across all sixteen doctypes, and roughly 390
 people held one — against four who had ever used the module. The tests that matter
 are therefore about what each role *cannot* do, not what it can.
 
-Two are load-bearing beyond that:
-
-* the grant must survive a user whose existing links are broken. `yammah@` points
-  at a Role Profile that no longer exists and four roles that were deleted; a patch
-  that re-saves the User fails on that unrelated rot, which is why the child row is
-  inserted directly.
-* `Milking Palour Checksheet` must be gone. This patch narrowed it to System
-  Manager; it has since been dropped from the app outright, so the assertion is
-  now that no such DocType survives migrate at all.
+One is load-bearing beyond that: the grant must survive a user whose existing
+links are broken. `yammah@` points at a Role Profile that no longer exists and
+four roles that were deleted; a patch that re-saves the User fails on that
+unrelated rot, which is why the child row is inserted directly.
 """
-
-import os
 
 import frappe
 from frappe.tests import IntegrationTestCase
@@ -56,44 +49,22 @@ class TestNamespaceLivestockRoles(IntegrationTestCase):
 	def test_the_general_roles_no_longer_reach_livestock(self):
 		"""The whole point: Farm Manager (130 holders) and Agriculture User (267)
 		could read and write every animal. Neither is a livestock job."""
-		for doctype in ("Animal", "Herds", "Livestock Event", "Milk Recording"):
+		for doctype in ("Animal", "Herds", "Livestock Event"):
 			roles = _roles_on(doctype)
 			for stale in ("Farm Manager", "Agriculture User", "Agriculture Manager",
 			              "Dairy Secretary", "HOD Dairy", "Dairy Supervisor"):
 				self.assertNotIn(stale, roles, f"{stale} still reaches {doctype}")
 
-	def test_the_retired_checksheet_is_gone(self):
-		"""This patch narrowed it to System Manager; it has since been dropped.
-
-		The files are deleted, so `remove_orphan_doctypes()` clears the DocType
-		record on the next migrate — non-destructively, leaving
-		`tabMilking Palour Checksheet` and its rows in place on purpose. The
-		assertion is therefore about what the app ships, not what the site holds.
-		"""
-		self.assertFalse(
-			os.path.exists(
-				frappe.get_app_path(
-					"upande_livestock",
-					"upande_livestock",
-					"doctype",
-					"milking_palour_checksheet",
-					"milking_palour_checksheet.json",
-				)
-			),
-			"the retired checksheet is back in the app",
-		)
-
 	def test_each_role_is_confined_to_its_job(self):
-		"""A milker cannot treat a cow; a vet cannot dispose of one."""
-		# Read-only on a health file is allowed (the milk-safe date, and the
+		"""An attendant cannot treat a cow; a vet cannot dispose of one."""
+		# Read-only on a health file is allowed (the slaughter-safe date, and the
 		# options every record screen loads); treating is not.
 		perms = {p.role: p for p in frappe.get_meta("Livestock Health Case").permissions}
-		for role in ("Livestock Milker", "Livestock Attendant", "Livestock Breeder", "Livestock Stores"):
+		for role in ("Livestock Attendant", "Livestock Breeder", "Livestock Stores"):
 			for power in ("write", "create", "submit", "cancel", "delete"):
 				self.assertFalse(perms[role].get(power), f"{role} can {power} a health case")
 		self.assertNotIn("Livestock Attendant", _roles_on("Livestock Disposal"))
 		self.assertNotIn("Livestock Attendant", _roles_on("Livestock Diagnosis"))
-		self.assertNotIn("Livestock Breeder", _roles_on("Milk Recording"))
 
 	def test_disposal_is_management_only(self):
 		"""Raising and posting one, that is. The vet's one act is not disposal.
@@ -117,12 +88,6 @@ class TestNamespaceLivestockRoles(IntegrationTestCase):
 		animal = _roles_on("Animal")
 		for role in NEW_ROLES:
 			self.assertIn(role, animal, f"{role} cannot see an Animal")
-
-	def test_the_milker_can_record_milk_and_the_attendant_can_only_read_it(self):
-		perms = {p.role: p for p in frappe.get_meta("Milk Recording").permissions}
-		self.assertTrue(perms["Livestock Milker"].create)
-		self.assertTrue(perms["Livestock Attendant"].read)
-		self.assertFalse(perms["Livestock Attendant"].create)
 
 	def test_a_user_with_broken_links_can_still_be_granted(self):
 		"""Re-saving a User revalidates every link it already carries. Several here

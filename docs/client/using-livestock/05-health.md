@@ -95,7 +95,7 @@ those two show no drug table at all.
 **Vaccination and deworming issue their drugs** out of the drug store.
 
 Four kinds of activity take drugs out of the store on this farm — **Vaccination,
-Deworming, Check Up** and **Drying Off**. That list is a setting, not something
+Deworming** and **Check Up**. That list is a setting, not something
 fixed in the software, so your administrator can add to it (calcium at calving,
 say) without a new release.
 
@@ -129,11 +129,6 @@ Record the withdrawal days against every drug you give. They are stored on that
 animal's own treatment or drug row, which is what makes them useful — a herd
 deworming leaves 119 individual records, each carrying its own withdrawal.
 
-> **The withdrawal is recorded, but not yet enforced or counted for you.** The
-> Animal record has a **Milk safe date** field, and nothing currently fills it
-> in from the withdrawal days. Until that is connected, work the safe date out
-> yourself from the animal's last treatment before putting her milk back in the
-> tank.
-
-While a treated cow's milk is being held back, record it as a discard with the
-reason **Antibiotic withdrawal** (see [Milk Recording](04-milk-recording.md)).
+The health case works the **Slaughter safe from** date out for you: the latest
+treatment date plus its withdrawal days. Do not send an animal to slaughter
+before that date.

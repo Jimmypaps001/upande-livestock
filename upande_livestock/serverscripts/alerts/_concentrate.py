@@ -9,7 +9,7 @@ at once, and it stops them on a morning nobody chose.
 
 COVER IS COUNTED IN DAYS, NOT IN KILOGRAMS. "412 kg of calves meal" means
 nothing without the herd behind it — 412 kg is six weeks for the calves and two
-days for the milkers. `_cover.concentrate_plan` already does that arithmetic off the
+days for the cows. `_cover.concentrate_plan` already does that arithmetic off the
 head counts and the rations, so this reads days of cover and says so in days.
 
 TWO KINDS, BECAUSE THEY NEED DIFFERENT ANSWERS:

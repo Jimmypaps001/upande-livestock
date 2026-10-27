@@ -27,8 +27,8 @@ from upande_livestock.serverscripts.transactions.stock_drafts import stock_draft
 
 class TestEachEventPostsUnderItsOwnName(IntegrationTestCase):
 	def test_an_event_type_gets_livestock_and_its_name(self):
-		name = livestock_stock.stock_entry_type_for("Drying Off")
-		self.assertEqual(name, "Livestock Drying Off")
+		name = livestock_stock.stock_entry_type_for("Service")
+		self.assertEqual(name, "Livestock Service")
 		self.assertEqual(frappe.db.get_value("Stock Entry Type", name, "purpose"), "Material Issue")
 
 	def test_the_flows_that_are_not_events_keep_their_names(self):
@@ -37,7 +37,7 @@ class TestEachEventPostsUnderItsOwnName(IntegrationTestCase):
 
 	def test_the_old_event_types_still_count_as_livestock_stock(self):
 		types = livestock_stock.livestock_stock_entry_types()
-		for name in ("Animal Treatment", "Vaccination", "Livestock Drying Off", "Animal Feeding"):
+		for name in ("Animal Treatment", "Vaccination", "Livestock Service", "Animal Feeding"):
 			self.assertIn(name, types)
 		self.assertNotIn("Material Issue", types)
 

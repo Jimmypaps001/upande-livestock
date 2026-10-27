@@ -73,7 +73,7 @@ class TestCoverIsReadAsAtTheDaySheDied(IntegrationTestCase):
 	def setUp(self):
 		_tidy(ANIMAL)
 		_drop_policies(ANIMAL)
-		_make_cow(ANIMAL, herd="Lactating group 1")
+		_make_cow(ANIMAL, herd="Breeding Cows")
 		self.addCleanup(_drop_policies, ANIMAL)
 		self.addCleanup(_tidy, ANIMAL)
 
@@ -104,7 +104,7 @@ class TestADeathDraftsItsOwnClaim(IntegrationTestCase):
 	def setUp(self):
 		_tidy(ANIMAL)
 		_drop_policies(ANIMAL)
-		_make_cow(ANIMAL, herd="Lactating group 1")
+		_make_cow(ANIMAL, herd="Breeding Cows")
 		_policy(ANIMAL, percent=80.0, value=100000.0)
 		self.addCleanup(_drop_policies, ANIMAL)
 		self.addCleanup(_tidy, ANIMAL)
@@ -146,7 +146,7 @@ class TestADeathDraftsItsOwnClaim(IntegrationTestCase):
 class TestAnUninsuredDeathIsStillADeath(IntegrationTestCase):
 	def setUp(self):
 		_tidy(UNINSURED)
-		_make_cow(UNINSURED, herd="Lactating group 1")
+		_make_cow(UNINSURED, herd="Breeding Cows")
 		self.addCleanup(_tidy, UNINSURED)
 
 	def test_no_policy_means_no_claim_and_no_complaint(self):
@@ -168,7 +168,7 @@ class TestSettlingAClaim(IntegrationTestCase):
 	def setUp(self):
 		_tidy(ANIMAL)
 		_drop_policies(ANIMAL)
-		_make_cow(ANIMAL, herd="Lactating group 1")
+		_make_cow(ANIMAL, herd="Breeding Cows")
 		_policy(ANIMAL, percent=80.0, value=100000.0)
 		self.addCleanup(_drop_policies, ANIMAL)
 		self.addCleanup(_tidy, ANIMAL)
@@ -215,7 +215,7 @@ class TestAClaimNeedsADeathOnTheBooks(IntegrationTestCase):
 	def setUp(self):
 		_tidy(ANIMAL)
 		_drop_policies(ANIMAL)
-		_make_cow(ANIMAL, herd="Lactating group 1")
+		_make_cow(ANIMAL, herd="Breeding Cows")
 		self.policy = _policy(ANIMAL)
 		self.addCleanup(_drop_policies, ANIMAL)
 		self.addCleanup(_tidy, ANIMAL)

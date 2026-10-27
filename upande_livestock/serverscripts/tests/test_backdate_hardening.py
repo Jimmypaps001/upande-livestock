@@ -188,7 +188,6 @@ class TestTheOtherDoctypesSanitiseToo(IntegrationTestCase):
 		("Livestock Health Case", "opened_date", {}),
 		("Livestock Diagnosis", "diagnosis_date", {}),
 		("Livestock Weight Record", "weight_date", {"weight_kg": 400}),
-		("Milk Recording", "recording_date", {"total_yield_kg": 10}),
 	)
 
 	def _doc(self, doctype, date_field, date, extra):

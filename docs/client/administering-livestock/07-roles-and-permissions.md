@@ -11,15 +11,15 @@ order: 8
 The app used to reference whatever roles the site already had — `Farm Manager`,
 `Agriculture User`, `Dairy Secretary`. Those grant near-total access: four of them
 could read, write, create, delete, submit and cancel across all sixteen doctypes.
-There was no such thing as a milker's permission or a vet's.
+There was no such thing as an attendant's permission or a vet's.
 
 The reach was the real problem. **130 people held `Farm Manager` and 267 held
 `Agriculture User`** — roughly 390 people who could see and change herd data —
 against **four people who have ever actually used the module**.
 
-So the app now owns six roles, cut to the jobs those four people actually did.
+So the app now owns five roles, cut to the jobs those four people actually did.
 
-## The six roles
+## The five roles
 
 | Role | Scope |
 |---|---|
@@ -27,7 +27,6 @@ So the app now owns six roles, cut to the jobs those four people actually did.
 | **Livestock Vet** | Health cases, diagnosis, diseases, vaccination |
 | **Livestock Breeder** | Service, pregnancy diagnosis, calving and births, breeds |
 | **Livestock Attendant** | Feeds herds, manufactures feed, moves animals, records weights |
-| **Livestock Milker** | Daily yield capture, and nothing else |
 | **Livestock Stores** | Regulates feed stock |
 
 `Livestock Manager` was adopted rather than recreated — it already existed, the
@@ -38,30 +37,26 @@ naming.
 
 `R` read · `W` write · `C` create · `D` delete · `S` submit · `X` cancel
 
-| DocType | Manager | Vet | Breeder | Attendant | Milker | Stores |
-|---|---|---|---|---|---|---|
-| Animal | RWCDSX | R | R | R | R | R |
-| Herds | RWCDSX | R | R | R | R | R |
-| Livestock Event | RWCDSX | RWCS | RWCS | RWCS | — | — |
-| Livestock Event Type | RWCDSX | R | R | R | — | — |
-| Milk Recording | RWCDSX | — | — | R | RWCS | — |
-| Livestock Weight Record | RWCDSX | R | — | RWCS | — | — |
-| Livestock Health Case | RWCDSX | RWCS | — | — | — | — |
-| Livestock Diagnosis | RWCDSX | RWCS | — | — | — | — |
-| Livestock Disease | RWCDSX | RWC | — | — | — | — |
-| Breed | RWCDSX | — | RWC | — | — | — |
-| Livestock Disposal | RWCDSX | — | — | — | — | — |
-| Livestock Insurance Policy | RWCDSX | — | — | — | — | — |
-| Livestock Settings | RWCDSX | — | — | — | — | — |
-| Livestock Alert | RWCD | RW | RW | RW | — | R |
-| Milking Parlour Checksheet | — | — | — | — | — | — |
+| DocType | Manager | Vet | Breeder | Attendant | Stores |
+|---|---|---|---|---|---|
+| Animal | RWCDSX | R | R | R | R |
+| Herds | RWCDSX | R | R | R | R |
+| Livestock Event | RWCDSX | RWCS | RWCS | RWCS | — |
+| Livestock Event Type | RWCDSX | R | R | R | — |
+| Livestock Weight Record | RWCDSX | R | — | RWCS | — |
+| Livestock Health Case | RWCDSX | RWCS | — | — | — |
+| Livestock Diagnosis | RWCDSX | RWCS | — | — | — |
+| Livestock Disease | RWCDSX | RWC | — | — | — |
+| Breed | RWCDSX | — | RWC | — | — |
+| Livestock Disposal | RWCDSX | — | — | — | — |
+| Livestock Insurance Policy | RWCDSX | — | — | — | — |
+| Livestock Settings | RWCDSX | — | — | — | — |
+| Livestock Alert | RWCD | RW | RW | RW | R |
 
-System Manager holds full permissions on everything, including the parlour
-checksheet, which no livestock role can reach.
+System Manager holds full permissions on everything.
 
-Read the matrix as the design statement it is: a **Milker** can create milk
-recordings and read animals and herds, and can do nothing else at all. A **Vet**
-cannot move an animal or record a milking. Only the **Manager** can dispose of an
+Read the matrix as the design statement it is: a **Vet**
+cannot move an animal or dispose of one. Only the **Manager** can dispose of an
 animal or change settings.
 
 ## Why the old roles were not deleted
@@ -89,6 +84,6 @@ need an **Employee record linked to their user**. See
 
 The Operations block is visible to every workspace user, but each endpoint checks
 `create` permission against the **target doctype** before doing anything. So a
-Milker opening the Operations screen sees all thirteen tabs, and gets a clean
+Vet opening the Operations screen sees all eleven tabs, and gets a clean
 "You are not permitted to create Livestock Disposal" if they try one they do not
 hold. The forms are not hidden by role — the actions are.

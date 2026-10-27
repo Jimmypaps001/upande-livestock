@@ -21,10 +21,9 @@ for you when you save something else: a check-up creates a Check Up event, a
 health case creates a Health Case event, a feed issue creates a Feeding event.
 You never have to create those by hand.
 
-> **Three things are not on the timeline.** Milk recordings, weighings and
-> disposals do not create a Livestock Event. Look for a milking in the Milk
-> Recording list, a weighing in Livestock Weight Records, and a disposal in
-> Livestock Disposals — not in the animal's event history.
+> **Two things are not on the timeline.** Weighings and disposals do not create
+> a Livestock Event. Look for a weighing in Livestock Weight Records, and a
+> disposal in Livestock Disposals — not in the animal's event history.
 
 ## The reproductive cycle
 
@@ -49,7 +48,7 @@ cleared to be bred again — a working list, not a rule.
 The related service is found for you — you do not have to name it. But there
 must be one: **an animal with no service awaiting a check cannot be
 diagnosed**, and the app says so. A "confirmed" with no service behind it would
-invent a pregnancy that then drives calving dates, herd moves and milk
+invent a pregnancy that then drives calving dates, herd moves and feed
 forecasts.
 
 The card alongside, **Pregnancy checks due**, lists services still waiting on a
@@ -88,14 +87,6 @@ date.
 The animal's open pregnancy is found and closed for you, and the date she is
 ready to be served again is worked out. An abortion with no pregnancy on file
 is still recordable — that is legitimate data, not an error.
-
-### Drying Off
-
-**Operations → Drying Off.** Marks the end of a lactation.
-
-If your farm seals quarters at drying off, the drugs used are issued from the
-drug store as part of the same action, and the usual rule applies: not enough
-stock, no record.
 
 ## The other event tabs
 
@@ -139,7 +130,7 @@ Pressing **Record Disposal** does all of the following in one submit:
 - recomputes its herd's head count,
 - sells or scraps the animal's linked asset in the accounts.
 
-**History is kept.** The animal's record, its events, its milk, its treatments
+**History is kept.** The animal's record, its events, its weights, its treatments
 all stay readable. It is retired, not deleted.
 
 ## Reading an animal's history

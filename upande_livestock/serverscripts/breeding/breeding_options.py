@@ -24,7 +24,7 @@ def breeding_options():
 
 		labels = herd_label_map()
 		# Only animals a service can happen to: the top rung of the growth ladder
-		# and cows already in milk that are past the post-calving wait. A weaner
+		# and the cows past the post-calving wait. A weaner
 		# in the offer list is an invitation to record a service that biology
 		# rules out.
 		animals = [a for a in active_animals() if herd_movement.is_servable(a.name)]

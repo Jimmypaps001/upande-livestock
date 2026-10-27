@@ -76,7 +76,6 @@ class TestLivestockSettingsEndpoints(IntegrationTestCase):
 				"growth_ladder",
 				"heifer_herds",
 				"in_calf_herds",
-				"milking_herds",
 			],
 		)
 		for table in tables.values():
@@ -158,6 +157,6 @@ class TestLivestockSettingsEndpoints(IntegrationTestCase):
 	def test_a_link_that_names_nothing_is_refused(self):
 		"""These fields post stock and journal entries. A warehouse that does not
 		exist is not a typo the operator finds out about later."""
-		result = save_livestock_settings({"custom_milk_target_warehouse": "No Such Warehouse - ZZ"})
+		result = save_livestock_settings({"custom_feed_wip_warehouse": "No Such Warehouse - ZZ"})
 		self.assertIn("error", result)
 		self.assertIn("No Such Warehouse - ZZ", result["error"])

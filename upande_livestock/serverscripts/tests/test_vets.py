@@ -17,7 +17,6 @@ from upande_livestock.serverscripts.disposal.record_disposal import record_dispo
 from upande_livestock.serverscripts.health.create_check_up import create_check_up
 from upande_livestock.serverscripts.health.create_health_case import create_health_case
 from upande_livestock.serverscripts.husbandry.create_husbandry_event import create_husbandry_event
-from upande_livestock.serverscripts.breeding.create_drying_off_event import create_drying_off_event
 from upande_livestock.serverscripts.people.vet_options import vet_options
 from upande_livestock.serverscripts.health.treat_animal import treat_animal
 from upande_livestock.serverscripts.tests.timings_utils import set_setting
@@ -198,15 +197,12 @@ class TestWhereVetLands(VetCase):
 		self.assertTrue(res.get("ok"), res)
 		self.assertEqual(frappe.db.get_value("Livestock Health Case", res["name"], "vet"), vet.name)
 
-	def test_a_husbandry_round_and_a_drying_off_carry_the_vet(self):
+	def test_a_husbandry_round_carries_the_vet(self):
 		vet = self.external()
 		res = create_husbandry_event({"event_type": "Hoof Trimming", "animal": self.cow.name, "operator": _employee(), "vet": vet.name})
 		self.assertTrue(res.get("ok"), res)
 		self.assertEqual(frappe.db.get_value("Livestock Event", res["name"], "vet"), vet.name)
 		self.assertEqual(res["vet"], vet.name)
-		res = create_drying_off_event({"animal": self.cow.name, "operator": _employee(), "vet": vet.name})
-		self.assertTrue(res.get("ok"), res)
-		self.assertEqual(frappe.db.get_value("Livestock Event", res["name"], "vet"), vet.name)
 
 	def test_a_disposal_carries_the_vet(self):
 		vet = self.external()
@@ -336,7 +332,7 @@ class TestTheTreatmentFee(VetCase):
 		super().setUp()
 		self.animal = "ZZ-TREAT-FEE"
 		self._tidy()
-		_make_cow(self.animal, herd="Lactating group 1")
+		_make_cow(self.animal, herd="Breeding Cows")
 		self.who = _employee()
 		self.company = default_company()
 		self.original = frappe.db.get_single_value("Livestock Settings", EXPENSE_FIELD)

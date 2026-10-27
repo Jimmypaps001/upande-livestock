@@ -59,12 +59,11 @@ LIVESTOCK_ROLES = (
 	"Livestock Breeder",
 	"Livestock Attendant",
 	"Livestock Stores",
-	"Livestock Milker",
 )
 
-#: Who hears about what. Deliberately narrower than LIVESTOCK_ROLES: a milker
+#: Who hears about what. Deliberately narrower than LIVESTOCK_ROLES: an attendant
 #: has no say in whether a bull is past its selling window, and a store keeper
-#: does not decide when a cow is served. Notifying all six would be the fastest
+#: does not decide when a cow is served. Notifying all five would be the fastest
 #: way to teach the farm to ignore the bell.
 ROLES_FOR_KIND = {
 	# Where an animal belongs. The attendant walks it; the manager approves it.
@@ -140,7 +139,7 @@ def users_for_herd(herd):
 
 	No user is restricted to a herd on kaitet today, so in practice this returns
 	nothing and `audience_for_alert` falls back to the role audience — which is
-	the point. The day somebody IS restricted to Steamers, Steamers' alerts stop
+	the point. The day somebody IS restricted to one herd, that herd's alerts stop
 	going to the people who cannot see that herd anyway.
 	"""
 	if not herd:

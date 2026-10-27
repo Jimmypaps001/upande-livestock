@@ -1,4 +1,4 @@
-"""The ration record, held against this site's real feed and milk data.
+"""The ration record, held against this site's real feed data.
 
 The mistake worth a test of its own is the first one: reading a herd's
 *current* `Herds.bom` instead of the BOM its Work Order actually used. It looks
@@ -12,7 +12,7 @@ import unittest
 
 import frappe
 from frappe.tests import IntegrationTestCase
-from frappe.utils import add_days, flt, getdate
+from frappe.utils import flt, getdate
 
 from upande_livestock.serverscripts.feeding.ration_history import ration_history
 
@@ -25,16 +25,6 @@ def _submitted_herd_work_orders():
 		   WHERE IFNULL(custom_herd, '') <> '' AND docstatus = 1""",
 		as_dict=True,
 	)
-
-
-def _milk_by_day():
-	rows = frappe.db.sql(
-		"""SELECT herd, recording_date, SUM(total_yield_kg) AS kg
-		   FROM `tabMilk Recording` WHERE docstatus = 1
-		   GROUP BY herd, recording_date""",
-		as_dict=True,
-	)
-	return {(r.herd, getdate(r.recording_date)): flt(r.kg) for r in rows}
 
 
 class TestRationHistory(IntegrationTestCase):
@@ -108,75 +98,6 @@ class TestRationHistory(IntegrationTestCase):
 		multi = [r for r in res["rows"] if r["runs"] > 1]
 		if not multi:
 			raise unittest.SkipTest("no herd-day on this site was mixed in more than one run")
-
-	def test_each_milk_window_moves_the_figure(self):
-		"""same_day, next_day, plus_two and avg_three must each read a
-		different day's milk, held against a day this site actually recorded
-		milk on."""
-		milk = _milk_by_day()
-		if not milk:
-			raise unittest.SkipTest("no milk recorded on this site")
-
-		# A ration day whose milk landed the NEXT day and not the same day —
-		# the case that separates the windows instead of agreeing by accident.
-		rows = ration_history(limit=1000)["rows"]
-		target = None
-		for row in rows:
-			day = getdate(row["fed_on"])
-			if (row["herd"], day) not in milk and (row["herd"], add_days(day, 1)) in milk:
-				target = row
-				break
-		if not target:
-			raise unittest.SkipTest("no ration day on this site has milk only on the day after")
-
-		herd, day = target["herd"], getdate(target["fed_on"])
-		next_kg = milk[(herd, add_days(day, 1))]
-
-		def figure(window):
-			res = ration_history(herd=herd, from_date=str(day), to_date=str(day), milk_window=window)
-			self.assertTrue(res.get("ok"), res.get("error"))
-			self.assertEqual(res["milk_window"], window)
-			match = [r for r in res["rows"] if r["bom_no"] == target["bom_no"]]
-			self.assertTrue(match, f"{target['bom_no']} vanished for window {window}")
-			return match[0]["milk_kg"]
-
-		self.assertIsNone(figure("same_day"), "nothing was recorded on the day fed")
-		self.assertAlmostEqual(figure("next_day"), round(next_kg, 1), places=1)
-
-		plus_two = milk.get((herd, add_days(day, 2)))
-		self.assertEqual(
-			figure("plus_two"), None if plus_two is None else round(plus_two, 1)
-		)
-
-		# The average is taken over the days actually recorded, not over three
-		# regardless — recording milk on one of the three days must not report
-		# a third of it.
-		recorded = [
-			milk[(herd, add_days(day, off))]
-			for off in (0, 1, 2)
-			if (herd, add_days(day, off)) in milk
-		]
-		self.assertAlmostEqual(
-			figure("avg_three"), round(sum(recorded) / len(recorded), 1), places=1
-		)
-
-	def test_the_response_names_the_window_it_used(self):
-		"""A page that prints a next-day figure under a same-day heading is
-		the failure this label exists to stop."""
-		for window, needle in (
-			("same_day", "same day"),
-			("next_day", "next day"),
-			("plus_two", "two days"),
-			("avg_three", "average"),
-		):
-			res = ration_history(limit=5, milk_window=window)
-			self.assertEqual(res["milk_window"], window)
-			self.assertIn(needle, res["milk_window_label"].lower())
-
-	def test_an_unknown_window_is_refused_rather_than_quietly_defaulted(self):
-		res = ration_history(limit=5, milk_window="whenever")
-		self.assertIn("error", res)
-		self.assertIn("whenever", res["error"])
 
 	def test_the_herd_filter_answers_for_one_herd_only(self):
 		all_rows = ration_history(limit=1000)["rows"]

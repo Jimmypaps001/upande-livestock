@@ -15,7 +15,7 @@ order: 4
 | `herd_name` | The identity |
 | `min_age` / `max_age` | Age bracket in months, used when placing calves |
 | `number_of_animals` | Head count — **maintained by the app** |
-| `custom_is_calf_rearing` | Marks the calf-rearing herd. Which herds are milked is set in **Livestock Settings → Milking Herds**; the dry herds are Settings' drying-off and steamer herds |
+| `custom_is_calf_rearing` | Marks the calf-rearing herd. |
 | `bom` | What this herd is fed — its standing ration |
 | `cost_center` | Where its costs land |
 
@@ -54,20 +54,12 @@ quantity wrong and every feed run for that herd is wrong by the same factor.
 | `max_days_in_herd` | Beyond this it is overdue |
 | `exits_on_service` | The animal leaves on being served rather than on elapsed time |
 
-The ladder plus the lactation settings form one chain an animal walks:
+The ladder plus the breeding settings form one chain an animal walks:
 
 ```
 calf herd (by sex)
    ├─ heifer → growth ladder rungs → in-calf heifers (on CONFIRMED pregnancy)
    └─ bull   → bull herd → cull window (14 days here)
-
-in-calf heifers → steamers (90 days before calving)
-                     ↓ calves
-       high yield (120 days from conception)
-                     ↓
-        low yield (60 days)
-                     ↓
-        steamers (60 days before calving) → repeat
 ```
 
 Nothing in this chain moves an animal by itself. It **proposes**, and a person

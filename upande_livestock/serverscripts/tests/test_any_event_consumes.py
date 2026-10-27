@@ -1,7 +1,7 @@
 """Any event type the farm maps consumes its items — not only the four.
 
-`consumes_drugs` was a checkbox on a fixture, set on Check Up, Deworming,
-Drying Off and Vaccination. A Calving that uses lubricant, gloves and a calcium
+`consumes_drugs` was a checkbox on a fixture, set on Check Up, Deworming
+and Vaccination. A Calving that uses lubricant, gloves and a calcium
 bolus had nowhere to record any of it. The box is gone; any event type whose
 rule (Posts Stock Entry + item groups) is set issues what it used.
 """

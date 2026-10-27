@@ -3,21 +3,14 @@
 
 """A backdated record does not post money or stock.
 
-The drug and semen paths learned this first (test_backdated_drugs.py). Two
-writes never did, and both were reachable from the same amber Backdate toggle
-that promises, in as many words, "You are not affecting stocks":
-
-  Milk Recording   on_submit posts a Material Receipt of the milk and a revenue
-                   Journal Entry. Loading three months of milk notebooks put
-                   three months of production into TODAY's balance, because the
-                   Stock Entry set posting_date without set_posting_time and
-                   ERPNext replaced it with now — while the Journal Entry kept
-                   recording_date. The two postings did not even agree.
+The drug and semen paths learned this first (test_backdated_drugs.py). One
+write never did, and it was reachable from the same amber Backdate toggle that
+promises, in as many words, "You are not affecting stocks":
 
   Livestock Disposal  on_submit raises a Sales Invoice or an asset-scrap
-                   Journal Entry. Smaller blast radius, same shape.
+                   Journal Entry.
 
-Each is pinned on the balance, not on the absence of an exception: "nothing
+It is pinned on what was posted, not on the absence of an exception: "nothing
 threw" is what the old code did too.
 """
 
@@ -25,19 +18,13 @@ from unittest import mock
 
 import frappe
 from frappe.tests import IntegrationTestCase
-from frappe.utils import add_days, add_months, flt, today
+from frappe.utils import add_days, add_months, today
 
-from upande_livestock.serverscripts.common import herd_movement
 from upande_livestock.serverscripts.disposal.record_disposal import record_disposal
-from upande_livestock.serverscripts.milking.create_milk_recording import create_milk_recording
 
 
 def _set_window(value):
 	frappe.db.set_single_value("Livestock Settings", "custom_backdating_open", value)
-
-
-def _bin_qty(item, warehouse):
-	return flt(frappe.db.get_value("Bin", {"item_code": item, "warehouse": warehouse}, "actual_qty"))
 
 
 def _an_animal():
@@ -52,83 +39,6 @@ def _an_animal():
 			"date_of_birth": add_months(today(), -30),
 		}
 	).insert(ignore_permissions=True)
-
-
-class TestBackdatedMilkRecording(IntegrationTestCase):
-	def setUp(self):
-		self.addCleanup(_set_window, 0)
-		_set_window(1)
-		self.item = frappe.db.get_single_value("Livestock Settings", "custom_milk_item")
-		self.warehouse = frappe.db.get_single_value(
-			"Livestock Settings", "custom_milk_target_warehouse"
-		)
-		if not (self.item and self.warehouse):
-			self.skipTest("no milk item / target warehouse configured on this site")
-		self.herd = (herd_movement.milking_herds() or [None])[0] or frappe.db.get_value(
-			"Herds", {}, "name"
-		)
-		if not self.herd:
-			self.skipTest("no herd on this site")
-		self.addCleanup(frappe.db.rollback)
-
-	def _record(self, recording_date):
-		return create_milk_recording(
-			{
-				"herd": self.herd,
-				"recording_date": recording_date,
-				"total_yield_kg": 120.0,
-				"price_per_kg": 55.0,
-				"milking_time": "06:00:00",
-			}
-		)
-
-	def test_a_backdated_milking_leaves_the_milk_balance_alone(self):
-		before = _bin_qty(self.item, self.warehouse)
-		res = self._record(add_days(today(), -70))
-		self.assertNotIn("error", res, res.get("error"))
-		self.assertEqual(_bin_qty(self.item, self.warehouse), before)
-
-	def test_a_backdated_milking_posts_no_stock_entry_and_no_journal_entry(self):
-		res = self._record(add_days(today(), -70))
-		self.assertNotIn("error", res, res.get("error"))
-		doc = frappe.get_doc("Milk Recording", res["name"])
-		self.assertEqual(doc.custom_is_backdated, 1)
-		self.assertFalse(doc.stock_entry)
-		self.assertFalse(doc.journal_entry)
-
-	def test_the_yield_and_the_revenue_still_survive_for_the_reconciliation(self):
-		"""Suppressing the posting must not lose the figures it would have used —
-		a later pass has to be able to post them."""
-		res = self._record(add_days(today(), -70))
-		doc = frappe.get_doc("Milk Recording", res["name"])
-		self.assertEqual(flt(doc.total_yield_kg), 120.0)
-		self.assertEqual(flt(doc.net_yield_kg), 120.0)
-		self.assertEqual(flt(doc.milk_revenue), 120.0 * 55.0)
-
-	def test_a_live_milking_still_posts(self):
-		"""The control. Without this the three assertions above would also pass
-		on a site where milk never posts at all."""
-		before = _bin_qty(self.item, self.warehouse)
-		res = self._record(today())
-		self.assertNotIn("error", res, res.get("error"))
-		doc = frappe.get_doc("Milk Recording", res["name"])
-		self.assertEqual(doc.custom_is_backdated, 0)
-		self.assertTrue(doc.stock_entry, "a live milking must still post its Material Receipt")
-		self.assertTrue(doc.journal_entry, "a live milking must still post its revenue JE")
-		self.assertEqual(_bin_qty(self.item, self.warehouse), before + 120.0)
-
-	def test_a_live_milking_posts_on_its_own_clock_time(self):
-		"""set_posting_time was never set, so ERPNext overwrote both the date and
-		the time with `now` — which is why the backdated milk landed on today in
-		the first place, and why two milkings on one day both landed at the
-		submit time instead of at 06:00 and 16:00."""
-		res = self._record(today())
-		se = frappe.get_doc("Stock Entry", frappe.get_doc("Milk Recording", res["name"]).stock_entry)
-		self.assertEqual(se.set_posting_time, 1)
-		# posting_time comes back as a timedelta ("6:00:00"), not the "06:00:00"
-		# string that went in.
-		self.assertEqual(str(se.posting_time), "6:00:00")
-		self.assertEqual(str(se.posting_date), today())
 
 
 class TestBackdatedDisposal(IntegrationTestCase):

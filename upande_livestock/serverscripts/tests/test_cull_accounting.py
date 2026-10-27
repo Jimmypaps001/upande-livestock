@@ -43,7 +43,7 @@ def _a_customer():
 class TestWhichPostingEachFlowReaches(IntegrationTestCase):
 	def setUp(self):
 		_tidy(ANIMAL)
-		_make_cow(ANIMAL, herd="Lactating group 1")
+		_make_cow(ANIMAL, herd="Breeding Cows")
 		self.addCleanup(_tidy, ANIMAL)
 		self.sold = mock.MagicMock(return_value={})
 		self.scrapped = mock.MagicMock(return_value={})
@@ -109,7 +109,7 @@ class TestWhichPostingEachFlowReaches(IntegrationTestCase):
 		post_asset_disposal downgrades a posting failure to a warning on purpose
 		— an uncapitalised animal, a missing account, a closed period. The
 		departure still has to complete, or the farm is left with a dead animal
-		that the system says is still milking.
+		that the system says is still on the farm.
 		"""
 		self.scrapped.side_effect = Exception("no asset account")
 		case = raise_cull({"animal": ANIMAL, "flow": culling.MORTALITY,

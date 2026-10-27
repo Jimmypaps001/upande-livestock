@@ -150,10 +150,10 @@ def requires(flow: str) -> dict:
 def ensure_cull_herd() -> str:
 	"""The holding herd, created on first use.
 
-	Every departed animal is moved here rather than left in her milking group.
+	Every departed animal is moved here rather than left in her old herd.
 	`current_herd` is deliberately not cleared on a disposal — the record has to
 	keep saying where she was — so without a move she stays listed under
-	Lactating 1 forever, and every screen that reads a herd by its animals shows
+	her old herd forever, and every screen that reads a herd by its animals shows
 	a cow that is not on the farm.
 
 	Its head count settles at zero on its own: live_herd_count() counts only

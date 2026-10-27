@@ -117,16 +117,15 @@ doctype_js = {
 # What ships as data. Deliberately short: a fixture only restores what was last
 # exported from some site's database, so anything that can be stated in code is.
 fixtures = [
-	# NOTE: Custom Fields are no longer shipped as fixtures either. Work Order,
-	# BOM and Stock Entry are borrowed doctypes and their fields are DECLARED in
+	# NOTE: Custom Fields are no longer shipped as fixtures either. Work Order
+	# and BOM are borrowed doctypes and their fields are DECLARED in
 	# serverscripts/common/custom_fields.py, rebuilt on after_migrate. A fixture
 	# only restores what was last exported from some site's database, so a field
 	# nobody exported exists nowhere else — which is how the Rations page came to
 	# die on live with "Unknown column 'wo.custom_herd' in 'SELECT'".
 	# NOTE: Client Scripts and Server Scripts are no longer shipped as fixtures.
 	# They now live in the codebase: form scripts under public/js/ (doctype_js),
-	# doc-event logic in the doctype controllers (livestock_event / animal /
-	# milk_recording), and API/scheduler logic in api/*.py and tasks.py.
+	# doc-event logic in the doctype controllers (livestock_event / animal), and API/scheduler logic in api/*.py and tasks.py.
 	{
 		"dt": "Custom HTML Block",
 		"filters": [["name", "in", ["Livestock Dashboard", "Livestock Operations"]]],
@@ -158,21 +157,15 @@ after_install = "upande_livestock.install.after_install"
 
 # Migration
 # ---------
-# Ensure the "Milking" Stock Entry Type exists before any migrate-time save of
-# Livestock Settings (whose custom_milking_stock_entry_type defaults to
-# "Milking"), and again afterwards as a safety net on redeploys.
-#
 # ensure_livestock_event_types runs only after_migrate: on a fresh site the
 # Livestock Event Type table does not exist until model sync, so running it
 # before_migrate would be a silent no-op (guarded by table_exists) anyway.
-before_migrate = ["upande_livestock.install.ensure_milking_stock_entry_type"]
 after_migrate = [
-	# The custom fields this app puts on Work Order, BOM and Stock Entry are
+	# The custom fields this app puts on Work Order and BOM are
 	# declared in code and rebuilt here, not exported as a fixture — a fixture
 	# only restores what was last exported from some site, which is how
 	# Work Order.custom_herd came to exist on one machine and nowhere else.
 	"upande_livestock.serverscripts.common.custom_fields.ensure_livestock_custom_fields",
-	"upande_livestock.install.ensure_milking_stock_entry_type",
 	"upande_livestock.install.ensure_livestock_event_types",
 	"upande_livestock.serverscripts.common.stock.ensure_event_stock_entry_types",
 	"upande_livestock.install.ensure_livestock_timing_defaults",
@@ -255,7 +248,6 @@ doc_events = {
 			"Animal",
 			"Herds",
 			"Livestock Event",
-			"Milk Recording",
 			"Livestock Weight Record",
 			"Livestock Disposal",
 			"Livestock Health Case",

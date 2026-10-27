@@ -56,29 +56,6 @@
   {
    "child": 0,
    "collapsible": 1,
-   "icon": "milk",
-   "indent": 1,
-   "keep_closed": 0,
-   "label": "Production",
-   "link_type": "",
-   "show_arrow": 0,
-   "type": "Section Break"
-  },
-  {
-   "child": 1,
-   "collapsible": 1,
-   "icon": "milk",
-   "indent": 0,
-   "keep_closed": 0,
-   "label": "Milk Recording",
-   "link_to": "Milk Recording",
-   "link_type": "DocType",
-   "show_arrow": 0,
-   "type": "Link"
-  },
-  {
-   "child": 0,
-   "collapsible": 1,
    "icon": "activity",
    "indent": 1,
    "keep_closed": 0,
@@ -136,7 +113,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-07-17 14:45:00.000000",
+ "modified": "2026-10-27 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Upande Livestock",
  "module_onboarding": null,

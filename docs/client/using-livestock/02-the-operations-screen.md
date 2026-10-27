@@ -6,14 +6,12 @@ order: 3
 
 # The Operations screen
 
-**Upande Livestock → Operations.** One screen, thirteen tabs, in this order:
+**Upande Livestock → Operations.** One screen, eleven tabs, in this order:
 
 | Tab | What it records | Does it move stock? |
 |---|---|---|
 | **Feed** | The herd's total mixed ration, mixed and fed in one action | Yes — raw materials out, feed issued |
-| **Milking** | A milking session for a herd | Yes — milk into the dairy store |
 | **Movement** | An animal changing herd | No |
-| **Drying Off** | The end of a lactation | Yes — teat sealant or dry-cow therapy |
 | **Calving** | A calving, and an Animal record per live calf | No |
 | **Service** | An insemination or bull service | A semen straw, if configured |
 | **Diagnosis** | A pregnancy diagnosis | No |

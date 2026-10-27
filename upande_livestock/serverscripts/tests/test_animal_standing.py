@@ -3,7 +3,7 @@
 
 """Where an animal stands among the others: her figures, her herd's and her group's.
 
-Three milking cows in one test herd, with different service histories, and a
+Three breeding cows in one test herd, with different service histories, and a
 heifer, so the tests can say which way the ranking runs and who is compared with
 whom. Events go in straight (db_insert, submitted): the rules for HOW a calving
 is recorded are tested elsewhere; this reads what is there."""
@@ -68,7 +68,7 @@ class TestAnimalStanding(IntegrationTestCase):
 	def test_fewer_services_is_better_and_ranks_first(self):
 		m, _ = self.metric(GOOD, "services_per_conception")
 		self.assertEqual(m["value"], 1.0)
-		self.assertEqual(m["herd"]["top"], 33)  # best of the three milking cows in the herd
+		self.assertEqual(m["herd"]["top"], 33)  # best of the three breeding cows in the herd
 		best = m["group"]["top"]
 		m, _ = self.metric(POOR, "services_per_conception")
 		self.assertEqual(m["value"], 4.0)
@@ -85,14 +85,12 @@ class TestAnimalStanding(IntegrationTestCase):
 	def test_the_herd_includes_her_heifer_but_the_group_does_not(self):
 		_, got = self.metric(GOOD, "parity")
 		self.assertEqual(got["herd"]["n"], 4)
-		self.assertEqual(got["group"]["key"], "milking")
-		# the farm's other milking cows are in the group too, her heifer is not
+		self.assertEqual(got["group"]["key"], "breeding")
+		# the farm's other breeding cows are in the group too, her heifer is not
 		self.assertGreaterEqual(got["group"]["n"], 3)
-		herd_dim = next(m for m in got["metrics"] if m["key"] == "days_in_milk")["herd"]
-		self.assertEqual(herd_dim["n"], 3)  # three cows have milk days; the heifer has none
 
-	def test_a_heifer_is_compared_with_heifers_not_the_milking_string(self):
-		m, got = self.metric(HEIFER, "days_in_milk")
+	def test_a_heifer_is_compared_with_heifers_not_the_breeding_cows(self):
+		m, got = self.metric(HEIFER, "calving_interval")
 		self.assertEqual(got["group"]["key"], "heifer")
 		self.assertIsNone(m["value"])
 
@@ -108,7 +106,5 @@ class TestAnimalStanding(IntegrationTestCase):
 		self.assertIsNone(m["value"])
 		self.assertIsNone(m["herd"]["top"])
 
-	def test_it_says_milk_is_not_per_animal_and_refuses_a_stranger(self):
-		_, got = self.metric(GOOD, "parity")
-		self.assertFalse(got["per_animal_milk"])
+	def test_it_refuses_a_stranger(self):
 		self.assertIn("error", animal_standing({"animal": "ZZ NOT AN ANIMAL"}))

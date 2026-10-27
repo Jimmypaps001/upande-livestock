@@ -304,7 +304,7 @@ def manufacture_qty(per_head, heads, portion=1.0):
 	greater by 5e-16.
 
 	It bites at some head counts and not others: 86 and 88 are exact, 87 and 111
-	are not. Lactating Group 1 stood at 111 for months, so this was not a corner
+	are not. One herd stood at 111 for months, so this was not a corner
 	case waiting to happen. Rounding once, here, means every consumer of the
 	number agrees about what it is.
 	"""

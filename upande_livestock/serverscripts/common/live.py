@@ -5,7 +5,7 @@
 
 ONE LIGHTWEIGHT BROADCAST: `livestock_changed`. It carries identifiers only,
 never data: the phone, on hearing it, asks the normal permission-checked
-endpoints for what it needs. A message that leaked a milk figure to a user who
+endpoints for what it needs. A message that leaked a figure to a user who
 may not read it would be a second, unguarded read path; ids cannot.
 
 COALESCED. A husbandry round over 85 animals saves 85 events, and each save
@@ -38,7 +38,6 @@ KINDS = {
 	"Animal": "animal",
 	"Herds": "animal",
 	"Livestock Event": "event",
-	"Milk Recording": "event",
 	"Livestock Weight Record": "event",
 	"Livestock Disposal": "event",
 	"Livestock Health Case": "health",
@@ -134,8 +133,6 @@ def _livestock_stores():
 	stores = {r.warehouse for r in (s.get("feed_source_warehouses") or []) if r.warehouse}
 	for f in (
 		"custom_feed_wip_warehouse",
-		"custom_milk_target_warehouse",
-		"custom_milk_discard_warehouse",
 		"custom_colostrum_warehouse",
 	):
 		if s.get(f):

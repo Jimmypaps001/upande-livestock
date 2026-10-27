@@ -4,8 +4,8 @@
 """Apply a patch of changed Livestock Settings scalars.
 
 Guarded on Livestock Settings itself, not on a role: these fields decide how
-the whole farm behaves — how long a gestation is, which warehouse the milk is
-posted into, which account the journal entry credits — and being able to open
+the whole farm behaves — how long a gestation is, which warehouse the feed is
+drawn from, which account the journal entry credits — and being able to open
 the app is not the same thing as being allowed to change that.
 
 Two decisions worth knowing about before editing this file.

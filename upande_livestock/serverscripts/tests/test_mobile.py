@@ -29,7 +29,6 @@ APP_EVENT_TYPES = {
 	"Service",
 	"Pregnancy Diagnosis",
 	"Calving",
-	"Drying Off",
 	"Birth",
 	"Weight Recording",
 	"Vaccination",

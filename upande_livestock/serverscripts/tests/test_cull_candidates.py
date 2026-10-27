@@ -65,7 +65,7 @@ class TestOnlyCowsWithSomethingOnTheirRecordAreSuggested(IntegrationTestCase):
 	def setUp(self):
 		self.clean = "CAND-CLEAN-1"
 		_tidy(self.clean)
-		_make_cow(self.clean, herd="Lactating group 1")
+		_make_cow(self.clean, herd="Breeding Cows")
 		self.addCleanup(_tidy, self.clean)
 
 	def test_a_cow_with_nothing_against_her_is_not_on_the_list(self):
@@ -89,7 +89,7 @@ class TestLostPregnanciesPutHerForward(IntegrationTestCase):
 	def setUp(self):
 		self.animal = "CAND-LOSS-1"
 		_tidy(self.animal)
-		_make_cow(self.animal, herd="Lactating group 1")
+		_make_cow(self.animal, herd="Breeding Cows")
 		for back in (400, 120):
 			_event(self.animal, "Abortion", add_days(today(), -back), abortion_cause="Unknown")
 		self.addCleanup(_tidy, self.animal)
@@ -114,7 +114,7 @@ class TestServicesThatDoNotHoldPutHerForward(IntegrationTestCase):
 	def setUp(self):
 		self.animal = "CAND-OPEN-1"
 		_tidy(self.animal)
-		_make_cow(self.animal, herd="Lactating group 1")
+		_make_cow(self.animal, herd="Breeding Cows")
 		# A calving needs a pregnancy to have ended, which needs a confirmed
 		# service before it — the same chain the farm actually records.
 		_event(
@@ -165,7 +165,7 @@ class TestDaysUnderTreatmentPutHerForward(IntegrationTestCase):
 	def setUp(self):
 		self.animal = "CAND-SICK-1"
 		_tidy(self.animal)
-		_make_cow(self.animal, herd="Lactating group 1")
+		_make_cow(self.animal, herd="Breeding Cows")
 		self.addCleanup(_tidy, self.animal)
 
 	def _case(self, opened_back, **kw):
@@ -212,7 +212,7 @@ class TestTheRankingCanBeReadRatherThanTrusted(IntegrationTestCase):
 		self.milder = "CAND-RANK-MILDER"
 		for tag in (self.worse, self.milder):
 			_tidy(tag)
-			_make_cow(tag, herd="Lactating group 1")
+			_make_cow(tag, herd="Breeding Cows")
 			self.addCleanup(_tidy, tag)
 		for back in (500, 300, 100):
 			_event(self.worse, "Abortion", add_days(today(), -back), abortion_cause="Unknown")
@@ -231,11 +231,3 @@ class TestTheRankingCanBeReadRatherThanTrusted(IntegrationTestCase):
 		self.assertIsNotNone(worse)
 		self.assertIsNotNone(milder)
 		self.assertGreater(worse["score"], milder["score"])
-
-	def test_the_farm_is_told_milk_is_not_per_animal(self):
-		"""Milk Recording is a herd and a session on this farm.
-
-		So no ranking here can honestly be about litres, and the screen has to
-		be able to say so rather than implying a comparison it never made.
-		"""
-		self.assertFalse(cull_candidates()["per_animal_milk"])

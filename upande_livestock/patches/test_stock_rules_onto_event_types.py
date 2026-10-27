@@ -48,11 +48,11 @@ class TestPlannedRulesWithoutTheTable(unittest.TestCase):
 	def test_the_ticked_types_draw_on_the_drug_group_and_service_on_the_semen_group(self):
 		plan = self._plan(
 			{"custom_drug_item_group": "Dairy Drugs", "custom_semen_item_group": "Dairy Others"},
-			box_types=["Check Up", "Drying Off", "Service"],
+			box_types=["Check Up", "Deworming", "Service"],
 		)
 		self.assertEqual(
 			plan,
-			{"Check Up": ["Dairy Drugs"], "Drying Off": ["Dairy Drugs"], "Service": ["Dairy Others"]},
+			{"Check Up": ["Dairy Drugs"], "Deworming": ["Dairy Drugs"], "Service": ["Dairy Others"]},
 		)
 
 	def test_no_box_column_means_the_types_that_always_issued(self):

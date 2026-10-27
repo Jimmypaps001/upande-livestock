@@ -43,7 +43,7 @@ def prefix_for_sex(sex):
 	"""The letter an animal of this sex is numbered under.
 
 	Throws rather than defaulting: a calf whose sex never arrived would
-	otherwise be silently numbered as a heifer and join the milking ladder.
+	otherwise be silently numbered as a heifer and join the growth ladder.
 	"""
 	prefix = PREFIX_BY_SEX.get((sex or "").strip().title())
 	if not prefix:

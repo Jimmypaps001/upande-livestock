@@ -10,11 +10,9 @@ doctype's own rules, and a row can be right while the outcome is wrong.
 
 So each test signs in as a user holding exactly one role and asks
 `frappe.has_permission`. The negative cases carry the weight: the whole point of the
-change was that a milker could previously delete an animal and a vet could dispose
+change was that an attendant could previously delete an animal and a vet could dispose
 of the herd, because four roles held everything across all sixteen doctypes.
 """
-
-import os
 
 import frappe
 from frappe.tests import IntegrationTestCase
@@ -23,7 +21,6 @@ ROLE_USERS = {
 	"Livestock Vet": "_test_lsk_vet@example.com",
 	"Livestock Breeder": "_test_lsk_breeder@example.com",
 	"Livestock Attendant": "_test_lsk_attendant@example.com",
-	"Livestock Milker": "_test_lsk_milker@example.com",
 	"Livestock Stores": "_test_lsk_stores@example.com",
 	"Livestock Manager": "_test_lsk_manager@example.com",
 }
@@ -76,17 +73,9 @@ class TestLivestockRolePermissions(IntegrationTestCase):
 		self.assertTrue(self._can("Livestock Vet", "Livestock Health Case"))
 		self.assertTrue(self._can("Livestock Vet", "Livestock Diagnosis"))
 		self.assertFalse(self._can("Livestock Vet", "Livestock Disposal"))
-		self.assertFalse(self._can("Livestock Vet", "Milk Recording"))
-
-	def test_the_milker_records_milk_and_nothing_else(self):
-		self.assertTrue(self._can("Livestock Milker", "Milk Recording"))
-		self.assertFalse(self._can("Livestock Milker", "Livestock Health Case"))
-		self.assertFalse(self._can("Livestock Milker", "Livestock Disposal"))
-		self.assertFalse(self._can("Livestock Milker", "Livestock Event"))
 
 	def test_the_breeder_works_reproduction(self):
 		self.assertTrue(self._can("Livestock Breeder", "Livestock Event"))
-		self.assertFalse(self._can("Livestock Breeder", "Milk Recording"))
 		self.assertFalse(self._can("Livestock Breeder", "Livestock Disposal"))
 
 	def test_the_attendant_moves_and_feeds(self):
@@ -95,15 +84,11 @@ class TestLivestockRolePermissions(IntegrationTestCase):
 		self.assertFalse(self._can("Livestock Attendant", "Livestock Diagnosis"))
 		self.assertFalse(self._can("Livestock Attendant", "Livestock Disposal"))
 
-	def test_the_attendant_can_read_milk_but_not_record_it(self):
-		self.assertTrue(self._can("Livestock Attendant", "Milk Recording", "read"))
-		self.assertFalse(self._can("Livestock Attendant", "Milk Recording", "create"))
-
 	def test_disposal_is_management_only(self):
 		"""Nobody but management can raise one — the vet's write is not a create."""
 		self.assertTrue(self._can("Livestock Manager", "Livestock Disposal"))
 		for role in ("Livestock Vet", "Livestock Breeder", "Livestock Attendant",
-		             "Livestock Milker", "Livestock Stores"):
+		             "Livestock Stores"):
 			self.assertFalse(
 				self._can(role, "Livestock Disposal"), f"{role} can dispose of an animal"
 			)
@@ -129,36 +114,12 @@ class TestLivestockRolePermissions(IntegrationTestCase):
 	def test_no_field_role_can_delete_an_animal(self):
 		"""Previously every livestock role could. Deleting a cow is not a field task."""
 		for role in ("Livestock Vet", "Livestock Breeder", "Livestock Attendant",
-		             "Livestock Milker", "Livestock Stores"):
+		             "Livestock Stores"):
 			self.assertFalse(
 				self._can(role, "Animal", "delete"), f"{role} can delete an Animal"
 			)
 
-	def test_the_app_no_longer_ships_the_retired_checksheet(self):
-		"""It was narrowed to System Manager, then dropped from the app outright.
-
-		Asserted against the filesystem, not against `tabDocType`: the site's
-		DocType record is cleared by `remove_orphan_doctypes()` on the next
-		migrate, so checking the database would fail on any site that has not
-		migrated yet and pass for the wrong reason on one that has. What this
-		app controls — and what a future commit could regress — is whether the
-		schema file ships at all. (The directory itself can linger on an existing
-		bench as a stale `__pycache__`, so the JSON is the honest signal.)
-		"""
-		self.assertFalse(
-			os.path.exists(
-				frappe.get_app_path(
-					"upande_livestock",
-					"upande_livestock",
-					"doctype",
-					"milking_palour_checksheet",
-					"milking_palour_checksheet.json",
-				)
-			),
-			"the retired checksheet is back in the app",
-		)
-
 	def test_settings_are_management_only(self):
 		self.assertTrue(self._can("Livestock Manager", "Livestock Settings", "write"))
-		for role in ("Livestock Vet", "Livestock Milker", "Livestock Attendant"):
+		for role in ("Livestock Vet", "Livestock Attendant"):
 			self.assertFalse(self._can(role, "Livestock Settings", "write"))

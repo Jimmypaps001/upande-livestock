@@ -6,8 +6,8 @@
 THE HERD IS NOT A CONSTANT, and a projection that treats it as one is answering
 a question nobody asked. Today's draw times thirty days assumes the calves in
 the 0-2 pen are still there next month — they are not, they will have aged into
-2-4 — and that the cows in the milking herd are still milking, which the ones
-calving in a fortnight are not. Feed is bought on a lead time, so the number
+2-4 — and that no calf is about to arrive, which the cows calving in a fortnight
+will make. Feed is bought on a lead time, so the number
 worth having is what the herd will look like WHEN THE FEED ARRIVES.
 
 So this walks the herd forward a day at a time, applying every move the farm's
@@ -17,18 +17,13 @@ own rules already know about:
                       weaners after two hundred and forty. Each animal's exit
                       is her arrival plus the rung's own limit, and the rungs
                       chain, so one calf moves three times inside a year.
-  drying off          a carrying cow leaves the milking herd for the steamers a
-                      set number of days before she calves.
-  calving             on the day, she moves to the post-calving herd and a calf
-                      arrives in the calf pen — which is a NEW MOUTH the static
-                      view never counted.
-  stepping down       four months in calf and she moves from the high-yield
-                      herd to the low.
+  calving             on the day a calf arrives in the calf pen — which is a NEW
+                      MOUTH the static view never counted. The dam stays in her
+                      herd.
 
 WHICH MAKES IT ANSWER THE QUESTION THAT PROMPTED IT. Two cows abort: their
 pregnancies are no longer confirmed, so no calving is scheduled, no calf arrives
-in 0-2, and the dams do not leave the milking herd. The forecast for the calf
-pen falls and the milking herd's draw stays up — scenario B instead of scenario
+in 0-2. The forecast for the calf pen falls — scenario B instead of scenario
 A — without anybody editing a forecast, because the forecast was never a
 document. It is read from the events every time it is asked for.
 
@@ -125,17 +120,13 @@ def _ladder_moves(horizon_end):
 
 
 def _pregnancy_moves(horizon_end):
-	"""Drying off, calving, and the calf that arrives with it.
+	"""Calving, and the calf that arrives with it.
 
 	Read off CONFIRMED pregnancies only. A service still awaiting its check
 	might not have taken, and a pregnancy that ended in an abortion is no longer
 	confirmed — which is exactly how an abortion rewrites this without anybody
 	editing anything.
 	"""
-	s = hm.settings()
-	steamers, post_calving = s.get("steamer_herd"), hm.post_calving_herd()
-	high, low = s.get("high_yield_herd"), s.get("low_yield_herd")
-	step_down = int(s.get("high_yield_days_from_conception") or 0)
 	moves, births = [], []
 
 	rows = frappe.db.sql(
@@ -152,27 +143,11 @@ def _pregnancy_moves(horizon_end):
 		as_dict=True,
 	)
 	for r in rows:
-		herd = r.current_herd
 		calving = hm.expected_calving_date(r.service_date)
 		if not calving:
 			continue
-		dry_lead = hm.steamer_days_for(herd)
 
-		if high and low and step_down and herd == high:
-			when = add_days(getdate(r.service_date), step_down)
-			if today() <= str(when) <= str(horizon_end):
-				moves.append((str(when), high, low, 1.0))
-				herd = low
-
-		if steamers and herd != steamers and dry_lead:
-			when = add_days(getdate(calving), -dry_lead)
-			if today() <= str(when) <= str(horizon_end):
-				moves.append((str(when), herd, steamers, 1.0))
-				herd = steamers
-
-		if str(calving) <= str(horizon_end) and post_calving:
-			if herd and herd != post_calving:
-				moves.append((str(calving), herd, post_calving, 1.0))
+		if str(calving) <= str(horizon_end):
 			# A calf's sex is not known until she is born, and the two sexes go
 			# to different pens. Half a calf in each is the expected value, not
 			# a fudge — and it is the only honest answer before the day.
@@ -250,7 +225,7 @@ def feed_forecast(payload=None):
 			"herds": {h: v for h, v in herd_series.items() if any(v)},
 			"basis": (
 				"today's herds, moved forward by the farm's own rules — the growth "
-				"ladder, drying off, calving and the calves that arrive with it"
+				"ladder, and the calves that arrive at calving"
 			),
 		}
 

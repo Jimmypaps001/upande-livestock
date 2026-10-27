@@ -81,7 +81,7 @@ class TestSexDecidesTheLetter(IntegrationTestCase):
 
 	def test_a_missing_sex_is_refused_rather_than_assumed(self):
 		"""Defaulting to A would number a bull calf as a heifer and put him on
-		the ladder to the milking parlour."""
+		the ladder to the breeding herd."""
 		for bad in (None, "", "Unknown"):
 			with self.assertRaises(frappe.ValidationError):
 				animal_id.prefix_for_sex(bad)

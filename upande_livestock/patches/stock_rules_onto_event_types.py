@@ -36,7 +36,7 @@ DEFAULT_GROUPS = {"drug": "DRUGS", "semen": "DAIRY"}
 #: Without a mapping or a "Consumes Drugs" column to read (the live site meets
 #: Livestock Event Type for the first time), the types whose forms collect
 #: drugs — the same set kaitet.local had mapped.
-OLD_DRUG_TYPES = ("Vaccination", "Deworming", "Drying Off", "Check Up", "Treatment")
+OLD_DRUG_TYPES = ("Vaccination", "Deworming", "Check Up", "Treatment")
 RETIRED_SETTINGS = (
 	"custom_event_item_groups", "custom_drug_item_group", "custom_semen_item_group",
 	"custom_drug_warehouses", "drug_warehouse", "semen_warehouse",

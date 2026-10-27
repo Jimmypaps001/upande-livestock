@@ -23,7 +23,7 @@ the plan's cost centre on every transfer row because ERPNext's own
 An earlier version of this module asked a single site-wide setting and then the
 company default. That kept the runs alive and charged them to the wrong place:
 nine of eleven herds already name `Dairy - KR` and nothing read it, so feed,
-milk, drugs and husbandry all landed on `Main - KR` — the flower side of a
+drugs and husbandry all landed on `Main - KR` — the flower side of a
 company that runs both. A cost centre nobody chose is a real accounting error,
 quieter than the refusal it replaced.
 

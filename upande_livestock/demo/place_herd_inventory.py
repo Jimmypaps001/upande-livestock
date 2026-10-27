@@ -8,8 +8,7 @@ stands today; the site's herds drifted from it. Matching is on name AND date of
 birth, falling back to name alone — the site has no book number on any record,
 which is the very thing this also fixes.
 
-TWO NAMES FOR ONE HERD. The inventory writes "LACTATION GROUP 1" where the site
-holds "Lactating group 1", and "12 MONTHS-SERVICE" where the site holds
+TWO NAMES FOR ONE HERD. The inventory may spell a herd differently from the site, e.g. "12 MONTHS-SERVICE" where the site holds
 "12 MONTHS-SERVICE (BULLYING HEIFERS)". Taken literally that reads as 186
 animals changing herd; mapped, it is a handful of real moves. Every difference
 that looks like a mass migration deserves that second look.
@@ -31,12 +30,9 @@ DATA = ("/tmp/claude-1001/-home-ubuntu-stive-code-frappe15-apps-upande-scp/"
 
 # What the inventory calls a herd -> what this site calls it.
 HERD = {
-	"LACTATION GROUP 1": "Lactating group 1",
-	"LACTATION GROUP 2": "LACTATION GROUP 2",
 	"12 MONTHS-SERVICE": "12 MONTHS-SERVICE (BULLYING HEIFERS)",
 	"4-12 MONTHS (WEANERS)": "4-12 MONTHS (WEANERS)",
 	"INCALF HEIFERS": "INCALF HEIFERS",
-	"STEAMERS": "STEAMERS",
 	"0-2": "0-2",
 	"2-4": "2-4",
 }

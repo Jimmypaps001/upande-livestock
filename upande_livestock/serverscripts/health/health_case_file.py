@@ -112,8 +112,7 @@ def health_case_file(payload=None):
 			"vet_name": frappe.db.get_value("Livestock Vet", doc.vet, "vet_name") if doc.vet else None,
 			# Kept for a handset built before vets were records.
 			"vet_called": bool(doc.vet),
-			"milk_safe_date": str(doc.milk_safe_date) if doc.milk_safe_date else None,
-			"production_loss_kg": flt(doc.production_loss_kg),
+			"slaughter_safe_date": str(doc.slaughter_safe_date) if doc.slaughter_safe_date else None,
 			"treatment_cost": flt(doc.total_treatment_cost),
 			"outcome_notes": doc.outcome_notes,
 		}

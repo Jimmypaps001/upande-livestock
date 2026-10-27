@@ -120,11 +120,10 @@ AGE_WINDOW_RULES = {
 #   * Check Up / Health Case — these are created from a reference document, and an
 #     animal can legitimately be seen twice in a day.
 #   * Service — double insemination within one day is a real practice.
-#   * Milking / Feeding — herd-level, not per-animal.
+#   * Feeding — herd-level, not per-animal.
 DUPLICATE_ONCE_PER_DAY = {
 	"Calving": "custom_related_pregnancy",
 	"Abortion": "custom_related_pregnancy",
-	"Drying Off": None,
 	"Pregnancy Diagnosis": None,
 }
 
@@ -413,7 +412,6 @@ NOT_EMPLOYEE = (
 	"You're not registered as an employee, so you can't record. "
 	"Ask HR to link your user to an Employee."
 )
-NOT_EMPLOYEE_MILKING = "You're not registered as an employee, so you can't record milkings."
 
 # Roles that skip the check. The web desk has an operator picker, so a manager
 # who is not on the payroll can still record on behalf of a named Employee
@@ -446,5 +444,4 @@ def require_employee(doctype=None):
 		return
 	if employee_status(user)["is_employee"]:
 		return
-	message = NOT_EMPLOYEE_MILKING if doctype == "Milk Recording" else NOT_EMPLOYEE
-	raise NotEmployee(_(message))
+	raise NotEmployee(_(NOT_EMPLOYEE))

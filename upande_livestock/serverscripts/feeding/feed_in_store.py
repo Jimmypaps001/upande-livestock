@@ -10,8 +10,7 @@ from upande_livestock.serverscripts.feeding import _engine
 # _engine's own docstring records this: every feed item — raw material, mixed
 # concentrate and bought-in concentrate alike — sits in the DAIRY item group,
 # alongside 700-odd things that are not feed at all (yoghurt SKUs, semen
-# straws, drugs, packaging). A chemical or a dairy-processing output such as
-# raw milk can still turn up with a balance in a feed warehouse — the store is
+# straws, drugs, packaging). A chemical or a dairy-processing output can still turn up with a balance in a feed warehouse — the store is
 # a physical place, not a rule — so this filter is what keeps those off a
 # screen meant to answer "what feed do we hold".
 #: What the older sites in this group call it. Kept as the default so a site

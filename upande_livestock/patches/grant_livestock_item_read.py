@@ -42,7 +42,6 @@ ROLES = (
 	"Livestock Vet",
 	"Livestock Attendant",
 	"Livestock Breeder",
-	"Livestock Milker",
 )
 
 

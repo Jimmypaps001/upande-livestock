@@ -23,7 +23,6 @@ farm recognises. The record's name is the disease name.
 | `is_chronic` | Persists rather than resolves |
 | `standard_protocol` | The farm's standard treatment |
 | `typical_duration_days` | |
-| `expected_milk_withdrawal_days` | |
 | `expected_meat_withdrawal_days` | |
 | `notes` | Rich text |
 | `is_active` | Untick to retire a disease without deleting it |
@@ -37,17 +36,13 @@ usable list rather than an empty one.
 
 ### The withdrawal fields are reference only
 
-`expected_milk_withdrawal_days` and `expected_meat_withdrawal_days` describe the
-disease. They are **not** what sets a withdrawal on a treated animal — that comes
-from the withdrawal days entered per drug on the treatment or drug row. Treat
-these as guidance for whoever is entering the treatment.
+`expected_meat_withdrawal_days` describes the disease. It is **not** what sets a
+withdrawal on a treated animal — that comes from the withdrawal days entered per
+drug on the treatment row. Treat it as guidance for whoever is entering the
+treatment.
 
-> Related gap: the `milk_safe_date` field exists on Livestock Health Case
-> and Livestock Drug Issue, and the field descriptions say withdrawal periods
-> drive it — but **nothing in the app writes it**. Withdrawal days are captured
-> and stored per drug; they are never turned into a date. Staff are currently
-> told to count forward by hand. This is the most worthwhile of the outstanding
-> gaps to close.
+The health case turns the per-drug withdrawal days into a **Slaughter safe from**
+date (`slaughter_safe_date`): the latest treatment date plus its withdrawal days.
 
 ## Livestock Diagnosis
 

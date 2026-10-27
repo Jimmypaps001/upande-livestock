@@ -5,7 +5,7 @@
 
 import frappe
 from frappe import _
-from frappe.utils import date_diff, flt, getdate, today
+from frappe.utils import date_diff, getdate
 
 from upande_livestock.serverscripts.common import backdate
 from upande_livestock.serverscripts.common.envelope import as_dict, guard, run
@@ -76,8 +76,6 @@ def close_health_case(payload):
 			doc.outcome_notes = d["outcome_notes"]
 		if d.get("confirmed_diagnosis"):
 			doc.confirmed_diagnosis = d["confirmed_diagnosis"]
-		if d.get("production_loss_kg") is not None:
-			doc.production_loss_kg = flt(d["production_loss_kg"])
 		doc.flags.ignore_permissions = True
 		doc.save()
 		doc.reload()

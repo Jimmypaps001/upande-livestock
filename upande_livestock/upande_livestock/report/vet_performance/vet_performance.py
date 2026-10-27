@@ -11,7 +11,7 @@ measures the records, and is only as good as how consistently `vet` is filled.
 * Check-ups: submitted check-ups (Livestock Diagnosis) in the period.
 * Treatments: treatment rows dated in the period, on the vet's cases.
 * Health events: husbandry and other vet events (vaccination, deworming, hoof
-  trimming, dehorning, pregnancy diagnosis, drying off) in the period. The
+  trimming, dehorning, pregnancy diagnosis) in the period. The
   timeline events mirrored from cases and check-ups are not counted again.
 * Recovered / Chronic / Died / Culled: the vet's cases CLOSED in the period, by
   outcome. Open: the vet's cases still open at the end of the period.

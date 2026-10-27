@@ -8,11 +8,10 @@ from upande_livestock.serverscripts.feeding import _engine
 from upande_livestock.serverscripts.feeding import feed_in_store as feed_in_store_mod
 from upande_livestock.serverscripts.feeding.feed_in_store import feed_in_store
 
-LACTATING_CONCENTRATE = "4040010086"
-# Real, wrongly-flagged rows from the coordinator's report: a chemical stored
-# in the feed store, and 35.5 tonnes of raw milk (livestock *output*, not
-# feed) sitting in a warehouse this endpoint reads.
-KNOWN_NON_FEED = ("1110009", "WestWood Dairy Milk (kg)")
+CONCENTRATE_ITEM = "4040010086"
+# A real, wrongly-flagged row from the coordinator's report: a chemical stored
+# in the feed store.
+KNOWN_NON_FEED = ("1110009",)
 
 
 def _a_herd_ration():
@@ -55,7 +54,7 @@ class TestFeedInStore(IntegrationTestCase):
 	def test_a_tmr_is_not_reported_as_a_concentrate(self):
 		"""The bug this test pins: 'has a default BOM' used to be the whole
 		concentrate test, and a TMR is manufactured too — so real rations like
-		Bullying Heifers, Lactating Group 1/2 etc. were flagged as concentrates.
+		Bullying Heifers, Breeding Cows/2 etc. were flagged as concentrates.
 		Concentrate-ness is a line's role inside a herd's ration, not merely
 		having a BOM; a TMR's own production item must come back "tmr", never
 		"concentrate", even though Item.default_bom is set on it."""
@@ -76,9 +75,9 @@ class TestFeedInStore(IntegrationTestCase):
 
 	def test_the_known_bought_in_concentrate_is_flagged(self):
 		res = feed_in_store()
-		rows = [r for r in res["items"] if r["item_code"] == LACTATING_CONCENTRATE]
+		rows = [r for r in res["items"] if r["item_code"] == CONCENTRATE_ITEM]
 		if not rows:
-			raise unittest.SkipTest(f"{LACTATING_CONCENTRATE} has no stock on this site")
+			raise unittest.SkipTest(f"{CONCENTRATE_ITEM} has no stock on this site")
 		for r in rows:
 			self.assertEqual(r["kind"], "concentrate", r)
 			self.assertTrue(r["is_concentrate"], r)
@@ -135,9 +134,9 @@ class TestFeedInStore(IntegrationTestCase):
 			self.assertEqual(frappe.db.get_value("Item", r["item_code"], "item_group"), "DAIRY", r)
 
 	def test_known_non_feed_items_are_excluded(self):
-		"""Regression for the coordinator's report: a CHEMICALS item and 35.5
-		tonnes of raw milk (livestock output, not feed) both sit with a real
-		balance in a feed warehouse on this site, and must not appear here."""
+		"""Regression for the coordinator's report: a CHEMICALS item sits with
+		a real balance in a feed warehouse on this site, and must not appear
+		here."""
 		res = feed_in_store()
 		reported = {r["item_code"] for r in res["items"]}
 		for code in KNOWN_NON_FEED:

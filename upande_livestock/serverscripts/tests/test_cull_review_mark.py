@@ -48,7 +48,7 @@ class TestMarkingACowForReview(IntegrationTestCase):
 
 	def test_the_mark_lands_on_her_record_with_its_reason(self):
 		got = mark_cull_review({
-			"animal": self.animal, "reason": "Third mastitis this lactation",
+			"animal": self.animal, "reason": "Third mastitis in two years",
 			"operator": _employee(),
 		})
 		self.assertTrue(got.get("ok"), got.get("error"))
@@ -57,7 +57,7 @@ class TestMarkingACowForReview(IntegrationTestCase):
 			["custom_cull_candidate", "custom_cull_reason", "custom_cull_marked_by"],
 			as_dict=True)
 		self.assertEqual(row.custom_cull_candidate, 1)
-		self.assertEqual(row.custom_cull_reason, "Third mastitis this lactation")
+		self.assertEqual(row.custom_cull_reason, "Third mastitis in two years")
 		self.assertEqual(row.custom_cull_marked_by, frappe.session.user)
 
 	def test_the_decision_reaches_her_timeline_under_its_own_type(self):

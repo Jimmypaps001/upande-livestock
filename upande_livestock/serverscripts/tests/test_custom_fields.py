@@ -1,6 +1,6 @@
 """The custom fields this app puts on doctypes it does not own.
 
-Work Order, BOM and Stock Entry belong to ERPNext and are shared with three
+Work Order and BOM belong to ERPNext and are shared with three
 other installed apps, so nothing this app adds to them may be assumed to exist
 and nothing it adds may get in anyone else's way.
 
@@ -52,17 +52,8 @@ class TestTheDeclarationCoversWhatTheCodeReads(unittest.TestCase):
 			{"custom_livestock_tab", "custom_herd", "custom_is_livestock_feed", "custom_ration_kind"},
 		)
 
-	def test_the_milking_stock_entry_fields_are_declared(self):
-		declared = {f["fieldname"] for f in CF.field_spec()["Stock Entry"]}
-		self.assertEqual(
-			declared,
-			{
-				"custom_milking_details_section",
-				"custom_milking_time",
-				"custom_cows_milked",
-				"custom_milking_end_section",
-			},
-		)
+	def test_stock_entry_carries_no_field_of_ours(self):
+		self.assertNotIn("Stock Entry", CF.field_spec())
 
 	def test_every_declared_field_is_stamped_as_ours(self):
 		"""Reconciliation deletes app-owned fields that leave the spec, so a

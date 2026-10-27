@@ -78,20 +78,11 @@ Minimum intervals, all enforced as guards on the matching **Livestock Event**:
 
 This is the tab that stops flows working when it is wrong.
 
-### Feed and milk stock
+### Feed stock
 
 | Setting | Purpose | Karen Roses |
 |---|---|---|
 | Feed WIP warehouse | Where the TMR is produced and held. Used as **both** WIP and finished-goods store | Livestock Feed Store - KR |
-| Milk item | The stock item for raw milk | WDL-RAW-MILK |
-| Milking stock entry type | Type stamped on the milk receipt | *unset — falls back to "Milking"* |
-| Milk target warehouse | Where net sellable milk is posted | Dairy 1 - KR |
-| Milk discard warehouse | Where discarded milk is posted | Dairy 1 - KR |
-
-> Target and discard are the **same warehouse** here. That still separates the
-> two quantities onto their own lines of the stock entry, but it does not
-> separate them in stock. If the farm wants discarded milk visibly quarantined,
-> point the discard warehouse somewhere else.
 
 ### Feed source warehouses
 
@@ -148,11 +139,11 @@ The same tab keeps two defaults:
 | Setting | Karen Roses |
 |---|---|
 | Default company | Karen Roses |
-| Default credit account | Livestock Milk Unbilled - KR |
+| Default credit account | Livestock Unbilled - KR |
 
 The company falls back to the user's default, then Global Defaults, so a site
 that never filled this in still works. The credit account has no fallback — with
-it unset, the milk revenue journal entry is silently skipped.
+it unset, the revenue journal entry is silently skipped.
 
 ---
 
@@ -194,31 +185,16 @@ how many days an animal stays in it, an optional maximum, and whether the animal
 |---|---|
 | In-calf heifer herd | `INCALF HEIFERS` |
 | In-calf general days | 180 |
-| Heifer dry-off before calving (days) | 90 |
 
 A heifer enters the in-calf herd on a **confirmed pregnancy**, never on the
 service alone.
 
-### D · Lactation cycle
+### D · Breeding herds
 
 | Setting | Karen Roses |
 |---|---|
-| High yield herd | `Lactating group 1` |
-| High yield days from conception | 120 |
-| Low yield herd | `LACTATION GROUP 2` |
-| Low yield days | 60 |
 | Max open days | 200 |
-| Steamer (dry) herd | `STEAMERS` |
-| Steamer days from heifers / from lactation | 90 / 60 |
 
-A cow that has not conceived within max open days has expired for that cycle and
-is flagged.
+A cow that has not conceived within max open days is flagged as open too long.
 
 ---
-
-## Which herds the milking form offers
-
-The Milking tab does not offer every herd — it offers the lactation groups
-resolved from this tab. That is deliberate: offering everything let a milking be
-recorded against calves and dry cows. If a herd is missing from the milking
-form, it is because it is not part of the lactation chain here.

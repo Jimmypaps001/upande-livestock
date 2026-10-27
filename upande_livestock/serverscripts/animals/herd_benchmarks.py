@@ -22,7 +22,7 @@ def _median(values):
 def herd_benchmarks():
 	"""The farm's middle cow, per measure.
 
-	MEDIAN, NOT MEAN. One nine-lactation matriarch or one heifer bought in at
+	MEDIAN, NOT MEAN. One nine-calf matriarch or one heifer bought in at
 	six years old drags a mean far enough that half the herd reads as "below
 	average", which is exactly the comparison this exists to make honest. The
 	median says what a normal cow here looks like.

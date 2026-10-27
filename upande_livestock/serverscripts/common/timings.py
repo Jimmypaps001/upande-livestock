@@ -50,11 +50,6 @@ from frappe.utils import cint
 #: rules, carried from the live site's first settings design. A blank target is
 #: "no target", not a default to invent.
 NOT_TIMINGS = (
-	"custom_target_prod_group1",
-	"custom_target_prod_group2",
-	"custom_target_prod_group3",
-	"custom_target_prod_average",
-	"custom_target_dim",
 	"custom_target_calving_interval",
 	"custom_target_first_insem",
 	"custom_target_days_open",
@@ -104,11 +99,6 @@ TIMING_DEFAULTS = {
 	# set, and the values match the DocType's own defaults so a seeded site and
 	# a fresh install agree.
 	"bull_cull_max_days": 14,
-	"heifer_dry_off_before_calving_days": 90,
-	"high_yield_days_from_conception": 120,
-	"low_yield_days": 60,
-	"steamer_days_from_heifers": 90,
-	"steamer_days_from_lactation": 60,
 	"max_open_days": 200,
 	# Health files. Both are lines the farm draws about its own record-keeping
 	# rather than about an animal's biology, and 0 on either legitimately means
@@ -125,13 +115,6 @@ TIMING_DEFAULTS = {
 FLOAT_TIMING_DEFAULTS = {
 	"default_calf_herd_min_age": 0.0,
 	"default_calf_herd_max_age": 2.0,
-	# Bulk tank somatic cell count, in thousands of cells per ml, above which a
-	# reading is worth saying something about. 400 is the EU bulk limit and what
-	# most Kenyan creameries price against. A Float rather than an Int because
-	# it is a threshold on a measurement, not a count of days — and here rather
-	# than in TIMING_DEFAULTS because get_timing() cint()s and ZERO_IS_INVALID
-	# would refuse the 0 that legitimately means "do not check".
-	"custom_quality_scc_ceiling": 400.0,
 	# Days of concentrate cover below which the farm wants to be told. Seven,
 	# because this farm mixes weekly: less than a week of cover means the next
 	# mix cannot wait for the next mixing day, which is the moment worth a
