@@ -266,6 +266,10 @@ def ration_history(herd=None, from_date=None, to_date=None, limit=None):
 					# recipe; None (not 0) when too few were weighed to say.
 					"avg_adg_kg": round(avg_adg, 3) if avg_adg is not None else None,
 					"weighed_head": weighed_head,
+					# The period those two figures belong to, so a reader can count
+					# each period once rather than once per day row.
+					"period_start": str(span[0]),
+					"period_end": str(span[1]),
 				}
 			)
 

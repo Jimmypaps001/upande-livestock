@@ -46,6 +46,10 @@ export type RationRow = {
   avg_adg_kg?: number | null;
   /** How many head that average rests on. */
   weighed_head?: number;
+  /** The stretch on this recipe the gain figures belong to; every day row of one
+   *  period repeats the same gain, so a reader counts a period once. */
+  period_start?: string;
+  period_end?: string;
 };
 
 export type RationHistory = {
@@ -138,11 +142,22 @@ export function gainLabel(row: Pick<RationRow, "avg_adg_kg" | "weighed_head">): 
   return `${Number(row.avg_adg_kg).toFixed(2)} (${row.weighed_head ?? 0} weighed)`;
 }
 
-/** The gain across a set of ration periods, each weighted by the animals behind it. */
+/**
+ * The gain across a set of ration periods, each weighted by the animals behind it.
+ *
+ * Every day row of a period repeats that period's gain and head count, so the
+ * rows are collapsed to one entry per (herd, recipe, period) first — summing the
+ * rows would weight a long period by its number of feed days.
+ */
 export function averageGain(rows: RationRow[]): number | null {
+  const periods = new Map<string, RationRow>();
+  for (const r of rows || []) {
+    const key = [r.herd, r.bom_no, r.period_start ?? r.fed_on, r.period_end ?? r.fed_on].join("|");
+    if (!periods.has(key)) periods.set(key, r);
+  }
   let sum = 0;
   let head = 0;
-  for (const r of rows || []) {
+  for (const r of periods.values()) {
     const n = Number(r.weighed_head) || 0;
     if (r.avg_adg_kg === null || r.avg_adg_kg === undefined || n <= 0) continue;
     sum += Number(r.avg_adg_kg) * n;

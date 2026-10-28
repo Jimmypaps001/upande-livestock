@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  averageGain,
   groupByHerd,
   recipesUsed,
   type RationRow,
@@ -60,5 +61,35 @@ describe("recipesUsed", () => {
     expect(used[1].days).toBe(2);
     expect(used[1].qty).toBe(108);
     expect(used[1].last_fed).toBe("2026-07-10");
+  });
+});
+
+describe("averageGain", () => {
+  it("counts each ration period once, not once per feed day", () => {
+    // A 10-day period at 1.0 kg/day (20 head) and a 1-day period at 0.5 (10 head).
+    const long = Array.from({ length: 10 }, (_, i) =>
+      row({
+        fed_on: `2026-07-${String(i + 1).padStart(2, "0")}`,
+        avg_adg_kg: 1.0,
+        weighed_head: 20,
+        period_start: "2026-07-01",
+        period_end: "2026-07-10",
+      }),
+    );
+    const short = row({
+      fed_on: "2026-07-11",
+      bom_no: "BOM-B",
+      avg_adg_kg: 0.5,
+      weighed_head: 10,
+      period_start: "2026-07-11",
+      period_end: "2026-07-11",
+    });
+    // (1.0*20 + 0.5*10) / 30, not the day-row-weighted (1.0*200 + 0.5*10) / 210.
+    expect(averageGain([...long, short])).toBeCloseTo(25 / 30, 6);
+  });
+
+  it("skips periods with no gain and returns null when none has one", () => {
+    expect(averageGain([row({ avg_adg_kg: null, weighed_head: 0 })])).toBeNull();
+    expect(averageGain([])).toBeNull();
   });
 });
