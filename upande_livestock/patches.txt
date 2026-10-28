@@ -183,3 +183,6 @@ upande_livestock.patches.thumbnail_animal_photos
 # types, the milker role and the dairy settings go. Refuses over submitted milk data.
 upande_livestock.patches.remove_milking
 upande_livestock.patches.rename_metabolic_death_cause
+
+# Age-based bull culling is gone: its three settings and any open "Bull Cull Due" alerts.
+upande_livestock.patches.retire_bull_cull
