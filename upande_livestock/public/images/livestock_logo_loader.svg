@@ -12,12 +12,12 @@
     .head { animation: lv-round-0 5625ms cubic-bezier(.3,.7,.2,1) infinite both; }
     .tail { animation: lv-round-1 5625ms cubic-bezier(.3,.7,.2,1) infinite both; }
     @keyframes lv-in-0 {
-      0% { transform: translate(0px, 0px) scale(1); }
-      9.9% { transform: translate(186px, -190px) scale(.3); }
-      18% { transform: translate(186px, -190px) scale(.3); }
-      82% { transform: translate(186px, -190px) scale(.3); }
-      90.1% { transform: translate(186px, -190px) scale(.3); }
-      100% { transform: translate(0px, 0px) scale(1); }
+      0% { transform: translate(0px, 0px) scale(1); opacity: 1; }
+      8.1% { transform: translate(0px, 0px) scale(0); opacity: 0; }
+      18% { transform: translate(0px, 0px) scale(0); opacity: 0; }
+      82% { transform: translate(0px, 0px) scale(0); opacity: 0; }
+      91.9% { transform: translate(0px, 0px) scale(0); opacity: 0; }
+      100% { transform: translate(0px, 0px) scale(1); opacity: 1; }
     }
     @keyframes lv-in-1 {
       0% { opacity: 0; }

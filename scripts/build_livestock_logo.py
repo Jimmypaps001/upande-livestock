@@ -13,7 +13,7 @@
   scripts never run).
 
 THE SCENE (Livestock's own, after the reference silhouettes in
-doc references/livestock files/icon): the arrow steps aside to the top right, a
+doc references/livestock files/icon): the arrow shrinks into the centre of the disc, a
 strip of green grass draws across, and a dairy cow walks in onto it — one
 realistic solid silhouette in the arrow's own grey, the grass the one accent.
 The round is quiet: she lowers her head toward the grass and lifts it, and
@@ -111,13 +111,15 @@ def body(rest_hidden: bool) -> str:
 # gives each selector one animation.
 
 ARROW_HOME = "translate(0px, 0px) scale(1)"
-ARROW_ASIDE = "translate(186px, -190px) scale(.3)"
+ARROW_GONE = "translate(0px, 0px) scale(0)"
 
 ENTER = [
+    # The arrow shrinks into the centre of the disc and fades, so the scene has the whole
+    # disc; on leave it grows back out of the centre.
     (".arrow", "348.5px 347px", [
-        (0, {"transform": ARROW_HOME}),
-        (0.55, {"transform": ARROW_ASIDE}),
-        (1, {"transform": ARROW_ASIDE}),
+        (0, {"transform": ARROW_HOME, "opacity": 1}),
+        (0.45, {"transform": ARROW_GONE, "opacity": 0}),
+        (1, {"transform": ARROW_GONE, "opacity": 0}),
     ]),
     (".scene", None, [
         (0, {"opacity": 0}),
