@@ -92,6 +92,23 @@ class TestUpdateASubmittedHerd(IntegrationTestCase):
 		out = update_herd(name, max_weight_kg=260)
 		self.assertTrue(out.get("ok"), out)
 
+	def test_a_livestock_manager_may_create_a_herd_of_any_class(self):
+		from upande_livestock.serverscripts.herds.create_herd import create_herd
+
+		user = "zz.herd.creator@example.com"
+		frappe.get_doc({"doctype": "User", "email": user, "first_name": "ZZ", "send_welcome_email": 0,
+		                "roles": [{"role": "Livestock Manager"}]}).insert(ignore_permissions=True)
+		self.addCleanup(frappe.set_user, "Administrator")
+		frappe.set_user(user)
+		# The editor always sends a target gain, band class or not.
+		for cls in ("Other", "Cow", "Breeding"):
+			out = create_herd({"herd_name": f"ZZ Mgr {cls}", "herd_class": cls, "min_weight_kg": 0,
+			                   "max_weight_kg": 0, "target_adg_kg": 0.9, "weigh_monthly": 0})
+			self.assertTrue(out.get("ok"), out)
+			self.assertEqual(frappe.db.get_value("Herds", f"ZZ Mgr {cls}", "target_adg_kg"), 0.9)
+			out = update_herd(f"ZZ Mgr {cls}", target_adg_kg=0.7)
+			self.assertTrue(out.get("ok"), out)
+
 	def test_band_rules_still_apply_to_a_submitted_herd(self):
 		a = self._created("ZZ Sub A")
 		make_herd("ZZ Sub B", "Fattening", 250, 350)

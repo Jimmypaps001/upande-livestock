@@ -57,6 +57,10 @@ def create_herd(payload):
 				herd.set(field, d[field])
 		# Said outright, "no weighing" must survive the Fattening/Breeding default.
 		herd.flags.weigh_monthly_explicit = d.get("weigh_monthly") is not None
+		# `guard` above is the real check. Submitting asks for the "submit"
+		# permission, which a doctype that is not submittable never grants to
+		# anyone but Administrator, so a Livestock Manager was refused here.
+		herd.flags.ignore_permissions = True
 		herd.insert()
 		herd.submit()
 
