@@ -45,6 +45,9 @@
   "weighbridge_available",
   "hoof_section",
   "min_hoof_trimming_interval_days",
+  "forecast_section",
+  "target_exit_weight_kg",
+  "forecast_horizon_weeks",
   "tab_dairy",
   "custom_dairy_section",
   "custom_feed_wip_warehouse",
@@ -367,6 +370,25 @@
    "fieldname": "min_hoof_trimming_interval_days",
    "fieldtype": "Int",
    "label": "Min Hoof Trimming Interval (Days)"
+  },
+  {
+   "fieldname": "forecast_section",
+   "fieldtype": "Section Break",
+   "label": "Production forecast"
+  },
+  {
+   "default": "450",
+   "description": "Weight at which a bull is counted as ready for sale in the production forecast. A herd that is the top weight band with an upper limit uses that limit instead.",
+   "fieldname": "target_exit_weight_kg",
+   "fieldtype": "Float",
+   "label": "Target Exit Weight (kg)"
+  },
+  {
+   "default": "12",
+   "description": "How many weeks ahead the production forecast looks.",
+   "fieldname": "forecast_horizon_weeks",
+   "fieldtype": "Int",
+   "label": "Forecast Horizon (Weeks)"
   },
   {
    "fieldname": "tab_dairy",

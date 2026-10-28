@@ -288,6 +288,11 @@ scheduler_events = {
 		# alert row, so this running nightly does not re-send anything.
 		"upande_livestock.serverscripts.alerts.raise_alerts.raise_alerts",
 	],
+	# Records what the production forecast says, so its accuracy can be read
+	# back once the weeks it was about have passed.
+	"weekly": [
+		"upande_livestock.serverscripts.forecast.snapshot.take_weekly_snapshot",
+	],
 }
 
 # Testing

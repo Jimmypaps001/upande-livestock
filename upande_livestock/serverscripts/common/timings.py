@@ -103,6 +103,9 @@ TIMING_DEFAULTS = {
 	# interval cannot be 0; the grace can (no slack) — see ZERO_MEANS_DISABLED.
 	"weighing_interval_days": 30,
 	"weighing_grace_days": 5,
+	# Production forecast horizon (serverscripts/forecast). Zero weeks is not a
+	# forecast, so it stays out of ZERO_MEANS_DISABLED.
+	"forecast_horizon_weeks": 12,
 	# Health files. Both are lines the farm draws about its own record-keeping
 	# rather than about an animal's biology, and 0 on either legitimately means
 	# "do not tell me" — so both are in ZERO_MEANS_DISABLED, which is what keeps
@@ -118,6 +121,8 @@ TIMING_DEFAULTS = {
 FLOAT_TIMING_DEFAULTS = {
 	"default_calf_herd_min_age": 0.0,
 	"default_calf_herd_max_age": 2.0,
+	# Weight at which a bull counts as ready for sale in the production forecast.
+	"target_exit_weight_kg": 450.0,
 	# Days of concentrate cover below which the farm wants to be told. Seven,
 	# because this farm mixes weekly: less than a week of cover means the next
 	# mix cannot wait for the next mixing day, which is the moment worth a
