@@ -157,6 +157,32 @@ class TestBeefExits(IntegrationTestCase):
 		invoice = frappe.get_doc("Sales Invoice", posted["sales_invoice"])
 		self.assertEqual((invoice.items[0].qty, invoice.items[0].uom, invoice.items[0].rate), (412, "Kg", 380))
 
+	def test_a_cull_flow_sale_returns_the_withdrawal_warning(self):
+		from upande_livestock.serverscripts.common import culling
+		from upande_livestock.serverscripts.culling.approve_cull import approve_cull
+		from upande_livestock.serverscripts.culling.post_cull import post_cull
+		from upande_livestock.serverscripts.culling.raise_cull import raise_cull
+
+		a = make_animal(self.herd, 412)
+		raised = raise_cull({"animal": a.name, "flow": culling.SALE, "customer": self.customer, "price_per_kg": 380, "operator": _employee()})
+		frappe.db.set_value("Livestock Disposal", raised["name"], "custom_review_status", culling.AWAITING_APPROVAL)
+		self.assertTrue(approve_cull({"case": raised["name"]}).get("ok"))
+		frappe.db.set_value("Livestock Disposal", raised["name"], "custom_review_status", culling.APPROVED)
+		with patch("upande_livestock.serverscripts.common.withdrawal.slaughter_safe_date",
+		           return_value=date.fromisoformat(add_days(today(), 5))):
+			posted = post_cull({"case": raised["name"], "operator": _employee()})
+		self.assertTrue(posted.get("ok"), posted.get("error"))
+		self.assertEqual(len(posted["warnings"]), 1)
+		self.assertIn("withdrawal", posted["warnings"][0])
+
+	def test_a_desk_sale_without_a_price_per_kg_is_refused_in_validate(self):
+		a = make_animal(self.herd, 412)
+		doc = frappe.get_doc({"doctype": "Livestock Disposal", "animal": a.name, "disposal_type": "Sold",
+		                      "disposal_date": today(), "customer": self.customer, "sale_price": 150000})
+		with self.assertRaises(frappe.ValidationError) as ctx:
+			doc.insert(ignore_permissions=True)
+		self.assertIn("price per kg", str(ctx.exception))
+
 	def test_a_cull_sale_without_a_price_per_kg_is_refused(self):
 		from upande_livestock.serverscripts.common import culling
 		from upande_livestock.serverscripts.culling.raise_cull import raise_cull

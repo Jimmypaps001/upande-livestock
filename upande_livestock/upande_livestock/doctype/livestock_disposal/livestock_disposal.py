@@ -51,14 +51,14 @@ class LivestockDisposal(Document):
 			self.flags.warnings = self.withdrawal_warnings()
 
 	def price_the_sale(self):
-		"""A per-kg sale is worth its exit weight times the price per kg.
+		"""A sale is worth its exit weight times the price per kg.
 
-		The weight defaults to the latest weighing. With no price per kg the
-		sale_price stays as typed (a direct disposal). A cull-flow sale always
-		carries a price per kg — raise_cull and approve_cull refuse without one.
+		Live cattle sell by the kilogram, so a sale without a price per kg is
+		refused here, as record_disposal does. The weight defaults to the latest
+		weighing.
 		"""
 		if flt(self.price_per_kg) <= 0:
-			return
+			frappe.throw(_("Enter the price per kg the animal was sold at."))
 		if flt(self.exit_weight_kg) <= 0:
 			latest = latest_weight(self.animal, self.disposal_date)
 			if not latest:
@@ -146,11 +146,10 @@ class LivestockDisposal(Document):
 	def post_asset_disposal(self):
 		"""Scrap or sell the linked Asset. Warn rather than throw on failure.
 
-		A Sold disposal with no customer or no sale_price skips the sale posting
-		with a warning rather than throwing: sell_livestock_asset() requires both,
-		this site has no Customer records yet, and the disposal itself must still
-		record and retire the animal. customer/sale_price stay optional fields —
-		see livestock_disposal.json — with no mandatory_depends_on.
+		A Sold disposal always has a price (validate refuses one without) and a
+		customer (before_submit does), so its posting is never skipped for want of
+		them; a failed posting is downgraded to a warning, and the disposal still
+		records and retires the animal.
 		"""
 		# A backdated disposal records that the animal left and retires it, but posts
 		# no money. _sell_livestock_asset raises a Sales Invoice and
@@ -166,14 +165,6 @@ class LivestockDisposal(Document):
 		if self.get("custom_is_backdated"):
 			frappe.msgprint(
 				_("Backdated: the animal was retired, but no asset sale or write-off was posted."),
-				alert=True,
-				indicator="orange",
-			)
-			return
-
-		if self.disposal_type in SALE_TYPES and not (self.customer and self.sale_price):
-			frappe.msgprint(
-				_("No Customer or sale price set, so the asset sale was not posted."),
 				alert=True,
 				indicator="orange",
 			)

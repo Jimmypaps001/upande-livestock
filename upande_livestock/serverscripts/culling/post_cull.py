@@ -52,6 +52,9 @@ def post_cull(payload):
 		moved = _move_to_cull_herd(doc, herd_before, d.get("operator"))
 
 		doc.submit()  # posts the asset and retires the animal
+		# Withdrawal warnings are raised by the disposal's validate; a sale
+		# posted from the cull flow must say them too, not only record_disposal.
+		warnings = list(doc.flags.get("warnings") or [])
 		doc.db_set("custom_review_status", culling.POSTED, update_modified=False)
 
 		claim = _claim_for(doc) if flow == culling.MORTALITY else None
@@ -68,6 +71,7 @@ def post_cull(payload):
 			"sales_invoice": doc.get("sales_invoice"),
 			"journal_entry": doc.get("writeoff_journal_entry"),
 			"claim": claim,
+			"warnings": warnings,
 		}
 
 	return run(go, "livestock post_cull failed")
