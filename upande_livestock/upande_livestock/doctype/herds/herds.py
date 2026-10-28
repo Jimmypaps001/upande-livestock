@@ -33,7 +33,7 @@ class Herds(Document):
 
 	def on_trash(self):
 		if self.herd_class == "Fattening":
-			_check_ladder(_fattening_bands(exclude=self.name), leaving=self.name)
+			check_ladder(_fattening_bands(exclude=self.name), leaving=self.name)
 
 	def validate_band(self):
 		"""Only Fattening and Calf herds carry a band; any other class has it
@@ -53,17 +53,21 @@ class Herds(Document):
 			if hi and hi <= lo:
 				frappe.throw(_("{0}: the upper weight limit must be above the lower one.").format(self.name or self.herd_name))
 
+		if self.flags.ladder_check_suspended:
+			# save_band_ladder moves several boundaries at once and judges the
+			# whole ladder itself when the last herd is written.
+			return
 		if self.herd_class == "Fattening":
 			bands = _fattening_bands(exclude=self.name)
 			bands.append({"herd": self.name or self.herd_name or _("this herd"),
 			              "min": flt(self.min_weight_kg), "max": flt(self.max_weight_kg) or None})
-			_check_ladder(bands)
+			check_ladder(bands)
 		elif left_ladder:
 			# Taking a herd off the ladder must not tear a hole in the rest of it.
-			_check_ladder(_fattening_bands(exclude=self.name), leaving=self.name)
+			check_ladder(_fattening_bands(exclude=self.name), leaving=self.name)
 
 
-def _check_ladder(bands, leaving=None):
+def check_ladder(bands, leaving=None):
 	"""Throw unless these bands join up with no overlap, no gap and one open top.
 
 	`leaving` names the herd whose departure is being checked, so the refusal

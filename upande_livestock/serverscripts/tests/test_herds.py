@@ -147,3 +147,36 @@ class TestLeavingTheLadderKeepsItWhole(IntegrationTestCase):
 		frappe.delete_doc("Herds", self.a.name, ignore_permissions=True)
 		self.c.herd_class = "Other"
 		self.c.save()
+
+
+class TestSaveBandLadder(IntegrationTestCase):
+	def setUp(self):
+		isolate(self)
+		clear_bands()
+		make_herd("ZZ L A", "Fattening", 150, 250)
+		make_herd("ZZ L B", "Fattening", 250, 350)
+
+	def _bounds(self):
+		return {h: tuple(frappe.db.get_value("Herds", h, ["min_weight_kg", "max_weight_kg"]))
+		        for h in ("ZZ L A", "ZZ L B")}
+
+	def test_moving_a_shared_boundary_succeeds(self):
+		from upande_livestock.serverscripts.herds.save_band_ladder import save_band_ladder
+
+		out = save_band_ladder([
+			{"herd": "ZZ L A", "min_weight_kg": 150, "max_weight_kg": 270},
+			{"herd": "ZZ L B", "min_weight_kg": 270, "max_weight_kg": 350, "target_adg_kg": 0.8},
+		])
+		self.assertTrue(out.get("ok"), out)
+		self.assertEqual(self._bounds(), {"ZZ L A": (150, 270), "ZZ L B": (270, 350)})
+		self.assertEqual([b["herd"] for b in out["bands"]], ["ZZ L A", "ZZ L B"])
+
+	def test_a_resulting_gap_is_refused_and_nothing_changes(self):
+		from upande_livestock.serverscripts.herds.save_band_ladder import save_band_ladder
+
+		out = save_band_ladder([
+			{"herd": "ZZ L A", "min_weight_kg": 150, "max_weight_kg": 270},
+			{"herd": "ZZ L B", "min_weight_kg": 280, "max_weight_kg": 350},
+		])
+		self.assertIn("gap", out["error"].lower())
+		self.assertEqual(self._bounds(), {"ZZ L A": (150, 250), "ZZ L B": (250, 350)})
