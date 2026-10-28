@@ -59,7 +59,7 @@ def herd_rows(herd, animals, period_days):
 def active_animals(herd):
 	return frappe.get_all(
 		"Animal",
-		filters={"current_herd": herd, "docstatus": ["!=", 2], "status": ["not in", RETIRED_STATUSES]},
+		filters={"current_herd": herd, "docstatus": ["!=", 2], "disabled": 0, "status": ["not in", RETIRED_STATUSES]},
 		fields=["name", "burn_name", "date_of_birth", "birth_weight_kg"],
 	)
 

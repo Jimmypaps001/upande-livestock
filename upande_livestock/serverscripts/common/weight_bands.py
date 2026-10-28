@@ -55,7 +55,7 @@ def _label(row):
 	return row.get("tag_number") or row.get("burn_name") or row.get("name")
 
 
-_ANIMAL_FIELDS = ["name", "tag_number", "burn_name", "current_herd", "last_weight_kg"]
+_ANIMAL_FIELDS = ["name", "tag_number", "burn_name", "current_herd", "last_weight_kg", "sex"]
 
 
 def _check(row, herd_classes, bands):
@@ -81,7 +81,9 @@ def _check(row, herd_classes, bands):
 		return {**base, "kind": MOVE_DUE, "to_herd": destination(weight),
 		        "from_min_kg": own["min_kg"], "from_max_kg": own["max_kg"]}
 
-	if cls == "Calf" and weight >= bands[0]["min_kg"]:
+	# Only bull calves go on to the fattening ladder; a heifer calf is reared
+	# up the heifer growth ladder, which has its own alerts.
+	if cls == "Calf" and row.get("sex") == "Male" and weight >= bands[0]["min_kg"]:
 		top = bands[-1]
 		if top["max_kg"] is not None and weight >= top["max_kg"]:
 			return {**base, "kind": READY_FOR_EXIT, "to_herd": None, "from_min_kg": None, "from_max_kg": None}

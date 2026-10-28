@@ -85,6 +85,14 @@ class TestWeightBands(IntegrationTestCase):
 		self.assertEqual(wb.band_check(make_animal(calves, 460).name)["kind"], "Ready for Exit")
 		self.assertEqual(wb.band_check(make_animal(calves, 300).name)["to_herd"], self.b)
 
+	def test_heifer_calves_are_not_flagged_for_the_fattening_ladder(self):
+		self._ladder()
+		calves = make_herd("ZZ Calves", "Calf").name
+		self.assertIsNone(wb.band_check(make_animal(calves, 300, sex="Female").name))
+		self.assertIsNone(wb.band_check(make_animal(calves, 460, sex="Female").name))
+		bull = make_animal(calves, 300)
+		self.assertEqual([s["animal"] for s in wb.band_suggestions()], [bull.name])
+
 	def test_a_cancelled_only_weight_withdraws_the_alert(self):
 		self._ladder()
 		animal = make_animal(self.a)

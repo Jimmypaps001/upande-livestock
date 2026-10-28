@@ -38,6 +38,13 @@ class TestBullPerformance(IntegrationTestCase):
 		self.assertEqual(res["herd_class"], "Fattening")
 		self.assertEqual(res["period_days"], 90)
 
+	def test_disabled_animal_is_left_out(self):
+		herd = make_herd("ZZ Perf Gone", "Fattening").name
+		kept, gone = _bull(herd, 200, 260), _bull(herd, 200, 270)
+		frappe.db.set_value("Animal", gone.name, "disabled", 1)
+		res = get_bull_performance(herd)
+		self.assertEqual([r["animal"] for r in res["rows"]], [kept.name])
+
 	def test_unweighed_bull_unranked_and_last(self):
 		herd = make_herd("ZZ Perf B", "Fattening").name
 		quiet = make_animal(herd)
