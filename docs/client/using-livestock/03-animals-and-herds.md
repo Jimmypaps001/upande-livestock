@@ -38,8 +38,8 @@ screen shows them, so they are never stored on the animal.
 
 ### Status and retirement
 
-**Status** is what the animal is now: Active, Dry, Dead, Sold, Culled,
-Transferred Out, Disposed.
+**Status** is what the animal is now: Active, Dead, Sold, Culled,
+Transferred Out, Disposed. A beef animal is never "Dry"; that status belongs to milking and is not used.
 
 The statuses **Dead, Deceased, Sold, Culled** and **Disposed** mean the animal
 has left. Recording a disposal sets one of them and also ticks the **Disabled**

@@ -66,7 +66,20 @@ Minimum intervals, all enforced as guards on the matching **Livestock Event**:
 | Minimum weight recording interval (days) | 7 |
 | Dehorning age window (months) | 1 – 6 |
 
-> **The weight interval does not currently fire from the Operations screen.**
+### Weighing
+
+A beef herd is weighed on a cycle, not only when someone remembers.
+
+| Setting | Default | Meaning |
+|---|---|---|
+| Weighing interval (days) | 30 | How often each animal in a monthly-weighed herd is due a weighing |
+| Weighing grace (days) | 5 | How long past due before a **Weighing Overdue** alert is raised |
+
+Which herds are on the cycle is set on the herd itself (*Monthly weighing*, ticked
+by default for Fattening and Breeding herds). See
+[Herds, weight bands and breeds](03-herds-growth-and-breeds.md#weight-bands-and-the-fattening-ladder).
+
+> **The minimum weight recording interval does not currently fire from the Operations screen.**
 > The guard is attached to a Livestock Event of type *Weight Recording*, but the
 > Weight tab creates a `Livestock Weight Record`, which does not raise an event.
 > So the setting is honoured only for a Weight Recording event created by hand.
@@ -74,7 +87,7 @@ Minimum intervals, all enforced as guards on the matching **Livestock Event**:
 
 ---
 
-## Tab 3 — Dairy and accounts
+## Tab 3 — Feed and accounts
 
 This is the tab that stops flows working when it is wrong.
 
@@ -160,18 +173,16 @@ daily movement alerts and where a newborn calf is placed.
 | Male calf herd | `BULLS` |
 
 Sex decides placement before anything else. A heifer calf joins the growth
-ladder; a bull calf goes to the bull herd, where the culling window below runs
-against it.
+ladder; a bull calf goes to the bull herd and is later moved up the fattening
+bands by weight.
 
-### Bull culling
+### Bulls are not culled by age
 
-| Setting | Karen Roses |
-|---|---|
-| Cull bulls after birth | Yes |
-| Bull cull max days | 14 |
-| Warn at percent | 75 |
-
-At 75% of 14 days the warning fires on day 10.5.
+Bull calves are reared, not culled at birth. There is no age-based bull cull
+setting any more (the old *Cull bulls after birth*, *Bull cull max days* and
+*Warn at percent* values were removed). A bull leaves the farm by sale or
+slaughter, decided from its weight and gain; see
+[Insurance, disposal and exits](05-insurance-and-disposal.md).
 
 ### B · Growth ladder
 

@@ -60,13 +60,16 @@ Nothing else in the app adds to this; one submit is the whole flow.
 
 ### Two behaviours worth knowing
 
-**A sale with no customer or no price skips the accounting, with a warning.**
-`customer` and `sale_price` are deliberately *not* mandatory. The reasoning: the
-asset sale needs both, this site had no Customer records when the flow was
-written, and the disposal must still record and retire the animal regardless.
-So a Sold disposal missing either posts nothing to the accounts and shows an
-orange warning — the animal is still retired. **If disposals are not reaching
-the ledger, this is the first thing to check.**
+**Live cattle are sold by the kilogram.** A Sold disposal needs a *price per kg*
+and a *customer*; it is refused without them. The *exit weight* defaults to the
+latest weighing, and the sale amount is exit weight times price per kg. The
+Sales Invoice carries one line in Kg. A Slaughtered disposal needs neither, and
+records the animal's lifetime gain up to the exit.
+
+**A withdrawal period warns, it does not block.** If the animal was treated and
+the drug's withdrawal has not passed, the exit still goes ahead and the farm is
+shown the warning (on the desk form, in the Livestock app's exit dialog and when
+a cull-flow sale is posted).
 
 **A sale posts a Sales Invoice, not a Journal Entry.** There used to be a
 `sale_journal_entry` link field that could never hold a Sales Invoice name,

@@ -14,7 +14,7 @@ not `bench install-app`.
   Animal Disposal, Animal Diagnosis (+ System Check), Animal Drug Issue, Animal
   Health Treatment, Animal Weight Record (a child table of Animal there), Breed,
   Calf Rearing, Feeding Ration Item, Livestock Insurance Policy (+ Animal),
-  Livestock Settings and Milk Recording under module "Upande Livestock"; Animal
+  Livestock Settings and (on a dairy install) Milk Recording under module "Upande Livestock"; Animal
   Disease, Animal Health Case and Livestock Insurance Claim under "Upande Kaitet".
 - The "Upande Livestock" Module Def names `frappe` as its app.
 - Missing entirely: Livestock Alert, Livestock Event Type, Herd Growth Stage, the
@@ -59,7 +59,7 @@ on the site and then migrated.
 5. **Migrate:** `bench --site <site> migrate`. This claims the module, renames the
    Animal doctypes, unhooks the old weight table, syncs, then runs the data
    patches. Everything `after_install` would do also runs in `after_migrate`
-   (custom fields, the milking Stock Entry Type, event types, timing defaults).
+   (custom fields, event types, timing defaults).
 6. **Build and restart:** `bench build --app upande_livestock`, restart the workers.
 
 ## Check afterwards (on the rehearsal, then on live)
@@ -67,14 +67,15 @@ on the site and then migrated.
 - Patch Log has every `upande_livestock.patches.*` entry; the Error Log has no
   patch tracebacks.
 - Row counts match the backup: Animal, Herds, Livestock Event (= old Animal
-  Event), Livestock Disposal, Livestock Health Case, Livestock Diagnosis, Milk
-  Recording, Livestock Insurance Policy / Claim.
+  Event), Livestock Disposal, Livestock Health Case, Livestock Diagnosis,
+  Livestock Insurance Policy / Claim. (A beef install has no Milk Recording: the
+  `remove_milking` patch refuses to run while submitted milk data exists.)
 - No Custom Field left on Livestock Event from the first design (the 54 in
   `migrate_legacy_event_fields.LEGACY`).
 - Settings → Stock: the drug-consuming event types (those ticked "Consumes
   Drugs" before) post stock from the drug item group with "Drug/ Medicine
   store- old office - KR" as their default store, and Service from the semen
-  group; Milking Herds lists the three herds that were ticked as milking.
+  group.
 - A Stock Entry Type "Livestock <event>" (Material Issue) for every event type that
   posts stock — Livestock Vaccination, Livestock Treatment, ... New issues post under
   these; old entries keep their old types (Vaccination, Animal Treatment, ...).

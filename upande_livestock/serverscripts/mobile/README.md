@@ -28,5 +28,5 @@ When endpoints do land here, the conventions are:
   never by editing the shape of one already in the wild.
 
 The roles a handset will authenticate as already exist and already work:
-Livestock Manager, Attendant, Breeder, Milker, Stores and Vet. A user holding
-all six and no System Manager reaches every endpoint in this package.
+Livestock Manager, Attendant, Breeder, Stores and Vet. A user holding
+all five and no System Manager reaches every endpoint in this package.

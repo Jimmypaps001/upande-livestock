@@ -18,6 +18,10 @@ order: 4
 | `custom_is_calf_rearing` | Marks the calf-rearing herd. |
 | `bom` | What this herd is fed — its standing ration |
 | `cost_center` | Where its costs land |
+| `herd_class` | Breeding, Fattening, Calf, Cow or Other |
+| `min_weight_kg` / `max_weight_kg` | The weight band of a Fattening (or Calf) herd. A blank top means open-ended |
+| `target_adg_kg` | The gain per day the herd is expected to make |
+| `weigh_monthly` | Whether its animals are on the weighing cycle (on by default for Fattening and Breeding) |
 
 ### The head count is derived — do not edit it
 
@@ -59,7 +63,7 @@ The ladder plus the breeding settings form one chain an animal walks:
 ```
 calf herd (by sex)
    ├─ heifer → growth ladder rungs → in-calf heifers (on CONFIRMED pregnancy)
-   └─ bull   → bull herd → cull window (14 days here)
+   └─ bull   → fattening bands (by weight) → sale or slaughter
 ```
 
 Nothing in this chain moves an animal by itself. It **proposes**, and a person
@@ -67,15 +71,17 @@ decides — the Movement tab is always the thing that actually moves an animal.
 
 ## Daily alerts
 
-A scheduled job runs once a day and records what the ladder says should happen,
-as **Livestock Alert** records in four kinds:
+A scheduled job runs once a day and records what the ladder and the weighing
+cycle say should happen, as **Livestock Alert** records:
 
 | Kind | Raised when |
 |---|---|
-| `Bull Cull Due` | A bull calf is near or past its cull window |
 | `Move Due` | An animal has reached the end of its rung |
 | `Move Overdue` | It has passed the maximum |
 | `Cow Open Too Long` | A cow has exceeded max open days without conceiving |
+| `Weighing Overdue` | An animal in a monthly-weighed herd is past its weighing interval plus grace |
+| `Weight Band Move Due` | A bull's latest weight is outside its herd's band |
+| `Ready for Exit` | A bull is heavier than the top band |
 
 Each alert has a status of Open / Actioned / Dismissed, and one is raised at most
 once per animal per day.
@@ -87,6 +93,35 @@ once per animal per day.
 A second daily job handles reproductive reminders: overdue pregnancy checks,
 calvings expected soon, animals ready to re-breed, and expected heats. Those
 post as ToDo-style notifications rather than Livestock Alerts.
+
+## Weight bands and the fattening ladder
+
+Fattening herds are **weight bands** that together tile the weight line, for
+example 150-250 kg, 250-350 kg, 350 kg and up. A band is from its lower limit up
+to, but not including, its upper limit: a bull at exactly 250 kg belongs in the
+band that starts at 250. The rules, enforced on save:
+
+- no two bands overlap and there is no gap between them;
+- only the top band may have no upper limit.
+
+Because two neighbouring bands share a boundary, move it from **Herds -> Edit
+bands** in the Livestock app, which edits every Fattening band together and checks
+the whole ladder once. Editing one herd at a time would always look like an
+overlap or a gap. Heifer calves are not on this ladder; only bull calves are
+flagged to move into the first band.
+
+When a weighing is submitted, or a Movement into another herd is submitted, the
+animal's alerts are brought up to date straight away; the nightly job covers the
+rest. The alert is a suggestion: the Movement tab is still what moves the bull.
+
+## Bull Performance
+
+**Livestock app -> Bull Performance** ranks the animals in a herd by the weight
+they gained per day over a period (30, 60, 90 or 180 days; 90 by default). An
+animal with fewer than two weighings in the period is listed last as "Not enough
+weighings", not as zero. Rows below the herd's target gain are shaded. Each row
+has an **Exit** button, and so does a *Ready for Exit* notification: it records a
+sale (per-kg price, customer) or a slaughter in one step.
 
 ## Breeds
 
