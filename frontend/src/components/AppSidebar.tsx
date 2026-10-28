@@ -89,6 +89,17 @@ const NAV: NavSection[] = [
     ],
   },
   {
+    label: "Production",
+    items: [
+      {
+        view: "forecast",
+        label: "Forecast",
+        icon: TrendingUp,
+        hint: "When bulls will be ready, against buyer commitments",
+      },
+    ],
+  },
+  {
     label: "Feeding",
     items: [
       {
@@ -178,6 +189,7 @@ export const BUILT_VIEWS: ReadonlySet<View> = new Set<View>([
   "health-case",
   "weight",
   "performance",
+  "forecast",
   "husbandry",
   "movement",
   "calving",

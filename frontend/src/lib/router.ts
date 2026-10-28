@@ -30,6 +30,7 @@ export const VIEWS = [
   "heat",
   "weight",
   "performance",
+  "forecast",
   "check-up",
   "treatment",
   "health-case",

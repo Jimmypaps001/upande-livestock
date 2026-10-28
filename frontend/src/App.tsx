@@ -102,6 +102,9 @@ const Weight = page(() => import("@/pages/Weights").then((m) => ({ default: m.We
 const Performance = page(() =>
   import("@/pages/Performance").then((m) => ({ default: m.Performance })),
 );
+const Forecast = page(() =>
+  import("@/pages/Forecast").then((m) => ({ default: m.Forecast })),
+);
 const Husbandry = page(() => import("@/pages/Husbandry").then((m) => ({ default: m.Husbandry })));
 const Movement = page(() => import("@/pages/Movement").then((m) => ({ default: m.Movement })));
 const RationEditor = page(() =>
@@ -139,6 +142,7 @@ const TITLES: Record<View, string> = {
   heat: "Heat",
   weight: "Weight",
   performance: "Bull Performance",
+  forecast: "Production Forecast",
   "check-up": "Check Up",
   treatment: "Treatment",
   "health-case": "Health Files",
@@ -170,6 +174,7 @@ const PAGES: Partial<Record<View, React.ComponentType>> = {
   "health-case": HealthCases,
   weight: Weight,
   performance: Performance,
+  forecast: Forecast,
   husbandry: Husbandry,
   movement: Movement,
   calving: Calving,
