@@ -5,12 +5,12 @@
     .arrow { transform-box: view-box; transform-origin: 348.5px 347px; }
     .head { transform-box: fill-box; transform-origin: 30% 60%; }
     .tail { transform-box: fill-box; transform-origin: 60% 0%; }
-    .arrow { animation: lv-in-0 5625ms cubic-bezier(.3,.7,.2,1) infinite both; }
-    .scene { animation: lv-in-1 5625ms cubic-bezier(.3,.7,.2,1) infinite both; }
-    .ground { animation: lv-in-2 5625ms cubic-bezier(.3,.7,.2,1) infinite both; }
-    .bull { animation: lv-in-3 5625ms cubic-bezier(.3,.7,.2,1) infinite both; }
-    .head { animation: lv-round-0 5625ms cubic-bezier(.3,.7,.2,1) infinite both; }
-    .tail { animation: lv-round-1 5625ms cubic-bezier(.3,.7,.2,1) infinite both; }
+    .arrow { animation: lv-in-0 3000ms cubic-bezier(.3,.7,.2,1) infinite both; }
+    .scene { animation: lv-in-1 3000ms cubic-bezier(.3,.7,.2,1) infinite both; }
+    .ground { animation: lv-in-2 3000ms cubic-bezier(.3,.7,.2,1) infinite both; }
+    .bull { animation: lv-in-3 3000ms cubic-bezier(.3,.7,.2,1) infinite both; }
+    .head { animation: lv-round-0 3000ms cubic-bezier(.3,.7,.2,1) infinite both; }
+    .tail { animation: lv-round-1 3000ms cubic-bezier(.3,.7,.2,1) infinite both; }
     @keyframes lv-in-0 {
       0% { transform: translate(0px, 0px) scale(1); opacity: 1; }
       8.1% { transform: translate(0px, 0px) scale(0); opacity: 0; }
