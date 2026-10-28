@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ExitDialog } from "@/components/disposal/ExitDialog";
 import { Figure, FigureRow } from "@/components/Figure";
 import { Notice } from "@/components/feeding/Notice";
 import { HEADER_PILL } from "@/components/header-controls";
 import { RowsSkeleton } from "@/components/Loading";
 import { Page, PageHeading } from "@/components/PageShell";
 import { RefreshButton } from "@/components/RefreshButton";
+import { useToast } from "@/components/Toast";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -32,6 +35,7 @@ import {
   listPerformanceHerds,
   sortRows,
   type PerformanceHerd,
+  type PerformanceRow,
   type PerformanceView,
 } from "@/lib/performance";
 import { cn } from "@/lib/utils";
@@ -53,6 +57,8 @@ export function Performance() {
   const [view, setView] = useState<PerformanceView | null>(null);
   const [loading, setLoading] = useState(true);
   const [failure, setFailure] = useState<string | null>(null);
+  const [exiting, setExiting] = useState<PerformanceRow | null>(null);
+  const toast = useToast();
 
   // The herd list first; the first herd is chosen once it arrives.
   useEffect(() => {
@@ -206,6 +212,7 @@ export function Performance() {
                     <th className="px-3 py-2.5 text-right font-medium">Gain, period</th>
                     <th className="px-3 py-2.5 text-right font-medium">Gain in herd</th>
                     <th className="px-3 py-2.5 text-right font-medium">Lifetime gain</th>
+                    <th className="px-3 py-2.5 text-right font-medium">Exit</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -265,6 +272,17 @@ export function Performance() {
                             </div>
                           )}
                         </td>
+                        <td className="px-3 py-2.5 text-right">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 rounded-full px-3 text-[12px]"
+                            aria-label={`Exit ${row.label || row.animal}`}
+                            onClick={() => setExiting(row)}
+                          >
+                            Exit
+                          </Button>
+                        </td>
                       </tr>
                     );
                   })}
@@ -286,6 +304,7 @@ export function Performance() {
                       </td>
                       <td className="px-3 py-2.5" />
                       <td className="px-3 py-2.5" />
+                      <td className="px-3 py-2.5" />
                     </tr>
                   </tfoot>
                 )}
@@ -294,6 +313,20 @@ export function Performance() {
           )}
         </CardContent>
       </Card>
+
+      {exiting && (
+        <ExitDialog
+          animal={exiting.animal}
+          label={exiting.label}
+          latestWeight={exiting.latest_weight_kg}
+          open
+          onOpenChange={(o) => !o && setExiting(null)}
+          onDone={(m) => {
+            toast(m);
+            void load();
+          }}
+        />
+      )}
     </Page>
   );
 }

@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { Bell, Check, CheckCheck, Loader2 } from "lucide-react";
+import { ExitDialog } from "@/components/disposal/ExitDialog";
 import { Notice } from "@/components/feeding/Notice";
 import { Page, PageHeading } from "@/components/PageShell";
+import { useToast } from "@/components/Toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -66,17 +68,21 @@ function Pill({
 function Row({
   item,
   onOpen,
+  onExit,
 }: {
   item: LivestockNotification;
   onOpen: (n: LivestockNotification) => void;
+  onExit: (n: LivestockNotification) => void;
 }) {
   const overdue = item.severity === "Overdue";
   return (
+    <div className="flex items-stretch gap-2">
     <button
       type="button"
       onClick={() => onOpen(item)}
       className={cn(
         "flex w-full items-start gap-3 rounded-[var(--sd-radius-lg)] border px-3 py-2.5 text-left transition-colors hover:bg-[var(--sd-bg-soft)]",
+        "min-w-0 flex-1",
         item.read
           ? "border-[var(--sd-line)] bg-transparent"
           : "border-[var(--sd-line)] bg-[var(--sd-bg-soft)]",
@@ -118,6 +124,19 @@ function Row({
         </span>
       </span>
     </button>
+    {item.alert_kind === "Ready for Exit" && item.animal && (
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="h-auto self-center rounded-full px-3 text-[12px]"
+        aria-label={`Exit ${item.animal}`}
+        onClick={() => onExit(item)}
+      >
+        Exit
+      </Button>
+    )}
+    </div>
   );
 }
 
@@ -128,6 +147,8 @@ export function Notifications() {
   const [unread, setUnread] = useState(0);
   const [error, setError] = useState("");
   const [clearing, setClearing] = useState(false);
+  const [exiting, setExiting] = useState<LivestockNotification | null>(null);
+  const toast = useToast();
 
   const load = useCallback(async () => {
     const r = await fetchNotifications({ category, unreadOnly, limit: 100 });
@@ -225,9 +246,21 @@ export function Notifications() {
       ) : (
         <div className="flex flex-col gap-1.5">
           {rows.map((n) => (
-            <Row key={n.name} item={n} onOpen={onOpen} />
+            <Row key={n.name} item={n} onOpen={onOpen} onExit={setExiting} />
           ))}
         </div>
+      )}
+
+      {exiting?.animal && (
+        <ExitDialog
+          animal={exiting.animal}
+          open
+          onOpenChange={(o) => !o && setExiting(null)}
+          onDone={(m) => {
+            toast(m);
+            void load();
+          }}
+        />
       )}
     </Page>
   );

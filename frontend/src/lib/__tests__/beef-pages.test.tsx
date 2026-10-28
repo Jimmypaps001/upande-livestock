@@ -46,9 +46,12 @@ const payloads: Record<string, unknown> = {
     ],
     feeds: [],
   },
+  save_band_ladder: { ok: true, bands: [] },
   update_herd: { ok: true, herd: "Finishing 1", herd_class: "Fattening", min_weight_kg: 250, max_weight_kg: 360,
     target_adg_kg: 0.9, weigh_monthly: 1 },
   get_cull_board: { ok: true, animals: [] },
+  disposal_options: { ok: true, customers: ["Butcher Ltd"] },
+  record_disposal: { ok: true, name: "DISP-1", sale_price: 117420, warnings: [] },
 };
 
 const call = vi.fn(async (method?: string, args?: Record<string, unknown>) => {
@@ -133,9 +136,73 @@ describe("Herds editor", () => {
     await waitFor(() =>
       expect(call).toHaveBeenCalledWith(
         expect.stringContaining("update_herd"),
-        expect.objectContaining({ herd: "Finishing 1", herd_class: "Fattening", min_weight_kg: 250, max_weight_kg: 360, target_adg_kg: 0.9, weigh_monthly: 1 }),
+        expect.objectContaining({ herd: "Finishing 1", herd_class: "Fattening", min_weight_kg: 250, max_weight_kg: 360, target_adg_kg: 0.9 }),
       ),
     );
+  });
+});
+
+describe("Edit bands ladder editor", () => {
+  it("lists the Fattening herds and saves every rung in one call", async () => {
+    call.mockClear();
+    wrap(<Herds />);
+    const top = await screen.findByLabelText("Finishing 1 up to (kg)");
+    expect(screen.queryByLabelText("Bulls up to (kg)")).toBeNull();
+    fireEvent.change(top, { target: { value: "270" } });
+    fireEvent.click(screen.getByText("Save the bands"));
+    await waitFor(() =>
+      expect(call).toHaveBeenCalledWith(
+        expect.stringContaining("save_band_ladder"),
+        { bands: [{ herd: "Finishing 1", min_weight_kg: 250, max_weight_kg: 270, target_adg_kg: 0.9 }] },
+      ),
+    );
+  });
+});
+
+describe("Exit from Bull Performance", () => {
+  async function openExit() {
+    wrap(<Performance />);
+    fireEvent.click(await screen.findByLabelText("Exit B-FAST"));
+    return screen.findByText("Exit B-FAST");
+  }
+
+  it("sends a one-step sale to record_disposal and previews the amount", async () => {
+    call.mockClear();
+    await openExit();
+    fireEvent.click(await screen.findByLabelText("Customer"));
+    fireEvent.click(await screen.findByRole("option", { name: "Butcher Ltd" }));
+    fireEvent.change(screen.getByLabelText("Price per kg"), { target: { value: "340" } });
+    expect(screen.getByTestId("exit-amount").textContent).toContain("117,300");
+    fireEvent.click(screen.getByText("Record the sale"));
+    await waitFor(() =>
+      expect(call).toHaveBeenCalledWith(
+        expect.stringContaining("record_disposal"),
+        { payload: expect.objectContaining({
+            animal: "B-FAST", disposal_type: "Sold", customer: "Butcher Ltd", price_per_kg: 340 }) },
+      ),
+    );
+  });
+
+  it("will not record a sale without a price per kg", async () => {
+    call.mockClear();
+    await openExit();
+    fireEvent.click(screen.getByText("Record the sale"));
+    expect(await screen.findByText(/price per kg/i, { selector: "[role=alert] *, [role=alert]" })).toBeTruthy();
+    expect(call).not.toHaveBeenCalledWith(expect.stringContaining("record_disposal"), expect.anything());
+  });
+
+  it("shows the withdrawal warning the server returns", async () => {
+    const prev = payloads.record_disposal;
+    payloads.record_disposal = { ok: true, name: "DISP-2", warnings: ["Inside the withdrawal period until 2026-11-02."] };
+    try {
+      await openExit();
+      fireEvent.click(screen.getByLabelText("Leaving as"));
+      fireEvent.click(await screen.findByRole("option", { name: "Slaughtered" }));
+      fireEvent.click(screen.getByText("Record the slaughter"));
+      expect(await screen.findByText(/withdrawal period until/)).toBeTruthy();
+    } finally {
+      payloads.record_disposal = prev;
+    }
   });
 });
 

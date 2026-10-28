@@ -9,6 +9,7 @@
 import { call, type Envelope } from "@/lib/frappe";
 
 const UPDATE = "upande_livestock.serverscripts.herds.update_herd.update_herd";
+const LADDER = "upande_livestock.serverscripts.herds.save_band_ladder.save_band_ladder";
 const CREATE = "upande_livestock.serverscripts.herds.create_herd.create_herd";
 const BUY_IN = "upande_livestock.serverscripts.herds.buy_in_animal.buy_in_animal";
 const RATION = "upande_livestock.serverscripts.feeding.set_herd_ration.set_herd_ration";
@@ -37,7 +38,24 @@ export type HerdDetails = {
   max_weight_kg: string;
   target_adg_kg: string;
   weigh_monthly: boolean;
+  /** Whether the person (or a class change on their behalf) has settled the
+   *  weighing box. Untouched, it is not sent and the server's default applies. */
+  weigh_touched?: boolean;
 };
+
+/** Classes the server weighs monthly unless told otherwise. */
+export const WEIGH_MONTHLY_CLASSES: readonly HerdClass[] = ["Fattening", "Breeding"];
+
+/** The details after the class changes: a Fattening or Breeding herd is
+ *  weighed monthly by default, ticked here so the person sees it and can untick. */
+export function withClass(d: HerdDetails, herd_class: HerdClass): HerdDetails {
+  const next = { ...d, herd_class };
+  if (WEIGH_MONTHLY_CLASSES.includes(herd_class) && !WEIGH_MONTHLY_CLASSES.includes(d.herd_class)) {
+    next.weigh_monthly = true;
+    next.weigh_touched = true;
+  }
+  return next;
+}
 
 /** What the server takes. */
 export type BandPayload = {
@@ -45,7 +63,7 @@ export type BandPayload = {
   min_weight_kg: number;
   max_weight_kg: number;
   target_adg_kg: number;
-  weigh_monthly: 0 | 1;
+  weigh_monthly?: 0 | 1;
 };
 
 /** Only a herd that is fattened, or reared up to the fattening bands, has a
@@ -57,10 +75,10 @@ export function showsBandFields(herdClass: string): boolean {
 /** A blank max means open-ended (the top band), which the server stores as 0.
  *  A class without a band clears the band (0/0); the target gain is kept as entered. */
 export function bandPayload(d: HerdDetails): Partial<BandPayload> {
-  const out: Partial<BandPayload> = {
-    herd_class: d.herd_class,
-    weigh_monthly: d.weigh_monthly ? 1 : 0,
-  };
+  const out: Partial<BandPayload> = { herd_class: d.herd_class };
+  // Only a box the person settled is sent: sending 0 for an untouched one
+  // reads on the server as "deliberately off" and defeats the class default.
+  if (d.weigh_touched) out.weigh_monthly = d.weigh_monthly ? 1 : 0;
   out.target_adg_kg = Number(d.target_adg_kg) || 0;
   if (showsBandFields(d.herd_class)) {
     out.min_weight_kg = Number(d.min_weight_kg) || 0;
@@ -114,6 +132,44 @@ export function detailsOf(h: Partial<HerdBand>): HerdDetails {
 
 export function updateHerd(herd: string, d: HerdDetails) {
   return call<HerdBand>(UPDATE, { herd, ...bandPayload(d) });
+}
+
+/** One rung of the fattening ladder as the ladder editor holds it. */
+export type LadderRow = { herd: string; min: string; max: string; target: string };
+
+/** The Fattening herds, lowest band first. */
+export function ladderRows(bands: HerdBand[]): LadderRow[] {
+  const s = (v: number | null | undefined) => (v ? String(v) : "");
+  return bands
+    .filter((b) => b.herd_class === "Fattening")
+    .sort((a, b) => (a.min_weight_kg || 0) - (b.min_weight_kg || 0))
+    .map((b) => ({ herd: b.herd, min: s(b.min_weight_kg), max: s(b.max_weight_kg), target: s(b.target_adg_kg) }));
+}
+
+/** What save_band_ladder takes: every rung at once, a blank max as 0 (open top). */
+export function ladderPayload(rows: LadderRow[]) {
+  return rows.map((r) => ({
+    herd: r.herd,
+    min_weight_kg: Number(r.min) || 0,
+    max_weight_kg: Number(r.max) || 0,
+    target_adg_kg: Number(r.target) || 0,
+  }));
+}
+
+/** The one rule the editor can say before the server judges the whole ladder. */
+export function validateLadder(rows: LadderRow[]): string | null {
+  for (const r of rows) {
+    const min = Number(r.min) || 0;
+    const max = Number(r.max) || 0;
+    if (max && max <= min) return `${r.herd}: the top of the band must be above its bottom.`;
+  }
+  return null;
+}
+
+export function saveBandLadder(rows: LadderRow[]) {
+  return call<{
+    bands: { herd: string; min_weight_kg: number; max_weight_kg: number; target_adg_kg: number }[];
+  }>(LADDER, { bands: ladderPayload(rows) });
 }
 
 export function createHerd(args: {

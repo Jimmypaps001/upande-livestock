@@ -65,6 +65,7 @@ const board = {
   counts: { awaiting_vet: 1, awaiting_approval: 0, ready_to_post: 0, flagged: 1 },
 };
 
+let postReply: Record<string, unknown> | null = null;
 const sent: Array<{ method: string; args: Record<string, unknown> }> = [];
 
 vi.mock("@/lib/frappe", async () => {
@@ -73,6 +74,7 @@ vi.mock("@/lib/frappe", async () => {
     ...actual,
     call: vi.fn(async (method?: string, args?: Record<string, unknown>) => {
       sent.push({ method: method ?? "", args: args ?? {} });
+      if (postReply && (method ?? "").includes("post_cull")) return postReply;
       return board;
     }),
   };
@@ -109,6 +111,23 @@ describe("the culling page", () => {
     await waitFor(() => expect(sent.some((c) => c.method.includes("settle_insurance_claim"))).toBe(true));
     const settle = sent.find((c) => c.method.includes("settle_insurance_claim"))!;
     expect((settle.args.payload as Record<string, unknown>).payout_date).toBe("2026-09-24");
+  });
+
+  it("tells the farm about the withdrawal warning when a sale is posted", async () => {
+    const approved = { ...board.cases[0], name: "ANI-DISP-2026-00100", animal_name: "TOTO",
+      status: "Approved", waiting_on: "posting" } as unknown as (typeof board.cases)[number];
+    board.cases.unshift(approved);
+    postReply = { ok: true, name: approved.name, warnings: ["Inside the withdrawal period until 2026-11-02."] };
+    window.localStorage.setItem("upande.livestock.operator", "EMP-0001");
+    try {
+      draw();
+      fireEvent.click(await screen.findByText("Post it"));
+      expect(await screen.findByText(/Inside the withdrawal period until/)).toBeTruthy();
+    } finally {
+      board.cases.shift();
+      postReply = null;
+      window.localStorage.removeItem("upande.livestock.operator");
+    }
   });
 
   it("draws the queue with the case on it", async () => {

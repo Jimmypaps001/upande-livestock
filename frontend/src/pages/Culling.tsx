@@ -124,13 +124,16 @@ export function Culling() {
 
   async function act(fn: () => Promise<{ error?: string } | Record<string, unknown>>, said: string) {
     setBusy(true);
-    const r = (await fn()) as { error?: string };
+    const r = (await fn()) as { error?: string; warnings?: string[] };
     setBusy(false);
     if (isError(r)) {
       toast(r.error, "error");
       return;
     }
     toast(said);
+    // Warned, not blocked: a sale inside a withdrawal period still posts, and
+    // the farm is told so.
+    for (const w of r.warnings ?? []) toast(w, "warn");
     void load();
   }
 

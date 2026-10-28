@@ -1,7 +1,7 @@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Picker } from "@/components/ui/picker";
-import { HERD_CLASSES, showsBandFields, type HerdClass, type HerdDetails } from "@/lib/herds";
+import { HERD_CLASSES, showsBandFields, withClass, type HerdClass, type HerdDetails } from "@/lib/herds";
 
 /**
  * What kind of herd this is, and — for a fattening or calf herd — the weight
@@ -31,7 +31,7 @@ export function HerdBandFields({
           <Picker
             id={`${idPrefix}-class`}
             value={value.herd_class}
-            onChange={(c) => set({ herd_class: c as HerdClass })}
+            onChange={(c) => onChange(withClass(value, c as HerdClass))}
             options={[...HERD_CLASSES]}
             label="Herd class"
             disabled={disabled}
@@ -46,7 +46,7 @@ export function HerdBandFields({
               type="checkbox"
               checked={value.weigh_monthly}
               disabled={disabled}
-              onChange={(e) => set({ weigh_monthly: e.target.checked })}
+              onChange={(e) => set({ weigh_monthly: e.target.checked, weigh_touched: true })}
             />
             Weigh every animal each month
           </label>

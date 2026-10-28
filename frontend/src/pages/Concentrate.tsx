@@ -423,7 +423,7 @@ export function Concentrate() {
                 id="c-name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="e.g. Dairy Meal 18"
+                placeholder="e.g. Finisher Pellets 14"
               />
             </div>
 

@@ -252,6 +252,8 @@ export function postCull(caseName: string, operator?: string) {
     herd_before: string | null;
     herd_now: string | null;
     claim: { name: string; insurer: string; claimed_amount: number } | null;
+    /** Withdrawal warnings from the disposal: the exit stood, the farm is told. */
+    warnings?: string[];
   }>(POST, { payload: { case: caseName, operator } });
 }
 

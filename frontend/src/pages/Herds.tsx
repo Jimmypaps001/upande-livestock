@@ -22,6 +22,7 @@ import { Picker } from "@/components/ui/picker";
 import { useToast } from "@/components/Toast";
 import { isError } from "@/lib/frappe";
 import { asSummaries, getCullBoard, type FarmAnimal } from "@/lib/culling";
+import { BandLadderEditor } from "@/components/herds/BandLadderEditor";
 import { HerdBandFields } from "@/components/herds/HerdBandFields";
 import {
   bandPayload,
@@ -124,6 +125,15 @@ export function Herds() {
       </div>
 
       <EditHerd
+        bands={bands}
+        loading={loading}
+        onDone={(m) => {
+          toast(m);
+          void load();
+        }}
+      />
+
+      <BandLadderEditor
         bands={bands}
         loading={loading}
         onDone={(m) => {
