@@ -173,8 +173,8 @@ LOOP = [
     ]),
 ]
 
-ENTER_MS = 1200
-LOOP_MS = 3600
+ENTER_MS = 1800
+LOOP_MS = 5000  # slowed ~1.4x: calm, not busy
 EASE = "cubic-bezier(.3,.7,.2,1)"
 
 
@@ -203,8 +203,8 @@ def _origin_rules(tracks) -> list[str]:
 def loader_css() -> str:
     """One cycle: enter (0–18%), the round (18–82%), back out (82–100%)."""
     a, b = 18.0, 82.0
-    # One full pass (arrow in, the scene, arrow back out) in the 3 s the splash is held for.
-    cycle_ms = 3000
+    # One full pass (arrow in, the scene, arrow back out) in the 4 s the splash is held for.
+    cycle_ms = 4000
     lines = ["  <style>"]
     lines += _origin_rules(ENTER + LOOP)
     keyframes = []
