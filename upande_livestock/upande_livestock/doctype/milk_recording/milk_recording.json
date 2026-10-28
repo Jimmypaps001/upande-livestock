@@ -418,6 +418,14 @@
    "read": 1,
    "report": 1,
    "role": "Livestock Attendant"
+  },
+  {
+   "idx": 5,
+   "permlevel": 0,
+   "read": 1,
+   "report": 1,
+   "role": "Livestock Quality",
+   "write": 1
   }
  ],
  "row_format": "Dynamic",

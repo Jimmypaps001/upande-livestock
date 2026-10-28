@@ -81,6 +81,22 @@ LIVESTOCK_ROLES = (
 )
 
 
+# A role for the lab: it files bulk tank figures against milkings and reads
+# the quality pages, and nothing else. Kept out of LIVESTOCK_ROLES on purpose —
+# that tuple means "may see animals and events", which this role may not.
+QUALITY_ROLE = "Livestock Quality"
+
+
+def livestock_roles(user=None):
+	"""The livestock roles `user` (default: the session user) holds, farm roles first.
+
+	Only the app's own roles: a phone needs to know which screens to show, not
+	every ERPNext role the person carries.
+	"""
+	held = set(frappe.get_roles(user or frappe.session.user))
+	return [r for r in (*LIVESTOCK_ROLES, QUALITY_ROLE) if r in held]
+
+
 def guard_read_or_livestock(doctype: str) -> None:
 	"""Raise unless the user can read `doctype` or holds any livestock role.
 

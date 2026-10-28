@@ -178,3 +178,6 @@ upande_livestock.patches.vets_as_records
 
 # Every animal picture gets a ~240 px thumbnail for lists.
 upande_livestock.patches.thumbnail_animal_photos
+
+# The lab role that files bulk tank quality against milkings.
+upande_livestock.patches.ensure_livestock_quality_role

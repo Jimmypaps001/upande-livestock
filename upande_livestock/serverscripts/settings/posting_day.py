@@ -14,7 +14,7 @@ import frappe
 from frappe.utils import today
 
 from upande_livestock.serverscripts.common import backdate
-from upande_livestock.serverscripts.common.envelope import guard_read, run
+from upande_livestock.serverscripts.common.envelope import QUALITY_ROLE, guard_read, livestock_roles, run
 from upande_livestock.serverscripts.common.guards import employee_status
 
 
@@ -23,7 +23,9 @@ def posting_day():
 	def go():
 		# Every record screen is about animals; whoever may read them may know
 		# what day it is to the server.
-		guard_read("Animal")
+		# The lab role reads no animals; it still asks what day it is.
+		if QUALITY_ROLE not in frappe.get_roles():
+			guard_read("Animal")
 		# is_employee rides along: it is the one extra fact the phone needs when it
 		# wakes, and this is the light call it already makes then. A user with no
 		# Employee is view-only (guards.require_employee refuses their records).
@@ -32,6 +34,9 @@ def posting_day():
 			"today": today(),
 			"backdating_open": backdate.window_open(),
 			**employee_status(),
+			# Which livestock roles the user holds: the phone shows a user whose only
+			# role is Livestock Quality just the quality view.
+			"roles": livestock_roles(),
 		}
 
 	return run(go, "livestock posting_day failed")
