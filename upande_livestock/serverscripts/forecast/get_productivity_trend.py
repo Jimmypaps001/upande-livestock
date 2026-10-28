@@ -15,9 +15,6 @@ from upande_livestock.serverscripts.performance.bull_performance import PERFORMA
 # earlier weighing may sit before the window: read this much further back.
 LOOKBACK_DAYS = 120
 
-FARM = "__farm__"
-
-
 def _points(start, herd):
 	params = {"start": str(start), "classes": PERFORMANCE_CLASSES}
 	cond = ""
@@ -55,7 +52,7 @@ def get_productivity_trend(weeks=26, herd=None) -> dict:
 	buckets = engine.trend_buckets(_points(start, herd or None), on, weeks)
 	series, farm = {}, []
 	for row in buckets:
-		if row["herd"] == FARM:
+		if row["herd"] == engine.FARM_KEY:
 			farm.append(_point(row))
 		else:
 			series.setdefault(row["herd"], []).append(_point(row))

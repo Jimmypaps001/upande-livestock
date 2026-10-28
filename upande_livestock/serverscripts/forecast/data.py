@@ -17,6 +17,10 @@ from upande_livestock.serverscripts.forecast import engine
 DEFAULT_EXIT_KG = 450.0
 FORECAST_CLASSES = ("Fattening", "Calf")
 EXIT_TYPES = ("Sold", "Slaughtered")
+COMMITMENT_DOCTYPE = "Livestock Buyer Commitment"
+COMMITMENT_FIELDS = (
+	"customer", "week_start", "head", "min_weight_kg", "committed_kg", "price_per_kg", "status", "notes",
+)
 
 
 def iso(value):
@@ -88,6 +92,7 @@ def forecast_bulls(today, herd=None):
 			"current_herd": ["in", list(herds)],
 			"sex": "Male",
 			"disabled": 0,
+			"docstatus": ["!=", 2],
 			"status": ["not in", list(RETIRED_STATUSES)],
 		},
 		fields=["name", "tag_number", "burn_name", "current_herd"],
@@ -159,19 +164,20 @@ def open_commitments(first_week=None, last_week=None):
 
 
 def disposal_actuals(week_start, herd=None):
-	"""(head, kg) of submitted Sold and Slaughtered disposals dated in the week.
+	"""(head, kg) of submitted Sold and Slaughtered disposals of bulls dated in the week.
 
-	With `herd`, only animals now recorded in that herd.
+	Males only, because the forecast is of bulls. With `herd`, only animals now
+	recorded in that herd.
 	"""
 	start = getdate(week_start)
 	params = {"start": str(start), "end": str(add_days(start, 6)), "types": EXIT_TYPES}
-	join, cond = "", ""
+	cond = ""
 	if herd:
-		join = "JOIN `tabAnimal` a ON a.name = d.animal"
 		cond = "AND a.current_herd = %(herd)s"
 		params["herd"] = herd
 	row = frappe.db.sql(
-		f"""SELECT COUNT(*), COALESCE(SUM(d.exit_weight_kg), 0) FROM `tabLivestock Disposal` d {join}
+		f"""SELECT COUNT(*), COALESCE(SUM(d.exit_weight_kg), 0) FROM `tabLivestock Disposal` d
+		    JOIN `tabAnimal` a ON a.name = d.animal AND a.sex = 'Male'
 		    WHERE d.docstatus = 1 AND d.disposal_type IN %(types)s
 		      AND d.disposal_date BETWEEN %(start)s AND %(end)s {cond}""",
 		params,

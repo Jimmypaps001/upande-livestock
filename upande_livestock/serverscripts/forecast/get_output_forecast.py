@@ -18,7 +18,7 @@ def get_output_forecast(weeks=None, herd=None) -> dict:
 	bulls, unweighed = data.forecast_bulls(on, herd or None)
 	rows = engine.weekly_output(bulls, on, horizon)
 	return {
-		"exit_weight_kg": data.exit_weight_setting(),
+		"exit_weight_kg": data.exit_weight_for_herd(herd) if herd else data.exit_weight_setting(),
 		"horizon_weeks": horizon,
 		"weeks": [{"week_start": data.iso(r["week_start"]), "head": r["head"], "kg": r["kg"]} for r in rows],
 		"bulls": [

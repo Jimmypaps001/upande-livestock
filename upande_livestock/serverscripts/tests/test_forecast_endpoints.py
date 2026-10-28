@@ -14,10 +14,12 @@ import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import add_days, getdate, today
 
-from upande_livestock.serverscripts.forecast.accuracy import get_forecast_accuracy
-from upande_livestock.serverscripts.forecast.commitments import list_buyer_commitments, save_buyer_commitment
-from upande_livestock.serverscripts.forecast.cover import get_commitment_cover
-from upande_livestock.serverscripts.forecast.output import get_output_forecast
+from upande_livestock.serverscripts.forecast.get_forecast_accuracy import get_forecast_accuracy
+from upande_livestock.serverscripts.forecast import data
+from upande_livestock.serverscripts.forecast.list_buyer_commitments import list_buyer_commitments
+from upande_livestock.serverscripts.forecast.save_buyer_commitment import save_buyer_commitment
+from upande_livestock.serverscripts.forecast.get_commitment_cover import get_commitment_cover
+from upande_livestock.serverscripts.forecast.get_output_forecast import get_output_forecast
 from upande_livestock.serverscripts.forecast.snapshot import take_weekly_snapshot
 from upande_livestock.serverscripts.tests.beef_fixtures import (
 	clear_bands,
@@ -92,6 +94,7 @@ class TestForecastEndpoints(IntegrationTestCase):
 	def test_cover_uses_open_commitments_only(self):
 		herd = _fattening_herd("ZZ Fcst Cover")
 		_bull_ready_in_20_days(herd)
+		frappe.db.delete("Livestock Buyer Commitment", {"status": "Open"})  # the site's own, rolled back
 		customer = _customer()
 		ready_week = _monday(add_days(getdate(today()), 20))
 		for head, status in ((3, "Open"), (5, "Cancelled"), (7, "Fulfilled")):
@@ -167,3 +170,26 @@ class TestForecastEndpoints(IntegrationTestCase):
 	def test_commitment_needs_positive_head(self):
 		res = save_buyer_commitment({"customer": _customer(), "week_start": today(), "head": 0})
 		self.assertIn("error", res)
+
+	def test_disposal_actuals_count_submitted_bulls_only(self):
+		herd = _fattening_herd("ZZ Fcst Disp")
+		week = add_days(_monday(getdate(today())), -7)
+		bull = make_animal(herd)
+		cow = make_animal(herd, sex="Female")
+
+		def dispose(animal, kg, docstatus=1, kind="Sold", on=None):
+			doc = frappe.new_doc("Livestock Disposal")
+			doc.name = "ZZ-DISP-" + frappe.generate_hash(length=8)
+			doc.animal = animal.name
+			doc.disposal_type = kind
+			doc.disposal_date = on or add_days(week, 2)
+			doc.exit_weight_kg = kg
+			doc.db_insert()
+			frappe.db.set_value("Livestock Disposal", doc.name, "docstatus", docstatus)
+
+		dispose(bull, 480)
+		dispose(cow, 400)  # female: not part of the bull forecast
+		dispose(bull, 300, docstatus=0)  # draft
+		dispose(bull, 310, kind="Culled")  # not a sale or slaughter
+		dispose(bull, 320, on=add_days(week, 8))  # next week
+		self.assertEqual(data.disposal_actuals(week, herd=herd), (1, 480.0))

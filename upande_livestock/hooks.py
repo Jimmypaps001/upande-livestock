@@ -289,10 +289,14 @@ scheduler_events = {
 		"upande_livestock.serverscripts.alerts.raise_alerts.raise_alerts",
 	],
 	# Records what the production forecast says, so its accuracy can be read
-	# back once the weeks it was about have passed.
-	"weekly": [
-		"upande_livestock.serverscripts.forecast.snapshot.take_weekly_snapshot",
-	],
+	# back once the weeks it was about have passed. Monday 01:00, not "weekly"
+	# (Sunday 00:00): accuracy uses snapshots dated before the week's Monday, so
+	# this one leads the week it first covers by a full 7 days, not one.
+	"cron": {
+		"0 1 * * 1": [
+			"upande_livestock.serverscripts.forecast.snapshot.take_weekly_snapshot",
+		],
+	},
 }
 
 # Testing
