@@ -17,7 +17,7 @@ CAUSES = (
 	"Disease — other tick-borne",
 	"Disease — other",
 	"Calving complications",
-	"Metabolic (milk fever, ketosis, bloat)",
+	"Metabolic (ketosis, bloat)",
 	"Injury / accident",
 	"Predation",
 	"Poisoning",

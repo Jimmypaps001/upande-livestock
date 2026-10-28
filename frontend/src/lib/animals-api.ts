@@ -50,7 +50,7 @@ export function benchmarkAxes(b: HerdBenchmarks | null): number[] {
   const clamp = (n: number) => Math.max(0, Math.min(1, n));
   return [
     b?.conception_rate != null ? clamp(b.conception_rate / 100) : 0.5, // fertility
-    0.5, // yield — the median cow is the median by definition
+    0.5, // growth — the median animal is the median by definition
     clamp((480 - 400) / 115), // interval, 400 days
     b?.parity != null ? clamp(b.parity / 6) : 0.33, // longevity
     clamp((4 - 1) / 4), // health — one treatment a year

@@ -15,7 +15,7 @@ import { cn, parseYmd, ymd } from "@/lib/utils";
  *
  * It replaces `<input type="date">`, which renders as whatever the browser
  * feels like — a different width, a different glyph and a different popup on
- * every machine in the dairy — and cannot be told to stop offering tomorrow in
+ * every machine on the farm — and cannot be told to stop offering tomorrow in
  * any way the user can see before they click it.
  *
  * `max` is honoured as a real boundary: days past it are struck out in the

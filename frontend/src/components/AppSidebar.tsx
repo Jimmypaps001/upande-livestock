@@ -271,7 +271,7 @@ export function AppSidebar({
               Upande Livestock
             </span>
             <span className="mt-0.5 truncate text-[10px] font-medium uppercase tracking-[0.16em] text-[var(--sd-quiet)]">
-              Herd &amp; Dairy Operations
+              Herd &amp; Beef Operations
             </span>
           </div>
         </div>

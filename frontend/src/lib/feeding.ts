@@ -306,9 +306,8 @@ export type BatchPlan = {
  *
  *  Shared because the Feeding page and the Concentrate page had a copy each
  *  and both copies said "Nothing in this store" whenever the pool came back
- *  empty. On live that is usually false: `Dry Cows  Meal` holds 48 kg in the
- *  raw-materials store, all of it on the disabled batch
- *  `Dry Cows  Meal-PREMIGRATION`, and seven of the twenty stocked feed lines
+ *  empty. On live that is usually false: a stocked meal can hold 48 kg in the
+ *  raw-materials store, all of it on a disabled `-PREMIGRATION` batch, and seven of the twenty stocked feed lines
  *  are the same. "Nothing here" sends an operator to look for stock that is
  *  already in front of them; naming the batch tells them what to fix. */
 export function batchNote(plan?: BatchPlan): string {

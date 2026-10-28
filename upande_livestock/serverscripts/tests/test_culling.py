@@ -348,3 +348,20 @@ class TestACullCaseArguesFromGain(IntegrationTestCase):
 		self.assertIn("1.00", got["evidence"])
 		self.assertNotIn("was_productive", got)
 		self.assertFalse(frappe.get_meta("Livestock Disposal").has_field("custom_was_productive"))
+
+
+class TestTheDeathCausesAreOneList(IntegrationTestCase):
+	def test_the_server_accepts_every_cause_the_form_offers(self):
+		"""The page's DEATH_CAUSES and the server's CAUSES are one list written twice;
+		a cause only the page knew was refused when recorded."""
+		import os
+		import re
+
+		from upande_livestock.serverscripts.culling.record_mortality import CAUSES
+
+		path = os.path.join(frappe.get_app_path("upande_livestock"), "..", "frontend", "src", "lib", "culling.ts")
+		with open(path) as f:
+			block = re.search(r"DEATH_CAUSES = \[(.*?)\] as const", f.read(), re.S).group(1)
+		offered = re.findall(r'"([^"]+)"', block)
+		self.assertTrue(offered)
+		self.assertEqual(sorted(offered), sorted(CAUSES))

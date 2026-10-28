@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 /**
  * Where she stands in the loop between one calving and the next.
  *
- * A dairy cow's year is a circle — calve, wait, serve, carry, calve
+ * A breeding cow's year is a circle — calve, wait, serve, carry, calve
  * again — and every textbook on the subject draws it as one. Rendering it as a
  * row of status chips would throw away the one thing the shape is telling you:
  * that this is a cycle she has been round before and will go round again, and

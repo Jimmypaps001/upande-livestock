@@ -54,7 +54,8 @@ class LivestockDisposal(Document):
 		"""A per-kg sale is worth its exit weight times the price per kg.
 
 		The weight defaults to the latest weighing. With no price per kg the
-		sale_price stays as typed — a cull case is priced by its approver.
+		sale_price stays as typed (a direct disposal). A cull-flow sale always
+		carries a price per kg — raise_cull and approve_cull refuse without one.
 		"""
 		if flt(self.price_per_kg) <= 0:
 			return

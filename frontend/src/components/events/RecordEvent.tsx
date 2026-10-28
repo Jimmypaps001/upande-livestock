@@ -125,7 +125,7 @@ export interface RecordEventProps<O> {
    *  items from the options payload's `items_by_event` — no per-page wiring. */
   eventType?: string;
   /** Offer the vet picker. For events a vet does: check-ups, pregnancy
-   *  diagnosis, drying off. The server applies the same default. */
+   *  diagnosis, treatments. The server applies the same default. */
   withVet?: boolean;
 }
 

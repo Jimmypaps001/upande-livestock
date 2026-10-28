@@ -31,9 +31,9 @@ import { cn, todayISO } from "@/lib/utils";
  * Who is due out of the herd they are in, and moving them.
  *
  * TWO KINDS OF RULE, ONE LIST. A weaner leaves her pen because she has been in
- * it long enough; a high yielder leaves because she is four months in calf and
- * her yield is falling away. A herdsman with a gate open does not care which
- * rule produced the row — only that she is due — so both arrive here together
+ * it long enough; a fattening bull leaves because he has outgrown his weight
+ * band and the next band up is where he belongs. A herdsman with a gate open does not care which
+ * rule produced the row — only that it is due — so both arrive here together
  * and each says why in the farm's own words.
  *
  * MOVING IS A BATCH, BECAUSE THE JOB IS. Nobody walks one cow across the yard
