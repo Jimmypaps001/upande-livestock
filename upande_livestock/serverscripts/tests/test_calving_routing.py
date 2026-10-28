@@ -19,6 +19,8 @@ from frappe.utils import add_days, today
 from upande_livestock.serverscripts.breeding.calving_destinations import calving_destinations
 from upande_livestock.serverscripts.breeding.create_service_event import create_service_event
 from upande_livestock.serverscripts.common import herd_movement as hm
+from upande_livestock.serverscripts.tests.beef_fixtures import make_herd
+from upande_livestock.serverscripts.tests.test_employee_gate import link_employee
 from upande_livestock.serverscripts.tests.timings_utils import set_setting
 from upande_livestock.serverscripts.tests.test_operations import (
 	_make_cow,
@@ -29,22 +31,37 @@ from upande_livestock.serverscripts.tests.test_operations import (
 
 
 def _employee():
-	return frappe.db.get_value("Employee", {"status": "Active"}, "name")
+	"""An active Employee, made inside the test when the site has none, so the
+	end-to-end tests run on an empty site instead of skipping."""
+	found = frappe.db.get_value("Employee", {"status": "Active"}, "name")
+	if not found:
+		link_employee("zz-calving@example.com")
+		found = frappe.db.get_value("Employee", {"user_id": "zz-calving@example.com"}, "name")
+	return found
+
+
+def _forget_fixtures():
+	"""Take back the Employee and herds the helpers above made, if they did."""
+	frappe.db.delete("Employee", {"user_id": "zz-calving@example.com"})
+	for name in frappe.get_all("Herds", filters={"herd_name": ["like", "ZZ Calving Herd %"]}, pluck="name"):
+		frappe.db.delete("Herds", {"name": name})
+	frappe.db.commit()
 
 
 def _two_herds():
+	"""Two herds, made inside the test when the site has fewer than two."""
 	herds = frappe.get_all("Herds", pluck="name", limit_page_length=2, order_by="name")
-	if len(herds) < 2:
-		raise unittest.SkipTest("fewer than two herds on this site")
+	for n in range(2 - len(herds)):
+		herds.append(make_herd(f"ZZ Calving Herd {n}").name)
 	return herds
 
 
 class TestTheDestinationsAreAnsweredBeforeAnythingIsWritten(IntegrationTestCase):
 	def setUp(self):
-		self.dam = frappe.db.get_value(
-			"Animal", {"current_herd": ["is", "set"], "status": "Active", "disabled": 0}, "name")
-		if not self.dam:
-			raise unittest.SkipTest("no cow in a herd on this site")
+		self.addCleanup(_forget_fixtures)
+		self.addCleanup(_purge, "Animal", "ZZ DESTINATION DAM")
+		herd = _two_herds()[0]
+		self.dam = _make_cow("ZZ DESTINATION DAM", months_old=48, herd=herd).name
 
 	def test_it_names_all_three_destinations(self):
 		got = calving_destinations(dam=self.dam)
@@ -77,6 +94,7 @@ class TestTheDestinationsAreAnsweredBeforeAnythingIsWritten(IntegrationTestCase)
 class TestTheDamAfterCalving(IntegrationTestCase):
 	def setUp(self):
 		_open_backdating_window(self)
+		self.addCleanup(_forget_fixtures)
 		self.employee = _employee()
 		if not self.employee:
 			raise unittest.SkipTest("no active Employee on this site")
@@ -162,6 +180,7 @@ class TestAnAnimalWithNoHerdCanBeMovedIntoOne(IntegrationTestCase):
 
 	def setUp(self):
 		self.tag = "ZZ HERDLESS MOVE"
+		self.addCleanup(_forget_fixtures)
 		self.addCleanup(_purge_events_for, self.tag)
 		self.addCleanup(_purge, "Animal", self.tag)
 		_purge("Animal", self.tag)
@@ -207,6 +226,7 @@ class TestCancellingTheMoveUndoesIt(IntegrationTestCase):
 		self.addCleanup(_purge_events_for, self.tag)
 		self.addCleanup(_purge, "Animal", self.tag)
 		_purge("Animal", self.tag)
+		self.addCleanup(_forget_fixtures)
 		self.employee = _employee()
 		if not self.employee:
 			raise unittest.SkipTest("no active Employee on this site")
