@@ -365,3 +365,24 @@ class TestTheDeathCausesAreOneList(IntegrationTestCase):
 		offered = re.findall(r'"([^"]+)"', block)
 		self.assertTrue(offered)
 		self.assertEqual(sorted(offered), sorted(CAUSES))
+
+	def test_the_doctype_options_are_the_same_list(self):
+		from upande_livestock.serverscripts.culling.record_mortality import CAUSES
+
+		options = frappe.get_meta("Livestock Disposal").get_field("custom_death_cause").options.split("\n")
+		self.assertEqual(sorted(o for o in options if o), sorted(CAUSES))
+
+	def test_a_metabolic_death_can_be_recorded(self):
+		from upande_livestock.serverscripts.culling.record_mortality import record_mortality
+		from upande_livestock.serverscripts.tests.beef_fixtures import isolate, make_animal, make_herd
+		from upande_livestock.serverscripts.tests.test_employee_gate import link_employee
+
+		isolate(self)
+		link_employee("zz-metabolic@example.com")
+		herd = make_herd("ZZ Metabolic Herd", "Fattening", min_kg=0, max_kg=900).name
+		animal = make_animal(herd).name
+		operator = frappe.db.get_value("Employee", {"user_id": "zz-metabolic@example.com"}, "name")
+		got = record_mortality({"animal": animal, "death_cause": "Metabolic (ketosis, bloat)", "operator": operator})
+		self.assertTrue(got.get("ok"), got)
+		case = frappe.get_all("Livestock Disposal", filters={"animal": animal}, fields=["custom_death_cause"])
+		self.assertEqual(case[0].custom_death_cause, "Metabolic (ketosis, bloat)")

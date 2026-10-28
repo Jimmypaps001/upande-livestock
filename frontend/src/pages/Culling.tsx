@@ -1,9 +1,9 @@
-import { SalePricing } from "@/components/culling/SalePricing";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Flag, Search, Stethoscope } from "lucide-react";
 import { CaseBadge } from "@/components/culling/CaseBadge";
 import { CullSuggestions } from "@/components/culling/CullSuggestions";
 import { RaiseCase } from "@/components/culling/RaiseCase";
+import { SalePricing } from "@/components/culling/SalePricing";
 import { Figure, FigureRow } from "@/components/Figure";
 import { Notice } from "@/components/feeding/Notice";
 import { Page, PageHeading } from "@/components/PageShell";

@@ -182,3 +182,4 @@ upande_livestock.patches.thumbnail_animal_photos
 # Beef, not dairy: Milk Recording, the milking herds, the Milking/Drying Off
 # types, the milker role and the dairy settings go. Refuses over submitted milk data.
 upande_livestock.patches.remove_milking
+upande_livestock.patches.rename_metabolic_death_cause

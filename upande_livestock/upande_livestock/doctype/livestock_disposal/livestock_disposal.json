@@ -257,7 +257,7 @@
    "fieldname": "custom_death_cause",
    "fieldtype": "Select",
    "label": "Cause Of Death",
-   "options": "\nDisease — mastitis\nDisease — East Coast Fever\nDisease — other tick-borne\nDisease — other\nCalving complications\nMetabolic (milk fever, ketosis, bloat)\nInjury / accident\nPredation\nPoisoning\nOld age\nUnknown"
+   "options": "\nDisease — mastitis\nDisease — East Coast Fever\nDisease — other tick-borne\nDisease — other\nCalving complications\nMetabolic (ketosis, bloat)\nInjury / accident\nPredation\nPoisoning\nOld age\nUnknown"
   },
   {
    "allow_on_submit": 1,
