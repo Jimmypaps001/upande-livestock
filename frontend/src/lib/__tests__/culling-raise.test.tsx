@@ -58,7 +58,7 @@ const payloads: Record<string, unknown> = {
   },
 };
 
-const call = vi.fn(async (method?: string) => {
+const call = vi.fn(async (method?: string, _args?: unknown) => {
   const key = Object.keys(payloads)
     .filter((k) => (method || "").includes(k))
     .sort((a, b) => b.length - a.length)[0];
@@ -115,7 +115,7 @@ describe("opening a cull case", () => {
     await waitFor(() => {
       const raised = call.mock.calls.find((c) => String(c[0]).includes("raise_cull"));
       expect(raised).toBeTruthy();
-      const payload = (raised![1] as { payload: Record<string, unknown> }).payload;
+      const payload = (raised![1] as unknown as { payload: Record<string, unknown> }).payload;
       expect(payload.price_per_kg).toBe(300);
       expect(payload.exit_weight_kg).toBe(400);
       expect(payload).not.toHaveProperty("sale_price");
