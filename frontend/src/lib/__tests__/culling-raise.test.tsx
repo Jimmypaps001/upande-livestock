@@ -42,7 +42,7 @@ const payloads: Record<string, unknown> = {
     measures: [],
     below: 0,
     measured: 0,
-    was_productive: false,
+    latest_weight_kg: 412,
     case: "There are no figures on her yet to compare.",
     book_value: 0,
     is_capitalised: false,
@@ -99,6 +99,27 @@ describe("opening a cull case", () => {
     await openTheRaiseTab();
     expect(screen.getByLabelText("Buyer")).toBeTruthy();
     expect(screen.getByLabelText("Buyer contact / phone")).toBeTruthy();
+  });
+
+  it("prices a sale per kg, previews weight x rate, and sends price_per_kg", async () => {
+    await openTheRaiseTab();
+    fireEvent.click(screen.getByText("COW-7"));
+    await waitFor(() => expect(screen.getByLabelText("Price per kg")).toBeTruthy());
+    expect(screen.queryByLabelText("Asking price")).toBeNull();
+    fireEvent.change(screen.getByLabelText("Price per kg"), { target: { value: "300" } });
+    // No exit weight typed: the preview falls back on the latest weighing (412).
+    await waitFor(() => expect(screen.getByTestId("cull-amount").textContent).toMatch(/123,?600/));
+    fireEvent.change(screen.getByLabelText("Exit weight (kg)"), { target: { value: "400" } });
+    await waitFor(() => expect(screen.getByTestId("cull-amount").textContent).toMatch(/120,?000/));
+    fireEvent.click(screen.getByRole("button", { name: /Open the case/ }));
+    await waitFor(() => {
+      const raised = call.mock.calls.find((c) => String(c[0]).includes("raise_cull"));
+      expect(raised).toBeTruthy();
+      const payload = (raised![1] as { payload: Record<string, unknown> }).payload;
+      expect(payload.price_per_kg).toBe(300);
+      expect(payload.exit_weight_kg).toBe(400);
+      expect(payload).not.toHaveProperty("sale_price");
+    });
   });
 
   it("asks where a gifted animal is going", async () => {

@@ -87,11 +87,15 @@ export interface CullCase {
   status: ReviewStatus;
   waiting_on: string;
   evidence: string | null;
-  was_productive: boolean;
   death_cause: string | null;
   vet_verdict: Verdict | null;
   vet_on: string | null;
   sale_price: number;
+  /** Live cattle sell by the kilogram: the rate, the weight it is applied to, and the
+   *  latest weighing the server falls back on when no exit weight is set. */
+  price_per_kg: number;
+  exit_weight_kg: number;
+  latest_weight_kg: number | null;
   buyer_name: string | null;
   /** How to reach them. Written by raise/approve, and read back here so the
    *  approval panel can show what the case already holds. */
@@ -176,7 +180,7 @@ export interface Evidence {
   measures: { key: string; label: string; hers: number | null; herd: number | null; below: boolean; hint: string }[];
   below: number;
   measured: number;
-  was_productive: boolean;
+  latest_weight_kg: number | null;
   case: string;
   book_value: number;
   is_capitalised: boolean;
@@ -202,12 +206,15 @@ export interface RaiseInput {
   gift_destination?: string;
   buyer_name?: string;
   buyer_contact?: string;
-  sale_price?: number;
+  /** Required for a Sale: the rate per kg. */
+  price_per_kg?: number;
+  /** Blank takes the latest weighing. */
+  exit_weight_kg?: number;
   vet?: string;
 }
 
 export function raiseCull(input: RaiseInput) {
-  return call<{ name: string; status: ReviewStatus; evidence: string; was_productive: boolean; policy: Policy | null }>(
+  return call<{ name: string; status: ReviewStatus; evidence: string; policy: Policy | null }>(
     RAISE,
     { payload: input },
   );
@@ -220,7 +227,8 @@ export function vetVerdict(caseName: string, verdict: Verdict, notes?: string, v
 }
 
 export function approveCull(caseName: string, terms: {
-    sale_price?: number;
+    price_per_kg?: number;
+    exit_weight_kg?: number;
     buyer_name?: string;
     buyer_contact?: string;
     customer?: string;
@@ -268,6 +276,17 @@ export function settleClaim(claim: string, status: "Submitted" | "Paid" | "Rejec
   return call<{ name: string; status: string; payout_amount: number; shortfall: number }>(SETTLE, {
     payload: { claim, status, payout_amount, remarks, payout_date },
   });
+}
+
+/**
+ * What a live sale comes to: exit weight x price per kg, to the cent.
+ *
+ * A preview only — the server computes the amount that is booked. `null` while
+ * either figure is missing, so the page shows a prompt instead of a zero.
+ */
+export function saleAmount(weightKg: number | null | undefined, perKg: number | null | undefined): number | null {
+  if (!weightKg || !perKg || weightKg <= 0 || perKg <= 0) return null;
+  return Math.round(weightKg * perKg * 100) / 100;
 }
 
 /**

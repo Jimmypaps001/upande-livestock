@@ -7,7 +7,7 @@ import frappe
 from frappe.utils import add_days, date_diff, flt, getdate, today
 
 from upande_livestock.serverscripts.common.envelope import guard_read, run
-from upande_livestock.serverscripts.common.gain import adg_between, herd_target_adg, weights_for
+from upande_livestock.serverscripts.common.gain import adg_between, herd_target_adg, latest_weight, weights_for
 from upande_livestock.serverscripts.common.gain import period_days as _period
 
 
@@ -70,6 +70,7 @@ def cull_evidence(animal=None, period_days=None):
 			"measures": measures,
 			"below": below,
 			"measured": measured,
+			"latest_weight_kg": latest_weight(animal),
 			"period_adg": None if adg is None else round(adg, 3),
 			"target_adg": None if not target else round(target, 3),
 			"sick_days": sick_days,

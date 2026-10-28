@@ -7,6 +7,7 @@ import frappe
 from frappe.utils import flt
 
 from upande_livestock.serverscripts.common import culling
+from upande_livestock.serverscripts.common.gain import weights_for_many
 from upande_livestock.serverscripts.common.envelope import as_dict, guard_read, run
 
 #: Who has to act next, said in the words the farm uses rather than a status
@@ -42,7 +43,7 @@ def cull_board(payload=None):
 			          d.custom_cull_flow AS flow, d.custom_review_status AS status,
 			          d.custom_evidence AS evidence,
 			          d.custom_death_cause AS death_cause, d.custom_vet_verdict AS vet_verdict,
-			          d.custom_vet_on AS vet_on, d.sale_price, d.buyer_name,
+			          d.custom_vet_on AS vet_on, d.sale_price, d.price_per_kg, d.exit_weight_kg, d.buyer_name,
 			          d.buyer_contact, d.gift_destination, d.gifted_to,
 			          a.current_herd AS herd
 			   FROM `tabLivestock Disposal` d
@@ -52,9 +53,15 @@ def cull_board(payload=None):
 			   LIMIT %(limit)s""",
 			{"open": OPEN, "limit": limit}, as_dict=True,
 		)
+		latest = weights_for_many([c["animal"] for c in cases], birth=False) if cases else {}
 		for c in cases:
 			c["waiting_on"] = WAITING_ON.get(c["status"], "nobody")
 			c["sale_price"] = flt(c["sale_price"])
+			c["price_per_kg"] = flt(c["price_per_kg"])
+			c["exit_weight_kg"] = flt(c["exit_weight_kg"])
+			# The weighing a sale falls back on when no exit weight is set.
+			points = latest.get(c["animal"]) or []
+			c["latest_weight_kg"] = points[-1][1] if points else None
 
 		flagged = frappe.db.sql(
 			"""SELECT a.name, a.burn_name, a.current_herd AS herd,

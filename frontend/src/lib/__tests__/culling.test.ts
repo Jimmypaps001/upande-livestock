@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { asSummaries, DEATH_CAUSES, FLOWS, toneFor, type FarmAnimal } from "@/lib/culling";
+import { asSummaries, saleAmount, DEATH_CAUSES, FLOWS, toneFor, type FarmAnimal } from "@/lib/culling";
 
 const animal: FarmAnimal = {
   name: "A039/26",
@@ -60,5 +60,17 @@ describe("the vocabulary the page offers", () => {
     expect(DEATH_CAUSES).toContain("Unknown");
     expect(DEATH_CAUSES.some((c) => /other/i.test(c))).toBe(true);
     expect(DEATH_CAUSES).not.toContain("");
+  });
+});
+
+describe("the sale amount preview", () => {
+  it("is exit weight x price per kg, rounded to the cent", () => {
+    expect(saleAmount(412, 300)).toBe(123600);
+    expect(saleAmount(412.5, 10.333)).toBe(4262.36);
+  });
+  it("is null until both figures are present and positive", () => {
+    expect(saleAmount(null, 300)).toBeNull();
+    expect(saleAmount(412, 0)).toBeNull();
+    expect(saleAmount(undefined, undefined)).toBeNull();
   });
 });

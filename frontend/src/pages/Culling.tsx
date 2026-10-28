@@ -1,3 +1,4 @@
+import { SalePricing } from "@/components/culling/SalePricing";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Flag, Search, Stethoscope } from "lucide-react";
 import { CaseBadge } from "@/components/culling/CaseBadge";
@@ -70,7 +71,8 @@ export function Culling() {
   const [term, setTerm] = useState("");
   const toast = useToast();
   const [notes, setNotes] = useState("");
-  const [price, setPrice] = useState("");
+  const [pricePerKg, setPricePerKg] = useState("");
+  const [exitWeight, setExitWeight] = useState("");
   const [buyer, setBuyer] = useState("");
   const [buyerContact, setBuyerContact] = useState("");
   const who = useOperator();
@@ -114,7 +116,8 @@ export function Culling() {
 
   useEffect(() => {
     setNotes("");
-    setPrice(chosen?.sale_price ? String(chosen.sale_price) : "");
+    setPricePerKg(chosen?.price_per_kg ? String(chosen.price_per_kg) : "");
+    setExitWeight(chosen?.exit_weight_kg ? String(chosen.exit_weight_kg) : "");
     setBuyer(chosen?.buyer_name ?? "");
     setBuyerContact(chosen?.buyer_contact ?? "");
   }, [chosen?.name]);
@@ -268,8 +271,10 @@ export function Culling() {
                     busy={busy}
                     notes={notes}
                     setNotes={setNotes}
-                    price={price}
-                    setPrice={setPrice}
+                    pricePerKg={pricePerKg}
+                    setPricePerKg={setPricePerKg}
+                    exitWeight={exitWeight}
+                    setExitWeight={setExitWeight}
                     buyer={buyer}
                     setBuyer={setBuyer}
                     buyerContact={buyerContact}
@@ -460,8 +465,10 @@ function CaseChain({
   busy,
   notes,
   setNotes,
-  price,
-  setPrice,
+  pricePerKg,
+  setPricePerKg,
+  exitWeight,
+  setExitWeight,
   buyer,
   setBuyer,
   buyerContact,
@@ -473,8 +480,10 @@ function CaseChain({
   busy: boolean;
   notes: string;
   setNotes: (v: string) => void;
-  price: string;
-  setPrice: (v: string) => void;
+  pricePerKg: string;
+  setPricePerKg: (v: string) => void;
+  exitWeight: string;
+  setExitWeight: (v: string) => void;
   buyer: string;
   setBuyer: (v: string) => void;
   buyerContact: string;
@@ -491,12 +500,6 @@ function CaseChain({
       {c.evidence && (
         <div className="rounded-[var(--sd-radius-lg)] bg-[var(--sd-bg-soft)] px-4 py-3.5 text-[13px] leading-relaxed text-[var(--sd-ink)] shadow-[var(--sd-shadow-inset)]">
           {c.evidence}
-          {c.was_productive && (
-            <p className="mt-2 text-[11.5px] text-[var(--sd-sev-moderate)]">
-              She was performing when this case was opened. That is not a refusal — it is
-              on the record.
-            </p>
-          )}
         </div>
       )}
 
@@ -559,16 +562,14 @@ function CaseChain({
                   onChange={(e) => setBuyerContact(e.target.value)}
                 />
               </div>
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="ap-price">Price</Label>
-                <Input
-                  id="ap-price"
-                  type="number"
-                  min={0}
-                  value={price}
-                  onChange={(e) => setPrice(e.target.value)}
-                />
-              </div>
+              <SalePricing
+                idPrefix="ap"
+                pricePerKg={pricePerKg}
+                setPricePerKg={setPricePerKg}
+                exitWeight={exitWeight}
+                setExitWeight={setExitWeight}
+                latestWeight={c.latest_weight_kg}
+              />
               <p className="text-[11.5px] text-[var(--sd-muted)] sm:col-span-2">
                 The approval is of these terms, not of the idea — so they are settled here
                 rather than at posting.
@@ -585,7 +586,8 @@ function CaseChain({
                       c.name,
                       c.flow === "Sale"
                         ? {
-                            sale_price: price ? Number(price) : undefined,
+                            price_per_kg: pricePerKg ? Number(pricePerKg) : undefined,
+                            exit_weight_kg: exitWeight ? Number(exitWeight) : undefined,
                             buyer_name: buyer || undefined,
                             buyer_contact: buyerContact || undefined,
                           }

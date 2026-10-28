@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ShieldCheck, Skull } from "lucide-react";
+import { Skull } from "lucide-react";
 import { AnimalSearch } from "@/components/animals/AnimalSearch";
 import { Notice } from "@/components/feeding/Notice";
 import { OperatorField } from "@/components/events/OperatorField";
@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Picker } from "@/components/ui/picker";
+import { SalePricing } from "@/components/culling/SalePricing";
 import { Textarea } from "@/components/ui/textarea";
 import { isError } from "@/lib/frappe";
 import { useOperator } from "@/lib/operator";
@@ -58,7 +59,8 @@ export function RaiseCase({
   const [cause, setCause] = useState<string>(DEATH_CAUSES[0]);
   const [when, setWhen] = useState(todayISO());
   const [buyer, setBuyer] = useState("");
-  const [price, setPrice] = useState("");
+  const [pricePerKg, setPricePerKg] = useState("");
+  const [exitWeight, setExitWeight] = useState("");
   const [giftedTo, setGiftedTo] = useState("");
   // Both of these are fields the case has always had and the form never
   // offered — a buyer with no phone number is a sale nobody can follow up.
@@ -113,7 +115,8 @@ export function RaiseCase({
             buyer_name: flow === "Sale" ? buyer || undefined : undefined,
             buyer_contact: flow === "Sale" ? buyerContact || undefined : undefined,
             gift_destination: flow === "Gift" ? giftDestination || undefined : undefined,
-            sale_price: flow === "Sale" && price ? Number(price) : undefined,
+            price_per_kg: flow === "Sale" && pricePerKg ? Number(pricePerKg) : undefined,
+            exit_weight_kg: flow === "Sale" && exitWeight ? Number(exitWeight) : undefined,
             gifted_to: flow === "Gift" ? giftedTo || undefined : undefined,
           });
     setBusy(false);
@@ -134,7 +137,8 @@ export function RaiseCase({
     setAnimal(null);
     setReason("");
     setBuyer("");
-    setPrice("");
+    setPricePerKg("");
+    setExitWeight("");
     setGiftedTo("");
     setBuyerContact("");
     setGiftDestination("");
@@ -200,11 +204,7 @@ export function RaiseCase({
       {evidence && (
         <div className="rounded-[var(--sd-radius-lg)] bg-[var(--sd-bg-soft)] px-4 py-3.5 shadow-[var(--sd-shadow-inset)]">
           <p className="flex items-start gap-2 text-[13px] leading-relaxed text-[var(--sd-ink)]">
-            {evidence.was_productive ? (
-              <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-[var(--sd-sev-moderate)]" strokeWidth={1.75} />
-            ) : (
-              <Skull className="mt-0.5 h-4 w-4 shrink-0 text-[var(--sd-quiet)]" strokeWidth={1.75} />
-            )}
+            <Skull className="mt-0.5 h-4 w-4 shrink-0 text-[var(--sd-quiet)]" strokeWidth={1.75} />
             <span>{evidence.case}</span>
           </p>
           <p className="mt-2 text-[11.5px] text-[var(--sd-quiet)]">
@@ -275,16 +275,14 @@ export function RaiseCase({
                 onChange={(e) => setBuyerContact(e.target.value)}
               />
             </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="cull-price">Asking price</Label>
-              <Input
-                id="cull-price"
-                type="number"
-                min={0}
-                value={price}
-                onChange={(e) => setPrice(e.target.value)}
-              />
-            </div>
+            <SalePricing
+              idPrefix="cull"
+              pricePerKg={pricePerKg}
+              setPricePerKg={setPricePerKg}
+              exitWeight={exitWeight}
+              setExitWeight={setExitWeight}
+              latestWeight={evidence?.latest_weight_kg}
+            />
           </>
         )}
 
