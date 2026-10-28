@@ -115,11 +115,10 @@ class TestLivestockDisposal(IntegrationTestCase):
 		self.assertTrue(field.read_only)
 
 	def test_customer_and_sale_price_are_optional_on_the_doctype(self):
-		"""customer/sale_price are deliberately unenforced server-side: this site
-		has zero Customer records and all 10 existing Sold disposals carry only a
-		free-text buyer_name. A mandatory_depends_on wouldn't even help — Frappe
-		16 only enforces it in the browser — and a validate() check would break
-		those 10 rows on amend.
+		"""The doctype fields stay optional: customer/sale_price carry no reqd or
+		mandatory_depends_on, since Frappe 16 only enforces the latter in the
+		browser. The rule lives in validate() instead: a Sold disposal needs a
+		price per kg, and sale_price is derived from it and the exit weight.
 		"""
 		meta = frappe.get_meta("Livestock Disposal")
 		customer_field = meta.get_field("customer")
@@ -129,19 +128,21 @@ class TestLivestockDisposal(IntegrationTestCase):
 		self.assertFalse(sale_price_field.reqd)
 		self.assertFalse(sale_price_field.mandatory_depends_on)
 
-	@patch(
-		"upande_livestock.upande_livestock.doctype.livestock_disposal.livestock_disposal._sell_livestock_asset"
-	)
-	@patch("frappe.msgprint")
-	def test_sold_without_customer_or_price_warns_and_still_retires(self, mock_msgprint, mock_sell):
-		doc = self._disposal("Sold")
-
-		mock_sell.assert_not_called()
-		self.assertEqual(mock_msgprint.call_count, 1)
-		self.assertEqual(doc.docstatus, 1)
+	def test_sold_without_price_per_kg_is_refused_and_animal_not_retired(self):
+		doc = frappe.get_doc(
+			{
+				"doctype": "Livestock Disposal",
+				"animal": self.animal.name,
+				"disposal_date": "2026-09-01",
+				"disposal_type": "Sold",
+				"exit_weight_kg": 400,
+			}
+		)
+		with self.assertRaisesRegex(frappe.ValidationError, "Enter the price per kg"):
+			doc.insert()
 		self.animal.reload()
-		self.assertEqual(self.animal.status, "Sold")
-		self.assertTrue(self.animal.disabled)
+		self.assertEqual(self.animal.status, "Active")
+		self.assertFalse(self.animal.disabled)
 
 	@patch(
 		"upande_livestock.upande_livestock.doctype.livestock_disposal.livestock_disposal._scrap_livestock_asset"
@@ -159,8 +160,9 @@ class TestLivestockDisposal(IntegrationTestCase):
 		if not customer:
 			customer = frappe.get_doc({"doctype": "Customer", "customer_name": "TEST-BUYER"}).insert().name
 			self.addCleanup(_purge_customer, customer)
-		self._disposal("Sold", customer=customer, sale_price=50000)
+		doc = self._disposal("Sold", customer=customer, exit_weight_kg=400, price_per_kg=125)
 		mock_sell.assert_called_once()
+		self.assertEqual(doc.sale_price, 50000)
 
 	@patch(
 		"upande_livestock.upande_livestock.doctype.livestock_disposal.livestock_disposal._scrap_livestock_asset"
