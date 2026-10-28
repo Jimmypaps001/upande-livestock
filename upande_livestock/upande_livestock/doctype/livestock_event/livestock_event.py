@@ -1154,6 +1154,13 @@ class LivestockEvent(Document):
 		)
 
 	def on_submit(self):
+		if self.event_type == "Movement" and self.animal:
+			# A band-move alert asks for exactly this move: settle it now rather
+			# than at the nightly sweep.
+			from upande_livestock.serverscripts.alerts.raise_alerts import refresh_weight_alerts
+
+			refresh_weight_alerts(self.animal)
+
 		# --------------------------------------------
 		# RULE: Cow must calve before next pregnancy
 		# --------------------------------------------

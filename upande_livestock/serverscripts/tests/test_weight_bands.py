@@ -93,6 +93,22 @@ class TestWeightBands(IntegrationTestCase):
 		bull = make_animal(calves, 300)
 		self.assertEqual([s["animal"] for s in wb.band_suggestions()], [bull.name])
 
+	def test_submitting_the_move_settles_the_band_alert(self):
+		from upande_livestock.serverscripts.common.events import new_livestock_event
+		from upande_livestock.serverscripts.tests.test_beef_exits import _employee
+
+		self._ladder()
+		animal = make_animal(self.a)
+		submit_weight(animal.name, 262)
+		open_alerts = {"animal": animal.name, "alert_kind": "Weight Band Move Due", "status": "Open"}
+		self.assertEqual(len(frappe.get_all("Livestock Alert", filters=open_alerts)), 1)
+		move = new_livestock_event({"animal": animal.name, "operator": _employee()}, "Movement")
+		move.new_herd = self.b
+		move.current_herd = self.a
+		move.insert(ignore_permissions=True)
+		move.submit()
+		self.assertEqual(frappe.get_all("Livestock Alert", filters=open_alerts), [])
+
 	def test_a_cancelled_only_weight_withdraws_the_alert(self):
 		self._ladder()
 		animal = make_animal(self.a)
