@@ -351,3 +351,59 @@ Coordinator calls (defaults; the user can override):
 - Breeding herds use Kaitet's naming (Bulling Heifers, Lactation Group 1, Lactation Group 2), 2–3 bulls each.
 - Inbreeding check covers parents and full/half siblings only.
 - AI uses a demo semen item in a demo store, seeded.
+
+## 12. Endpoint shapes as built (backend, 2026-10-29 — the mobile branch builds against these)
+
+All additive; every endpoint keeps the `{ok: true, ...}` / `{error, code?}` envelope. Dotted paths are
+`upande_livestock.serverscripts.<group>.<file>.<function>`.
+
+**Generic.** Every write response may carry `warnings: [str]` (inbreeding and other Warn-level notes; same
+idea as `stock_warnings`). Never an error.
+
+**`settings.posting_day.posting_day`** adds `roles: [str]` (the session user's roles).
+
+**`mobile.get_bootstrap_bundle.get_bootstrap_bundle`** — each `herds[]` row adds `herd_class`,
+`is_breeding` (class Breeding), `females`, `bulls` (live head, calves excluded), `fed_heads`. New top-level
+`settings: {calf_separation_age_days, default_service_type, breeding_bull_min_age_months,
+conception_window_days, kinship_check}`. Herd `heads` is unchanged (every live animal, calves included).
+
+**`movement.eligibility.eligibility`** adds
+- `breeding_herds: [herd]`
+- `separation_due: [{animal, label, sex, herd, age_days, over_days, weight_kg|null,
+   options: [{stream, herd, herds?}]}]` — a heifer has `[{stream:"Heifer", herd}]` (first Settings heifer
+   herd, or null); a bull calf has `[{stream:"Feedlot", herd}` (`band_for_weight`, else the lowest band)`,
+   {stream:"Breeding", herd:null, herds:[breeding herds]}]`.
+- `service_herds` now includes every Breeding-class herd.
+
+**`movement.kinship_check.kinship_check(animal, herd)`** (read, guarded) →
+`{ok, warnings: [str], conflicts: [{other, other_label, relation, shared_parent, message}],
+  selection: bool, note_required: bool, stream: "Feedlot"|"Breeding"|null}`.
+`relation` is one of `sire-daughter`, `dam-son`, `full-siblings`, `half-siblings`; `shared_parent` is the
+parent's animal name (half/full siblings) or the parent animal of the pair (sire-daughter / dam-son).
+
+**Movement** (`record_animal_event` type Movement, `create_movement_event`, `move_animals`): a male moving
+into a Breeding-class herd from a non-Breeding herd is a *selection*; `remarks` is required, at least 20
+characters ("Describe the bull and why he is kept for breeding"), else `{error}`. `move_animals` for a
+selection needs `remarks_by_animal: {animal: note}` (one note per animal) or is refused. Responses add
+`warnings: [str]` and `stream`.
+
+**Service** (`create_service_event`): payload adds `sire_animal` (user choice, wins), `sire_unknown: 1`
+(no sire wanted), `conception_date` (natural; defaults to `service_date`). `service_type` defaults to
+Settings `default_service_type`. Response adds `service_type`, `sire_animal|""`, `sire_label`,
+`sire_inferred: bool`, `sire_basis`, `candidates: [{animal, label, basis}]`, `conception_date`, `warnings`.
+
+**`breeding.sire_candidates.sire_candidates(animal, conception_date)`** (read, new) →
+`{ok, sire_animal|null, label, inferred: bool, basis, candidates: [{animal, label, basis}]}`:
+exactly one candidate → inferred; several → `sire_animal null` and the list; none → empty plus `basis` text.
+
+**Pregnancy diagnosis** (`create_pregnancy_diagnosis`): with no open service, a `conception_date` (or
+`foetal_age_weeks`) creates the Natural Service at that date, flagged backdated, and links the diagnosis;
+without either it is refused as today. Payload also takes `sire_animal` / `sire_unknown`. Response adds
+`service`, `service_created: bool`, `sire_animal`, `sire_inferred`, `sire_basis`, `candidates`, `warnings`.
+
+**Calving** (`record_birth`): with no Confirmed service on file, conception = calving date −
+`gestation_period_days`; the Natural Service and its confirmation are created and linked. Response adds
+`service`, `service_created`, and each calf row `sire`; the calf Animal gets `sire` / `sire_name`.
+
+**`herds.herd_rations.herd_rations`** rows add `fed_heads`, `calves`, `bulls`, `females`; `day_kg` uses
+`fed_heads` (calves under the separation age are not fed the herd ration, bulls are).
