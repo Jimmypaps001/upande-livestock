@@ -58,6 +58,7 @@ from upande_livestock.serverscripts.common import cost_center as livestock_cost_
 from upande_livestock.serverscripts.common import backdate
 from upande_livestock.serverscripts.common import stock as livestock_stock
 from upande_livestock.serverscripts.common.company import default_company
+from upande_livestock.serverscripts.projection import paddocks as herd_paddocks
 
 # _availability imports resolve_requirement from this module, so this cannot be
 # a top-level import without a circular import (confirmed empirically: bench
@@ -914,6 +915,17 @@ def manufacture_herd_feed(
 			}
 		)
 		return res
+	# A herd that stands on a paddock or pen has its mix moved there from the mixing
+	# store (a Material Transfer), and the issue is then taken out of the paddock.
+	# A herd with no paddock behaves exactly as before.
+	issue_from = res.get("store")
+	moved = _move_to_paddock(
+		herd, bom.item, total_qty, bom.uom, issue_from, posting_date=posting_date,
+		posting_time=run_posting_time, work_order=res.get("work_order"),
+	)
+	if moved:
+		res.update({"paddock": moved["paddock"], "paddock_transfer_stock_entry": moved["stock_entry"]})
+		issue_from = moved["paddock"]
 	issue = _issue_feed(
 		herd,
 		bom,
@@ -923,9 +935,9 @@ def manufacture_herd_feed(
 		feed_mode=feed_mode,
 		posting_time=run_posting_time,
 		# The batch is issued out of the store the manufacture put it in, which
-		# `_run_manufacture` already resolved. Passing the source through keeps
-		# the two halves of one run in the same place.
-		source_warehouse=res.get("store"),
+		# `_run_manufacture` already resolved, or the herd's paddock when it was
+		# moved there. Passing the source through keeps the halves of one run together.
+		source_warehouse=issue_from,
 		work_order=res.get("work_order"),
 	)
 	res.update(
@@ -1005,10 +1017,53 @@ def feed_herd(herd, qty, employee=None, posting_date=None, source_warehouse=None
 	if posting_date and getdate(posting_date) < getdate(today()):
 		backdate.assert_allowed(True)
 	herd_doc, bom, heads = _herd_bom(herd)
+	if not (source_warehouse or "").strip():
+		# Unnamed: take it from the herd's paddock when the mix is there, else from the store.
+		paddock = herd_paddock(herd)
+		if paddock and _bin_qty(bom.item, paddock) >= qty:
+			source_warehouse = paddock
 	return _issue_feed(
 		herd, bom, qty, _operator_or_throw(employee), posting_date=posting_date,
 		source_warehouse=source_warehouse,
 	)
+
+
+def herd_paddock(herd):
+	"""The paddock or pen warehouse a herd stands on, or None."""
+	return (frappe.db.get_value("Herds", herd, "paddock") or "").strip() or None
+
+
+def _move_to_paddock(herd, item, qty, uom, store, posting_date=None, posting_time=FEED_RUN_TIME,
+                     work_order=None, source_warehouse=None):
+	"""Material Transfer of a mixed batch from `store` to the herd's paddock; None when the herd has
+	none (or is already there). Returns {paddock, stock_entry}.
+
+	Tied to the run's Work Order so cancelling the feeding takes it back with the mixing
+	(`LivestockEvent.undo_feed_mixing`)."""
+	paddock = herd_paddock(herd)
+	if not herd_paddocks.needs_transfer(paddock, store):
+		return None
+	se = frappe.new_doc("Stock Entry")
+	se.stock_entry_type = se.purpose = "Material Transfer"
+	se.company = _company()
+	if posting_date:
+		se.set_posting_time = 1
+		se.posting_date = posting_date
+		if _is_backdated(posting_date):
+			se.posting_time = posting_time
+	if work_order:
+		se.work_order = work_order
+	row = se.append("items", {})
+	row.item_code = item
+	row.qty = qty
+	row.s_warehouse = source_warehouse or store
+	row.t_warehouse = paddock
+	se.remarks = "Animal feeding - {0} - {1} {2} of {3} moved to {4}".format(herd, qty, uom or "", item, paddock)
+	livestock_cost_center.stamp(se, se.company, herd=herd)
+	livestock_batches.assign_batches(se)
+	se.insert(ignore_permissions=True)
+	se.submit()
+	return {"paddock": paddock, "stock_entry": se.name}
 
 
 def _issue_feed(
@@ -1206,3 +1261,29 @@ def complete_feed_run(transfer_name):
 		"issue_stock_entry": issue.name,
 		"livestock_event": event.name,
 	}
+
+
+def move_ration_to_paddock(herd, qty, source_warehouse=None, posting_date=None):
+	"""Move `qty` of the herd's mixed ration from the mixing store (or `source_warehouse`) to its paddock.
+
+	For a batch mixed ahead of the feeding, or a correction; a feeding run does this itself."""
+	qty = flt(qty)
+	if qty <= 0:
+		frappe.throw(_("Enter a quantity greater than zero."))
+	backdate.assert_not_future(posting_date, _("Date moved"))
+	if posting_date and getdate(posting_date) < getdate(today()):
+		backdate.assert_allowed(True)
+	herd_doc, bom, heads = _herd_bom(herd)
+	paddock = herd_paddock(herd)
+	if not paddock:
+		frappe.throw(_("Herd {0} has no paddock or pen set.").format(herd))
+	store = (source_warehouse or "").strip() or _feed_store()
+	if store == paddock:
+		frappe.throw(_("The feed is already in {0}.").format(paddock))
+	have = _bin_qty(bom.item, store)
+	if have < qty:
+		frappe.throw(_("{0} holds {1} of {2}; {3} asked for.").format(store, have, bom.item, qty))
+	moved = _move_to_paddock(herd, bom.item, qty, bom.uom, store, posting_date=posting_date,
+	                         posting_time=FEED_RUN_TIME, source_warehouse=store)
+	return {"herd": herd, "item": bom.item, "qty": qty, "uom": bom.uom, "from": store,
+	        "paddock": moved["paddock"], "stock_entry": moved["stock_entry"]}

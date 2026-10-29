@@ -1264,7 +1264,8 @@ class LivestockEvent(Document):
 		"""
 		if self.event_type != "Feeding" or not self.get("feed_work_order"):
 			return
-		order = {"Manufacture": 0, "Material Transfer for Manufacture": 1}
+		# the paddock transfer (if the herd has a paddock) went out after the manufacture: back first
+		order = {"Material Transfer": -1, "Manufacture": 0, "Material Transfer for Manufacture": 1}
 		entries = frappe.get_all(
 			"Stock Entry",
 			filters={"work_order": self.feed_work_order, "docstatus": 1},

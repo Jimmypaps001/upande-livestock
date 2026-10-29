@@ -109,6 +109,32 @@ def rename_legacy_drug_store():
 	_log("renamed {} -> {}{}".format(old, new, " (merged)" if merge else ""))
 
 
+STANDARD_ENTRY_TYPES = (
+	"Material Issue", "Material Receipt", "Material Transfer", "Material Transfer for Manufacture",
+	"Material Consumption for Manufacture", "Manufacture", "Repack", "Disassemble",
+)
+
+
+def ensure_stock_entry_types():
+	"""ERPNext's own entry types must be flagged standard (the work-order flow looks the type up by
+	purpose), and the livestock types the feeding run posts under must exist.
+
+	This site had every type unflagged, so a Work Order's transfer had no type and no feed run could
+	post; the feed-mixing and livestock-issue types were also missing."""
+	for name in STANDARD_ENTRY_TYPES:
+		if frappe.db.exists("Stock Entry Type", name) and not frappe.db.get_value("Stock Entry Type", name, "is_standard"):
+			frappe.db.set_value("Stock Entry Type", name, "is_standard", 1)
+			_log("stock entry type {} flagged standard".format(name))
+	from upande_livestock.patches import create_feed_mixing_stock_entry_types, create_livestock_stock_entry_types
+
+	before = frappe.db.count("Stock Entry Type")
+	create_feed_mixing_stock_entry_types.execute()
+	create_livestock_stock_entry_types.execute()
+	if frappe.db.count("Stock Entry Type") != before:
+		_log("{} livestock stock entry types created".format(frappe.db.count("Stock Entry Type") - before))
+	frappe.clear_cache()
+
+
 def ensure_stores():
 	rename_legacy_drug_store()
 	for s in STORES:
@@ -224,6 +250,7 @@ def place_herds():
 def run():
 	print("Mutara stores, paddocks and pens")
 	ensure_warehouse_type("Pen")
+	ensure_stock_entry_types()
 	ensure_stores()
 	ensure_items()
 	ensure_settings()
