@@ -20,6 +20,16 @@
   "min_weight_kg",
   "max_weight_kg",
   "target_adg_kg",
+  "sb_counting",
+  "counting",
+  "species",
+  "cb_counting",
+  "head_females",
+  "head_males",
+  "head_young",
+  "head_others",
+  "withdrawal_until",
+  "last_count_date",
   "section_break_69rv",
   "bom",
   "sb_acct",
@@ -137,6 +147,75 @@
    "label": "Cost Center",
    "options": "Cost Center",
    "description": "Charged for every stock movement this herd causes — feed, drugs and husbandry. Falls back to Livestock Settings > Default Cost Centres by Company, which says so when it is used. Must be a leaf cost centre of the company the movement posts under."
+  },
+  {
+   "fieldname": "sb_counting",
+   "fieldtype": "Section Break",
+   "label": "Counting"
+  },
+  {
+   "default": "Individual",
+   "description": "By number: sheep and goats, kept as head counts by class from a ledger of count events, never as Animal records.",
+   "fieldname": "counting",
+   "fieldtype": "Select",
+   "in_list_view": 0,
+   "in_standard_filter": 1,
+   "label": "Counting",
+   "options": "Individual\nBy number"
+  },
+  {
+   "default": "Cattle",
+   "fieldname": "species",
+   "fieldtype": "Select",
+   "in_standard_filter": 1,
+   "label": "Species",
+   "options": "Cattle\nSheep\nGoat"
+  },
+  {
+   "fieldname": "cb_counting",
+   "fieldtype": "Column Break"
+  },
+  {
+   "depends_on": "eval:doc.counting=='By number'",
+   "fieldname": "head_females",
+   "fieldtype": "Int",
+   "label": "Ewes / Does",
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:doc.counting=='By number'",
+   "fieldname": "head_males",
+   "fieldtype": "Int",
+   "label": "Rams / Bucks",
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:doc.counting=='By number'",
+   "fieldname": "head_young",
+   "fieldtype": "Int",
+   "label": "Lambs / Kids",
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:doc.counting=='By number'",
+   "fieldname": "head_others",
+   "fieldtype": "Int",
+   "label": "Others",
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:doc.counting=='By number'",
+   "fieldname": "withdrawal_until",
+   "fieldtype": "Date",
+   "label": "Drug Withdrawal Until",
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:doc.counting=='By number'",
+   "fieldname": "last_count_date",
+   "fieldtype": "Date",
+   "label": "Last Head Count",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
