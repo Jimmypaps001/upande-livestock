@@ -90,6 +90,7 @@ def record_calf_births(payload):
 				birth.submit()
 				if not stillborn:
 					created.append({
+						"birth": birth.name,
 						"animal": birth.animal,
 						"book_number": birth.animal,
 						"tag": birth.calf_tag_number,

@@ -85,16 +85,17 @@ def ensure_pregnancy_for_calving(calving):
 	conception = add_days(getdate(calving.event_date), -get_timing("gestation_period_days"))
 	service = create_natural_service(
 		calving.animal, conception, operator=calving.operator,
-		remarks=_("Derived from the calving on {0}").format(frappe.utils.formatdate(calving.event_date)))
+		remarks="Derived from the calving on {0}".format(frappe.utils.formatdate(calving.event_date)))
 	checked = min(
 		add_days(conception, get_timing("pregnancy_check_days_after_service")), getdate(calving.event_date))
 	dx = new_livestock_event(
 		{"animal": calving.animal, "operator": calving.operator, "event_date": str(checked),
-		 "remarks": _("Derived from the calving on {0}").format(frappe.utils.formatdate(calving.event_date))},
+		 "remarks": "Derived from the calving on {0}".format(frappe.utils.formatdate(calving.event_date))},
 		"Pregnancy Diagnosis", date_key="diagnosis_date", derived=True)
 	dx.diagnosis_date = dx.event_date
 	dx.diagnosis_result = "Confirmed"
 	dx.related_service = service.name
 	dx.insert()
 	dx.submit()
+	calving.flags.derived_docs = {"service": service.name, "pregnancy_diagnosis": dx.name}
 	return service.name

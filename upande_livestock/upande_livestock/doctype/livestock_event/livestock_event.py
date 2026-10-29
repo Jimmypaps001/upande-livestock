@@ -1248,6 +1248,9 @@ class LivestockEvent(Document):
 		self.undo_movement()
 		self.cancel_own_stock_issue()
 		self.undo_feed_mixing()
+		# What a Service, diagnosis, calving, birth or selection move stamped on the
+		# animal is taken back with it (see common/beef_events.undo_event).
+		beef_events.undo_event(self)
 
 	def undo_feed_mixing(self):
 		"""Take back the mixing a cancelled feeding gave out.

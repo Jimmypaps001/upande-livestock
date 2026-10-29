@@ -60,6 +60,9 @@ def isolate(test):
 			frappe.db.rollback()
 
 	test.addCleanup(undo)
+	# A seeded farm already has a weight ladder; a test that builds its own bands
+	# must not tile with it. Undone with everything else.
+	clear_bands()
 
 
 def move_animal(animal, new_herd, on=None):

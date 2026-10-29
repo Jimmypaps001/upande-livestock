@@ -94,6 +94,7 @@ def move_animals(payload):
 
 		return {
 			"ok": True,
+			"warnings": [],
 			"herd": herd,
 			"moved": moved,
 			"count": len(moved),

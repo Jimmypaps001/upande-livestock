@@ -152,3 +152,164 @@ def settle_service_sire(doc):
 			frappe.msgprint(sentence, alert=True, indicator="orange")
 		else:
 			doc.kinship_warnings = None
+
+
+# --- undoing what an event stamped ------------------------------------------
+#
+# A Service marks the cow Served, a diagnosis marks her Pregnant, a calving sets
+# her calving date and parity, a selection move sets the bull's stream and note.
+# Cancelling (or force-deleting) the event used to leave all of it behind, so a
+# cow stayed "Served" with the date of a service that never was. The animal's
+# breeding state is therefore RE-DERIVED from the events that are still
+# standing, which is correct for any order of undoing.
+
+DERIVED_REMARK = "Derived from the calving"
+
+
+def _has(doctype, field):
+	return frappe.get_meta(doctype).has_field(field)
+
+
+def restore_breeding_state(animal, exclude=None):
+	"""Set the animal's service/pregnancy/calving stamps from its standing events."""
+	if not animal or not frappe.db.exists("Animal", animal):
+		return
+	base = {"animal": animal, "docstatus": 1}
+	if exclude:
+		base["name"] = ["!=", exclude]
+	services = frappe.get_all(
+		"Livestock Event", filters={**base, "event_type": "Service"},
+		fields=["name", "service_date", "pregnancy_confirmation_status", "expected_calving_date"],
+		order_by="service_date desc, creation desc")
+	calvings = frappe.get_all(
+		"Livestock Event", filters={**base, "event_type": ["in", ["Calving", "Abortion"]]},
+		fields=["name", "event_type", "event_date"], order_by="event_date desc")
+	closed_after = lambda day: any(getdate(c.event_date) >= getdate(day) for c in calvings)  # noqa: E731
+	carrying = next((s for s in services if s.pregnancy_confirmation_status == "Confirmed"
+	                 and not closed_after(s.service_date)), None)
+	pending = next((s for s in services if s.pregnancy_confirmation_status == "Pending"), None)
+	births = [c for c in calvings if c.event_type == "Calving"]
+
+	values = {
+		"last_service_date": services[0].service_date if services else None,
+		"last_calving_date": births[0].event_date if births else None,
+		"expected_calving_date": carrying.expected_calving_date if carrying else None,
+	}
+	if carrying:
+		repro, preg = "Pregnant", "Confirmed"
+	elif pending:
+		repro, preg = "Served", "Pending Check"
+	else:
+		dob = frappe.db.get_value("Animal", animal, "date_of_birth")
+		young = dob and (getdate(frappe.utils.today()) - getdate(dob)).days < 24 * 30
+		repro = "Open" if births or not young else "Heifer"
+		preg = "Not Pregnant"
+	values["repro_status"] = repro
+	if _has("Animal", "custom_pregnancy_status"):
+		values["custom_pregnancy_status"] = preg
+	frappe.db.set_value("Animal", animal, values, update_modified=False)
+
+
+def recompute_stream(animal, exclude=None):
+	"""A bull's stream and breeding note, from the moves still standing."""
+	row = frappe.db.get_value("Animal", animal, ["sex", "date_of_birth"], as_dict=True)
+	if not row or row.sex != "Male":
+		return
+	filters = {"animal": animal, "event_type": "Movement", "docstatus": 1}
+	if exclude:
+		filters["name"] = ["!=", exclude]
+	stream, note = "", None
+	for m in frappe.get_all("Livestock Event", filters=filters, order_by="event_date asc, creation asc",
+	                        fields=["current_herd", "new_herd", "remarks", "operator", "event_date"]):
+		cls = herd_class(m.new_herd)
+		if cls == "Fattening":
+			stream = "Feedlot"
+		elif cls == "Breeding":
+			young = row.date_of_birth and add_months(
+				getdate(row.date_of_birth), get_timing("breeding_bull_min_age_months")) > getdate(m.event_date)
+			if herd_class(m.current_herd) != "Breeding" or (stream != "Breeding" and young):
+				stream = "Breeding"
+				note = {"breeding_note": (m.remarks or "").strip(), "breeding_note_by": m.operator,
+				        "breeding_note_on": m.event_date}
+	values = {"stream": stream, "breeding_note": None, "breeding_note_by": None, "breeding_note_on": None}
+	if stream == "Breeding" and note:
+		values.update(note)
+	frappe.db.set_value("Animal", animal, values, update_modified=False)
+
+
+def _cancel_todos(doc_name):
+	for todo in frappe.get_all("ToDo", filters={"reference_type": "Livestock Event", "reference_name": doc_name,
+	                                           "status": ["!=", "Cancelled"]}, pluck="name"):
+		frappe.db.set_value("ToDo", todo, "status", "Cancelled", update_modified=False)
+
+
+def undo_event(doc):
+	"""Take back what a submitted event stamped (called as it is cancelled).
+
+	A submitted event cannot be deleted in Frappe, so cancelling is the only way
+	out, and a cancelled event is deleted afterwards with nothing left to undo."""
+	exclude = None
+	kind = doc.event_type
+	if kind == "Service":
+		_cancel_todos(doc.name)
+		restore_breeding_state(doc.animal, exclude)
+	elif kind == "Pregnancy Diagnosis":
+		if doc.related_service and not frappe.db.exists("Livestock Event", {
+			"event_type": "Pregnancy Diagnosis", "related_service": doc.related_service, "docstatus": 1,
+			"name": ["!=", doc.name]}):
+			frappe.db.set_value("Livestock Event", doc.related_service, {
+				"pregnancy_confirmation_status": "Pending", "pregnancy_confirmation_date": None},
+				update_modified=False)
+		restore_breeding_state(doc.animal, exclude)
+	elif kind == "Calving":
+		_undo_calving(doc, exclude)
+	elif kind == "Birth":
+		_undo_birth(doc)
+	elif kind == "Movement":
+		recompute_stream(doc.animal, exclude)
+
+
+def _cancel(name):
+	child = frappe.get_doc("Livestock Event", name)
+	if child.docstatus == 1:
+		child.cancel()
+
+
+def _undo_calving(doc, exclude):
+	for birth in frappe.get_all("Livestock Event", filters={
+		"event_type": "Birth", "related_calving": doc.name, "docstatus": 1}, pluck="name"):
+		_cancel(birth)
+	# the move that put the dam in the cow herd after this calving
+	for move in frappe.get_all("Livestock Event", filters={
+		"event_type": "Movement", "animal": doc.animal, "docstatus": 1,
+		"remarks": ["like", "Calved on%{0}".format(doc.name)]}, pluck="name"):
+		_cancel(move)
+	# a pregnancy this calving derived (no service was on file) goes with it
+	service = doc.custom_related_pregnancy
+	if service and (frappe.db.get_value("Livestock Event", service, "remarks") or "").startswith(DERIVED_REMARK):
+		for dx in frappe.get_all("Livestock Event", filters={
+			"event_type": "Pregnancy Diagnosis", "related_service": service, "docstatus": 1}, pluck="name"):
+			_cancel(dx)
+		_cancel(service)
+	parity = frappe.db.get_value("Animal", doc.animal, "parity")
+	if parity:
+		frappe.db.set_value("Animal", doc.animal, "parity", max(0, int(parity) - 1), update_modified=False)
+	restore_breeding_state(doc.animal, exclude)
+
+
+def _undo_birth(doc):
+	"""A calf with nothing else recorded goes with its Birth; one with a history is left, disabled."""
+	calf = doc.animal
+	if not calf or not frappe.db.exists("Animal", calf):
+		return
+	others = frappe.db.exists("Livestock Event", {"animal": calf, "docstatus": 1, "name": ["!=", doc.name]}) \
+		or frappe.db.exists("Livestock Weight Record", {"animal": calf, "docstatus": 1})
+	herd = frappe.db.get_value("Animal", calf, "current_herd")
+	if others:
+		frappe.db.set_value("Animal", calf, {"disabled": 1, "status": "Transferred Out"}, update_modified=False)
+	else:
+		frappe.db.sql("delete from `tabLivestock Alert` where animal = %s", calf)
+		frappe.delete_doc("Animal", calf, force=True, ignore_permissions=True)
+	from upande_livestock.serverscripts.common.animal import recompute_herd_count
+
+	recompute_herd_count(herd)

@@ -22,6 +22,7 @@ def create_movement_event(payload):
 		doc.submit()  # herd_movement_processor updates Animal.current_herd + headcounts
 		return {
 			"ok": True,
+			"warnings": [],
 			"name": doc.name,
 			"stream": frappe.db.get_value("Animal", doc.animal, "stream") or None,
 		}

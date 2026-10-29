@@ -56,6 +56,8 @@ def create_service_event(payload):
 		doc.flags.sire_inference = inference
 		return {
 			**natural_service.sire_report(doc),
+			"warnings": [],
+			"created": {"service": doc.name},
 			"ok": True,
 			"name": doc.name,
 			"expected_calving_date": str(doc.expected_calving_date or ""),

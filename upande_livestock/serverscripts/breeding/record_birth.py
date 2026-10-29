@@ -137,6 +137,15 @@ def record_birth(payload):
 			"ok": True,
 			"service": calving.custom_related_pregnancy or "",
 			"service_created": bool(calving.flags.get("service_created")),
+			# Everything this call made, by name, so a client can show it and undo it.
+			"created": {
+				"calving": calving.name,
+				"births": [c.get("birth") for c in created if c.get("birth")],
+				"animals": [c.get("animal") for c in created if c.get("animal")],
+				"service": (calving.flags.get("derived_docs") or {}).get("service"),
+				"pregnancy_diagnosis": (calving.flags.get("derived_docs") or {}).get("pregnancy_diagnosis"),
+			},
+			"warnings": [],
 			"sire_animal": calving.get("sire_animal") or "",
 			"name": calving.name,
 			"outcome": outcome,

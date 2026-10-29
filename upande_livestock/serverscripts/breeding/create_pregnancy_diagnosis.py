@@ -55,7 +55,9 @@ def create_pregnancy_diagnosis(payload):
 		doc.insert()
 		doc.submit()
 		out = {"ok": True, "name": doc.name, "result": doc.diagnosis_result,
-		       "service": doc.related_service, "service_created": bool(created)}
+		       "service": doc.related_service, "service_created": bool(created),
+		       "created": {"pregnancy_diagnosis": doc.name, "service": created.name if created else None},
+		       "warnings": []}
 		out.update(natural_service.sire_report(created or doc.related_service))
 		return out
 

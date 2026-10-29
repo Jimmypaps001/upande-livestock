@@ -88,6 +88,8 @@ def record_animal_event(payload=None):
 		# the message was written for the person holding the phone.
 		if isinstance(result, dict):
 			result.setdefault("type", event_type)
+			if not result.get("error"):
+				result.setdefault("warnings", [])
 		return result
 
 	return run(go, "livestock mobile record_animal_event failed")
