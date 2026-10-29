@@ -326,3 +326,28 @@ applies: dates are computed from a fixed anchor, not `today()` per run, or re-ru
     names? How many breeding groups and bulls per group really?
 11. **Kinship depth** — parent/child and siblings only (designed), or also grandparents and cousins?
 12. **AI at Mutara** — which straws/semen item and store, if any, so the AI option has stock to issue?
+
+## 11. Answers and calls (2026-10-29, supersede section 10)
+
+User answers:
+1. **207 females, 293 males** (bulls spread over calves, the three feedlot herds and breeding bulls).
+2. **Calves live in their mother's herd** until the max calf age, then move to feedlot or breeders. They
+   count in that herd but are not fed its ration (rations count only non-calf head + bulls).
+3. **The simulated user is `saitoti@mutaraorchards.com`.** It does not exist on mutara.local: create it there
+   (local dev site only), linked to an Employee, with the herdsman and manager roles the recording and approval
+   endpoints need. The end-to-end API tests and the app use this login. Its local password lives only in
+   `sites/mutara.local/` config / the test env, never committed.
+
+Coordinator calls (defaults; the user can override):
+- "Weight first" = Weight is the first entry in the Record list and the first section on the animal page.
+- A calving may be recorded with no service on file; conception is then taken as 280 days before. The perceived
+  conception date can be given by the herdsman or the vet.
+- A feedlot bull may later be moved to breeding and back; the move note is required (≥ 20 characters), no
+  manager approval, optional photo.
+- Defaults: max calf age reuses the existing weaning setting if it exists (else 210 days), breeding bull from
+  18 months, conception window ±10 days. A bull eats one head of his herd's ration.
+- App: name "Upande Livestock Mutara", its own package/slug so it installs beside Kaitet's; EAS project is
+  pending the user (placeholder id as in the production app).
+- Breeding herds use Kaitet's naming (Bulling Heifers, Lactation Group 1, Lactation Group 2), 2–3 bulls each.
+- Inbreeding check covers parents and full/half siblings only.
+- AI uses a demo semen item in a demo store, seeded.
