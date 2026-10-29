@@ -273,11 +273,12 @@ class TestCowHerd(unittest.TestCase):
 		with mock.patch.object(hm, "growth_ladder", return_value=ladder), mock.patch.object(
 			hm, "cow_herd", return_value="COWS"
 		):
-			self.assertEqual(hm.service_herds(), ["TOP", "COWS"])
+			# every Breeding-class herd is a service herd too (a beef site's mating groups)
+			self.assertEqual(hm.service_herds()[:2], ["TOP", "COWS"])
 		with mock.patch.object(hm, "growth_ladder", return_value=ladder), mock.patch.object(
 			hm, "cow_herd", return_value=None
 		):
-			self.assertEqual(hm.service_herds(), ["TOP"])
+			self.assertEqual(hm.service_herds()[:1], ["TOP"])
 
 	def test_a_cow_in_the_cow_herd_past_the_wait_is_servable(self):
 		from unittest import mock

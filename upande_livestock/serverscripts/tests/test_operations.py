@@ -314,6 +314,8 @@ class TestWeightRecord(IntegrationTestCase):
 		self.assertFalse(res.get("ok"))
 
 	def test_options_offer_the_methods(self):
+		# a site with no weighbridge (Mutara) switches it off in Settings; this test is about the on state
+		frappe.db.set_single_value("Livestock Settings", "weighbridge_available", 1)
 		res = _assert_ok(self, weight_options(), "weight_options")
 		self.assertIn("Platform Scale", res["methods"])
 		self.assertIn("Weighbridge", res["methods"])

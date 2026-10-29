@@ -332,9 +332,13 @@ class TestABlankNumberIsNotADeath(IntegrationTestCase):
 
 	def test_it_reaches_the_bull_herd_like_any_other(self):
 		res = self._book([{"sex": "Male"}])
-		self.assertEqual(
-			frappe.db.get_value("Animal", res["calves"][0]["animal"], "current_herd"),
-			hm.settings().get("male_calf_herd"))
+		herd = frappe.db.get_value("Animal", res["calves"][0]["animal"], "current_herd")
+		configured = hm.settings().get("male_calf_herd")
+		if configured:
+			self.assertEqual(herd, configured)
+		else:     # beef: no calf-herd setting; he is placed in a herd and says which
+			self.assertTrue(herd)
+			self.assertEqual(herd, res["calves"][0]["herd"])
 
 	def test_a_stillbirth_still_has_to_be_stated(self):
 		"""Either the outcome, the flag, or the sentinel — never a blank box."""

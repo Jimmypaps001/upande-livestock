@@ -55,7 +55,7 @@ class TestReadingTheRations(IntegrationTestCase):
 
 	def test_the_day_is_the_ration_times_the_head_count(self):
 		for h in self.fed:
-			self.assertAlmostEqual(h["day_kg"], h["per_head_kg"] * h["heads"], places=3)
+			self.assertAlmostEqual(h["day_kg"], h["per_head_kg"] * h.get("fed_heads", h["heads"]), places=3)   # calves are not fed
 
 	def test_it_says_whether_the_output_and_the_ingredients_agree(self):
 		for h in self.fed:
