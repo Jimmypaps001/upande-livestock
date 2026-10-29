@@ -15,6 +15,7 @@ fed last March.
 """
 
 import frappe
+from upande_livestock.serverscripts.tests.herd_fixture import cow_herd
 from frappe.tests import IntegrationTestCase
 from frappe.utils import flt
 
@@ -62,7 +63,7 @@ class TestSplittingAHerdOffTheAnimalsYouHave(IntegrationTestCase):
 	def setUp(self):
 		_drop_herd()
 		for tag in COWS:
-			_make_cow(tag, herd="Breeding Cows")
+			_make_cow(tag, herd=cow_herd())
 		frappe.db.commit()
 		self.addCleanup(_drop_herd)
 
@@ -124,7 +125,7 @@ class TestRevisingWhatAHerdIsFed(IntegrationTestCase):
 	def setUp(self):
 		_drop_herd()
 		for tag in COWS:
-			_make_cow(tag, herd="Breeding Cows")
+			_make_cow(tag, herd=cow_herd())
 		create_herd({"herd_name": HERD, "animals": COWS, "operator": _employee(),
 		             "ration_item": RATION_ITEM,
 		             "lines": _lines((SILAGE, 20.0), (HAY, 2.0))})

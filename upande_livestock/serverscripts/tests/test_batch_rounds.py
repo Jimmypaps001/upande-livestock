@@ -15,6 +15,7 @@ the worst possible answer, so the batch reports per animal and carries on.
 """
 
 import frappe
+from upande_livestock.serverscripts.tests.herd_fixture import cow_herd
 from frappe.tests import IntegrationTestCase
 from frappe.utils import today
 
@@ -45,7 +46,7 @@ class TestAWeighingIsAMorningNotAMoment(IntegrationTestCase):
 		self.cows = ["WEIGH-BATCH-1", "WEIGH-BATCH-2", "WEIGH-BATCH-3"]
 		for tag in self.cows:
 			_tidy(tag)
-			_make_cow(tag, herd="Breeding Cows")
+			_make_cow(tag, herd=cow_herd())
 			self.addCleanup(_tidy, tag)
 		self.who = _employee()
 
@@ -145,7 +146,7 @@ class TestAPenIsWeighedTogether(IntegrationTestCase):
 		self.cows = ["WEIGH-PEN-1", "WEIGH-PEN-2", "WEIGH-PEN-3", "WEIGH-PEN-4"]
 		for tag in self.cows:
 			_tidy(tag)
-			_make_cow(tag, herd="Breeding Cows")
+			_make_cow(tag, herd=cow_herd())
 			self.addCleanup(_tidy, tag)
 		self.who = _employee()
 
@@ -214,7 +215,7 @@ class TestAPenIsWeighedTogether(IntegrationTestCase):
 
 class TestADrugRoundIsAHerdThroughACrush(IntegrationTestCase):
 	def setUp(self):
-		self.herd = "Breeding Cows"
+		self.herd = cow_herd()
 		self.cows = ["ROUND-DOSE-1", "ROUND-DOSE-2"]
 		for tag in self.cows:
 			_tidy(tag)

@@ -8,6 +8,7 @@ afterwards; the Livestock Settings account is restored.
 """
 
 import frappe
+from upande_livestock.serverscripts.tests.herd_fixture import cow_herd
 from frappe.tests import IntegrationTestCase
 from frappe.utils import add_days, today
 
@@ -332,7 +333,7 @@ class TestTheTreatmentFee(VetCase):
 		super().setUp()
 		self.animal = "ZZ-TREAT-FEE"
 		self._tidy()
-		_make_cow(self.animal, herd="Breeding Cows")
+		_make_cow(self.animal, herd=cow_herd())
 		self.who = _employee()
 		self.company = default_company()
 		self.original = frappe.db.get_single_value("Livestock Settings", EXPENSE_FIELD)

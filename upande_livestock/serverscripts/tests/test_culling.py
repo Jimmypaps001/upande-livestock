@@ -15,6 +15,7 @@ her status set to Dead — and the feed run mixes for her in the morning.
 """
 
 import frappe
+from upande_livestock.serverscripts.tests.herd_fixture import cow_herd
 from frappe.tests import IntegrationTestCase
 from frappe.utils import add_days, today
 
@@ -65,7 +66,7 @@ class TestACaseStartsAtTheRightGate(IntegrationTestCase):
 	def setUp(self):
 		self.animal = "CULL-GATE-1"
 		_tidy(self.animal)
-		_make_cow(self.animal, herd="Breeding Cows")
+		_make_cow(self.animal, herd=cow_herd())
 		self.addCleanup(_tidy, self.animal)
 
 	def _raise(self, flow, **kw):
@@ -116,7 +117,7 @@ class TestTheVetsVerdictIsFinalOnHealth(IntegrationTestCase):
 	def setUp(self):
 		self.animal = "CULL-VET-1"
 		_tidy(self.animal)
-		_make_cow(self.animal, herd="Breeding Cows")
+		_make_cow(self.animal, herd=cow_herd())
 		self.addCleanup(_tidy, self.animal)
 
 	def test_not_fit_for_sale_ends_a_sale(self):
@@ -176,7 +177,7 @@ class TestAnApprovalIsOfTerms(IntegrationTestCase):
 	def setUp(self):
 		self.animal = "CULL-APPROVE-1"
 		_tidy(self.animal)
-		_make_cow(self.animal, herd="Breeding Cows")
+		_make_cow(self.animal, herd=cow_herd())
 		self.addCleanup(_tidy, self.animal)
 		self.case = raise_cull({"animal": self.animal, "flow": culling.SALE})["name"]
 		vet_verdict({"case": self.case, "verdict": "Fit for sale"})
@@ -215,7 +216,7 @@ class TestPostingActuallyRemovesHerFromTheFarm(IntegrationTestCase):
 	def setUp(self):
 		self.animal = "CULL-POST-1"
 		_tidy(self.animal)
-		_make_cow(self.animal, herd="Breeding Cows")
+		_make_cow(self.animal, herd=cow_herd())
 		self.addCleanup(_tidy, self.animal)
 
 	def _approved_gift(self):
@@ -292,7 +293,7 @@ class TestADeathIsRecordedNotApproved(IntegrationTestCase):
 	def setUp(self):
 		self.animal = "CULL-DEAD-1"
 		_tidy(self.animal)
-		_make_cow(self.animal, herd="Breeding Cows")
+		_make_cow(self.animal, herd=cow_herd())
 		self.addCleanup(_tidy, self.animal)
 
 	def test_one_call_records_and_posts_it(self):

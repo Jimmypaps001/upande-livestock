@@ -17,6 +17,7 @@ that is the part the cull chain decides.
 from unittest import mock
 
 import frappe
+from upande_livestock.serverscripts.tests.herd_fixture import cow_herd
 from frappe.tests import IntegrationTestCase
 
 from upande_livestock.serverscripts.common import culling
@@ -43,7 +44,7 @@ def _a_customer():
 class TestWhichPostingEachFlowReaches(IntegrationTestCase):
 	def setUp(self):
 		_tidy(ANIMAL)
-		_make_cow(ANIMAL, herd="Breeding Cows")
+		_make_cow(ANIMAL, herd=cow_herd())
 		self.addCleanup(_tidy, ANIMAL)
 		self.sold = mock.MagicMock(return_value={})
 		self.scrapped = mock.MagicMock(return_value={})

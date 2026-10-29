@@ -15,6 +15,7 @@ signature wearing two hats.
 """
 
 import frappe
+from upande_livestock.serverscripts.tests.herd_fixture import cow_herd
 from frappe.tests import IntegrationTestCase
 
 from upande_livestock.serverscripts.common import culling
@@ -77,7 +78,7 @@ class TestTheGatesHoldForTheRolesTheyName(IntegrationTestCase):
 	def setUp(self):
 		self.animal = "CULL-PERM-1"
 		_tidy(self.animal)
-		_make_cow(self.animal, herd="Breeding Cows")
+		_make_cow(self.animal, herd=cow_herd())
 		frappe.db.commit()
 		self.addCleanup(self._restore)
 		self.addCleanup(_tidy, self.animal)

@@ -15,6 +15,7 @@ ACCIDENT. Everything else here follows from it.
 """
 
 import frappe
+from upande_livestock.serverscripts.tests.herd_fixture import cow_herd
 from frappe.tests import IntegrationTestCase
 from frappe.utils import add_days, today
 
@@ -53,7 +54,7 @@ class TestACheckUpIsWhereAFileComesFrom(IntegrationTestCase):
 	def setUp(self):
 		self.animal = "FILE-CHECK-1"
 		_tidy(self.animal)
-		_make_cow(self.animal, herd="Breeding Cows")
+		_make_cow(self.animal, herd=cow_herd())
 		self.who = _employee()
 		self.addCleanup(_tidy, self.animal)
 
@@ -102,7 +103,7 @@ class TestTreatingIsTheDoorIn(IntegrationTestCase):
 	def setUp(self):
 		self.animal = "FILE-TREAT-1"
 		_tidy(self.animal)
-		_make_cow(self.animal, herd="Breeding Cows")
+		_make_cow(self.animal, herd=cow_herd())
 		self.who = _employee()
 		self.addCleanup(_tidy, self.animal)
 
@@ -152,7 +153,7 @@ class TestAFileIsClosedWithAnEnding(IntegrationTestCase):
 	def setUp(self):
 		self.animal = "FILE-CLOSE-1"
 		_tidy(self.animal)
-		_make_cow(self.animal, herd="Breeding Cows")
+		_make_cow(self.animal, herd=cow_herd())
 		self.who = _employee()
 		self.addCleanup(_tidy, self.animal)
 		got = treat_animal({
@@ -218,7 +219,7 @@ class TestTheFileCanBeRead(IntegrationTestCase):
 	def setUp(self):
 		self.animal = "FILE-READ-1"
 		_tidy(self.animal)
-		_make_cow(self.animal, herd="Breeding Cows")
+		_make_cow(self.animal, herd=cow_herd())
 		self.who = _employee()
 		self.addCleanup(_tidy, self.animal)
 		self.case = treat_animal({
@@ -278,7 +279,7 @@ class TestOpeningASecondFileIsDeliberate(IntegrationTestCase):
 	def setUp(self):
 		self.animal = "FILE-SECOND-1"
 		_tidy(self.animal)
-		_make_cow(self.animal, herd="Breeding Cows")
+		_make_cow(self.animal, herd=cow_herd())
 		self.who = _employee()
 		self.addCleanup(_tidy, self.animal)
 		create_health_case({
