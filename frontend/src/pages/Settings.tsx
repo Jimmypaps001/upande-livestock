@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Loader2, ShieldAlert } from "lucide-react";
 import { BackdatingSetting } from "@/components/settings/BackdatingSetting";
 import { ChildTableEditor } from "@/components/settings/ChildTableEditor";
+import { FeedlotBandsCard } from "@/components/settings/FeedlotBandsCard";
 import { SettingField } from "@/components/settings/SettingField";
 import { StockRulesCard } from "@/components/settings/StockRulesCard";
 import { AmberNotice, Notice } from "@/components/feeding/Notice";
@@ -186,6 +187,8 @@ export function Settings() {
           ))}
         </Tabs>
       )}
+
+      {doc && <FeedlotBandsCard />}
 
       {doc && !readOnly && (
         <div className="sticky bottom-0 z-20 -mx-4 border-t border-[var(--sd-line)] bg-[var(--sd-card)]/95 px-4 py-3 backdrop-blur md:-mx-6 md:px-6">

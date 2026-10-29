@@ -349,6 +349,7 @@ def planted():
 COMPANY = "Mutara"
 SIM_ROLES = ("Livestock Attendant", "Livestock Breeder", "Livestock Manager")
 FEED_ITEMS = (("Mutara Boma Hay", 8), ("Mutara Maize Silage", 14), ("Mutara Beef Meal", 4))
+FEED_ITEMS_RATE = (("Mutara Boma Hay", 18), ("Mutara Maize Silage", 9), ("Mutara Beef Meal", 55))
 
 
 def _rng(tag, salt=""):
@@ -596,6 +597,43 @@ def ensure_ai():
 	_log("20 A.I. straws of {} received into {}".format(item, warehouse))
 
 
+RATIONS = {   # herd -> (kg per head per day, hay share, silage share, meal share)
+	WEANERS: (7, 0.5, 0.3, 0.2), BH: (10, 0.4, 0.4, 0.2), LG1: (12, 0.35, 0.5, 0.15),
+	LG2: (12, 0.35, 0.5, 0.15), RESERVE: (11, 0.4, 0.4, 0.2), STARTERS: (6, 0.3, 0.3, 0.4),
+	GROWERS: (8, 0.25, 0.4, 0.35), FINISHERS: (10, 0.2, 0.35, 0.45),
+}
+
+
+def ensure_rations():
+	"""One standing ration per herd, through the same function the Rations page uses.
+
+	Feed items are demo items in the DAIRY group (where the feed catalogue looks); a bull eats one head of his herd's
+	ration, and calves with their mothers are not fed it (calf_separation.fed_head_count)."""
+	from upande_livestock.serverscripts.feeding._standing_ration import set_standing_ration
+
+	if not frappe.db.exists("UOM", "Kilogram"):
+		frappe.get_doc({"doctype": "UOM", "uom_name": "Kilogram"}).insert(ignore_permissions=True)
+	if not frappe.db.exists("Item Group", "DAIRY"):     # where the feed catalogue looks for feed
+		frappe.get_doc({"doctype": "Item Group", "item_group_name": "DAIRY", "parent_item_group": "All Item Groups",
+		                "is_group": 0}).insert(ignore_permissions=True)
+	for name, _per in FEED_ITEMS:
+		if not frappe.db.exists("Item", name):
+			frappe.get_doc({"doctype": "Item", "item_code": name, "item_name": name, "item_group": "DAIRY",
+			                "stock_uom": "Kilogram", "is_stock_item": 1, "is_purchase_item": 1, "is_sales_item": 0,
+			                "include_item_in_manufacturing": 1, "valuation_rate": dict(FEED_ITEMS_RATE)[name],
+			                "standard_rate": dict(FEED_ITEMS_RATE)[name]}).insert(ignore_permissions=True)
+	farm = frappe.db.get_value("Warehouse", "Livestock Drug Store - {}".format(
+		frappe.db.get_value("Company", COMPANY, "abbr")), "custom_farm")
+	for herd, (kg, hay, silage, meal) in RATIONS.items():
+		if frappe.db.get_value("Herds", herd, "bom"):
+			continue
+		lines = [{"item_code": FEED_ITEMS[0][0], "qty": round(kg * hay, 3)},
+		         {"item_code": FEED_ITEMS[1][0], "qty": round(kg * silage, 3)},
+		         {"item_code": FEED_ITEMS[2][0], "qty": round(kg - round(kg * hay, 3) - round(kg * silage, 3), 3)}]
+		got = set_standing_ration(herd, lines, ration_item="Ration - {}".format(herd), farm=farm)
+		_log("ration {} -> {}".format(herd, got["bom"]))
+
+
 def recount():
 	from upande_livestock.serverscripts.common.animal import recompute_herd_count
 
@@ -671,6 +709,8 @@ def _execute(skip_stock=False):
 	recount()
 	if not skip_stock:
 		ensure_ai()
+		ensure_rations()
+		frappe.db.commit()
 	from upande_livestock.serverscripts.alerts import raise_alerts
 
 	raised, existing = raise_alerts.record(raise_alerts.collect())

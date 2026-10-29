@@ -118,6 +118,18 @@ class TestSeedMutaraBeef(IntegrationTestCase):
 		self.assertNotIn("System Manager", roles)
 		self.assertTrue(frappe.db.exists("Employee", {"user_id": seed.SIM_USER}))
 
+	def test_every_herd_has_a_ration_and_the_breeding_herds_feed_their_bulls(self):
+		from upande_livestock.serverscripts.common.calf_separation import fed_head_count
+
+		for herd, *_ in seed.HERDS:
+			self.assertTrue(frappe.db.get_value("Herds", herd, "bom"), herd)
+		from upande_livestock.serverscripts.common.calf_separation import head_breakdown
+
+		heads = frappe.db.get_value("Herds", seed.LG1, "number_of_animals")
+		calves = head_breakdown(seed.LG1)["calves"]
+		self.assertGreater(calves, 0)
+		self.assertEqual(fed_head_count(seed.LG1), heads - calves)
+
 	def test_rerun_changes_nothing(self):
 		tables = ("Animal", "Livestock Event", "Livestock Weight Record", "Livestock Alert", "Herds", "Stock Entry")
 		before = {t: frappe.db.count(t) for t in tables}
