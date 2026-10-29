@@ -82,6 +82,7 @@ const Culling = page(() =>
 const Procurement = page(() =>
   import("@/pages/Procurement").then((m) => ({ default: m.Procurement })),
 );
+const Shoats = page(() => import("@/pages/Shoats").then((m) => ({ default: m.Shoats })));
 const Herds = page(() => import("@/pages/Herds").then((m) => ({ default: m.Herds })));
 const Transactions = page(() =>
   import("@/pages/Transactions").then((m) => ({ default: m.Transactions })),
@@ -125,6 +126,7 @@ const TITLES: Record<View, string> = {
   dashboard: "Dashboard",
   animals: "Animals",
   herds: "Herds",
+  shoats: "Shoats",
   events: "Events",
   health: "Health",
   reports: "Reports",
@@ -168,6 +170,7 @@ const PAGES: Partial<Record<View, React.ComponentType>> = {
   culling: Culling,
   procurement: Procurement,
   herds: Herds,
+  shoats: Shoats,
   service: Service,
   diagnosis: Diagnosis,
   abortion: Abortion,

@@ -28,6 +28,7 @@ import {
   Wheat,
   CalendarClock,
   Map as MapIcon,
+  PawPrint,
 } from "lucide-react";
 import {
   Sidebar,
@@ -72,6 +73,12 @@ const NAV: NavSection[] = [
         hint: "Head count, weight and gain per herd",
       },
       { view: "animals", label: "Animals", icon: ClipboardList },
+      {
+        view: "shoats",
+        label: "Shoats",
+        icon: PawPrint,
+        hint: "Sheep and goats by number: head, weights, breeding, treatments",
+      },
       {
         view: "performance",
         label: "Bull Performance",
@@ -198,6 +205,7 @@ export const BUILT_VIEWS: ReadonlySet<View> = new Set<View>([
   "performance",
   "forecast",
   "paddocks",
+  "shoats",
   "husbandry",
   "movement",
   "calving",

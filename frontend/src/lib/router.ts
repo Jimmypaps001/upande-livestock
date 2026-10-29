@@ -32,6 +32,7 @@ export const VIEWS = [
   "performance",
   "forecast",
   "paddocks",
+  "shoats",
   "check-up",
   "treatment",
   "health-case",
