@@ -1,0 +1,392 @@
+{
+ "actions": [],
+ "autoname": "HCE-.YYYY.-.#####",
+ "creation": "2026-10-29 12:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "herd",
+  "species",
+  "cb1",
+  "event_date",
+  "event_type",
+  "sb_counts",
+  "females",
+  "males",
+  "cb2",
+  "young",
+  "others",
+  "total",
+  "born_dead",
+  "sb_detail",
+  "cause",
+  "other_herd",
+  "paddock",
+  "cb3",
+  "reason",
+  "amount",
+  "sb_mating",
+  "mating_start",
+  "mating_end",
+  "expected_birth_date",
+  "mating",
+  "sb_variance",
+  "head_before",
+  "head_after",
+  "cb4",
+  "variance_females",
+  "variance_males",
+  "variance_young",
+  "variance_others",
+  "paired_event",
+  "sb_who",
+  "operator",
+  "remarks",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "fieldname": "herd",
+   "fieldtype": "Link",
+   "label": "Herd",
+   "options": "Herds",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "species",
+   "fieldtype": "Data",
+   "label": "Species",
+   "read_only": 1,
+   "fetch_from": "herd.species",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "cb1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "event_date",
+   "fieldtype": "Date",
+   "label": "Date",
+   "reqd": 1,
+   "in_list_view": 1,
+   "default": "Today"
+  },
+  {
+   "fieldname": "event_type",
+   "fieldtype": "Select",
+   "label": "Event",
+   "options": "Head Count\nBirth\nDeath\nPurchase\nSale\nSlaughter\nTransfer In\nTransfer Out\nWeaning\nMating",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "sb_counts",
+   "fieldtype": "Section Break",
+   "label": "Head by class"
+  },
+  {
+   "fieldname": "females",
+   "fieldtype": "Int",
+   "label": "Ewes / Does",
+   "default": "0"
+  },
+  {
+   "fieldname": "males",
+   "fieldtype": "Int",
+   "label": "Rams / Bucks",
+   "default": "0"
+  },
+  {
+   "fieldname": "cb2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "young",
+   "fieldtype": "Int",
+   "label": "Lambs / Kids",
+   "default": "0"
+  },
+  {
+   "fieldname": "others",
+   "fieldtype": "Int",
+   "label": "Others",
+   "default": "0"
+  },
+  {
+   "fieldname": "total",
+   "fieldtype": "Int",
+   "label": "Head in this event",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "born_dead",
+   "fieldtype": "Int",
+   "label": "Born Dead",
+   "default": "0",
+   "depends_on": "eval:doc.event_type=='Birth'"
+  },
+  {
+   "fieldname": "sb_detail",
+   "fieldtype": "Section Break",
+   "label": "Detail"
+  },
+  {
+   "fieldname": "cause",
+   "fieldtype": "Select",
+   "label": "Cause of Death",
+   "options": "\nDisease\nPredation\nTheft\nAccident\nCold or Exposure\nPoisoning\nOld Age\nUnknown\nOther",
+   "depends_on": "eval:doc.event_type=='Death'",
+   "mandatory_depends_on": "eval:doc.event_type=='Death'"
+  },
+  {
+   "fieldname": "other_herd",
+   "fieldtype": "Link",
+   "label": "To / From Herd",
+   "options": "Herds",
+   "depends_on": "eval:['Transfer In','Transfer Out','Weaning'].includes(doc.event_type)",
+   "mandatory_depends_on": "eval:['Transfer In','Transfer Out'].includes(doc.event_type)"
+  },
+  {
+   "fieldname": "paddock",
+   "fieldtype": "Link",
+   "label": "Paddock",
+   "options": "Warehouse",
+   "description": "Where they went to or came from (a note; the herd's paddock is set on the herd)."
+  },
+  {
+   "fieldname": "cb3",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "reason",
+   "fieldtype": "Small Text",
+   "label": "Reason"
+  },
+  {
+   "fieldname": "amount",
+   "fieldtype": "Currency",
+   "label": "Amount",
+   "depends_on": "eval:['Purchase','Sale','Slaughter'].includes(doc.event_type)",
+   "description": "Total price paid or received."
+  },
+  {
+   "fieldname": "sb_mating",
+   "fieldtype": "Section Break",
+   "label": "Breeding",
+   "depends_on": "eval:['Mating','Birth','Weaning'].includes(doc.event_type)"
+  },
+  {
+   "fieldname": "mating_start",
+   "fieldtype": "Date",
+   "label": "Mating Start",
+   "depends_on": "eval:doc.event_type=='Mating'"
+  },
+  {
+   "fieldname": "mating_end",
+   "fieldtype": "Date",
+   "label": "Mating End",
+   "depends_on": "eval:doc.event_type=='Mating'"
+  },
+  {
+   "fieldname": "expected_birth_date",
+   "fieldtype": "Date",
+   "label": "Expected Lambing / Kidding",
+   "read_only": 1,
+   "depends_on": "eval:doc.event_type=='Mating'"
+  },
+  {
+   "fieldname": "mating",
+   "fieldtype": "Link",
+   "label": "Mating",
+   "options": "Herd Count Event",
+   "depends_on": "eval:['Birth','Weaning'].includes(doc.event_type)"
+  },
+  {
+   "fieldname": "sb_variance",
+   "fieldtype": "Section Break",
+   "label": "Ledger",
+   "collapsible": 0
+  },
+  {
+   "fieldname": "head_before",
+   "fieldtype": "Int",
+   "label": "Head Before",
+   "read_only": 1
+  },
+  {
+   "fieldname": "head_after",
+   "fieldtype": "Int",
+   "label": "Head After",
+   "read_only": 1
+  },
+  {
+   "fieldname": "cb4",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "variance_females",
+   "fieldtype": "Int",
+   "label": "Variance Ewes / Does",
+   "read_only": 1,
+   "depends_on": "eval:doc.event_type=='Head Count'"
+  },
+  {
+   "fieldname": "variance_males",
+   "fieldtype": "Int",
+   "label": "Variance Rams / Bucks",
+   "read_only": 1,
+   "depends_on": "eval:doc.event_type=='Head Count'"
+  },
+  {
+   "fieldname": "variance_young",
+   "fieldtype": "Int",
+   "label": "Variance Lambs / Kids",
+   "read_only": 1,
+   "depends_on": "eval:doc.event_type=='Head Count'"
+  },
+  {
+   "fieldname": "variance_others",
+   "fieldtype": "Int",
+   "label": "Variance Others",
+   "read_only": 1,
+   "depends_on": "eval:doc.event_type=='Head Count'"
+  },
+  {
+   "fieldname": "paired_event",
+   "fieldtype": "Link",
+   "label": "Paired Event",
+   "options": "Herd Count Event",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "sb_who",
+   "fieldtype": "Section Break",
+   "label": "Recorded by"
+  },
+  {
+   "fieldname": "operator",
+   "fieldtype": "Link",
+   "label": "Operator",
+   "options": "Employee"
+  },
+  {
+   "fieldname": "remarks",
+   "fieldtype": "Small Text",
+   "label": "Remarks"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "options": "Herd Count Event",
+   "read_only": 1,
+   "no_copy": 1,
+   "print_hide": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2026-10-29 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Upande Livestock",
+ "name": "Herd Count Event",
+ "naming_rule": "Expression (old style)",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "permlevel": 0,
+   "read": 1,
+   "report": 1,
+   "print": 1,
+   "email": 1,
+   "export": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "share": 1,
+   "submit": 1,
+   "cancel": 1,
+   "idx": 1
+  },
+  {
+   "role": "Livestock Manager",
+   "permlevel": 0,
+   "read": 1,
+   "report": 1,
+   "print": 1,
+   "email": 1,
+   "export": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "share": 1,
+   "submit": 1,
+   "cancel": 1,
+   "idx": 2
+  },
+  {
+   "role": "Livestock Attendant",
+   "permlevel": 0,
+   "read": 1,
+   "report": 1,
+   "print": 1,
+   "email": 1,
+   "export": 1,
+   "write": 1,
+   "create": 1,
+   "submit": 1,
+   "idx": 3
+  },
+  {
+   "role": "Livestock Breeder",
+   "permlevel": 0,
+   "read": 1,
+   "report": 1,
+   "print": 1,
+   "email": 1,
+   "export": 1,
+   "write": 1,
+   "create": 1,
+   "submit": 1,
+   "idx": 4
+  },
+  {
+   "role": "Livestock Vet",
+   "permlevel": 0,
+   "read": 1,
+   "report": 1,
+   "print": 1,
+   "email": 1,
+   "export": 1,
+   "write": 1,
+   "create": 1,
+   "submit": 1,
+   "idx": 5
+  },
+  {
+   "role": "Livestock Stores",
+   "permlevel": 0,
+   "read": 1,
+   "report": 1,
+   "print": 1,
+   "email": 1,
+   "export": 1,
+   "idx": 6
+  }
+ ],
+ "row_format": "Dynamic",
+ "search_fields": "herd,event_type,event_date",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

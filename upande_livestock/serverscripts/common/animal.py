@@ -133,6 +133,9 @@ def recompute_herd_count(herd):
 	"""Set Herds.number_of_animals to the live count."""
 	if not herd:
 		return
+	if frappe.db.get_value("Herds", herd, "counting") == "By number":
+		# a shoat herd's head is its ledger's, not a count of Animal records
+		return
 	frappe.db.set_value("Herds", herd, "number_of_animals", live_herd_count(herd))
 
 

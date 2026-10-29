@@ -1,0 +1,292 @@
+{
+ "actions": [],
+ "autoname": "HTR-.YYYY.-.#####",
+ "creation": "2026-10-29 12:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "herd",
+  "species",
+  "cb1",
+  "treatment_date",
+  "treatment_type",
+  "sb_drug",
+  "product",
+  "product_name",
+  "dose_per_head",
+  "dose_uom",
+  "cb2",
+  "number_treated",
+  "quantity",
+  "warehouse",
+  "withdrawal_days",
+  "withdrawal_end",
+  "sb_more",
+  "diagnosis",
+  "treated_by",
+  "cb3",
+  "cost_center",
+  "stock_entry",
+  "remarks",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "fieldname": "herd",
+   "fieldtype": "Link",
+   "label": "Herd",
+   "options": "Herds",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "species",
+   "fieldtype": "Data",
+   "label": "Species",
+   "read_only": 1,
+   "fetch_from": "herd.species"
+  },
+  {
+   "fieldname": "cb1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "treatment_date",
+   "fieldtype": "Date",
+   "label": "Date",
+   "reqd": 1,
+   "in_list_view": 1,
+   "default": "Today"
+  },
+  {
+   "fieldname": "treatment_type",
+   "fieldtype": "Select",
+   "label": "Type",
+   "options": "Treatment\nDipping\nDeworming\nVaccination",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "default": "Treatment"
+  },
+  {
+   "fieldname": "sb_drug",
+   "fieldtype": "Section Break",
+   "label": "Drug"
+  },
+  {
+   "fieldname": "product",
+   "fieldtype": "Link",
+   "label": "Product",
+   "options": "Item",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "product_name",
+   "fieldtype": "Data",
+   "label": "Product Name",
+   "read_only": 1,
+   "fetch_from": "product.item_name"
+  },
+  {
+   "fieldname": "dose_per_head",
+   "fieldtype": "Float",
+   "label": "Dose per Head",
+   "reqd": 1,
+   "precision": "4",
+   "description": "In the product's stock unit (litres, nos, ...)."
+  },
+  {
+   "fieldname": "dose_uom",
+   "fieldtype": "Data",
+   "label": "Unit",
+   "read_only": 1,
+   "fetch_from": "product.stock_uom"
+  },
+  {
+   "fieldname": "cb2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "number_treated",
+   "fieldtype": "Int",
+   "label": "Number Treated",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "quantity",
+   "fieldtype": "Float",
+   "label": "Quantity Issued",
+   "read_only": 1,
+   "precision": "4"
+  },
+  {
+   "fieldname": "warehouse",
+   "fieldtype": "Link",
+   "label": "Drug Store",
+   "options": "Warehouse"
+  },
+  {
+   "fieldname": "withdrawal_days",
+   "fieldtype": "Int",
+   "label": "Withdrawal (days)",
+   "default": "0"
+  },
+  {
+   "fieldname": "withdrawal_end",
+   "fieldtype": "Date",
+   "label": "Withdrawal Ends",
+   "read_only": 1
+  },
+  {
+   "fieldname": "sb_more",
+   "fieldtype": "Section Break",
+   "label": "Detail"
+  },
+  {
+   "fieldname": "diagnosis",
+   "fieldtype": "Data",
+   "label": "Reason / Diagnosis"
+  },
+  {
+   "fieldname": "treated_by",
+   "fieldtype": "Link",
+   "label": "Treated By",
+   "options": "Employee"
+  },
+  {
+   "fieldname": "cb3",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "cost_center",
+   "fieldtype": "Link",
+   "label": "Cost Center",
+   "options": "Cost Center",
+   "read_only": 1
+  },
+  {
+   "fieldname": "stock_entry",
+   "fieldtype": "Link",
+   "label": "Stock Entry",
+   "options": "Stock Entry",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "remarks",
+   "fieldtype": "Small Text",
+   "label": "Remarks"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "options": "Herd Treatment",
+   "read_only": 1,
+   "no_copy": 1,
+   "print_hide": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2026-10-29 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Upande Livestock",
+ "name": "Herd Treatment",
+ "naming_rule": "Expression (old style)",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "permlevel": 0,
+   "read": 1,
+   "report": 1,
+   "print": 1,
+   "email": 1,
+   "export": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "share": 1,
+   "submit": 1,
+   "cancel": 1,
+   "idx": 1
+  },
+  {
+   "role": "Livestock Manager",
+   "permlevel": 0,
+   "read": 1,
+   "report": 1,
+   "print": 1,
+   "email": 1,
+   "export": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "share": 1,
+   "submit": 1,
+   "cancel": 1,
+   "idx": 2
+  },
+  {
+   "role": "Livestock Attendant",
+   "permlevel": 0,
+   "read": 1,
+   "report": 1,
+   "print": 1,
+   "email": 1,
+   "export": 1,
+   "write": 1,
+   "create": 1,
+   "submit": 1,
+   "idx": 3
+  },
+  {
+   "role": "Livestock Breeder",
+   "permlevel": 0,
+   "read": 1,
+   "report": 1,
+   "print": 1,
+   "email": 1,
+   "export": 1,
+   "write": 1,
+   "create": 1,
+   "submit": 1,
+   "idx": 4
+  },
+  {
+   "role": "Livestock Vet",
+   "permlevel": 0,
+   "read": 1,
+   "report": 1,
+   "print": 1,
+   "email": 1,
+   "export": 1,
+   "write": 1,
+   "create": 1,
+   "submit": 1,
+   "idx": 5
+  },
+  {
+   "role": "Livestock Stores",
+   "permlevel": 0,
+   "read": 1,
+   "report": 1,
+   "print": 1,
+   "email": 1,
+   "export": 1,
+   "idx": 6
+  }
+ ],
+ "row_format": "Dynamic",
+ "search_fields": "herd,product,treatment_type",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

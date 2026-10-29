@@ -117,6 +117,12 @@ def head_breakdown(herd):
 	`fed` is the head the herd's ration is made for: everyone but the calves
 	under the separation age. A breeding bull is one head, like a cow.
 	"""
+	if frappe.db.get_value("Herds", herd, "counting") == "By number":
+		# a shoat herd: the ledger's head, every head fed (lambs and kids eat with the flock)
+		from upande_livestock.serverscripts.common import shoats
+
+		h = shoats.head(herd)
+		return {"animals": h["total"], "calves": 0, "fed": h["total"], "bulls": h["males"], "females": h["females"]}
 	rows = frappe.get_all(
 		"Animal",
 		filters={"current_herd": herd, "docstatus": ["!=", 2], "status": ["not in", RETIRED_STATUSES]},

@@ -72,6 +72,7 @@ STOCK_ENTRY_TYPES = {
 	"Feeding": "Animal Feeding",
 	"Concentrate Manufacture": "Concentrate Mixing",
 	"Ration Manufacture": "Ration Mixing",
+	"Shoat Treatment": "Livestock Shoat Treatment",
 }
 FALLBACK_TYPE = "Material Issue"
 # The generic type to fall back on for the kinds that are not Material Issues.

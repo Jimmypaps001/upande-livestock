@@ -1,0 +1,186 @@
+{
+ "actions": [],
+ "autoname": "HWS-.YYYY.-.#####",
+ "creation": "2026-10-29 12:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "herd",
+  "sample_date",
+  "cb1",
+  "sample_class",
+  "sb",
+  "animals_weighed",
+  "average_kg",
+  "cb2",
+  "total_kg",
+  "operator",
+  "remarks"
+ ],
+ "fields": [
+  {
+   "fieldname": "herd",
+   "fieldtype": "Link",
+   "label": "Herd",
+   "options": "Herds",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "sample_date",
+   "fieldtype": "Date",
+   "label": "Date",
+   "reqd": 1,
+   "in_list_view": 1,
+   "default": "Today"
+  },
+  {
+   "fieldname": "cb1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "sample_class",
+   "fieldtype": "Select",
+   "label": "Class",
+   "options": "All\nfemales\nmales\nyoung\nothers",
+   "default": "All",
+   "reqd": 1,
+   "in_list_view": 1,
+   "description": "All = the weighed animals were drawn from the whole herd."
+  },
+  {
+   "fieldname": "sb",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "animals_weighed",
+   "fieldtype": "Int",
+   "label": "Animals Weighed",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "average_kg",
+   "fieldtype": "Float",
+   "label": "Average Weight (kg)",
+   "reqd": 1,
+   "in_list_view": 1,
+   "precision": "1"
+  },
+  {
+   "fieldname": "cb2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "total_kg",
+   "fieldtype": "Float",
+   "label": "Total Weighed (kg)",
+   "read_only": 1,
+   "precision": "1"
+  },
+  {
+   "fieldname": "operator",
+   "fieldtype": "Link",
+   "label": "Operator",
+   "options": "Employee"
+  },
+  {
+   "fieldname": "remarks",
+   "fieldtype": "Small Text",
+   "label": "Remarks"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "is_submittable": 0,
+ "links": [],
+ "modified": "2026-10-29 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Upande Livestock",
+ "name": "Herd Weight Sample",
+ "naming_rule": "Expression (old style)",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "permlevel": 0,
+   "read": 1,
+   "report": 1,
+   "print": 1,
+   "email": 1,
+   "export": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "share": 1,
+   "idx": 1
+  },
+  {
+   "role": "Livestock Manager",
+   "permlevel": 0,
+   "read": 1,
+   "report": 1,
+   "print": 1,
+   "email": 1,
+   "export": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "share": 1,
+   "idx": 2
+  },
+  {
+   "role": "Livestock Attendant",
+   "permlevel": 0,
+   "read": 1,
+   "report": 1,
+   "print": 1,
+   "email": 1,
+   "export": 1,
+   "write": 1,
+   "create": 1,
+   "idx": 3
+  },
+  {
+   "role": "Livestock Breeder",
+   "permlevel": 0,
+   "read": 1,
+   "report": 1,
+   "print": 1,
+   "email": 1,
+   "export": 1,
+   "write": 1,
+   "create": 1,
+   "idx": 4
+  },
+  {
+   "role": "Livestock Vet",
+   "permlevel": 0,
+   "read": 1,
+   "report": 1,
+   "print": 1,
+   "email": 1,
+   "export": 1,
+   "write": 1,
+   "create": 1,
+   "idx": 5
+  },
+  {
+   "role": "Livestock Stores",
+   "permlevel": 0,
+   "read": 1,
+   "report": 1,
+   "print": 1,
+   "email": 1,
+   "export": 1,
+   "idx": 6
+  }
+ ],
+ "row_format": "Dynamic",
+ "search_fields": "herd,sample_date",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

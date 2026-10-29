@@ -105,6 +105,8 @@ def get_bootstrap_bundle(version=None):
 				"min_age",
 				"max_age",
 				"herd_class",
+				"counting",
+				"species",
 			],
 			order_by="herd_name asc",
 		)
@@ -133,6 +135,9 @@ def get_bootstrap_bundle(version=None):
 					"has_bom": bool(h.bom),
 					"herd_class": h.herd_class or "Other",
 					"is_breeding": h.herd_class == "Breeding",
+					"counting": h.counting or "Individual",
+					"by_number": h.counting == "By number",
+					"species": h.species or "Cattle",
 					**counts(h.name, h.number_of_animals),
 				}
 				for h in herds
