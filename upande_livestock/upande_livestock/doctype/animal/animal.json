@@ -30,6 +30,11 @@
   "cb_parentage",
   "dam",
   "sire_name",
+  "sire",
+  "stream",
+  "breeding_note",
+  "breeding_note_by",
+  "breeding_note_on",
   "tab_herd",
   "sb_placement",
   "current_herd",
@@ -409,6 +414,43 @@
    "label": "Marked By",
    "options": "User",
    "read_only": 1
+  },
+  {
+   "description": "The farm's own bull. Sire Name stays for A.I. straws and outside bulls.",
+   "fieldname": "sire",
+   "fieldtype": "Link",
+   "label": "Sire",
+   "options": "Animal"
+  },
+  {
+   "fieldname": "stream",
+   "fieldtype": "Select",
+   "label": "Stream",
+   "options": "\nFeedlot\nBreeding",
+   "read_only": 1,
+   "description": "Set by the move that decides it: a bull calf goes to the feedlot or is kept for breeding."
+  },
+  {
+   "fieldname": "breeding_note",
+   "fieldtype": "Small Text",
+   "label": "Breeding Note",
+   "read_only": 1,
+   "depends_on": "eval:doc.stream=='Breeding'"
+  },
+  {
+   "fieldname": "breeding_note_by",
+   "fieldtype": "Link",
+   "label": "Note By",
+   "options": "Employee",
+   "read_only": 1,
+   "depends_on": "eval:doc.stream=='Breeding'"
+  },
+  {
+   "fieldname": "breeding_note_on",
+   "fieldtype": "Date",
+   "label": "Note On",
+   "read_only": 1,
+   "depends_on": "eval:doc.stream=='Breeding'"
   }
  ],
  "grid_page_length": 50,

@@ -18,6 +18,10 @@ ZERO_MEANS_DISABLED = {
 	"health_case_stale_days",
 	# No slack after the weighing interval is a fair choice.
 	"weighing_grace_days",
+	# Beef herd: 0 separation age = no Calf Separation Due; a window of 0 is
+	# "that day only".
+	"calf_separation_age_days",
+	"conception_window_days",
 }
 
 # Every other timing: 0 cannot mean anything real (a 0-day gestation period,

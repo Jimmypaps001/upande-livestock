@@ -112,6 +112,12 @@ TIMING_DEFAULTS = {
 	# them out of ZERO_IS_INVALID while still being seeded like everything else.
 	"health_case_concern_days": 21,
 	"health_case_stale_days": 7,
+	# Beef herd. The age a calf leaves its mother (0 switches the alert off), the
+	# age a male counts as a possible sire, and the days either side of a perceived
+	# conception date in which a bull must have shared the female's herd.
+	"calf_separation_age_days": 210,
+	"breeding_bull_min_age_months": 18,
+	"conception_window_days": 10,
 }
 
 # Float counterparts of TIMING_DEFAULTS: seeded the same way (see

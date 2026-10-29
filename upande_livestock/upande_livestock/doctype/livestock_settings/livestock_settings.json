@@ -48,6 +48,14 @@
   "forecast_section",
   "target_exit_weight_kg",
   "forecast_horizon_weeks",
+  "sb_beef",
+  "calf_separation_age_days",
+  "breeding_bull_min_age_months",
+  "default_service_type",
+  "cb_beef",
+  "conception_window_days",
+  "kinship_check",
+  "weight_bands_html",
   "tab_dairy",
   "custom_dairy_section",
   "custom_feed_wip_warehouse",
@@ -841,6 +849,57 @@
    "fieldtype": "Link",
    "label": "Cow herd (after calving)",
    "options": "Herds"
+  },
+  {
+   "fieldname": "sb_beef",
+   "fieldtype": "Section Break",
+   "label": "Beef herd"
+  },
+  {
+   "default": "210",
+   "description": "The maximum age of a calf: at this age it leaves its mother and is due to move to the feedlot or to breeding (Calf Separation Due). 0 switches the alert off.",
+   "fieldname": "calf_separation_age_days",
+   "fieldtype": "Int",
+   "label": "Calf Separation Age (Days)"
+  },
+  {
+   "default": "18",
+   "description": "A male counts as a possible sire from this age.",
+   "fieldname": "breeding_bull_min_age_months",
+   "fieldtype": "Int",
+   "label": "Breeding Bull Minimum Age (Months)"
+  },
+  {
+   "default": "Natural",
+   "description": "What a new Service is recorded as when nobody says.",
+   "fieldname": "default_service_type",
+   "fieldtype": "Select",
+   "label": "Default Service Type",
+   "options": "Natural\nA.I."
+  },
+  {
+   "fieldname": "cb_beef",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "10",
+   "description": "Days either side of the perceived conception date in which a bull must have been in the female's herd to be named her sire. 0 means that day only.",
+   "fieldname": "conception_window_days",
+   "fieldtype": "Int",
+   "label": "Conception Window (± Days)"
+  },
+  {
+   "default": "1",
+   "description": "Warn when a bull would run with his daughter, his mother or his sister (full or half).",
+   "fieldname": "kinship_check",
+   "fieldtype": "Check",
+   "label": "Inbreeding Warnings"
+  },
+  {
+   "fieldname": "weight_bands_html",
+   "fieldtype": "HTML",
+   "label": "Feedlot Weight Bands",
+   "options": "<p class=\"text-muted\">The feedlot weight bands (Starters, Growers, Finishers) are the min/max weights on the three Fattening herds. Edit them on the Herds page of the Livestock app; there is one copy of the numbers.</p>"
   }
  ],
  "grid_page_length": 50,

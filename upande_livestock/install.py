@@ -108,7 +108,9 @@ def ensure_livestock_timing_defaults():
 		# Settings doctype not yet migrated to include the timing fields.
 		return
 
-	for fieldname, default in ALL_TIMING_DEFAULTS.items():
+	from upande_livestock.serverscripts.common.beef_settings import BEEF_DEFAULTS
+
+	for fieldname, default in {**ALL_TIMING_DEFAULTS, **BEEF_DEFAULTS}.items():
 		if read_setting(fieldname) in (None, ""):
 			frappe.db.set_single_value("Livestock Settings", fieldname, default)
 

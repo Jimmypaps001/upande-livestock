@@ -25,6 +25,11 @@
   "semen_warehouse",
   "service_type",
   "service_date",
+  "sire_animal",
+  "sire_inferred",
+  "sire_basis",
+  "conception_date",
+  "kinship_warnings",
   "cb_service",
   "pregnancy_confirmation_status",
   "pregnancy_confirmation_date",
@@ -567,6 +572,41 @@
    "options": "Work Order",
    "read_only": 1,
    "description": "The mixing run this feeding gave out. Cancelling the feeding takes it back too."
+  },
+  {
+   "fieldname": "sire_animal",
+   "fieldtype": "Link",
+   "label": "Sire (Animal)",
+   "options": "Animal",
+   "depends_on": "eval:doc.event_type=='Service'",
+   "description": "The bull behind this service."
+  },
+  {
+   "fieldname": "sire_inferred",
+   "fieldtype": "Check",
+   "label": "Sire Inferred",
+   "read_only": 1,
+   "depends_on": "eval:doc.event_type=='Service'"
+  },
+  {
+   "fieldname": "sire_basis",
+   "fieldtype": "Small Text",
+   "label": "Sire Basis",
+   "read_only": 1,
+   "depends_on": "eval:doc.sire_inferred"
+  },
+  {
+   "fieldname": "conception_date",
+   "fieldtype": "Date",
+   "label": "Perceived Conception Date",
+   "depends_on": "eval:doc.event_type=='Service' && doc.service_type=='Natural'",
+   "description": "For a natural service: the day conception is believed to have happened."
+  },
+  {
+   "fieldname": "kinship_warnings",
+   "fieldtype": "Small Text",
+   "label": "Kinship Warnings",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
