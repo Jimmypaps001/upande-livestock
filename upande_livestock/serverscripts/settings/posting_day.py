@@ -31,6 +31,8 @@ def posting_day():
 			"ok": True,
 			"today": today(),
 			"backdating_open": backdate.window_open(),
+			# The phone's role logic (who may record, who may approve) reads these.
+			"roles": sorted(frappe.get_roles()),
 			**employee_status(),
 		}
 

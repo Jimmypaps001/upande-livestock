@@ -20,7 +20,8 @@ from frappe.model.naming import make_autoname
 from frappe.utils import getdate, nowdate
 
 from upande_livestock.serverscripts.common import backdate
-from upande_livestock.serverscripts.common import beef_events
+from upande_livestock.serverscripts.common import beef_events, natural_service
+from upande_livestock.serverscripts.common.beef_settings import default_service_type
 from upande_livestock.serverscripts.common import event_items
 from upande_livestock.serverscripts.common import stock as livestock_stock
 
@@ -134,6 +135,11 @@ def _validate_pregnancy_link(doc):
 		)
 
 
+def natural_service_default():
+	"""Does this farm record natural service by default (Settings -> Default Service Type)?"""
+	return default_service_type() == "Natural"
+
+
 class LivestockEvent(Document):
 	def autoname(self):
 		"""Name as TYPE-YEAR-#####, e.g. FEEDING-2026-00001.
@@ -238,6 +244,8 @@ class LivestockEvent(Document):
 			health_status=self.get("calf_health_status") or None,
 			vet_remarks=self.get("calf_vet_remarks") or None,
 			photo=self.get("calf_photo") or None,
+			sire_animal=self.get("sire_animal") or None,
+			sire_name=self.get("sire") or None,
 		)
 
 	def before_insert(self):
@@ -803,6 +811,12 @@ class LivestockEvent(Document):
 						alert=True,
 						indicator="blue",
 					)
+				elif natural_service_default():
+					# Natural service is recorded when it is perceived; a calving
+					# is one of the three places it is perceived. Conception is the
+					# calving date minus gestation (common/natural_service).
+					self.custom_related_pregnancy = natural_service.ensure_pregnancy_for_calving(self)
+					self.flags.service_created = True
 				else:
 					frappe.throw("""<b>No active pregnancy to calve from</b><br><br>
                         This animal has no confirmed pregnancy to calve from.<br><br>
@@ -821,6 +835,8 @@ class LivestockEvent(Document):
 			# it. A sire somebody typed stays.
 			if not (self.sire or "").strip():
 				self.sire = sire_of(service)
+			if service.get("sire_animal") and not self.get("sire_animal"):
+				self.sire_animal = service.sire_animal
 
 			if service.service_date:
 				gestation_days = frappe.utils.date_diff(self.event_date, service.service_date)

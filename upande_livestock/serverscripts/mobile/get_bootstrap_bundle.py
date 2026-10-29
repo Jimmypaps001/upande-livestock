@@ -20,6 +20,8 @@ Read-guarded on Herds. It discloses herd structure, store balances and the
 farm's settings — not something an arbitrary logged-in user should collect.
 """
 
+import hashlib
+
 import frappe
 
 from upande_livestock.serverscripts.common import herd_movement
@@ -39,7 +41,23 @@ from upande_livestock.serverscripts.mobile._shared import digest, unchanged
 
 # The doctypes whose state this payload reflects. A change to any of them must
 # change the version, or the phone will keep serving a stale form.
-_SOURCES = ["Herds", "Livestock Event Type", "Livestock Event Type Item Group", "Employee", "Bin", "Item"]
+# Animal is here for the beef herd cards (females and bulls per herd); it changes more
+# often than the rest, which costs a re-download, not a wrong answer.
+_SOURCES = ["Herds", "Animal", "Livestock Event Type", "Livestock Event Type Item Group", "Employee", "Bin", "Item"]
+
+
+def beef_settings():
+	"""The Beef herd settings the phone reads, with their defaults."""
+	from upande_livestock.serverscripts.common.beef_settings import default_service_type, kinship_check_on
+	from upande_livestock.serverscripts.common.timings import get_timing
+
+	return {
+		"calf_separation_age_days": get_timing("calf_separation_age_days"),
+		"default_service_type": default_service_type(),
+		"breeding_bull_min_age_months": get_timing("breeding_bull_min_age_months"),
+		"conception_window_days": get_timing("conception_window_days"),
+		"kinship_check": kinship_check_on(),
+	}
 
 
 def herd_category(h):
@@ -55,11 +73,22 @@ def herd_category(h):
 	return None
 
 
+def counts(herd, stored):
+	"""Females, bulls and fed head in a herd (calves under the separation age excluded)."""
+	from upande_livestock.serverscripts.common.calf_separation import head_breakdown
+
+	b = head_breakdown(herd)
+	return {"females": b["females"], "bulls": b["bulls"], "calves": b["calves"],
+	        "fed_heads": max(0, int(stored or 0) - b["calves"])}
+
+
 @frappe.whitelist()
 def get_bootstrap_bundle(version=None):
 	def go():
 		guard_read("Herds")
-		current = digest(_SOURCES)
+		settings = beef_settings()
+		# The settings are a Single, which `digest` cannot see; fold them in.
+		current = hashlib.sha1((digest(_SOURCES) + frappe.as_json(settings)).encode()).hexdigest()[:16]
 		if unchanged(version, current):
 			return {"ok": True, "unchanged": True, "version": current}
 
@@ -75,6 +104,7 @@ def get_bootstrap_bundle(version=None):
 				"custom_is_calf_rearing",
 				"min_age",
 				"max_age",
+				"herd_class",
 			],
 			order_by="herd_name asc",
 		)
@@ -101,6 +131,9 @@ def get_bootstrap_bundle(version=None):
 					"min_age": h.min_age,
 					"max_age": h.max_age,
 					"has_bom": bool(h.bom),
+					"herd_class": h.herd_class or "Other",
+					"is_breeding": h.herd_class == "Breeding",
+					**counts(h.name, h.number_of_animals),
 				}
 				for h in herds
 			],
@@ -122,6 +155,7 @@ def get_bootstrap_bundle(version=None):
 				for t in frappe.get_all("Livestock Event Type", filters={"is_active": 1}, pluck="name")
 				if consumes_items(t)
 			},
+			"settings": settings,
 			"options": {
 				"service_types": select_options("Livestock Event", "service_type"),
 				"diagnosis_results": select_options("Livestock Event", "diagnosis_result"),
