@@ -421,3 +421,39 @@ without either it is refused as today. Payload also takes `sire_animal` / `sire_
 - Seed deviations from section 7 (arithmetic): feedlot bulls and 47 of 50 bulling heifers are Purchased with no
   parents; 63 calves, 37 weaner heifers and 5 planted animals are born here through real service chains.
 - Nightly `Inbreeding Risk` is one alert per female naming every related bull in her herd.
+
+## 13. Feed projection, paddocks and stores (2026-10-29)
+
+**Settings** (Livestock Settings, "Feed projection" and "Paddock rotation", seeded by `ensure_livestock_timing_defaults`):
+`dm_intake_pct` 4 (an animal eats this % of live weight a day), `adg_min_kg` 0.7 and `adg_max_kg` 1.2 (the low and high
+gain cases), `adg_min_weighings` 2 and `adg_min_span_days` 30 (an animal with that much history is projected at its
+own measured gain: the expected case), `paddock_graze_days` 7 and `paddock_rest_days` 35 (the rotation check).
+
+**Projection** (`serverscripts/projection/engine.py`, pure). Expected gain = own measured gain, else the herd's target gain,
+else the middle of the low and high; low/high widen to include the animal's own. A herd that is not Fattening and has no
+target gain (mature cows) is held flat. Feed in a week = intake at the mid-week weight x days on the farm. A feedlot animal
+leaves when it reaches the exit weight (Settings, or the top band's limit) and is not replaced; one already over it leaves
+within the week. Calves still with their dams are counted in head, not fed. Stock is kg as stored (no moisture correction),
+read from the feed source warehouses, the feed (mixing) store and every herd's paddock, filtered to the feed item group;
+each herd gets its own paddock stock plus a share of the central stores by need. By-number (shoat) herds come from
+`common.shoats.shoat_herd_numbers` (head x sample weight, held flat unless the herd has a target gain).
+
+**Endpoints**: `projection.get_feed_projection.get_feed_projection(weeks=12, herd=None)` (weeks clamped 4-26) and
+`projection.get_paddock_map.get_paddock_map()`; `feeding.move_feed_to_paddock.move_feed_to_paddock(herd, qty, source_warehouse=None, posting_date=None)`.
+Desk: Production / Forecast has a Feed tab; Production / Paddock Map is the map.
+
+**Herd and paddock.** `Herds.paddock` (Link Warehouse, type Paddock or Pen). Paddocks A1-A7 are warehouses of type Paddock with
+GeoJSON in `custom_raw_geojson`; `Feedlot Pen 1-3 - MUT` (type Pen, under `Feedlot - MUT`) are drawn beside them.
+A grazing herd is any herd that is not Fattening and not on a pen. 7 paddocks for 5 grazing herds is 1.4 per herd: a
+paddock rests about 2.8 days between 7-day grazings against 35 wanted; rotating needs 1 + ceil(rest/graze) = 6 per herd, 30
+in all. The paddocks are also tiny (about 1.03 ha together, over 240 head per hectare), which the page states.
+
+**Feed to the paddock in ERPNext.** Manufacture lands in the Mixing Store (`custom_feed_wip_warehouse`). For a herd with a
+paddock the feeding run then posts a Material Transfer Mixing Store -> paddock (tied to the Work Order, so cancelling the
+feeding takes it back) and the Material Issue reads from the paddock. By hand: manufacture the ration into the Mixing
+Store, make a Stock Entry of type Material Transfer to the herd's paddock warehouse, then feed (the issue is taken from the
+paddock when it holds the mix). `move_feed_to_paddock` does the transfer for a batch mixed ahead.
+
+**Stores** (company Mutara, under `Mutara - MUT`): Feed Store, Drug Store (the beef seed's "Livestock Drug Store - MUT",
+renamed), Mixing Store, Concentrate Store, Hay Store, Silo. Livestock Settings: Mixing Store is the feed store; Feed,
+Concentrate, Hay Store and Silo are the Feed Source Warehouses. Seed: `demo/seed_mutara_stores.run` (idempotent).
