@@ -349,14 +349,14 @@ def ledger(herd, event_type=None, limit=50, start=0):
 	if event_type:
 		filters["event_type"] = event_type
 	rows = frappe.get_all("Herd Count Event", filters=filters, fields=LEDGER_FIELDS,
-	                      order_by="event_date desc, creation desc", limit_start=cint(start), limit_page_length=cint(limit))
+	                      order_by="event_date desc, creation desc", limit_start=cint(start), limit=cint(limit))
 	return [event_row(r) for r in rows]
 
 
 def sample_rows(herd, limit=12):
 	rows = frappe.get_all("Herd Weight Sample", filters={"herd": herd},
 	                      fields=["name", "sample_date", "sample_class", "animals_weighed", "average_kg", "total_kg"],
-	                      order_by="sample_date desc, creation desc", limit_page_length=cint(limit))
+	                      order_by="sample_date desc, creation desc", limit=cint(limit))
 	return [{"name": r.name, "sample_date": str(r.sample_date), "sample_class": r.sample_class,
 	         "animals_weighed": cint(r.animals_weighed), "average_kg": flt(r.average_kg), "total_kg": flt(r.total_kg)}
 	        for r in rows]
@@ -367,7 +367,7 @@ def treatment_rows(herd, limit=10):
 		"Herd Treatment", filters={"herd": herd, "docstatus": 1},
 		fields=["name", "treatment_date", "treatment_type", "product", "product_name", "dose_per_head", "dose_uom",
 		        "number_treated", "quantity", "withdrawal_days", "withdrawal_end", "diagnosis", "stock_entry"],
-		order_by="treatment_date desc, creation desc", limit_page_length=cint(limit))
+		order_by="treatment_date desc, creation desc", limit=cint(limit))
 	return [{**{k: r.get(k) for k in ("name", "product", "product_name", "dose_uom", "diagnosis", "stock_entry")},
 	         "treatment_date": str(r.treatment_date), "treatment_type": r.treatment_type,
 	         "dose_per_head": flt(r.dose_per_head), "number_treated": cint(r.number_treated),

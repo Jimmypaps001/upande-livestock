@@ -58,7 +58,7 @@ def shoat_options():
 			                   *[{"key": k, "label_sheep": shoats.label("Sheep", k), "label_goat": shoats.label("Goat", k)}
 			                     for k in shoats.CLASSES]],
 			"drug_store": store, "drugs": drugs, "herds": herds,
-			"gestation_days": shoats.gestation_days(),
+			"gestation_days": shoats.gestation_days(), "warnings": [],
 		}
 
 	return run(go, "livestock shoat_options failed")
