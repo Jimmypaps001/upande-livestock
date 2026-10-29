@@ -31,6 +31,7 @@ export const VIEWS = [
   "weight",
   "performance",
   "forecast",
+  "paddocks",
   "check-up",
   "treatment",
   "health-case",

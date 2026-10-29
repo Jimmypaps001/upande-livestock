@@ -52,7 +52,7 @@ def build(on, weeks, herd=None):
 		p = proj["herds"].get(name)
 		row = dict(s)
 		if p:
-			row.update({"live_kg": round(p["live_kg"], 1), "avg_kg": round(p["live_kg"] / max(1, p["head"]), 1),
+			row.update({"live_kg": round(p["live_kg"], 1), "avg_kg": round(p["live_kg"] / max(1, s["fed_heads"]), 1),
 			            "day_kg": round(p["day_kg"], 1), "projected_head": p["head"]})
 			row["weeks"] = {sc: _week_rows(p[sc]["weeks"], start) for sc in engine.SCENARIOS}
 			held = stock_by_herd.get(name, 0.0)

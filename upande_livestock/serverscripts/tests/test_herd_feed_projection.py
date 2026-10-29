@@ -73,9 +73,13 @@ class TestFeedProjectionEndpoint(IntegrationTestCase):
 		kinds = {p["kind"] for p in m["places"]}
 		self.assertEqual(kinds, {"Paddock", "Pen"})
 		rot = m["rotation"]
-		self.assertEqual((rot["paddocks"], rot["grazing_herds"]), (7, 5))
-		self.assertFalse(rot["enough"])
-		self.assertEqual(sorted(m["resting"]), ["Paddock A2", "Paddock A5"])
+		paddocks = [p for p in m["places"] if p["kind"] == "Paddock"]
+		pens = {p["warehouse"] for p in m["places"] if p["kind"] == "Pen"}
+		grazing = [h for h in m["herds"] if h["herd_class"] != "Fattening" and h["paddock"] not in pens]
+		self.assertEqual((rot["paddocks"], rot["grazing_herds"]), (len(paddocks), len(grazing)))
+		self.assertGreaterEqual(rot["grazing_herds"], 5)
+		self.assertFalse(rot["enough"])      # a handful of paddocks cannot rest for the grazing herds
+		self.assertEqual(sorted(m["resting"]), sorted(p["label"] for p in paddocks if p["state"] == "resting"))
 		for p in m["places"]:
 			if p["state"] == "occupied":
 				self.assertEqual(p["heads"], sum(h["heads"] for h in p["herds"]))

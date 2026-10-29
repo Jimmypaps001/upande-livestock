@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Notice } from "@/components/feeding/Notice";
 import { AccuracyTab } from "@/components/forecast/AccuracyTab";
 import { CoverTab } from "@/components/forecast/CoverTab";
+import { FeedTab } from "@/components/forecast/FeedTab";
 import { OutputTab } from "@/components/forecast/OutputTab";
 import { TrendTab } from "@/components/forecast/TrendTab";
 import { HEADER_PILL } from "@/components/header-controls";
@@ -23,13 +24,15 @@ import {
   type OutputForecast,
   type TrendView,
 } from "@/lib/forecast";
+import { DEFAULT_FEED_WEEKS, FEED_WEEK_OPTIONS, getFeedProjection, type FeedProjection } from "@/lib/feed-projection";
 import { isError } from "@/lib/frappe";
 import { listPerformanceHerds, type PerformanceHerd } from "@/lib/performance";
 import { cn } from "@/lib/utils";
 
-type Tab = "output" | "cover" | "trend" | "accuracy";
+type Tab = "output" | "feed" | "cover" | "trend" | "accuracy";
 const TABS: Array<[Tab, string]> = [
   ["output", "Output"],
+  ["feed", "Feed"],
   ["cover", "Cover"],
   ["trend", "Trend"],
   ["accuracy", "Accuracy"],
@@ -45,6 +48,7 @@ export function Forecast() {
   const [cover, setCover] = useState<CoverRow[] | null>(null);
   const [trend, setTrend] = useState<TrendView | null>(null);
   const [accuracy, setAccuracy] = useState<AccuracyRow[] | null>(null);
+  const [feed, setFeed] = useState<FeedProjection | null>(null);
   const [loading, setLoading] = useState(true);
   const [failure, setFailure] = useState<string | null>(null);
 
@@ -70,6 +74,11 @@ export function Forecast() {
       if (mine !== latest.current) return;
       if (isError(r)) err = r.error;
       else setOutput(r as OutputForecast);
+    } else if (tab === "feed") {
+      const r = await getFeedProjection(weeks, h);
+      if (mine !== latest.current) return;
+      if (isError(r)) err = r.error;
+      else setFeed(r as FeedProjection);
     } else if (tab === "cover") {
       const r = await getCommitmentCover(weeks);
       if (mine !== latest.current) return;
@@ -94,11 +103,17 @@ export function Forecast() {
     void load();
   }, [load]);
 
+  // The feed tab offers 4 to 26 weeks; going to or from it must not leave a value the other list lacks.
+  const weekOptions: readonly number[] = tab === "feed" ? FEED_WEEK_OPTIONS : WEEK_OPTIONS;
+  useEffect(() => {
+    if (!weekOptions.includes(weeks)) setWeeks(tab === "feed" ? DEFAULT_FEED_WEEKS : DEFAULT_WEEKS);
+  }, [tab, weeks, weekOptions]);
+
   return (
     <Page>
       <PageHeading eyebrow="Upande Livestock · Beef" title="Production Forecast">
-        When each bull reaches exit weight, what that means week by week, and how it lines up with
-        what buyers have asked for.
+        When each bull reaches exit weight, what that means week by week, how it lines up with
+        what buyers have asked for, and the feed the herds need to get there.
       </PageHeading>
       {failure && <Notice tone="error">{failure}</Notice>}
       <Card>
@@ -137,7 +152,7 @@ export function Forecast() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {WEEK_OPTIONS.map((w) => (
+                  {weekOptions.map((w) => (
                     <SelectItem key={w} value={String(w)}>
                       {w} weeks
                     </SelectItem>
@@ -150,6 +165,7 @@ export function Forecast() {
         </CardHeaderRow>
         <CardContent>
           {tab === "output" && <OutputTab data={output} loading={loading} />}
+          {tab === "feed" && <FeedTab data={feed} loading={loading} />}
           {tab === "cover" && <CoverTab rows={cover} loading={loading} onSaved={load} />}
           {tab === "trend" && <TrendTab data={trend} loading={loading} />}
           {tab === "accuracy" && <AccuracyTab rows={accuracy} loading={loading} />}

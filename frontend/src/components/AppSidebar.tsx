@@ -27,6 +27,7 @@ import {
   Warehouse,
   Wheat,
   CalendarClock,
+  Map as MapIcon,
 } from "lucide-react";
 import {
   Sidebar,
@@ -95,7 +96,13 @@ const NAV: NavSection[] = [
         view: "forecast",
         label: "Forecast",
         icon: TrendingUp,
-        hint: "When bulls will be ready, against buyer commitments",
+        hint: "When bulls will be ready, against buyer commitments, and the feed to get them there",
+      },
+      {
+        view: "paddocks",
+        label: "Paddock Map",
+        icon: MapIcon,
+        hint: "Which herd stands on which paddock or pen",
       },
     ],
   },
@@ -190,6 +197,7 @@ export const BUILT_VIEWS: ReadonlySet<View> = new Set<View>([
   "weight",
   "performance",
   "forecast",
+  "paddocks",
   "husbandry",
   "movement",
   "calving",
