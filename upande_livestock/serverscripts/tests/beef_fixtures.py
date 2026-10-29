@@ -60,3 +60,31 @@ def isolate(test):
 			frappe.db.rollback()
 
 	test.addCleanup(undo)
+
+
+def move_animal(animal, new_herd, on=None):
+	"""A submitted Movement event, dated `on` (default today). Backdated is fine
+	here: the fixture writes the event directly, not through an endpoint."""
+	from upande_livestock.serverscripts.common.events import new_livestock_event  # noqa: F401
+
+	was = frappe.db.get_value("Animal", animal, "current_herd")
+	doc = frappe.get_doc({
+		"doctype": "Livestock Event", "event_type": "Movement", "animal": animal,
+		"event_date": on or today(), "current_herd": was or "", "new_herd": new_herd,
+		"operator": test_employee(), "remarks": "test move",
+	})
+	doc.insert(ignore_permissions=True)
+	doc.submit()
+	return doc
+
+
+def test_employee():
+	"""Any Employee, made when the site has none (the operator is mandatory)."""
+	name = frappe.db.get_value("Employee", {"status": "Active"}, "name")
+	if name:
+		return name
+	company = frappe.db.get_value("Company", {}, "name")
+	return frappe.get_doc({
+		"doctype": "Employee", "first_name": "ZZ Test", "gender": "Male", "company": company,
+		"date_of_birth": "1990-01-01", "date_of_joining": "2020-01-01",
+	}).insert(ignore_permissions=True).name
