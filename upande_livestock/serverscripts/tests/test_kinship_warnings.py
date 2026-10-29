@@ -66,12 +66,12 @@ class TestKinshipWarnings(IntegrationTestCase):
 		stranger_bull = make_animal(self.pen, sex="Male", date_of_birth=ago(1800))
 		got = self._move(stranger_bull, self.group, remarks=NOTE)
 		self.assertTrue(got["ok"])
-		self.assertNotIn("warnings", got)
+		self.assertEqual(got["warnings"], [])
 
 	def test_kinship_check_off_in_settings_silences_it(self):
 		frappe.db.set_single_value("Livestock Settings", "kinship_check", 0)
 		got = self._move(self.bull, self.group, remarks=NOTE)
-		self.assertNotIn("warnings", got)
+		self.assertEqual(got["warnings"], [])
 
 	def test_move_animals_returns_every_warning(self):
 		second = make_animal(self.pen, sex="Male", date_of_birth=ago(1800), stream="Breeding")
