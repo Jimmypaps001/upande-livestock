@@ -165,8 +165,12 @@ LOOP = [
     ]),
 ]
 
-ENTER_MS = 1800
-LOOP_MS = 5000  # slowed ~1.4x: calm, not busy
+# One splash pass: enter 0-18 %, the scene round 18-82 %, back out 82-100 %. The splash
+# loader and the hover motion both derive their timing from this single cycle.
+CYCLE_MS = 4000
+ENTER_PCT, EXIT_PCT = 18.0, 82.0
+ENTER_MS = round(CYCLE_MS * ENTER_PCT / 100)                    # 720; leave reverses in the same time
+LOOP_MS = round(CYCLE_MS * (EXIT_PCT - ENTER_PCT) / 100)        # 2560
 EASE = "cubic-bezier(.3,.7,.2,1)"
 
 
@@ -194,9 +198,9 @@ def _origin_rules(tracks) -> list[str]:
 
 def loader_css() -> str:
     """One cycle: enter (0–18%), the round (18–82%), back out (82–100%)."""
-    a, b = 18.0, 82.0
+    a, b = ENTER_PCT, EXIT_PCT
     # One full pass (arrow in, the scene, arrow back out) in the 4 s the splash is held for.
-    cycle_ms = 4000
+    cycle_ms = CYCLE_MS
     lines = ["  <style>"]
     lines += _origin_rules(ENTER + LOOP)
     keyframes = []
