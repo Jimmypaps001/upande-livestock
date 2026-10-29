@@ -4,6 +4,7 @@ import frappe
 from frappe import _
 from frappe.utils import flt, today
 
+from upande_livestock.serverscripts.common import natural_service
 from upande_livestock.serverscripts.common.envelope import as_dict, guard, run
 from upande_livestock.serverscripts.common.event_items import consumes_items
 from upande_livestock.serverscripts.common.events import new_livestock_event
@@ -30,6 +31,10 @@ def create_service_event(payload):
 		doc.service_type = d.get("service_type")
 		doc.service_date = d.get("service_date") or today()
 		doc.sire = d.get("sire")
+		doc.sire_animal = d.get("sire_animal") or None
+		doc.flags.sire_unknown = bool(d.get("sire_unknown"))
+		if d.get("conception_date"):
+			doc.conception_date = d["conception_date"]
 		if consumes_items("Service"):
 			# Service posts stock: the straw goes through the items table like
 			# every other event's items. A caller still sending only the old
@@ -46,8 +51,11 @@ def create_service_event(payload):
 			doc.semen_warehouse = d.get("semen_warehouse") or None
 		doc.insert()
 		doc.submit()
+		inference = doc.flags.get("sire_inference")
 		doc.reload()
+		doc.flags.sire_inference = inference
 		return {
+			**natural_service.sire_report(doc),
 			"ok": True,
 			"name": doc.name,
 			"expected_calving_date": str(doc.expected_calving_date or ""),

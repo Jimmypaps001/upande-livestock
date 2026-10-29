@@ -72,7 +72,8 @@ def _straw_actually_issued(svc):
 def sire_of(svc):
 	"""The bull behind a service, in the order the farm would answer it.
 
-	1. the Sire box, when somebody typed one: an explicit answer wins. Roughly
+	0. the service's own bull (`sire_animal`), by his register number
+1. the Sire box, when somebody typed one: an explicit answer wins. Roughly
 	   every Service on Kaitet has it filled, and some hold an Item CODE
 	   (`4040030327`), not a name, because the box was filled from the picker. A
 	   value that is an Item is shown as its name; one that is not (a hand-typed
@@ -91,6 +92,9 @@ def sire_of(svc):
 
 	Total: never None, never an exception. The straw's ITEM NAME, not its code.
 	"""
+	# The farm's own bull, when the service names him (natural service, inferred or chosen).
+	if svc.get("sire_animal"):
+		return (frappe.db.get_value("Animal", svc.get("sire_animal"), "tag_number") or svc.get("sire_animal"))
 	typed = (svc.get("sire") or "").strip()
 	if typed:
 		return _item_name(typed) or typed

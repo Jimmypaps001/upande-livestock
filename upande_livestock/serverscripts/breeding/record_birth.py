@@ -135,6 +135,9 @@ def record_birth(payload):
 
 		return {
 			"ok": True,
+			"service": calving.custom_related_pregnancy or "",
+			"service_created": bool(calving.flags.get("service_created")),
+			"sire_animal": calving.get("sire_animal") or "",
 			"name": calving.name,
 			"outcome": outcome,
 			"num_calves": len(calves),

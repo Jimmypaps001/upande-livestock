@@ -136,8 +136,22 @@ def recompute_herd_count(herd):
 	frappe.db.set_value("Herds", herd, "number_of_animals", live_herd_count(herd))
 
 
+def calf_herd_with_dam(dam_doc):
+	"""A calf born to a cow in a mating group (Breeding herd) stays with her.
+
+	Beef calves live in their mother's herd until the separation age, then move
+	to the feedlot or to breeding. Any other dam's calf follows the Settings
+	calf herds as before.
+	"""
+	herd = dam_doc.current_herd
+	if herd and frappe.db.get_value("Herds", herd, "herd_class") == "Breeding":
+		return herd
+	return None
+
+
 def create_calf(dam, tag_number, sex, event_date, birth_weight=None, burn_name=None, herd=None,
-                breed=None, health_status=None, vet_remarks=None, photo=None):
+                breed=None, health_status=None, vet_remarks=None, photo=None,
+                sire_animal=None, sire_name=None):
 	"""Insert a newborn Animal and return its name.
 
 	Throws on a duplicate tag before writing anything, so a mistyped tag cannot
@@ -162,7 +176,7 @@ def create_calf(dam, tag_number, sex, event_date, birth_weight=None, burn_name=N
 		frappe.throw(_("Animal {0} already exists — pick a different calf tag.").format(tag))
 
 	dam_doc = frappe.get_doc("Animal", dam)
-	target_herd = herd or resolve_calf_herd(sex)
+	target_herd = herd or calf_herd_with_dam(dam_doc) or resolve_calf_herd(sex)
 	if not target_herd:
 		frappe.throw(_("No calf herd could be resolved. Set Default Calf Herd in Livestock Settings."))
 
@@ -180,6 +194,12 @@ def create_calf(dam, tag_number, sex, event_date, birth_weight=None, burn_name=N
 		"Livestock Settings", "custom_default_company"
 	)
 	calf.dam = dam
+	if sire_animal:
+		# The farm's own bull; his register number is the label, as on the Service.
+		calf.sire = sire_animal
+		calf.sire_name = frappe.db.get_value("Animal", sire_animal, "tag_number") or sire_animal
+	elif sire_name:
+		calf.sire_name = sire_name
 	calf.birth_weight_kg = flt(birth_weight)
 	calf.origin = "Born on Farm"
 	calf.status = "Active"

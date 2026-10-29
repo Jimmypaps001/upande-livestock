@@ -66,6 +66,7 @@ def record_calf_births(payload):
 				birth.dam = dam_name
 				birth.related_calving = calving.name
 				birth.sire = calving.sire
+				birth.sire_animal = calving.sire_animal
 				birth.is_stillborn = 1 if stillborn else 0
 
 				if stillborn:
