@@ -7,6 +7,7 @@ import frappe
 from frappe import _
 from frappe.utils import flt
 
+from upande_livestock.serverscripts.common.calf_separation import fed_head_count
 from upande_livestock.serverscripts.common.envelope import as_dict, guard, run
 from upande_livestock.serverscripts.feeding._standing_ration import set_standing_ration
 
@@ -41,7 +42,7 @@ def set_herd_ration(payload):
 		)
 		after = _lines_of(result["bom"])
 
-		heads = flt(frappe.db.get_value("Herds", herd, "number_of_animals"))
+		heads = flt(fed_head_count(herd))
 		return {
 			"ok": True,
 			"herd": herd,

@@ -373,9 +373,13 @@ def _herd_bom(herd):
 	herd_doc = frappe.get_doc("Herds", herd)
 	if not herd_doc.bom:
 		frappe.throw("Herd {0} has no BOM linked.".format(herd))
-	heads = int(herd_doc.number_of_animals or 0)
+	# The head the ration is made for: every live animal but the calves still with
+	# their mothers (a breeding herd's bulls are fed as one head each).
+	from upande_livestock.serverscripts.common.calf_separation import fed_head_count
+
+	heads = fed_head_count(herd)
 	if heads <= 0:
-		frappe.throw("Herd {0} has no animals (number_of_animals is 0).".format(herd))
+		frappe.throw("Herd {0} has no animals to feed.".format(herd))
 	bom = frappe.get_doc("BOM", herd_doc.bom)
 	return herd_doc, bom, heads
 

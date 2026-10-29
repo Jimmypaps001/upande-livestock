@@ -142,3 +142,15 @@ class TestBeefDashboardAndProfile(IntegrationTestCase):
 		self.assertEqual([p["adg_kg"] for p in res["gain"]["trend"]], [None, 1.0])
 		self.assertAlmostEqual(res["gain"]["lifetime_adg"], 1.0, places=3)
 		self.assertEqual(res["gain"]["target_adg_kg"], 0.9)
+
+	def test_a_breeding_herd_ranks_its_bulls_only(self):
+		herd = make_herd("ZZ Perf Mating", "Breeding").name
+		bull = _bull(herd, 600, 630)
+		cow = make_animal(herd, sex="Female")
+		submit_weight(cow.name, 400, days_ago=60)
+		submit_weight(cow.name, 440, days_ago=0)
+		res = get_bull_performance(herd)
+		self.assertEqual([r["animal"] for r in res["rows"]], [bull.name])
+		self.assertEqual(res["summary"]["head_count"], 1)
+		listed = {h["herd"]: h for h in list_performance_herds()}
+		self.assertEqual(listed[herd]["head_count"], 1)

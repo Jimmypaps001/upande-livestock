@@ -28,6 +28,7 @@ from frappe.utils import flt
 
 from upande_livestock.serverscripts.feeding._recipe_lines import _concentrate_items
 
+from upande_livestock.serverscripts.common.calf_separation import head_breakdown
 from upande_livestock.serverscripts.common.envelope import guard_read, run
 from upande_livestock.serverscripts.feeding._recipe_lines import lines_for
 
@@ -56,9 +57,14 @@ def herd_rations(payload=None):
 			ration = lines.get(h.bom or "", [])
 			per_head = flt(bom.quantity) if bom else 0.0
 			heads = flt(h.number_of_animals)
+			head = head_breakdown(h.name)
 			rows.append({
 				"herd": h.name,
 				"heads": heads,
+				"fed_heads": max(0, int(heads) - head["calves"]),
+				"calves": head["calves"],
+				"bulls": head["bulls"],
+				"females": head["females"],
 				"bom": h.bom,
 				"herd_class": h.herd_class or "Other",
 				"min_weight_kg": flt(h.min_weight_kg),
@@ -68,7 +74,7 @@ def herd_rations(payload=None):
 				"ration_item": bom.item if bom else None,
 				"ration_name": (bom.item_name or bom.item) if bom else None,
 				"per_head_kg": per_head,
-				"day_kg": per_head * heads,
+				"day_kg": per_head * max(0, int(heads) - head["calves"]),
 				"lines": ration,
 				# The invariant `set_herd_ration` enforces on anything it writes,
 				# reported for what is already there: six of the live site's

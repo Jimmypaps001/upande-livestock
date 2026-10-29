@@ -57,9 +57,14 @@ def herd_rows(herd, animals, period_days):
 
 
 def active_animals(herd):
+	"""The herd's live animals — in a Breeding herd (a mating group) the bulls only:
+	the cows running with them are not ranked as bulls."""
+	filters = {"current_herd": herd, "docstatus": ["!=", 2], "disabled": 0, "status": ["not in", RETIRED_STATUSES]}
+	if frappe.db.get_value("Herds", herd, "herd_class") == "Breeding":
+		filters["sex"] = "Male"
 	return frappe.get_all(
 		"Animal",
-		filters={"current_herd": herd, "docstatus": ["!=", 2], "disabled": 0, "status": ["not in", RETIRED_STATUSES]},
+		filters=filters,
 		fields=["name", "burn_name", "date_of_birth", "birth_weight_kg"],
 	)
 
@@ -109,4 +114,5 @@ def list_performance_herds() -> list:
 		fields=["name", "herd_class"],
 		order_by="herd_class asc, name asc",
 	)
-	return [{"herd": h.name, "herd_class": h.herd_class, "head_count": live_herd_count(h.name)} for h in herds]
+	return [{"herd": h.name, "herd_class": h.herd_class, "head_count": len(active_animals(h.name))
+	         if h.herd_class == "Breeding" else live_herd_count(h.name)} for h in herds]

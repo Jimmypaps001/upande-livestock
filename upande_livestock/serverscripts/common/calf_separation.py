@@ -132,4 +132,11 @@ def head_breakdown(herd):
 
 
 def fed_head_count(herd):
-	return head_breakdown(herd)["fed"]
+	"""The head a herd's ration is made for: the herd's stored head count less its
+	calves still with their mothers.
+
+	The stored count (`Herds.number_of_animals`, kept live by recompute_herd_count)
+	is the one every feed screen already multiplies by; only the calves come off it.
+	"""
+	stored = int(frappe.db.get_value("Herds", herd, "number_of_animals") or 0)
+	return max(0, stored - head_breakdown(herd)["calves"])
