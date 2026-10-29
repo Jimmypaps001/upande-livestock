@@ -405,5 +405,5 @@ without either it is refused as today. Payload also takes `sire_animal` / `sire_
 `gestation_period_days`; the Natural Service and its confirmation are created and linked. Response adds
 `service`, `service_created`, and each calf row `sire`; the calf Animal gets `sire` / `sire_name`.
 
-**`herds.herd_rations.herd_rations`** rows add `fed_heads`, `calves`, `bulls`, `females`; `day_kg` uses
+**`feeding.herd_rations.herd_rations`** `herds[]` rows add `fed_heads`, `calves`, `bulls`, `females`; `day_kg` uses
 `fed_heads` (calves under the separation age are not fed the herd ration, bulls are).
