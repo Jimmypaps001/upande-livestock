@@ -580,7 +580,12 @@ def ensure_ai():
 	if not frappe.db.exists("Item Group", seed_test_stock.DRUG_ITEM_GROUP):
 		frappe.get_doc({"doctype": "Item Group", "item_group_name": seed_test_stock.DRUG_ITEM_GROUP,
 		                "parent_item_group": "All Item Groups", "is_group": 0}).insert(ignore_permissions=True)
-	made = seed_test_stock.run(receive=False)
+	# Mutara's drug store is "Drug Store - MUT" (demo/seed_mutara_stores), not the Kaitet demo name.
+	was, seed_test_stock.WAREHOUSE_NAME = seed_test_stock.WAREHOUSE_NAME, "Drug Store"
+	try:
+		made = seed_test_stock.run(receive=False)
+	finally:
+		seed_test_stock.WAREHOUSE_NAME = was
 	warehouse, item = made["warehouse"], seed_test_stock.SEMEN_ITEM_CODE
 	if flt(frappe.db.get_value("Bin", {"item_code": item, "warehouse": warehouse}, "actual_qty")) > 0:
 		return
@@ -622,7 +627,7 @@ def ensure_rations():
 			                "stock_uom": "Kilogram", "is_stock_item": 1, "is_purchase_item": 1, "is_sales_item": 0,
 			                "include_item_in_manufacturing": 1, "valuation_rate": dict(FEED_ITEMS_RATE)[name],
 			                "standard_rate": dict(FEED_ITEMS_RATE)[name]}).insert(ignore_permissions=True)
-	farm = frappe.db.get_value("Warehouse", "Livestock Drug Store - {}".format(
+	farm = frappe.db.get_value("Warehouse", "Drug Store - {}".format(
 		frappe.db.get_value("Company", COMPANY, "abbr")), "custom_farm")
 	for herd, (kg, hay, silage, meal) in RATIONS.items():
 		if frappe.db.get_value("Herds", herd, "bom"):

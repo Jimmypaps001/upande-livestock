@@ -32,6 +32,7 @@
   "last_count_date",
   "section_break_69rv",
   "bom",
+  "paddock",
   "sb_acct",
   "cost_center"
  ],
@@ -216,6 +217,14 @@
    "fieldtype": "Date",
    "label": "Last Head Count",
    "read_only": 1
+  },
+  {
+   "fieldname": "paddock",
+   "fieldtype": "Link",
+   "label": "Paddock / Pen",
+   "options": "Warehouse",
+   "link_filters": "[[\"Warehouse\",\"warehouse_type\",\"in\",[\"Paddock\",\"Pen\"]]]",
+   "description": "Where the herd stands. Its feed is moved here after it is mixed, and the feeding issue is taken from here."
   }
  ],
  "grid_page_length": 50,

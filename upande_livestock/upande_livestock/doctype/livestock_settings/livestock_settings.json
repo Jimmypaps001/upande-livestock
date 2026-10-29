@@ -49,6 +49,16 @@
   "forecast_section",
   "target_exit_weight_kg",
   "forecast_horizon_weeks",
+  "sb_feed_projection",
+  "dm_intake_pct",
+  "adg_min_kg",
+  "adg_max_kg",
+  "cb_feed_projection",
+  "adg_min_weighings",
+  "adg_min_span_days",
+  "sb_paddocks",
+  "paddock_graze_days",
+  "paddock_rest_days",
   "sb_beef",
   "calf_separation_age_days",
   "breeding_bull_min_age_months",
@@ -908,6 +918,69 @@
    "fieldtype": "HTML",
    "label": "Feedlot Weight Bands",
    "options": "<p class=\"text-muted\">The feedlot weight bands (Starters, Growers, Finishers) are the min/max weights on the three Fattening herds. Edit them on the Herds page of the Livestock app; there is one copy of the numbers.</p>"
+  },
+  {
+   "fieldname": "sb_feed_projection",
+   "fieldtype": "Section Break",
+   "label": "Feed projection"
+  },
+  {
+   "fieldname": "dm_intake_pct",
+   "fieldtype": "Float",
+   "label": "Daily Feed Intake (% of live weight)",
+   "default": "4",
+   "description": "Dry-matter intake: an animal eats this share of its live weight each day. Drives the feed projection on Production / Forecast."
+  },
+  {
+   "fieldname": "adg_min_kg",
+   "fieldtype": "Float",
+   "label": "Lowest Daily Gain (kg/day)",
+   "default": "0.7",
+   "description": "The low case of the feed projection."
+  },
+  {
+   "fieldname": "adg_max_kg",
+   "fieldtype": "Float",
+   "label": "Highest Daily Gain (kg/day)",
+   "default": "1.2",
+   "description": "The high case of the feed projection."
+  },
+  {
+   "fieldname": "cb_feed_projection",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "adg_min_weighings",
+   "fieldtype": "Int",
+   "label": "Weighings Needed for Own Gain",
+   "default": "2",
+   "description": "An animal with at least this many weighings is projected at its own measured gain; others at the herd target gain, or the middle of the low and high."
+  },
+  {
+   "fieldname": "adg_min_span_days",
+   "fieldtype": "Int",
+   "label": "Days Between First and Last Weighing",
+   "default": "30",
+   "description": "The weighings must span at least this many days to count as a measured gain."
+  },
+  {
+   "fieldname": "sb_paddocks",
+   "fieldtype": "Section Break",
+   "label": "Paddock rotation"
+  },
+  {
+   "fieldname": "paddock_graze_days",
+   "fieldtype": "Int",
+   "label": "Days a Herd Grazes a Paddock",
+   "default": "7",
+   "description": "Used to say whether there are enough paddocks to rest each one."
+  },
+  {
+   "fieldname": "paddock_rest_days",
+   "fieldtype": "Int",
+   "label": "Days a Paddock Rests Between Grazings",
+   "default": "35",
+   "description": "Regrowth wanted before a paddock is grazed again."
   }
  ],
  "grid_page_length": 50,

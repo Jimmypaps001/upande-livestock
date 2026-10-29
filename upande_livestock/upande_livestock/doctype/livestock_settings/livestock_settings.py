@@ -22,6 +22,8 @@ ZERO_MEANS_DISABLED = {
 	# "that day only".
 	"calf_separation_age_days",
 	"conception_window_days",
+	# 0 days of rest = "no regrowth wanted".
+	"paddock_rest_days",
 }
 
 # Every other timing: 0 cannot mean anything real (a 0-day gestation period,

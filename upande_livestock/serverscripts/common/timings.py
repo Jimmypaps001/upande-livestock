@@ -119,6 +119,12 @@ TIMING_DEFAULTS = {
 	"calf_separation_age_days": 210,
 	"breeding_bull_min_age_months": 18,
 	"conception_window_days": 10,
+	# Feed projection (serverscripts/projection): weighings needed before an animal is
+	# projected at its own gain, and the paddock rotation the "enough paddocks" check assumes.
+	"adg_min_weighings": 2,
+	"adg_min_span_days": 30,
+	"paddock_graze_days": 7,
+	"paddock_rest_days": 35,
 }
 
 # Float counterparts of TIMING_DEFAULTS: seeded the same way (see
@@ -137,6 +143,11 @@ FLOAT_TIMING_DEFAULTS = {
 	# a measurement and half a day of it is a real answer, and here rather than
 	# in TIMING_DEFAULTS because 0 legitimately means "do not check".
 	"custom_concentrate_cover_days": 7.0,
+	# Feed projection: dry-matter intake as a share of live weight, and the low and high daily
+	# gain (kg) of the projection's range.
+	"dm_intake_pct": 4.0,
+	"adg_min_kg": 0.7,
+	"adg_max_kg": 1.2,
 }
 
 # The single structure the seeder (and its enforcing test) walk. Not consumed
