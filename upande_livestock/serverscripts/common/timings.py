@@ -67,6 +67,7 @@ TIMING_DEFAULTS = {
 	"post_calving_optimal_service_days": 60,
 	"post_abortion_min_service_days": 30,
 	"gestation_period_days": 280,
+	"shoat_gestation_days": 150,
 	"pregnancy_check_days_after_service": 35,
 	"heat_cycle_days": 21,
 	"diagnosis_earliest_days": 21,

@@ -19,6 +19,7 @@
   "post_calving_optimal_service_days",
   "post_abortion_min_service_days",
   "gestation_period_days",
+  "shoat_gestation_days",
   "column_break_breeding",
   "pregnancy_check_days_after_service",
   "heat_cycle_days",
@@ -218,6 +219,13 @@
    "fieldname": "gestation_period_days",
    "fieldtype": "Int",
    "label": "Gestation Period (days)"
+  },
+  {
+   "default": "150",
+   "description": "Sheep and goats: expected lambing / kidding date = end of mating + this.",
+   "fieldname": "shoat_gestation_days",
+   "fieldtype": "Int",
+   "label": "Shoat Gestation Period (days)"
   },
   {
    "fieldname": "column_break_breeding",
