@@ -363,7 +363,7 @@ idea as `stock_warnings`). Never an error.
 **`settings.posting_day.posting_day`** adds `roles: [str]` (the session user's roles).
 
 **`mobile.get_bootstrap_bundle.get_bootstrap_bundle`** — each `herds[]` row adds `herd_class`,
-`is_breeding` (class Breeding), `females`, `bulls` (live head, calves excluded), `fed_heads`. New top-level
+`is_breeding` (class Breeding), `females`, `bulls`, `calves` (under the separation age), `fed_heads` (= heads - calves). New top-level
 `settings: {calf_separation_age_days, default_service_type, breeding_bull_min_age_months,
 conception_window_days, kinship_check}`. Herd `heads` is unchanged (every live animal, calves included).
 
@@ -407,3 +407,17 @@ without either it is refused as today. Payload also takes `sire_animal` / `sire_
 
 **`feeding.herd_rations.herd_rations`** `herds[]` rows add `fed_heads`, `calves`, `bulls`, `females`; `day_kg` uses
 `fed_heads` (calves under the separation age are not fed the herd ration, bulls are).
+
+**As-built notes (backend, 2026-10-29).**
+- A *selection* is a male moving into a Breeding herd from a non-Breeding herd, OR a young male (under
+  `breeding_bull_min_age_months`) not yet in the breeding stream leaving his dam's Breeding herd for another
+  (calves live in their mother's herd). A mature bull rotating between mating groups needs no note.
+- `move_animals` returns `streams: {animal: stream|null}` and `warnings`; a selection batch needs
+  `remarks_by_animal`.
+- Calves live in their dam's herd; there is no Calves herd. `create_calf` puts a calf born to a cow in a Breeding
+  herd in that herd. Herds have no warehouse/paddock link (only `cost_center` and `bom`).
+- A calving with no confirmed service derives one only while Settings `default_service_type` is Natural
+  (A.I. farms keep the "No active pregnancy" refusal).
+- Seed deviations from section 7 (arithmetic): feedlot bulls and 47 of 50 bulling heifers are Purchased with no
+  parents; 63 calves, 37 weaner heifers and 5 planted animals are born here through real service chains.
+- Nightly `Inbreeding Risk` is one alert per female naming every related bull in her herd.
