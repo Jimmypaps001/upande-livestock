@@ -13,10 +13,10 @@ Mention / Energy Point) and "movement" is not one of its values.
 """
 
 #: Movement — an animal is in the wrong place, or has outstayed its window.
-MOVEMENT_KINDS = ("Move Due", "Move Overdue")
+MOVEMENT_KINDS = ("Move Due", "Move Overdue", "Calf Separation Due")
 
 #: The breeding calendar — something is due, overdue, or has stalled.
-BREEDING_KINDS = ("Cow Open Too Long", "Calving Due", "Pregnancy Check Overdue")
+BREEDING_KINDS = ("Cow Open Too Long", "Calving Due", "Pregnancy Check Overdue", "Inbreeding Risk")
 
 #: The store. These are the only kinds that are NOT about an animal — a
 #: concentrate running out is about a feed and about the whole farm, so they

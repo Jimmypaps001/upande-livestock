@@ -20,6 +20,10 @@ def create_movement_event(payload):
 		doc.new_herd = d.get("new_herd")
 		doc.insert()
 		doc.submit()  # herd_movement_processor updates Animal.current_herd + headcounts
-		return {"ok": True, "name": doc.name}
+		return {
+			"ok": True,
+			"name": doc.name,
+			"stream": frappe.db.get_value("Animal", doc.animal, "stream") or None,
+		}
 
 	return run(go, "livestock create_movement_event failed")

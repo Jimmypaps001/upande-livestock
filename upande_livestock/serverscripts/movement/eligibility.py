@@ -6,7 +6,7 @@ introduced it. Read-guarded on Herds."""
 import frappe
 
 from upande_livestock.serverscripts.common.envelope import guard_read, run
-from upande_livestock.serverscripts.common import herd_movement
+from upande_livestock.serverscripts.common import calf_separation, herd_movement
 
 
 @frappe.whitelist()
@@ -30,6 +30,8 @@ def eligibility():
 			"in_calf_herds": herd_movement.in_calf_herds(),
 			"calf_group_herds": herd_movement.calf_group_herds(),
 			"service_herds": herd_movement.service_herds(),
+			"breeding_herds": calf_separation.breeding_herds(),
+			"separation_due": calf_separation.separation_due(),
 			"service_wait_days": herd_movement.service_wait_days(),
 			"growth_ladder": ladder,
 			# next_herd per rung, so a client can propose a destination without

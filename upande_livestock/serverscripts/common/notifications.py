@@ -69,6 +69,11 @@ ROLES_FOR_KIND = {
 	# Where an animal belongs. The attendant walks it; the manager approves it.
 	"Move Due": ("Livestock Manager", "Livestock Attendant"),
 	"Move Overdue": ("Livestock Manager", "Livestock Attendant"),
+	# A calf old enough to leave its mother: the herdsman who walks it and the
+	# manager who decides feedlot or breeding.
+	"Calf Separation Due": ("Livestock Manager", "Livestock Attendant"),
+	# A bull running with his daughter, mother or sister: the manager and breeder decide.
+	"Inbreeding Risk": ("Livestock Manager", "Livestock Breeder"),
 	# The breeding calendar. The breeder acts, the vet is who a stalled cow
 	# ends up in front of.
 	"Cow Open Too Long": ("Livestock Manager", "Livestock Breeder", "Livestock Vet"),

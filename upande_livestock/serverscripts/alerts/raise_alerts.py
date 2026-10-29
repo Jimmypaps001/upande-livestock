@@ -11,9 +11,13 @@ to guard against.
 import frappe
 from frappe.utils import today
 
+from upande_livestock.serverscripts.common.beef_settings import kinship_check_on
+
 from upande_livestock.serverscripts.alerts._concentrate import concentrate_alerts
 from upande_livestock.serverscripts.alerts._shared import WEIGHT_KINDS
-from upande_livestock.serverscripts.common import herd_movement, notifications, weight_bands, weighing
+from upande_livestock.serverscripts.common import (
+	calf_separation, herd_movement, kinship, notifications, weight_bands, weighing,
+)
 
 #: How far either side of the expected date a calving is worth mentioning, when
 #: Livestock Settings has no `calving_alert_lead_days`. Seven days is the value
@@ -170,6 +174,78 @@ def weight_alerts():
 	)
 
 
+def calf_separation_alerts(animal=None):
+	"""Calves at the separation age that are still with their mothers."""
+	out = []
+	for c in calf_separation.separation_due(animal):
+		streams = " or ".join(o["stream"].lower() for o in c["options"])
+		out.append({
+			"kind": calf_separation.ALERT_KIND,
+			"animal": c["animal"],
+			"label": c["label"],
+			"herd": c["herd"],
+			"severity": "Overdue" if c["over_days"] >= 30 else "Due",
+			"message": "{} is {} days old — due to leave its mother in {} ({}).".format(
+				c["label"], c["age_days"], c["herd"], streams),
+			"detail": {"age_days": c["age_days"], "over_days": c["over_days"], "dam": c["dam"],
+			           "weight_kg": c["weight_kg"], "options": c["options"]},
+		})
+	return out
+
+
+def inbreeding_alerts():
+	"""Related bulls and females of breeding age standing in one mating group.
+
+	One alert per female, naming every related bull in her herd: a movement
+	into the herd warned at the time, but a heifer who grows up where her sire
+	still runs moves nowhere, so only a sweep finds her. It settles when either
+	leaves the herd (the pair is no longer in the herd's list).
+	"""
+	if not kinship_check_on():
+		return []
+	by_female = {}
+	for herd in frappe.get_all("Herds", filters={"herd_class": "Breeding"}, pluck="name"):
+		for pair in kinship.herd_conflicts(herd):
+			by_female.setdefault((pair["female"], herd), []).append(pair)
+	out = []
+	for (female, herd), pairs in sorted(by_female.items()):
+		label = frappe.db.get_value("Animal", female, "tag_number") or female
+		out.append({
+			"kind": "Inbreeding Risk",
+			"animal": female,
+			"label": label,
+			"herd": herd,
+			"severity": "Due",
+			"message": "Inbreeding risk in {}: {}".format(
+				herd, " ".join(p["message"] for p in pairs)),
+			"detail": {"pairs": [{"male": p["male"], "relation": p["relation"],
+			                      "shared_parent": p["shared_parent"]} for p in pairs]},
+		})
+	return out
+
+
+def refresh_calf_alert(animal):
+	"""Bring one calf's separation alert into line with where it is now (settles it on a move)."""
+	now = calf_separation_alerts(animal)
+	current = {alert_key(a["kind"], a.get("animal")): a for a in now}
+	settle_alerts_for(animal, (calf_separation.ALERT_KIND,), current)
+	for a in now:
+		if not already_open(a["kind"], a.get("animal")):
+			_insert_alert(a)
+
+
+def settle_alerts_for(animal, kinds, current):
+	for row in frappe.get_all(
+		"Livestock Alert", filters={"status": "Open", "animal": animal, "alert_kind": ["in", list(kinds)]},
+		fields=["name", "alert_kind"],
+	):
+		if alert_key(row.alert_kind, animal) not in current:
+			frappe.db.set_value("Livestock Alert", row.name, {
+				"status": "Dismissed",
+				"action_notes": "Cleared automatically on {}: no longer due.".format(today()),
+			}, update_modified=False)
+
+
 def collect():
 	"""Everything worth telling someone, as data. Writes nothing."""
 	s = herd_movement.suggestions()
@@ -210,6 +286,9 @@ def collect():
 
 	out += weight_alerts()
 
+	out += calf_separation_alerts()
+	out += inbreeding_alerts()
+
 	# The store, not an animal. These carry `item` where the rest carry
 	# `animal` — see alerts/_concentrate.py for why they are here at all.
 	out += concentrate_alerts()
@@ -246,7 +325,7 @@ def already_open(kind, animal, item=None):
 #: an open one it no longer reports has stopped being true.
 SWEPT_KINDS = (
 	"Move Due", "Move Overdue", "Cow Open Too Long", "Calving Due",
-	"Concentrate Low", "Concentrate Out",
+	"Concentrate Low", "Concentrate Out", "Calf Separation Due", "Inbreeding Risk",
 ) + WEIGHT_KINDS
 
 
@@ -352,6 +431,22 @@ def refresh_weight_alerts(animal):
 			_insert_alert(alert)
 
 
+def record(alerts):
+	"""Settle what is no longer due and write what is new. Returns (raised, already_open).
+
+	The sweep without its commit and delivery, so a test can run it.
+	"""
+	raised = skipped = 0
+	settle_open_alerts(SWEPT_KINDS, {alert_key(a["kind"], a.get("animal"), a.get("item")): a for a in alerts})
+	for a in alerts:
+		if already_open(a["kind"], a.get("animal"), a.get("item")):
+			skipped += 1
+			continue
+		_insert_alert(a)
+		raised += 1
+	return raised, skipped
+
+
 def raise_alerts():
 	"""Record today's alerts, then deliver whatever is still open.
 
@@ -360,15 +455,7 @@ def raise_alerts():
 	writes nothing new, and `deliver_open_alerts` then finds nothing new to
 	send. An alert repeated nightly is an alert people learn to skip.
 	"""
-	raised = skipped = 0
-	alerts = collect()
-	settle_open_alerts(SWEPT_KINDS, {alert_key(a["kind"], a.get("animal"), a.get("item")): a for a in alerts})
-	for a in alerts:
-		if already_open(a["kind"], a.get("animal"), a.get("item")):
-			skipped += 1
-			continue
-		_insert_alert(a)
-		raised += 1
+	raised, skipped = record(collect())
 	delivery = notifications.deliver_open_alerts()
 	frappe.db.commit()
 	return {"raised": raised, "already_open": skipped, "delivery": delivery}

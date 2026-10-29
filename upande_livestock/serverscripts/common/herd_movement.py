@@ -204,13 +204,15 @@ def calf_group_herds():
 
 def service_herds():
 	"""The rungs of the ladder that are left by being served, plus the cow herd
-	and every herd whose class is Cow.
+	and every herd whose class is Cow or Breeding.
 
 	A heifer becomes servable at the top of the ladder; a cow becomes servable
 	again once she is far enough past calving, which `service_wait_days` covers.
 	"""
 	herds = [r["herd"] for r in growth_ladder() if r["exits_on_service"]]
-	cows = [cow_herd()] + frappe.get_all("Herds", filters={"herd_class": "Cow"}, pluck="name")
+	# A Breeding herd is a mating group — females with the bull(s) running with them.
+	cows = [cow_herd()] + frappe.get_all(
+		"Herds", filters={"herd_class": ["in", ["Cow", "Breeding"]]}, pluck="name", order_by="name asc")
 	return herds + [h for h in dict.fromkeys(cows) if h and h not in herds]
 
 

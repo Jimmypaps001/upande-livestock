@@ -7,6 +7,7 @@ import frappe
 from frappe import _
 from frappe.utils import today
 
+from upande_livestock.serverscripts.common import beef_events
 from upande_livestock.serverscripts.common.animal import recompute_herd_count
 from upande_livestock.serverscripts.common.envelope import as_dict, guard, run
 from upande_livestock.serverscripts.common.events import new_livestock_event
@@ -59,13 +60,24 @@ def move_animals(payload):
 		if problems:
 			frappe.throw("\n".join(problems))
 
+		# Choosing bulls for breeding is a decision per bull: each needs his own note.
+		notes = d.get("remarks_by_animal") or {}
 		when = d.get("event_date") or today()
+		for animal in seen:
+			if not beef_events.is_selection(
+				animal, frappe.db.get_value("Animal", animal, "current_herd"), herd, when):
+				continue
+			if len((notes.get(animal) or "").strip()) < beef_events.MIN_NOTE_CHARS:
+				problems.append(_("{0}: describe the bull and why he is kept for breeding.").format(animal))
+		if problems:
+			frappe.throw("\n".join(problems))
+
 		moved, from_herds = [], set()
 		for animal in seen:
 			was = frappe.db.get_value("Animal", animal, "current_herd")
 			event = new_livestock_event(
 				{"animal": animal, "operator": d.get("operator"), "event_date": when,
-				 "remarks": d.get("remarks")},
+				 "remarks": notes.get(animal) or d.get("remarks")},
 				"Movement",
 			)
 			event.new_herd = herd
@@ -87,6 +99,7 @@ def move_animals(payload):
 			"count": len(moved),
 			"heads": frappe.db.get_value("Herds", herd, "number_of_animals"),
 			"emptied_from": sorted(from_herds),
+			"streams": {m["animal"]: frappe.db.get_value("Animal", m["animal"], "stream") or None for m in moved},
 		}
 
 	return run(go, "livestock move_animals failed")

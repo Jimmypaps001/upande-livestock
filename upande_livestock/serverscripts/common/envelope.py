@@ -149,6 +149,11 @@ def run(fn, log_title: str) -> dict:
 		drafts = drafts_made()
 		if drafts and isinstance(out, dict) and not out.get("error"):
 			out["stock_drafts"] = drafts
+		from upande_livestock.serverscripts.common.warnings import made as warnings_noted
+
+		notes = warnings_noted()
+		if notes and isinstance(out, dict) and not out.get("error"):
+			out["warnings"] = [*out.get("warnings", []), *[n for n in notes if n not in out.get("warnings", [])]]
 		return out
 	except frappe.PermissionError as e:
 		out = {"error": str(e) or _("Not permitted.")}

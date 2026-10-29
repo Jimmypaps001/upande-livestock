@@ -20,6 +20,7 @@ from frappe.model.naming import make_autoname
 from frappe.utils import getdate, nowdate
 
 from upande_livestock.serverscripts.common import backdate
+from upande_livestock.serverscripts.common import beef_events
 from upande_livestock.serverscripts.common import event_items
 from upande_livestock.serverscripts.common import stock as livestock_stock
 
@@ -686,8 +687,8 @@ class LivestockEvent(Document):
 
 			# The Select starts blank so other event types stop reading "A.I.";
 			# a Service booked without one keeps the default it always had.
-			if not self.service_type:
-				self.service_type = "A.I."
+			beef_events.settle_service_type(self)
+			beef_events.settle_service_sire(self)
 
 		# ============================================================
 		# VALIDATION FOR PREGNANCY DIAGNOSIS
@@ -934,6 +935,8 @@ class LivestockEvent(Document):
 			if self.current_herd == self.new_herd:
 				frappe.throw("Current herd and new herd cannot be the same!")
 
+			beef_events.check_movement(self)
+
 		# ============================================================
 		# CALCULATE DATES FOR ALL EVENTS
 		# ============================================================
@@ -1154,12 +1157,17 @@ class LivestockEvent(Document):
 		)
 
 	def on_submit(self):
+		beef_events.after_movement(self)
 		if self.event_type == "Movement" and self.animal:
 			# A band-move alert asks for exactly this move: settle it now rather
 			# than at the nightly sweep.
-			from upande_livestock.serverscripts.alerts.raise_alerts import refresh_weight_alerts
+			from upande_livestock.serverscripts.alerts.raise_alerts import (
+				refresh_calf_alert,
+				refresh_weight_alerts,
+			)
 
 			refresh_weight_alerts(self.animal)
+			refresh_calf_alert(self.animal)
 
 		# --------------------------------------------
 		# RULE: Cow must calve before next pregnancy

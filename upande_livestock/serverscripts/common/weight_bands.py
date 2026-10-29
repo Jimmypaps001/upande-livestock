@@ -9,8 +9,9 @@ STARTS at 250, not the one that ends there. The top band may have no upper limit
 Limits live on the Herds, never in this file; a farm that edits a band moves the
 suggestions with it.
 
-A Calf herd is not on the ladder but is reared up to it: a calf that reaches the
-first band's lower limit is due to move into it.
+A calf is NOT placed by weight. With the first band starting at 0 kg every
+weighed bull calf would be flagged at once; calves leave their mothers by AGE
+(common/calf_separation), and feedlot bulls move up the ladder by weight.
 """
 
 import frappe
@@ -81,21 +82,13 @@ def _check(row, herd_classes, bands):
 		return {**base, "kind": MOVE_DUE, "to_herd": destination(weight),
 		        "from_min_kg": own["min_kg"], "from_max_kg": own["max_kg"]}
 
-	# Only bull calves go on to the fattening ladder; a heifer calf is reared
-	# up the heifer growth ladder, which has its own alerts.
-	if cls == "Calf" and row.get("sex") == "Male" and weight >= bands[0]["min_kg"]:
-		top = bands[-1]
-		if top["max_kg"] is not None and weight >= top["max_kg"]:
-			return {**base, "kind": READY_FOR_EXIT, "to_herd": None, "from_min_kg": None, "from_max_kg": None}
-		return {**base, "kind": MOVE_DUE, "to_herd": destination(weight),
-		        "from_min_kg": None, "from_max_kg": None}
 	return None
 
 
 def _classes():
 	return {
 		r.name: r.herd_class
-		for r in frappe.get_all("Herds", filters={"herd_class": ["in", ["Fattening", "Calf"]]},
+		for r in frappe.get_all("Herds", filters={"herd_class": "Fattening"},
 		                        fields=["name", "herd_class"])
 	}
 
@@ -103,7 +96,7 @@ def _classes():
 def band_check(animal):
 	"""Does this animal's latest weight say it belongs somewhere else?
 
-	Only active animals in a Fattening or Calf herd with a weight on record are
+	Only active animals in a Fattening herd with a weight on record are
 	judged; anything else is None, as is an animal in the right band.
 	"""
 	row = frappe.db.get_value("Animal", animal, _ANIMAL_FIELDS + ["status", "disabled"], as_dict=True)
@@ -117,7 +110,7 @@ def band_check(animal):
 
 
 def band_suggestions():
-	"""band_check over every candidate: active animals in Fattening or Calf herds."""
+	"""band_check over every candidate: active animals in Fattening herds."""
 	classes = _classes()
 	bands = fattening_bands()
 	if not classes or not bands:

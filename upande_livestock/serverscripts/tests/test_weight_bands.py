@@ -56,12 +56,29 @@ class TestWeightBands(IntegrationTestCase):
 		                 ("Weight Band Move Due", self.b, 262))
 		self.assertEqual([s["animal"] for s in wb.band_suggestions()], [animal.name])
 
-	def test_calf_reaching_first_band_is_flagged(self):
+	def test_male_calf_is_no_longer_flagged_by_weight(self):
 		self._ladder()
 		calves = make_herd("ZZ Calves", "Calf").name
-		ready, small = make_animal(calves, 155), make_animal(calves, 90)
-		self.assertEqual(wb.band_check(ready.name)["to_herd"], self.a)
-		self.assertIsNone(wb.band_check(small.name))
+		self.assertIsNone(wb.band_check(make_animal(calves, 155).name))
+		self.assertIsNone(wb.band_check(make_animal(calves, 460).name))
+		self.assertEqual(wb.band_suggestions(), [])
+
+	def test_mutara_ladder_starters_growers_finishers(self):
+		starters = make_herd("ZZ Starters", "Fattening", 0, 250).name
+		growers = make_herd("ZZ Growers", "Fattening", 250, 280).name
+		finishers = make_herd("ZZ Finishers", "Fattening", 280, 0).name
+		self.assertEqual(wb.band_for_weight(40), starters)
+		self.assertEqual(wb.band_for_weight(249.9), starters)
+		self.assertEqual(wb.band_for_weight(250.0), growers)
+		self.assertEqual(wb.band_for_weight(279.9), growers)
+		self.assertEqual(wb.band_for_weight(280.0), finishers)
+		self.assertEqual(wb.band_for_weight(700), finishers)
+		# 250.0 exactly in Growers and 280.0 exactly in Finishers are already in the right herd
+		self.assertIsNone(wb.band_check(make_animal(growers, 250.0).name))
+		self.assertIsNone(wb.band_check(make_animal(finishers, 280.0).name))
+		# 251 in Starters is due to move up, 285 in Growers likewise
+		self.assertEqual(wb.band_check(make_animal(starters, 251).name)["to_herd"], growers)
+		self.assertEqual(wb.band_check(make_animal(growers, 285).name)["to_herd"], finishers)
 
 	def test_refresh_on_submit_opens_then_settles(self):
 		self._ladder()
@@ -78,20 +95,6 @@ class TestWeightBands(IntegrationTestCase):
 		refresh_weight_alerts(animal.name)
 		self.assertEqual(frappe.get_all("Livestock Alert", filters={
 			"animal": animal.name, "alert_kind": "Weight Band Move Due", "status": "Open"}), [])
-
-	def test_calf_heavier_than_a_closed_top_band_is_ready_for_exit(self):
-		self._ladder()
-		calves = make_herd("ZZ Calves", "Calf").name
-		self.assertEqual(wb.band_check(make_animal(calves, 460).name)["kind"], "Ready for Exit")
-		self.assertEqual(wb.band_check(make_animal(calves, 300).name)["to_herd"], self.b)
-
-	def test_heifer_calves_are_not_flagged_for_the_fattening_ladder(self):
-		self._ladder()
-		calves = make_herd("ZZ Calves", "Calf").name
-		self.assertIsNone(wb.band_check(make_animal(calves, 300, sex="Female").name))
-		self.assertIsNone(wb.band_check(make_animal(calves, 460, sex="Female").name))
-		bull = make_animal(calves, 300)
-		self.assertEqual([s["animal"] for s in wb.band_suggestions()], [bull.name])
 
 	def test_submitting_the_move_settles_the_band_alert(self):
 		from upande_livestock.serverscripts.common.events import new_livestock_event
