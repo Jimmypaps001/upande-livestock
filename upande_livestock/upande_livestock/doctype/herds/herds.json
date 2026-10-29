@@ -23,6 +23,7 @@
   "sb_counting",
   "counting",
   "species",
+  "breed",
   "cb_counting",
   "head_females",
   "head_males",
@@ -171,6 +172,14 @@
    "in_standard_filter": 1,
    "label": "Species",
    "options": "Cattle\nSheep\nGoat"
+  },
+  {
+   "depends_on": "eval:doc.counting=='By number'",
+   "description": "The breed of a shoat herd (Dorper, Red Maasai, Galla, Boer...).",
+   "fieldname": "breed",
+   "fieldtype": "Link",
+   "label": "Breed",
+   "options": "Breed"
   },
   {
    "fieldname": "cb_counting",
