@@ -109,7 +109,6 @@ def animal_profile(payload=None):
 	return run(go, "livestock animal_profile failed")
 
 
-def _gain(name, a):
 def _latest_kg(a, gain):
 	"""The Animal's last_weight_kg (kept current by the weight record, and what the
 	phone's stage uses), else the latest weighing."""
@@ -162,6 +161,7 @@ def _decorate_male_cycle(cycle, a, gain, events):
 	}
 
 
+def _gain(name, a):
 	"""Weight and daily-gain trend. ADG is null until two weighings exist.
 
 	`trend` has one point per weighing: the weight, and the gain since the

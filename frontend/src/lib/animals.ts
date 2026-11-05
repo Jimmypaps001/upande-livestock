@@ -125,9 +125,9 @@ export interface AnimalProfile extends AnimalSummary {
   kpis: AnimalKpis;
   milestones: Milestone[];
   spells: HerdSpell[];
+  gain?: { lifetime_adg: number | null; herd_adg: number | null; target_adg_kg: number | null };
 }
 
-  gain?: { lifetime_adg: number | null; herd_adg: number | null; target_adg_kg: number | null };
 /** How each stage reads on screen, and the arc it owns on the cycle ring. */
 export const STAGES: Record<
   CycleStage,
@@ -138,8 +138,6 @@ export const STAGES: Record<
   open: { label: "Open", note: "ready to serve", tone: "var(--sd-data-amber)" },
   served: { label: "Served", note: "awaiting the check", tone: "var(--sd-data-purple)" },
   confirmed: { label: "In calf", note: "carrying", tone: "var(--sd-data-green)" },
-  retired: { label: "Left the herd", note: "no longer on the farm", tone: "var(--sd-quiet)" },
-};
   calf: { label: "Calf", note: "on the dam", tone: "var(--sd-data-cyan)" },
   weaner: { label: "Weaner", note: "weaned, building frame", tone: "var(--sd-data-indigo)" },
   grower: { label: "Grower", note: "growing out", tone: "var(--sd-data-purple)" },
@@ -148,12 +146,12 @@ export const STAGES: Record<
   steer: { label: "Young male", note: "not yet weighed", tone: "var(--sd-data-purple)" },
   bull: { label: "Breeding bull", note: "kept for breeding", tone: "var(--sd-data-red)" },
   unknown: { label: "Unknown", note: "sex not recorded", tone: "var(--sd-quiet)" },
+  retired: { label: "Left the herd", note: "no longer on the farm", tone: "var(--sd-quiet)" },
+};
 
 /** The loop, in the order a cow travels it. `retired` and `heifer` sit outside. */
 export const CYCLE_ORDER: CycleStage[] = ["fresh", "open", "served", "confirmed"];
 
-export const MILESTONE_TONE: Record<MilestoneKind, string> = {
-  birth: "var(--sd-data-indigo)",
 /** A male's liveweight ladder, lowest first. */
 export const GROWTH_ORDER: CycleStage[] = ["calf", "weaner", "grower", "finisher", "market"];
 
@@ -173,6 +171,8 @@ export function placeholderKind(sex: string | null | undefined, stage: CycleStag
   return "steer";
 }
 
+export const MILESTONE_TONE: Record<MilestoneKind, string> = {
+  birth: "var(--sd-data-indigo)",
   movement: "var(--sd-quiet)",
   service: "var(--sd-data-purple)",
   confirmed: "var(--sd-data-green)",
