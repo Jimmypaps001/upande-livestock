@@ -137,4 +137,53 @@ describe("the Animals page", () => {
       expect(screen.getByText(/not permitted to read Animal/)).toBeTruthy(),
     );
   });
+
+  it("gives a steer a weight ladder, no calving figures and a steer picture", async () => {
+    const steer = { id: "B025/24", name: "B025/24", sex: "Male", herd: "Finishers", breed: null,
+      bornOn: "2024-05-01", status: "Active", stage: "finisher", photo: null };
+    call.mockImplementation(async (method?: string) => {
+      const m = method || "";
+      if (m.includes("animal_profile")) {
+        return { ok: true, ...steer, dam: null, sire: null, lastCalving: null, expectedCalving: null,
+          cycle: { kind: "growth", stage: "finisher", dayInStage: 0, nextUp: "Reaches market at 450 kg", nextOn: null,
+            growth: { kg: 363.3, stage: "finisher", fromKg: 280, nextStage: "market", nextKg: 450, pct: 49,
+              adg: 1.03, daysToNext: 84, daysOnFeed: 120, weighedOn: "2026-10-14" } },
+          kpis: { parity: 0, services: 0, conceptions: 0, abortions: 0, conceptionRate: null,
+            calvingInterval: null, treatments: 0 },
+          milestones: [], spells: [] };
+      }
+      if (m.includes("animal_list")) return { ok: true, animals: [steer] };
+      return { ok: true };
+    });
+    const { container } = draw();
+    await waitFor(() => expect(screen.getByText("Growth towards market")).toBeTruthy());
+    expect(screen.getByText("363.3 kg now")).toBeTruthy();
+    expect(screen.getByText("1.03 kg/d")).toBeTruthy();
+    expect(screen.queryByText("Conception rate")).toBeNull();
+    expect(screen.queryByText("Calvings")).toBeNull();
+    expect(screen.queryByRole("button", { name: /Compare against the herd/ })).toBeNull();
+    expect(container.querySelector('svg[data-kind="steer"]')).toBeTruthy();
+  });
+
+  it("shows a breeding bull as at rest, with a bull picture", async () => {
+    const bull = { id: "B001/19", name: "B001/19", sex: "Male", herd: "Bull Reserve", breed: null,
+      bornOn: "2019-05-01", status: "Active", stage: "bull", photo: null };
+    call.mockImplementation(async (method?: string) => {
+      const m = method || "";
+      if (m.includes("animal_profile")) {
+        return { ok: true, ...bull, dam: null, sire: null, lastCalving: null, expectedCalving: null,
+          cycle: { kind: "bull", stage: "bull", class: "Breeding bull", dayInStage: 0, nextUp: "", nextOn: null,
+            bull: { state: "At rest", lastService: null, reason: "not with a mating group" } },
+          kpis: { parity: 0, services: 0, conceptions: 0, abortions: 0, conceptionRate: null,
+            calvingInterval: null, treatments: 0 },
+          milestones: [], spells: [] };
+      }
+      if (m.includes("animal_list")) return { ok: true, animals: [bull] };
+      return { ok: true };
+    });
+    const { container } = draw();
+    await waitFor(() => expect(screen.getAllByText("At rest").length).toBeGreaterThan(0));
+    expect(screen.queryByText("Conception rate")).toBeNull();
+    expect(container.querySelector('svg[data-kind="bull"]')).toBeTruthy();
+  });
 });

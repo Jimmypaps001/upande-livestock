@@ -16,10 +16,46 @@ export type CycleStage =
   | "served"     // inseminated, awaiting the check
   | "confirmed"  // carrying
   | "heifer"     // never calved
+  | "calf"       // young, not yet weaned (either sex)
+  | "weaner" | "grower" | "finisher" | "market"  // a male's liveweight ladder
+  | "steer"      // a male past weaning with no weighing yet
+  | "bull"       // a male in the breeding stream
+  | "unknown"    // sex not recorded: no cycle is drawn
   | "retired";   // left the herd
 
-export interface CycleState {
+/** Which cycle the server chose for the animal: its sex decides. */
+export type CycleKind = "repro" | "growth" | "bull" | "unknown" | "retired";
+
+export interface GrowthState {
+  kg: number;
   stage: CycleStage;
+  fromKg: number;
+  nextStage: CycleStage | null;
+  nextKg: number | null;
+  /** How far through the current band, 0-100. */
+  pct: number;
+  /** kg/day, null until two weighings exist. */
+  adg: number | null;
+  daysToNext: number | null;
+  /** Null when the move into the Fattening herd was never recorded. */
+  daysOnFeed: number | null;
+  weighedOn: string | null;
+}
+
+export interface BullState {
+  state: "At rest" | "In breeding cycle";
+  lastService: string | null;
+  reason: string;
+}
+
+export interface CycleState {
+  /** Absent on older servers: read as "repro". */
+  kind?: CycleKind;
+  stage: CycleStage;
+  /** Breeding bull / Young bull. */
+  class?: string;
+  growth?: GrowthState | null;
+  bull?: BullState;
   /** Days since the event that started this stage. */
   dayInStage: number;
   /** What the farm should be watching for next, in the farm's own words. */
@@ -89,6 +125,7 @@ export interface AnimalProfile extends AnimalSummary {
   spells: HerdSpell[];
 }
 
+  gain?: { lifetime_adg: number | null; herd_adg: number | null; target_adg_kg: number | null };
 /** How each stage reads on screen, and the arc it owns on the cycle ring. */
 export const STAGES: Record<
   CycleStage,
@@ -101,12 +138,39 @@ export const STAGES: Record<
   confirmed: { label: "In calf", note: "carrying", tone: "var(--sd-data-green)" },
   retired: { label: "Left the herd", note: "no longer on the farm", tone: "var(--sd-quiet)" },
 };
+  calf: { label: "Calf", note: "on the dam", tone: "var(--sd-data-cyan)" },
+  weaner: { label: "Weaner", note: "weaned, building frame", tone: "var(--sd-data-indigo)" },
+  grower: { label: "Grower", note: "growing out", tone: "var(--sd-data-purple)" },
+  finisher: { label: "Finisher", note: "on finishing feed", tone: "var(--sd-data-amber)" },
+  market: { label: "Market-ready", note: "at sale weight", tone: "var(--sd-data-green)" },
+  steer: { label: "Young male", note: "not yet weighed", tone: "var(--sd-data-purple)" },
+  bull: { label: "Breeding bull", note: "kept for breeding", tone: "var(--sd-data-red)" },
+  unknown: { label: "Unknown", note: "sex not recorded", tone: "var(--sd-quiet)" },
 
 /** The loop, in the order a cow travels it. `retired` and `heifer` sit outside. */
 export const CYCLE_ORDER: CycleStage[] = ["fresh", "open", "served", "confirmed"];
 
 export const MILESTONE_TONE: Record<MilestoneKind, string> = {
   birth: "var(--sd-data-indigo)",
+/** A male's liveweight ladder, lowest first. */
+export const GROWTH_ORDER: CycleStage[] = ["calf", "weaner", "grower", "finisher", "market"];
+
+/** The cycle the animal is on, defaulting to the reproductive one for older servers. */
+export function cycleKind(cycle: CycleState): CycleKind {
+  return cycle.kind ?? "repro";
+}
+
+export type PlaceholderKind = "bull" | "steer" | "calf" | "heifer" | "cow";
+
+/** Which generic picture stands in for an animal with no photograph: sex AND stage. */
+export function placeholderKind(sex: string | null | undefined, stage: CycleStage): PlaceholderKind {
+  if (stage === "calf") return "calf";
+  if (sex === "Male") return stage === "bull" ? "bull" : "steer";
+  if (stage === "heifer") return "heifer";
+  if (sex === "Female") return "cow";
+  return "steer";
+}
+
   movement: "var(--sd-quiet)",
   service: "var(--sd-data-purple)",
   confirmed: "var(--sd-data-green)",

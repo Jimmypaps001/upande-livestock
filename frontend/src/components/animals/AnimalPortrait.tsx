@@ -1,4 +1,5 @@
-import { STAGES, ageFrom, initialsOf, type AnimalProfile } from "@/lib/animals";
+import { STAGES, ageFrom, placeholderKind, type AnimalProfile } from "@/lib/animals";
+import { AnimalSilhouette } from "@/components/animals/AnimalSilhouette";
 import { cn } from "@/lib/utils";
 
 /**
@@ -27,7 +28,7 @@ export function AnimalPortrait({ animal }: { animal: AnimalProfile }) {
             className="h-full w-full object-cover"
           />
         ) : (
-          // Her initials, not an apology. Most of this herd has no photograph
+          // A silhouette picked by sex and stage, not an apology. Most of this herd has no photograph
           // and probably never will; a panel that said so on every animal would
           // be reporting the same absence three hundred times. Set in the
           // stage's own colour so the frame still identifies her at a glance.
@@ -36,12 +37,11 @@ export function AnimalPortrait({ animal }: { animal: AnimalProfile }) {
             style={{ background: `color-mix(in srgb, ${stage.tone} 16%, var(--sd-bg-soft))` }}
             aria-label={`${animal.name} — no photograph`}
           >
-            <span
-              className="select-none text-[64px] font-semibold leading-none tracking-[-0.04em]"
-              style={{ color: `color-mix(in srgb, ${stage.tone} 72%, var(--sd-ink))` }}
-            >
-              {initialsOf(animal.name, animal.id)}
-            </span>
+            <AnimalSilhouette
+              kind={placeholderKind(animal.sex, animal.stage)}
+              color={`color-mix(in srgb, ${stage.tone} 72%, var(--sd-ink))`}
+              label={`${stage.label} ${animal.sex === "Male" ? "male" : "female"}`}
+            />
           </div>
         )}
 
@@ -67,7 +67,7 @@ export function AnimalPortrait({ animal }: { animal: AnimalProfile }) {
         <Fact label="Age" value={ageFrom(animal.bornOn)} />
         <Fact label="Breed" value={animal.breed || "—"} />
         <Fact label="Herd" value={animal.herd} />
-        <Fact label="Sex" value={animal.sex} />
+        <Fact label="Sex" value={animal.sex || "—"} />
         <Fact label="Dam" value={animal.dam || "—"} />
         <Fact label="Sire" value={animal.sire || "—"} />
       </dl>

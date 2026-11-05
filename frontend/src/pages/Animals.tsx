@@ -5,6 +5,7 @@ import { PhotoStrip } from "@/components/animals/PhotoStrip";
 import { AnimalPortrait, AnimalPortraitSkeleton } from "@/components/animals/AnimalPortrait";
 import { AnimalSearch } from "@/components/animals/AnimalSearch";
 import { CycleRing, CycleRingSkeleton } from "@/components/animals/CycleRing";
+import { BullStatus, GrowthLadder } from "@/components/animals/MaleCycle";
 import { EventFeed, EventFeedSkeleton } from "@/components/animals/EventFeed";
 import { KpiRadar, KpiRadarSkeleton } from "@/components/animals/KpiRadar";
 import { LifeTimeline, LifeTimelineSkeleton } from "@/components/animals/LifeTimeline";
@@ -28,7 +29,7 @@ import {
   type HerdBenchmarks,
 } from "@/lib/animals-api";
 import { isError } from "@/lib/frappe";
-import { ageFrom, type AnimalProfile, type AnimalSummary } from "@/lib/animals";
+import { ageFrom, cycleKind, type AnimalProfile, type AnimalSummary } from "@/lib/animals";
 import { Button } from "@/components/ui/button";
 
 /**
@@ -63,6 +64,12 @@ export function Animals() {
   const [failure, setFailure] = useState<string | null>(null);
 
   const profile = selected ? profiles[selected.id] ?? null : null;
+  // The animal's sex picks its cycle and which figures apply: a female runs the
+  // calving loop; a male on feed a weight ladder; a breeding bull has a status.
+  const kind = profile ? cycleKind(profile.cycle) : "repro";
+  const female = kind === "repro" || kind === "retired" && profile?.sex === "Female";
+  const male = kind === "growth" || kind === "bull" || kind === "retired" && profile?.sex === "Male";
+  const growth = profile?.cycle.growth ?? null;
 
   const fetchProfile = useCallback((id: string) => {
     setProfiles((have) => {
@@ -147,13 +154,20 @@ export function Animals() {
                 <Card>
                   <CardHeaderRow>
                     <CardHeading>
-                      <CardTitle>Where she is in the cycle</CardTitle>
+                      <CardTitle>
+                        {kind === "growth" ? "Growth towards market" : kind === "bull" ? "Breeding status" : kind === "unknown" ? "Cycle" : "Where she is in the cycle"}
+                      </CardTitle>
                       <CardDescription>
-                        The loop between one calving and the next, drawn to the length
-                        each stage actually takes.
+                        {kind === "growth"
+                          ? "Liveweight against the stage ladder, with daily gain from the weight records."
+                          : kind === "bull"
+                            ? "Whether he is at rest or running with females, from where he stands and his services."
+                            : kind === "unknown"
+                              ? "The cycle depends on sex, which is not recorded for this animal."
+                              : "The loop between one calving and the next, drawn to the length each stage actually takes."}
                       </CardDescription>
                     </CardHeading>
-                    {profile?.cycle.nextOn && (
+                    {profile?.cycle.nextOn && kind === "repro" && (
                       <span className="inline-flex shrink-0 items-center gap-2 rounded-[var(--sd-radius-pill)] bg-[var(--sd-bg-soft)] px-3 py-1.5 text-[12px] text-[var(--sd-muted)]">
                         <CalendarClock className="h-3.5 w-3.5 text-[var(--sd-quiet)]" />
                         {profile.cycle.nextUp}
@@ -164,10 +178,46 @@ export function Animals() {
                     )}
                   </CardHeaderRow>
                   <CardContent className="pt-0">
-                    {profile ? <CycleRing cycle={profile.cycle} /> : <CycleRingSkeleton />}
+                    {!profile ? (
+                      <CycleRingSkeleton />
+                    ) : kind === "growth" ? (
+                      <GrowthLadder cycle={profile.cycle} />
+                    ) : kind === "bull" ? (
+                      <BullStatus cycle={profile.cycle} />
+                    ) : kind === "unknown" ? (
+                      <p className="text-[13px] text-[var(--sd-muted)]">{profile.cycle.nextUp}</p>
+                    ) : (
+                      <CycleRing cycle={profile.cycle} />
+                    )}
                   </CardContent>
                 </Card>
 
+                {male && (
+                  <FigureRow>
+                    <Figure
+                      loading={!profile}
+                      label="Weight"
+                      value={growth ? String(growth.kg) : "—"}
+                      unit={growth ? "kg" : undefined}
+                      hint={growth?.weighedOn ? `weighed ${growth.weighedOn}` : "not weighed"}
+                    />
+                    <Figure
+                      loading={!profile}
+                      label="Daily gain"
+                      value={growth?.adg == null ? "—" : growth.adg.toFixed(2)}
+                      unit={growth?.adg == null ? undefined : "kg/d"}
+                      hint={profile?.gain?.target_adg_kg ? `target ${profile.gain.target_adg_kg} kg/d` : "from the weight records"}
+                    />
+                    <Figure
+                      loading={!profile}
+                      label={kind === "bull" ? "Services" : "Days on feed"}
+                      value={kind === "bull" ? String(profile?.kpis.services ?? "—") : growth?.daysOnFeed == null ? "—" : String(growth.daysOnFeed)}
+                      hint={kind === "bull" ? "recorded as sire" : "since the move to the feedlot"}
+                    />
+                  </FigureRow>
+                )}
+
+                {female && (
                 <button
                   type="button"
                   onClick={() => setComparing(true)}
@@ -204,9 +254,10 @@ export function Animals() {
                   />
                 </FigureRow>
                 </button>
+                )}
 
                 <div className="-mt-2 flex flex-wrap items-center gap-3">
-                  <Button
+                  {!male && <Button
                     variant="outline"
                     size="sm"
                     disabled={!profile}
@@ -214,7 +265,7 @@ export function Animals() {
                   >
                     <BarChart3 className="mr-1.5 h-3.5 w-3.5" />
                     Compare against the herd
-                  </Button>
+                  </Button>}
                   {culled[selected.id] && (
                     <span className="inline-flex items-center gap-1.5 text-[12.5px] text-[var(--sd-sev-critical)]">
                       <ShieldAlert className="h-3.5 w-3.5" />
@@ -226,7 +277,7 @@ export function Animals() {
                 <Card>
                   <CardHeaderRow>
                     <CardHeading>
-                      <CardTitle>Her life so far</CardTitle>
+                      <CardTitle>{male ? "His life so far" : "Her life so far"}</CardTitle>
                       <CardDescription>
                         {ageFrom(selected.bornOn)} on one line, to scale. The band underneath
                         is the herd she was standing in.
@@ -273,7 +324,7 @@ export function Animals() {
                   <AnimalPortraitSkeleton />
                 )}
                 {profile && <PhotoStrip key={profile.id} animal={profile.id} upload={{ context: "profile", label: "New profile photo" }} />}
-                <Card>
+                {!male && (<Card>
                   <CardHeaderRow className="pb-0">
                     <CardHeading>
                       <CardTitle className="text-[14px]">How she compares</CardTitle>
@@ -283,7 +334,7 @@ export function Animals() {
                   <CardContent>
                     {profile ? <KpiRadar kpis={profile.kpis} /> : <KpiRadarSkeleton />}
                   </CardContent>
-                </Card>
+                </Card>)}
               </div>
             </div>
           </div>
