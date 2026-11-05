@@ -62,7 +62,7 @@ def animal_profile(payload=None):
 		a = frappe.db.get_value(
 			"Animal", name,
 			["name", "burn_name", "sex", "current_herd", "breed", "date_of_birth",
-			 "status", "disabled", "image", "dam", "sire_name", "repro_status"],
+			 "status", "disabled", "image", "dam", "sire_name", "repro_status", "stream", "last_weight_kg"],
 			as_dict=True)
 		if not a:
 			frappe.throw(frappe._("{0} is not an animal on this farm.").format(name))
@@ -79,6 +79,9 @@ def animal_profile(payload=None):
 		last_calving = _last(events, "Calving")
 		expected = _expected_calving(events)
 		cycle = _cycle(a, events, last_calving, expected)
+		gain = _gain(name, a)
+		spells = _spells(a, events)
+		_decorate_male_cycle(cycle, a, gain, events)
 
 		return {
 			"ok": True,
@@ -98,14 +101,66 @@ def animal_profile(payload=None):
 			"cycle": cycle,
 			"kpis": _kpis(name, events, a),
 			"milestones": _milestones(events),
-			"spells": _spells(a, events),
-			"gain": _gain(name, a),
+			"spells": spells,
+			"gain": gain,
 		}
 
 	return run(go, "livestock animal_profile failed")
 
 
 def _gain(name, a):
+def _latest_kg(a, gain):
+	"""The Animal's last_weight_kg (kept current by the weight record, and what the
+	phone's stage uses), else the latest weighing."""
+	if flt(a.last_weight_kg) > 0:
+		return flt(a.last_weight_kg)
+	for point in reversed(gain["trend"]):
+		if point["weight_kg"]:
+			return point["weight_kg"]
+	return None
+
+
+def _decorate_male_cycle(cycle, a, gain, events):
+	"""Give a male his own cycle: a weight ladder, or the breeding bull's status.
+
+	`animal_stage.cycle` already chose his stage from `last_weight_kg`; the
+	weighings may be newer than that field, so the stage is re-read from the
+	latest weighing, and the growth figures (kg, next stage, progress, daily
+	gain, days on feed) are attached. A bull gets his classification and
+	"At rest" / "In breeding cycle" instead.
+	"""
+	if a.sex != "Male" or cycle["kind"] == "retired":
+		return
+	if cycle["kind"] == "bull":
+		cycle["bull"] = animal_stage.bull_status(a.name, a.current_herd)
+		return
+	kg = _latest_kg(a, gain)
+	pos = animal_stage.growth_position(kg)
+	if not pos:
+		cycle["growth"] = None
+		return
+	cycle.update(kind="growth", stage=pos["stage"])
+	adg = gain["herd_adg"] if gain["herd_adg"] is not None else gain["lifetime_adg"]
+	to_go = (pos["nextKg"] - kg) if pos["nextKg"] else None
+	on_feed = None
+	# days on feed: since the Movement that put him in his Fattening herd (unknown, not
+	# his age, when that move was never recorded)
+	if a.current_herd and frappe.db.get_value("Herds", a.current_herd, "herd_class") == "Fattening":
+		into = [e.event_date for e in events
+		        if e.event_type == "Movement" and e.new_herd == a.current_herd and e.event_date]
+		if into:
+			on_feed = date_diff(today(), getdate(into[-1]))
+	if pos["nextStage"]:
+		cycle["nextUp"] = "Reaches %s at %s kg" % (pos["nextStage"], round(pos["nextKg"]))
+	cycle["growth"] = {
+		"kg": round(kg, 1), **pos,
+		"adg": adg if adg is None else round(adg, 3),
+		"daysToNext": round(to_go / adg) if (to_go and adg and adg > 0) else None,
+		"daysOnFeed": on_feed,
+		"weighedOn": gain["trend"][-1]["date"] if gain["trend"] else None,
+	}
+
+
 	"""Weight and daily-gain trend. ADG is null until two weighings exist.
 
 	`trend` has one point per weighing: the weight, and the gain since the

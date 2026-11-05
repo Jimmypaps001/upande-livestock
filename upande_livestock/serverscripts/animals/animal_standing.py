@@ -85,7 +85,7 @@ def animal_standing(payload=None):
 		rows = frappe.get_all(
 			"Animal",
 			filters=[["status", "not in", list(RETIRED_STATUSES)], ["disabled", "=", 0]],
-			fields=["name", "current_herd", "date_of_birth", "status", "disabled", "parity", "last_weight_kg"],
+			fields=["name", "current_herd", "date_of_birth", "status", "disabled", "parity", "last_weight_kg", "sex", "stream"],
 			limit_page_length=0,
 		)
 		by_name = {r.name: r for r in rows}

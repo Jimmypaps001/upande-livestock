@@ -26,7 +26,7 @@ def _facts(**kw):
 
 
 def _a(**kw):
-	return {"disabled": 0, "status": "Active", "date_of_birth": add_days(today(), -900), **kw}
+	return {"disabled": 0, "status": "Active", "sex": "Female", "date_of_birth": add_days(today(), -900), **kw}
 
 
 class TestTheRule(IntegrationTestCase):
@@ -42,6 +42,35 @@ class TestTheRule(IntegrationTestCase):
 		self.assertEqual(self.stage({"calving": d(100), "service": d(60), "confirmed": d(20)}), "confirmed")
 		self.assertEqual(self.stage({}, status="Sold"), "retired")
 		self.assertEqual(self.stage({}, disabled=1), "retired")
+
+	def test_a_male_never_gets_the_heifer_cycle(self):
+		kind = lambda **a: animal_stage.cycle(_a(sex="Male", **a), _facts())  # noqa: E731
+		self.assertEqual(kind(stream="Breeding")["stage"], "bull")
+		self.assertEqual(kind(stream="Breeding")["kind"], "bull")
+		self.assertEqual(kind(stream="Feedlot", last_weight_kg=90)["stage"], "calf")
+		self.assertEqual(kind(stream="Feedlot", last_weight_kg=180)["stage"], "weaner")
+		self.assertEqual(kind(stream="Feedlot", last_weight_kg=500)["stage"], "market")
+		self.assertEqual(kind(stream="Feedlot", last_weight_kg=500)["kind"], "growth")
+		# unweighed: past weaning he is a steer with no rung; a young one is a calf
+		self.assertEqual(kind(stream="Feedlot")["stage"], "steer")
+		self.assertEqual(kind(date_of_birth=add_days(today(), -30))["stage"], "calf")
+
+	def test_the_ladder_climbs_with_weight(self):
+		order = [animal_stage.growth_position(kg)["stage"] for kg in (50, 160, 270, 400, 460)]
+		self.assertEqual(order, list(animal_stage.GROWTH_STAGES))
+		pos = animal_stage.growth_position(200)
+		self.assertTrue(0 < pos["pct"] < 100)
+		self.assertGreater(pos["nextKg"], 200)
+		self.assertIsNone(animal_stage.growth_position(460)["nextKg"])
+		self.assertIsNone(animal_stage.growth_position(None))
+
+	def test_unknown_sex_gets_no_cycle(self):
+		c = animal_stage.cycle(_a(sex=None), _facts())
+		self.assertEqual((c["kind"], c["stage"]), ("unknown", "unknown"))
+
+	def test_a_young_female_is_a_calf_then_a_heifer(self):
+		self.assertEqual(self.stage({}, date_of_birth=add_days(today(), -60)), "calf")
+		self.assertEqual(self.stage({}), "heifer")
 
 	def test_a_confirmation_before_the_last_calving_is_over(self):
 		d = lambda n: add_days(today(), -n)  # noqa: E731
@@ -110,3 +139,47 @@ class TestOnThePhone(IntegrationTestCase):
 		frappe.db.set_value("Livestock Event", ev.name, "docstatus", 1)
 		frappe.db.set_value("Livestock Event", ev.name, "modified", add_to_date(now(), days=-30), update_modified=False)
 		self.assertIn(COW, animal_stage.moved_since(add_to_date(now(), days=-1)))
+
+
+class TestBullStatus(IntegrationTestCase):
+	def test_a_bull_alone_in_the_bull_reserve_is_at_rest(self):
+		name = frappe.db.get_value("Animal", {"sex": "Male", "stream": "Breeding", "current_herd": "Bull Reserve",
+		                                      "status": "Active"})
+		if not name:
+			self.skipTest("no breeding bull in Bull Reserve on this site")
+		got = animal_stage.bull_status(name, "Bull Reserve")
+		self.assertIn(got["state"], ("At rest", "In breeding cycle"))
+		if frappe.db.count("Animal", {"current_herd": "Bull Reserve", "sex": "Female", "status": "Active"}) == 0:
+			self.assertEqual(animal_stage.bull_status("NOBODY", "Bull Reserve")["state"], "At rest")
+
+	def test_running_with_females_is_in_the_breeding_cycle(self):
+		herd = frappe.db.sql("""select a.current_herd from tabAnimal a join tabHerds h on h.name = a.current_herd
+			where h.herd_class = 'Breeding' and a.sex = 'Female' and a.status = 'Active' limit 1""")
+		if not herd:
+			self.skipTest("no Breeding herd with females")
+		self.assertEqual(animal_stage.bull_status("NOBODY", herd[0][0])["state"], "In breeding cycle")
+		self.assertEqual(animal_stage.bull_status("NOBODY", None)["state"], "At rest")
+
+
+class TestProfileBySex(IntegrationTestCase):
+	def profile(self, **flt_):
+		name = frappe.db.get_value("Animal", {"status": "Active", "disabled": 0, **flt_})
+		if not name:
+			self.skipTest(f"no animal like {flt_}")
+		return animal_profile({"animal": name})
+
+	def test_feedlot_steer_has_growth_figures_no_repro_cycle(self):
+		p = self.profile(sex="Male", stream="Feedlot")
+		self.assertEqual(p["cycle"]["kind"], "growth")
+		self.assertIn(p["stage"], animal_stage.GROWTH_STAGES + (animal_stage.UNWEIGHED_MALE,))
+		self.assertNotIn(p["stage"], ("heifer", "open", "served", "confirmed", "fresh"))
+
+	def test_breeding_bull_has_a_status(self):
+		p = self.profile(sex="Male", stream="Breeding")
+		self.assertEqual(p["stage"], "bull")
+		self.assertIn(p["cycle"]["bull"]["state"], ("At rest", "In breeding cycle"))
+		self.assertIn(p["cycle"]["class"], ("Breeding bull", "Young bull"))
+
+	def test_a_cow_keeps_the_reproductive_cycle(self):
+		p = self.profile(sex="Female", repro_status="Pregnant")
+		self.assertEqual(p["cycle"]["kind"], "repro")

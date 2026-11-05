@@ -62,6 +62,10 @@
   "sb_beef",
   "calf_separation_age_days",
   "breeding_bull_min_age_months",
+  "bull_service_window_days",
+  "stage_weaner_kg",
+  "stage_grower_kg",
+  "stage_finisher_kg",
   "default_service_type",
   "cb_beef",
   "conception_window_days",
@@ -886,6 +890,34 @@
    "fieldname": "breeding_bull_min_age_months",
    "fieldtype": "Int",
    "label": "Breeding Bull Minimum Age (Months)"
+  },
+  {
+   "default": "60",
+   "description": "A breeding bull who served a female within this many days counts as in the breeding cycle on the animal page; otherwise (and when not running with females) he is at rest.",
+   "fieldname": "bull_service_window_days",
+   "fieldtype": "Int",
+   "label": "Bull In Breeding Cycle For (Days After A Service)"
+  },
+  {
+   "default": "150",
+   "description": "Growth ladder for males not kept for breeding: a calf becomes a weaner at this liveweight.",
+   "fieldname": "stage_weaner_kg",
+   "fieldtype": "Int",
+   "label": "Weaner From (kg)"
+  },
+  {
+   "default": "250",
+   "description": "Used when there are fewer than three Fattening herd bands; otherwise the second band's minimum is used.",
+   "fieldname": "stage_grower_kg",
+   "fieldtype": "Int",
+   "label": "Grower From (kg)"
+  },
+  {
+   "default": "350",
+   "description": "Used when there are fewer than three Fattening herd bands; otherwise the third band's minimum is used. Market-ready starts at Target Exit Weight.",
+   "fieldname": "stage_finisher_kg",
+   "fieldtype": "Int",
+   "label": "Finisher From (kg)"
   },
   {
    "default": "Natural",

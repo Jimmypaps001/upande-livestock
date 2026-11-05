@@ -119,6 +119,14 @@ TIMING_DEFAULTS = {
 	"calf_separation_age_days": 210,
 	"breeding_bull_min_age_months": 18,
 	"conception_window_days": 10,
+	# Beef growth ladder (a male not kept for breeding), liveweight kg at which each
+	# stage starts. The Fattening herd bands override the grower/finisher cut-offs
+	# when the farm has three; market starts at Target Exit Weight.
+	"stage_weaner_kg": 150,
+	"stage_grower_kg": 250,
+	"stage_finisher_kg": 350,
+	# A bull who served within this many days is "in breeding cycle", else "at rest".
+	"bull_service_window_days": 60,
 	# Feed projection (serverscripts/projection): weighings needed before an animal is
 	# projected at its own gain, and the paddock rotation the "enough paddocks" check assumes.
 	"adg_min_weighings": 2,
