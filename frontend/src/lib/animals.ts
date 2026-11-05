@@ -162,6 +162,21 @@ export function cycleKind(cycle: CycleState): CycleKind {
 
 export type PlaceholderKind = "bull" | "steer" | "calf" | "heifer" | "cow";
 
+/**
+ * The sex chips on the animal search: All / Cows / Bulls.
+ *
+ * "Bulls" is every MALE, not only breeding bulls. The list carries sex but not
+ * the cycle stage (that needs the profile), so it cannot tell a breeding bull
+ * from a young male on feed (a "steer" in the profile); a farmer looking for
+ * "the bulls" means the males, steers and young males included.
+ */
+export type SexFilter = "all" | "cows" | "bulls";
+
+export function matchesSex(a: { sex?: string | null }, f: SexFilter): boolean {
+  if (f === "all") return true;
+  return f === "bulls" ? a.sex === "Male" : a.sex !== "Male";
+}
+
 /** Which generic picture stands in for an animal with no photograph: sex AND stage. */
 export function placeholderKind(sex: string | null | undefined, stage: CycleStage): PlaceholderKind {
   if (stage === "calf") return "calf";

@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { ChevronRight, Search, X } from "lucide-react";
-import { STAGES, ageFrom, type AnimalSummary } from "@/lib/animals";
+import { STAGES, ageFrom, matchesSex, type AnimalSummary, type SexFilter } from "@/lib/animals";
 import { Input } from "@/components/ui/input";
 import { Picker } from "@/components/ui/picker";
 import { cn } from "@/lib/utils";
@@ -22,6 +22,24 @@ const CAP = "max-h-[min(56vh,520px)]";
 /** Her standing, in the farm's words. "On the farm" covers every status that
  *  is not a way of having left it, including the blank ones. */
 const STANDINGS = ["On the farm", "Sold", "Culled", "Died", "Disposed", "Transferred out"];
+
+const SEX_KEY = "upande.livestock.animals.sex";
+const SEX_OPTIONS: { value: SexFilter; label: string }[] = [
+  { value: "all", label: "All" },
+  { value: "cows", label: "Cows" },
+  { value: "bulls", label: "Bulls" },
+];
+
+/** The remembered choice. Like the operator, a device convenience: private windows
+ *  and locked-down browsers simply start on All. */
+function rememberedSex(): SexFilter {
+  try {
+    const v = window.localStorage.getItem(SEX_KEY);
+    return v === "cows" || v === "bulls" ? v : "all";
+  } catch {
+    return "all";
+  }
+}
 
 /** The row's face: the lazy ~240 px thumbnail (full image only if no thumb), else the initials. */
 function RowAvatar({ a }: { a: AnimalSummary }) {
@@ -103,14 +121,36 @@ export function AnimalSearch({
   const [term, setTerm] = useState("");
   const [grouping, setGrouping] = useState<Grouping>("none");
   const [shut, setShut] = useState<Record<string, boolean>>({});
+  const [sex, setSexState] = useState<SexFilter>(() => rememberedSex());
+  const setSex = (next: SexFilter) => {
+    setSexState(next);
+    try {
+      window.localStorage.setItem(SEX_KEY, next);
+    } catch {
+      /* the choice still holds for this page */
+    }
+  };
 
-  const results = useMemo(() => {
+  // The text search first: the chips' counts describe what the search found, so
+  // "Cows 12" always means twelve cows among the matches.
+  const matched = useMemo(() => {
     const q = term.trim().toLowerCase();
     if (!q) return animals;
     return animals.filter((a) =>
       [a.id, a.name, a.herd, a.breed || ""].some((f) => f.toLowerCase().includes(q)),
     );
   }, [animals, term]);
+
+  const counts = useMemo(
+    () => ({
+      all: matched.length,
+      cows: matched.filter((a) => matchesSex(a, "cows")).length,
+      bulls: matched.filter((a) => matchesSex(a, "bulls")).length,
+    }),
+    [matched],
+  );
+
+  const results = useMemo(() => matched.filter((a) => matchesSex(a, sex)), [matched, sex]);
 
   // Grouped only when nothing has been typed: a search already knows what it is
   // looking for, and folding three matches into three herds hides them behind
@@ -156,6 +196,31 @@ export function AnimalSearch({
             <X className="h-4 w-4" />
           </button>
         )}
+      </div>
+
+      <div role="group" aria-label="Show cows or bulls" className="flex gap-1.5 px-1">
+        {SEX_OPTIONS.map((o) => {
+          const on = sex === o.value;
+          return (
+            <button
+              key={o.value}
+              type="button"
+              aria-pressed={on}
+              onClick={() => setSex(o.value)}
+              className={cn(
+                "flex h-8 flex-1 items-center justify-center gap-1.5 rounded-[var(--sd-radius-pill)] border text-[12px] font-medium transition-colors",
+                on
+                  ? "border-[var(--sd-ink)] bg-[var(--sd-ink)] text-white"
+                  : "border-[var(--sd-line)] bg-[var(--sd-bg-soft)] text-[var(--sd-muted)] hover:text-[var(--sd-ink)]",
+              )}
+            >
+              {o.label}
+              <span className={cn("text-[11px] tabular-nums", on ? "text-white/70" : "text-[var(--sd-quiet)]")}>
+                {counts[o.value]}
+              </span>
+            </button>
+          );
+        })}
       </div>
 
       <div className="flex items-center justify-between gap-2 px-1">
@@ -261,7 +326,9 @@ export function AnimalSearch({
         })}
         {!results.length && (
           <li className="rounded-[var(--sd-radius-lg)] bg-[var(--sd-bg-soft)] px-3 py-6 text-center text-[12.5px] text-[var(--sd-muted)]">
-            Nobody matches “{term}”. Try a register number, a name, or a herd.
+            {term.trim()
+              ? `Nobody matches “${term}”. Try a register number, a name, or a herd.`
+              : "Nobody here with that filter."}
           </li>
         )}
       </ul>
