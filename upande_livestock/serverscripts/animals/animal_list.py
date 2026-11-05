@@ -17,6 +17,7 @@ Read-guarded on Animal.
 
 import frappe
 
+from upande_livestock.serverscripts.common import thumbs
 from upande_livestock.serverscripts.common.envelope import guard_read, run
 
 RETIRED = ("Dead", "Deceased", "Sold", "Culled", "Disposed", "Transferred Out")
@@ -49,6 +50,7 @@ def animal_list():
 					# can answer cheaply and the page needs to colour a row.
 					"stage": "retired" if (r.disabled or r.status in RETIRED) else "open",
 					"photo": r.image,
+					"thumb": thumbs.existing_thumb(r.image) if r.image else None,
 				}
 				for r in rows
 			],

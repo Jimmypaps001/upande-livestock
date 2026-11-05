@@ -148,6 +148,7 @@ export interface FarmAnimal {
   breed: string | null;
   date_of_birth: string | null;
   image: string | null;
+  thumb?: string | null;
 }
 
 export interface CullBoard {
@@ -323,6 +324,7 @@ export function asSummaries(animals: FarmAnimal[]): AnimalSummary[] {
     status: "Active",
     stage: "open",
     photo: a.image,
+    thumb: a.thumb ?? null,
   }));
 }
 

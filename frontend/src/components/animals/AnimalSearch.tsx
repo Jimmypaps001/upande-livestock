@@ -23,6 +23,31 @@ const CAP = "max-h-[min(56vh,520px)]";
  *  is not a way of having left it, including the blank ones. */
 const STANDINGS = ["On the farm", "Sold", "Culled", "Died", "Disposed", "Transferred out"];
 
+/** The row's face: the lazy ~240 px thumbnail (full image only if no thumb), else the initials. */
+function RowAvatar({ a }: { a: AnimalSummary }) {
+  const src = a.thumb || a.photo;
+  if (src) {
+    return (
+      <img
+        src={src}
+        alt=""
+        loading="lazy"
+        decoding="async"
+        className="h-9 w-9 shrink-0 rounded-full object-cover"
+      />
+    );
+  }
+  return (
+    <span
+      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold text-white"
+      style={{ background: STAGES[a.stage].tone }}
+      aria-hidden
+    >
+      {a.name.slice(0, 2).toUpperCase()}
+    </span>
+  );
+}
+
 function standing(a: AnimalSummary): string {
   if (a.stage !== "retired") return STANDINGS[0];
   const status = (a.status || "").toLowerCase();
@@ -213,13 +238,7 @@ export function AnimalSearch({
                     : "hover:bg-[var(--sd-bg-soft)]",
                 )}
               >
-                <span
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold text-white"
-                  style={{ background: STAGES[a.stage].tone }}
-                  aria-hidden
-                >
-                  {a.name.slice(0, 2).toUpperCase()}
-                </span>
+                <RowAvatar a={a} />
                 <span className="flex min-w-0 flex-1 flex-col">
                   <span className="flex items-baseline gap-2">
                     <span className="truncate text-[13.5px] font-medium text-[var(--sd-ink)]">
@@ -262,13 +281,7 @@ export function AnimalSearch({
           active ? "bg-[var(--sd-bg-soft)]" : "hover:bg-[var(--sd-bg-soft)]",
         )}
       >
-        <span
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold text-white"
-          style={{ background: STAGES[a.stage].tone }}
-          aria-hidden
-        >
-          {a.name.slice(0, 2).toUpperCase()}
-        </span>
+        <RowAvatar a={a} />
         <span className="flex min-w-0 flex-1 flex-col">
           <span className="flex items-baseline gap-2">
             <span className="truncate text-[13.5px] font-medium text-[var(--sd-ink)]">

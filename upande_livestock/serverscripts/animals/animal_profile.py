@@ -26,7 +26,7 @@ from itertools import pairwise
 import frappe
 from frappe.utils import add_days, date_diff, flt, getdate, today
 
-from upande_livestock.serverscripts.common import animal_stage
+from upande_livestock.serverscripts.common import animal_stage, thumbs
 from upande_livestock.serverscripts.common.envelope import as_dict, guard_read, run
 from upande_livestock.serverscripts.common.gain import adg_between, herd_target_adg, weights_for, weights_for_many
 
@@ -94,6 +94,7 @@ def animal_profile(payload=None):
 			"status": a.status,
 			"stage": cycle["stage"],
 			"photo": a.image,
+			"thumb": thumbs.existing_thumb(a.image) if a.image else None,
 			"dam": a.dam,
 			"sire": a.sire_name,
 			"lastCalving": last_calving,

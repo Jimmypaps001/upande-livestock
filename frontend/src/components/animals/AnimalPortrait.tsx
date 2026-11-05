@@ -24,6 +24,7 @@ export function AnimalPortrait({ animal }: { animal: AnimalProfile }) {
         {animal.photo ? (
           <img
             src={animal.photo}
+            decoding="async"
             alt={`${animal.name}, ${animal.id}`}
             className="h-full w-full object-cover"
           />

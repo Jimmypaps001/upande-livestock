@@ -112,6 +112,8 @@ export interface AnimalSummary {
   status: string;
   stage: CycleStage;
   photo: string | null;
+  /** ~240 px list thumbnail of `photo`; lists use it, only the portrait loads `photo`. */
+  thumb?: string | null;
 }
 
 export interface AnimalProfile extends AnimalSummary {

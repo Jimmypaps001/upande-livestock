@@ -6,7 +6,7 @@
 import frappe
 from frappe.utils import flt
 
-from upande_livestock.serverscripts.common import culling
+from upande_livestock.serverscripts.common import culling, thumbs
 from upande_livestock.serverscripts.common.gain import weights_for_many
 from upande_livestock.serverscripts.common.envelope import as_dict, guard_read, run
 
@@ -121,13 +121,16 @@ def _animals_on_the_farm():
 	never a list of animals that have already left — which is what a page that
 	loaded its own roster once and never again eventually becomes.
 	"""
-	return frappe.get_all(
+	rows = frappe.get_all(
 		"Animal",
 		filters={"disabled": 0, "status": "Active"},
 		fields=["name", "burn_name", "sex", "current_herd", "breed", "date_of_birth", "image"],
 		order_by="name",
 		limit=2000,
 	)
+	for r in rows:
+		r["thumb"] = thumbs.existing_thumb(r["image"]) if r.get("image") else None
+	return rows
 
 
 def _open_claims():
