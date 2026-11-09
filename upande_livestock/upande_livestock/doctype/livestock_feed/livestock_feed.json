@@ -1,0 +1,225 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "field:item",
+ "creation": "2026-11-09 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "item",
+  "feed_name",
+  "category",
+  "disabled",
+  "nutrients_section",
+  "dry_matter_pct",
+  "crude_protein_pct",
+  "carbohydrate_pct",
+  "fibre_ndf_pct",
+  "fat_pct",
+  "nutrients_column",
+  "energy_me_mj_per_kg",
+  "calcium_pct",
+  "phosphorus_pct",
+  "nutrient_source",
+  "analysed_on",
+  "stock_section",
+  "low_stock_threshold",
+  "notes"
+ ],
+ "fields": [
+  {
+   "fieldname": "item",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Item",
+   "options": "Item",
+   "reqd": 1,
+   "search_index": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "feed_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Feed Name",
+   "read_only": 1,
+   "description": "Filled from the Item's name."
+  },
+  {
+   "fieldname": "category",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Category",
+   "options": "\nForage\nEnergy (grain / by-product)\nProtein\nMineral & vitamin\nAdditive\nConcentrate (made)\nRation (made)",
+   "description": "A made feed (concentrate or ration) takes its nutrition from its recipe; only a raw feed's figures below are used."
+  },
+  {
+   "fieldname": "disabled",
+   "fieldtype": "Check",
+   "label": "Disabled"
+  },
+  {
+   "fieldname": "nutrients_section",
+   "fieldtype": "Section Break",
+   "label": "Nutrients",
+   "description": "All on a dry-matter basis except Dry Matter itself, which is as fed."
+  },
+  {
+   "fieldname": "dry_matter_pct",
+   "fieldtype": "Percent",
+   "label": "Dry Matter %",
+   "description": "As-fed dry matter. Required for a raw feed."
+  },
+  {
+   "fieldname": "crude_protein_pct",
+   "fieldtype": "Percent",
+   "label": "Crude Protein %",
+   "description": "CP, % of DM.",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "carbohydrate_pct",
+   "fieldtype": "Percent",
+   "label": "Carbohydrate % (non-fibre)",
+   "description": "Starch + sugars, % of DM.",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "fibre_ndf_pct",
+   "fieldtype": "Percent",
+   "label": "Fibre (NDF) %",
+   "description": "Neutral detergent fibre, % of DM - the fibrous carbohydrate."
+  },
+  {
+   "fieldname": "fat_pct",
+   "fieldtype": "Percent",
+   "label": "Fat %",
+   "description": "Ether extract, % of DM."
+  },
+  {
+   "fieldname": "nutrients_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "energy_me_mj_per_kg",
+   "fieldtype": "Float",
+   "label": "Energy ME (MJ/kg DM)",
+   "description": "Metabolisable energy, MJ per kg of dry matter."
+  },
+  {
+   "fieldname": "calcium_pct",
+   "fieldtype": "Percent",
+   "label": "Calcium %",
+   "description": "% of DM."
+  },
+  {
+   "fieldname": "phosphorus_pct",
+   "fieldtype": "Percent",
+   "label": "Phosphorus %",
+   "description": "% of DM."
+  },
+  {
+   "fieldname": "nutrient_source",
+   "fieldtype": "Select",
+   "label": "Nutrient Source",
+   "options": "\nLab analysis\nSupplier label\nBook value"
+  },
+  {
+   "fieldname": "analysed_on",
+   "fieldtype": "Date",
+   "label": "Analysed On"
+  },
+  {
+   "fieldname": "stock_section",
+   "fieldtype": "Section Break",
+   "label": "Notes & Stock"
+  },
+  {
+   "fieldname": "low_stock_threshold",
+   "fieldtype": "Float",
+   "label": "Low Stock Threshold"
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Small Text",
+   "label": "Notes"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-11-09 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Upande Livestock",
+ "name": "Livestock Feed",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "permlevel": 0,
+   "idx": 1,
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "email": 1,
+   "share": 1
+  },
+  {
+   "role": "Livestock Manager",
+   "permlevel": 0,
+   "idx": 2,
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "email": 1,
+   "share": 1
+  },
+  {
+   "role": "Livestock Vet",
+   "permlevel": 0,
+   "idx": 3,
+   "read": 1,
+   "report": 1
+  },
+  {
+   "role": "Livestock Breeder",
+   "permlevel": 0,
+   "idx": 4,
+   "read": 1,
+   "report": 1
+  },
+  {
+   "role": "Livestock Attendant",
+   "permlevel": 0,
+   "idx": 5,
+   "read": 1,
+   "report": 1
+  },
+  {
+   "role": "Livestock Stores",
+   "permlevel": 0,
+   "idx": 6,
+   "read": 1,
+   "report": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "search_fields": "feed_name,category",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "feed_name",
+ "show_title_field_in_link": 1,
+ "track_changes": 1
+}
