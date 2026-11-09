@@ -4,8 +4,18 @@
 import frappe
 from frappe.tests import IntegrationTestCase
 
+# The Item link would otherwise pull in ERPNext's whole Item test-record set,
+# whose warehouses need a custom_farm this site's Warehouse makes mandatory.
+IGNORE_TEST_RECORD_DEPENDENCIES = ["Item"]
+
 
 class TestLivestockFeed(IntegrationTestCase):
+	def setUp(self):
+		frappe.db.delete("Livestock Feed", {"name": "_Test LF Item"})
+
+	def tearDown(self):
+		frappe.db.rollback()
+
 	def _item(self):
 		code = "_Test LF Item"
 		if not frappe.db.exists("Item", code):
