@@ -141,7 +141,27 @@ export function FeedDesign() {
     setName(h.ration_name || h.ration_item || "");
   }
 
+  /** Point one line at `code`, merging into a line that already has it (kg summed). */
+  function pickFor(index: number, code: string) {
+    setRows((s) => {
+      const dup = s.findIndex((r, j) => j !== index && r.item_code === code);
+      if (dup < 0 || !code) return s.map((x, j) => (j === index ? { ...x, item_code: code } : x));
+      const sum = num(s[dup].qty) + num(s[index].qty);
+      return s
+        .map((x, j) => (j === dup ? { ...x, qty: sum ? String(sum) : "" } : x))
+        .filter((_, j) => j !== index);
+    });
+  }
+
   function addFeed(code: string) {
+    const have = rows.find((r) => r.item_code === code);
+    if (have) {
+      // Already in the recipe: take the person to that line, not a second one.
+      const el = document.getElementById(`fd-qty-${have.key}`) as HTMLInputElement | null;
+      el?.focus();
+      el?.select();
+      return;
+    }
     setRows((s) => {
       const empty = s.find((r) => !r.item_code);
       if (empty) return s.map((r) => (r === empty ? { ...r, item_code: code } : r));
@@ -404,9 +424,7 @@ export function FeedDesign() {
                     <Picker
                       id={`fd-item-${r.key}`}
                       value={r.item_code}
-                      onChange={(next) =>
-                        setRows((s) => s.map((x, j) => (j === i ? { ...x, item_code: next } : x)))
-                      }
+                      onChange={(next) => pickFor(i, next)}
                       options={options}
                       label="Feed"
                       placeholder="Choose a feed…"
@@ -466,7 +484,7 @@ export function FeedDesign() {
                 {busy
                   ? "Saving…"
                   : target === "ration"
-                    ? `Save as ${chosenHerd ? chosenHerd.herd : "a herd"}'s ration`
+                    ? chosenHerd ? `Save as the ${chosenHerd.herd} ration` : "Save as a herd ration"
                     : "Save as a concentrate"}
               </Button>
               <Button variant="secondary" onClick={() => { setRows([]); setHerd(""); setName(""); }}>
@@ -514,24 +532,24 @@ export function FeedDesign() {
               {all.herds.length === 0 ? (
                 <p className="text-[13px] text-[var(--sd-muted)]">Every herd is already fed for today.</p>
               ) : (
-                <table className="w-full text-[13px]">
+                <table className="w-full border-separate border-spacing-0 text-[13px]">
                   <thead>
                     <tr className="text-left text-[11px] uppercase tracking-wide text-[var(--sd-quiet)]">
-                      <th className="py-1">Herd</th>
-                      <th className="py-1 text-right">Head</th>
-                      <th className="py-1 text-right">Portion</th>
-                      <th className="py-1 text-right">Mix (kg)</th>
-                      <th className="py-1">Stock</th>
+                      <th className="py-1 pr-4 font-medium">Herd</th>
+                      <th className="py-1 pr-4 text-right font-medium">Head</th>
+                      <th className="py-1 pr-4 text-right font-medium">Portion</th>
+                      <th className="py-1 pr-4 text-right font-medium">Mix (kg)</th>
+                      <th className="py-1 pl-4 text-left font-medium">Stock</th>
                     </tr>
                   </thead>
                   <tbody>
                     {all.herds.map((h) => (
                       <tr key={h.herd} className="border-t border-[var(--sd-line)]">
-                        <td className="py-1.5">{h.herd}</td>
-                        <td className="py-1.5 text-right tabular-nums">{h.heads}</td>
-                        <td className="py-1.5 text-right tabular-nums">{fmt(h.portion)}</td>
-                        <td className="py-1.5 text-right tabular-nums">{fmt(h.qty)}</td>
-                        <td className="py-1.5 text-[12px]">
+                        <td className="py-1.5 pr-4 align-top">{h.herd}</td>
+                        <td className="py-1.5 pr-4 text-right align-top tabular-nums">{h.heads}</td>
+                        <td className="py-1.5 pr-4 text-right align-top tabular-nums">{fmt(h.portion)}</td>
+                        <td className="py-1.5 pr-4 text-right align-top tabular-nums">{fmt(h.qty)}</td>
+                        <td className="max-w-[220px] py-1.5 pl-4 align-top text-[12px] break-words">
                           {h.short?.length ? (
                             <span className="text-[var(--sd-sev-critical)]">
                               short: {h.short.map((s) => s.item_name).join(", ")}
