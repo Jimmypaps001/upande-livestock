@@ -26,6 +26,7 @@ Read-guarded on BOM: it discloses what the farm feeds.
 import frappe
 from frappe.utils import flt
 
+from upande_livestock.serverscripts.feeding._concentrate import premanufacture_concentrate_on
 from upande_livestock.serverscripts.feeding._recipe_lines import _concentrate_items
 
 from upande_livestock.serverscripts.common.calf_separation import head_breakdown
@@ -85,7 +86,12 @@ def herd_rations(payload=None):
 				"balanced": abs(sum(flt(r["qty"]) for r in ration) - per_head) < 0.0005,
 			})
 
-		return {"ok": True, "herds": rows, "feeds": _feeds()}
+		return {
+			"ok": True, "herds": rows, "feeds": _feeds(),
+			# Off: the picker offers raw feeds only (the page filters on
+			# `is_concentrate`), and a ration still naming one is warned about.
+			"premanufacture_concentrate": premanufacture_concentrate_on(),
+		}
 
 	return run(go, "livestock herd_rations failed")
 

@@ -39,13 +39,38 @@ This site's BOM list is already what happens when every save makes a revision.
 
 import frappe
 from frappe import _
-from frappe.utils import flt
+from frappe.utils import cint, flt
 
 from upande_livestock.serverscripts.feeding._standing_ration import feed_item_for
 from upande_livestock.serverscripts.feeding._tuned_bom import _clean
 
 #: `BOM.custom_ration_kind`. Standing and Tuned are a herd's; this is neither.
 CONCENTRATE = "Concentrate"
+
+
+def premanufacture_concentrate_on():
+	"""Does this farm mix concentrate ahead for the store? Unset means yes.
+
+	The default is today's two-stage flow, so a site that never saved the
+	setting (or whose patch has not run) behaves exactly as it always did.
+	"""
+	from upande_livestock.serverscripts.common.timings import read_setting
+
+	value = read_setting("premanufacture_concentrate")
+	return True if value in (None, "") else bool(cint(value))
+
+
+def refuse_without_concentrate_stage():
+	"""Concentrate cannot be set or manufactured on a farm that mixes straight
+	from raw ingredients. The recipes already there stay readable."""
+	if not premanufacture_concentrate_on():
+		frappe.throw(
+			_(
+				"This farm does not pre-manufacture concentrate (Livestock Settings > "
+				"Pre-manufacture Concentrate is off). Mix the ration straight from its "
+				"ingredients on the Feed Design page."
+			)
+		)
 
 
 def concentrate_items():

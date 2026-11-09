@@ -186,3 +186,7 @@ upande_livestock.patches.rename_metabolic_death_cause
 
 # Age-based bull culling is gone: its three settings and any open "Bull Cull Due" alerts.
 upande_livestock.patches.retire_bull_cull
+
+# Pre-manufacture Concentrate: on wherever it was never set, so today's two-stage
+# feeding is unchanged until a manager turns it off.
+upande_livestock.patches.default_premanufacture_concentrate

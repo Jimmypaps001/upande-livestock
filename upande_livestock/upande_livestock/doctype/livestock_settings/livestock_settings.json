@@ -74,6 +74,7 @@
   "tab_dairy",
   "custom_dairy_section",
   "custom_feed_wip_warehouse",
+  "premanufacture_concentrate",
   "custom_concentrate_cover_days",
   "sb_feed_sources",
   "feed_source_warehouses",
@@ -436,6 +437,13 @@
    "fieldtype": "Link",
    "label": "Feed WIP / Store Warehouse",
    "options": "Warehouse"
+  },
+  {
+   "default": "1",
+   "description": "On: concentrate is mixed ahead for the store and the TMR run consumes it (two stages). Off: this farm mixes every ration straight from raw ingredients, so the Concentrate page is hidden, concentrates cannot be set or manufactured, and feed pickers offer raw feeds only. Existing concentrate recipes are kept, just not offered.",
+   "fieldname": "premanufacture_concentrate",
+   "fieldtype": "Check",
+   "label": "Pre-manufacture Concentrate"
   },
   {
    "fieldname": "sb_feed_sources",

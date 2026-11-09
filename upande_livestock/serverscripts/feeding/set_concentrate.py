@@ -6,6 +6,9 @@
 import frappe
 
 from upande_livestock.serverscripts.common.envelope import as_dict, guard, run
+from upande_livestock.serverscripts.feeding._concentrate import (
+	refuse_without_concentrate_stage,
+)
 from upande_livestock.serverscripts.feeding._concentrate import set_concentrate as _set
 
 
@@ -21,6 +24,7 @@ def set_concentrate(payload):
 
 	def go():
 		guard("BOM", employee=False)
+		refuse_without_concentrate_stage()
 		d = as_dict(payload)
 		res = _set(d.get("name"), d.get("lines") or [], farm=d.get("farm"))
 		res["ok"] = True

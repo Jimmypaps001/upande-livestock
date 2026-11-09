@@ -6,6 +6,7 @@ import frappe
 
 from upande_livestock.serverscripts.common.envelope import guard_stock, run
 from upande_livestock.serverscripts.feeding import _engine as feeding
+from upande_livestock.serverscripts.feeding._concentrate import refuse_without_concentrate_stage
 
 
 @frappe.whitelist()
@@ -15,6 +16,7 @@ def manufacture_concentrate(
 ):
 	def go():
 		guard_stock("Work Order", "Stock Entry")
+		refuse_without_concentrate_stage()
 		res = feeding.manufacture_concentrate(
 			item_code, qty=qty, bom_no=bom_no, allow_shortage=allow_shortage,
 			source_warehouse=source_warehouse, target_warehouse=target_warehouse,
