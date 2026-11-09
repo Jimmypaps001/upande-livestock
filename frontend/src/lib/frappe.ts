@@ -21,6 +21,10 @@ export interface LivestockBootstrap {
   user_image: string;
   site_name: string;
   roles: string[];
+  /** Livestock Settings > Pre-manufacture Concentrate. Off hides the
+   *  Concentrate page and offers raw feeds only; unset means on, so an older
+   *  page shell that does not send it behaves as it always did. */
+  premanufacture_concentrate: boolean;
 }
 
 declare global {
@@ -45,6 +49,7 @@ export function bootstrap(): LivestockBootstrap {
     user_image: typeof raw.user_image === "string" ? raw.user_image : "",
     site_name: typeof raw.site_name === "string" ? raw.site_name : "",
     roles: Array.isArray(raw.roles) ? (raw.roles as string[]) : [],
+    premanufacture_concentrate: raw.premanufacture_concentrate !== false,
   };
 }
 

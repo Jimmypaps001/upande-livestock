@@ -281,6 +281,8 @@ export interface FeedChoice {
 export interface HerdRations {
   herds: HerdRation[];
   feeds: FeedChoice[];
+  /** Livestock Settings > Pre-manufacture Concentrate. Off: raw feeds only. */
+  premanufacture_concentrate?: boolean;
 }
 
 export function getHerdRations(): Promise<Envelope<HerdRations>> {

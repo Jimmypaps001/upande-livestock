@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { AlertTriangle, Plus, Save, X } from "lucide-react";
 import { Figure, FigureRow } from "@/components/Figure";
 import { Notice } from "@/components/feeding/Notice";
+import { NutritionPanel } from "@/components/feeding/NutritionPanel";
 import { Page, PageHeading } from "@/components/PageShell";
 import { RefreshButton } from "@/components/RefreshButton";
 import { Button } from "@/components/ui/button";
@@ -15,6 +16,7 @@ import { RowsSkeleton } from "@/components/Loading";
 import { useToast } from "@/components/Toast";
 import { useSaveShortcut } from "@/lib/use-save-shortcut";
 import { isError } from "@/lib/frappe";
+import { expandConcentrates } from "@/lib/nutrition";
 import {
   describeChange, getHerdRations, setHerdRation,
   type HerdRation, type HerdRations, type RationDifference,
@@ -77,6 +79,10 @@ export function RationEditor() {
 
   const herds = data?.herds ?? [];
   const feeds = data?.feeds ?? [];
+  // Off: this farm mixes straight from raw ingredients, so a line may name raw
+  // feeds only. A made concentrate already in the recipe stays nameable so the
+  // row does not blank, and is warned about below.
+  const rawOnly = data?.premanufacture_concentrate === false;
   const chosen = useMemo(() => herds.find((h) => h.herd === picked) || null, [herds, picked]);
 
   // The edit starts as what the herd is actually fed, so "save" with nothing
@@ -112,6 +118,20 @@ export function RationEditor() {
     !!feeds.find((f) => f.value === code)?.is_concentrate;
   const labelOf = (code: string) => feeds.find((f) => f.value === code)?.label || code;
   const uomOf = (code: string) => feeds.find((f) => f.value === code)?.uom || "";
+
+  const stranded = rawOnly ? rows.filter((r) => r.item_code && isConcentrate(r.item_code)) : [];
+
+  async function expand() {
+    const r = await expandConcentrates(
+      rows.filter((x) => x.item_code && Number(x.qty) > 0).map((x) => ({ item_code: x.item_code, qty: Number(x.qty) })),
+    );
+    if (isError(r)) {
+      toast(r.error, "error");
+      return;
+    }
+    setRows(r.lines.map((l) => ({ key: nextKey++, item_code: l.item_code, qty: String(l.qty) })));
+    toast(`Rewrote ${r.expanded.join(", ")} into its ingredients. Save to make it the recipe.`, "info");
+  }
 
   useSaveShortcut(() => void save(), !!chosen && dirty && !busy && rows.length > 0);
 
@@ -260,6 +280,20 @@ export function RationEditor() {
                   </p>
                 </div>
 
+                {stranded.length > 0 && (
+                  <Notice tone="info">
+                    <span className="flex flex-wrap items-center gap-3">
+                      <span>
+                        This farm no longer pre-manufactures concentrate, but this ration still
+                        uses {stranded.map((r) => labelOf(r.item_code)).join(", ")}.
+                      </span>
+                      <Button variant="secondary" size="sm" onClick={() => void expand()}>
+                        Expand into ingredients
+                      </Button>
+                    </span>
+                  </Notice>
+                )}
+
                 <div className="flex flex-col gap-2">
                   <Label>What goes in, per head, per day</Label>
                   {rows.map((r, i) => (
@@ -289,7 +323,9 @@ export function RationEditor() {
                               s.map((x, j) => (j === i ? { ...x, item_code: next } : x)),
                             )
                           }
-                          options={feeds.map((f) => ({ value: f.value, label: f.label }))}
+                          options={feeds
+                            .filter((f) => !rawOnly || !f.is_concentrate || f.value === r.item_code)
+                            .map((f) => ({ value: f.value, label: f.label }))}
                           label="Feed"
                           placeholder="Choose a feed…"
                         />
@@ -349,6 +385,13 @@ export function RationEditor() {
                     </span>
                   </span>
                 </div>
+
+                <NutritionPanel
+                  perUnit="head per day"
+                  lines={rows
+                    .filter((x) => x.item_code && Number(x.qty) > 0)
+                    .map((x) => ({ item_code: x.item_code, qty: Number(x.qty) }))}
+                />
 
                 <div className="flex flex-wrap items-center gap-3">
                   <Button onClick={save} disabled={busy || !dirty || !rows.length}>

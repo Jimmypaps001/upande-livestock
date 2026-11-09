@@ -2,13 +2,14 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { Figure, FigureRow } from "@/components/Figure";
 import { Notice } from "@/components/feeding/Notice";
+import { NutritionPanel } from "@/components/feeding/NutritionPanel";
 import { Page, PageHeading } from "@/components/PageShell";
 import { Picker } from "@/components/ui/picker";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { isError } from "@/lib/frappe";
+import { bootstrap, isError } from "@/lib/frappe";
 import {
   concentrates,
   feedBatches,
@@ -206,6 +207,23 @@ export function Concentrate() {
       `Mixed ${fmt(r.produced_qty)} ${r.uom || "kg"} of ${c.item_name} into ${to} — Work Order ${r.work_order}.`,
     );
     void load();
+  }
+
+  // A farm that mixes straight from raw ingredients has no concentrate stage.
+  // The recipes it already holds stay readable elsewhere; this page is simply
+  // not part of its flow, and the server refuses to set or mix one.
+  if (!bootstrap().premanufacture_concentrate) {
+    return (
+      <Page>
+        <PageHeading eyebrow="Feeding" title="Concentrate">
+          Not used on this farm.
+        </PageHeading>
+        <Notice tone="info">
+          This farm does not pre-manufacture concentrate (Livestock Settings &gt; Pre-manufacture
+          Concentrate is off). Design and mix feed from raw ingredients on the Feed Design page.
+        </Notice>
+      </Page>
+    );
   }
 
   return (
@@ -477,6 +495,13 @@ export function Concentrate() {
                 </span>
               </div>
             </div>
+
+            <NutritionPanel
+              perUnit="batch"
+              lines={rows
+                .filter((x) => x.item_code && Number(x.qty) > 0)
+                .map((x) => ({ item_code: x.item_code, qty: Number(x.qty) }))}
+            />
 
             <div className="flex gap-3">
               <Button disabled={!ready || busy} onClick={() => void save()}>
