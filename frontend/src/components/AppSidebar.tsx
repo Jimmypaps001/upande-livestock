@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import {
+  FlaskConical,
   Activity,
   ArrowRightLeft,
   Baby,
@@ -47,6 +48,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { SidebarUser } from "@/components/SidebarUser";
 import { useUnreadNotifications } from "@/hooks/use-notifications";
+import { bootstrap } from "@/lib/frappe";
 import { routeHash, type View } from "@/lib/router";
 import { cn } from "@/lib/utils";
 import upandeLogo from "@/assets/upande_logo.png";
@@ -123,6 +125,12 @@ const NAV: NavSection[] = [
         hint: "Mix and issue a herd's ration",
       },
       {
+        view: "feed-design",
+        label: "Feed Design",
+        icon: FlaskConical,
+        hint: "Design a feed with its nutrition in view, and mix every herd's feed for the day",
+      },
+      {
         view: "concentrate",
         label: "Concentrate",
         icon: Wheat,
@@ -189,6 +197,7 @@ const NAV: NavSection[] = [
 export const BUILT_VIEWS: ReadonlySet<View> = new Set<View>([
   "dashboard",
   "feeding",
+  "feed-design",
   "concentrate",
   "stock",
   "rations",
@@ -230,6 +239,7 @@ export function AppSidebar({
   const { state, toggle } = useSidebar();
   const collapsed = state === "collapsed";
   const { unread } = useUnreadNotifications();
+  const premanufacture = bootstrap().premanufacture_concentrate;
 
   // The footer is pinned: SidebarContent is the only flexible row in the card
   // (flex-1 min-h-0, overflow hidden) and the nav scrolls INSIDE the ScrollArea
@@ -330,7 +340,14 @@ export function AppSidebar({
               "group-data-[collapsible=icon]:p-[0.8rem]",
             )}
           >
-            {NAV.map((section) => (
+            {NAV.map((section) => ({
+              ...section,
+              // A farm that mixes straight from raw ingredients has no
+              // concentrate stage, so its page is not offered.
+              items: section.items.filter(
+                (item) => premanufacture || item.view !== "concentrate",
+              ),
+            })).map((section) => (
               <SidebarGroup key={section.label}>
                 <SidebarGroupLabel>{section.label}</SidebarGroupLabel>
                 <SidebarGroupContent>

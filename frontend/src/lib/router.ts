@@ -16,6 +16,7 @@ export const VIEWS = [
   "health",
   "reports",
   "feeding",
+  "feed-design",
   "concentrate",
   "stock",
   "rations",

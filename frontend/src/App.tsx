@@ -57,6 +57,9 @@ const warm = warmChunks();
 const Feeding = page(() =>
   import("@/pages/Feeding").then((m) => ({ default: m.Feeding })),
 );
+const FeedDesign = page(() =>
+  import("@/pages/FeedDesign").then((m) => ({ default: m.FeedDesign })),
+);
 const Concentrate = page(() =>
   import("@/pages/Concentrate").then((m) => ({ default: m.Concentrate })),
 );
@@ -131,6 +134,7 @@ const TITLES: Record<View, string> = {
   health: "Health",
   reports: "Reports",
   feeding: "Feeding",
+  "feed-design": "Feed Design",
   concentrate: "Concentrate",
   stock: "Feed in Store",
   rations: "Rations",
@@ -160,6 +164,7 @@ const TITLES: Record<View, string> = {
  *  placeholder that says the desk block still does the work. */
 const PAGES: Partial<Record<View, React.ComponentType>> = {
   feeding: Feeding,
+  "feed-design": FeedDesign,
   concentrate: Concentrate,
   stock: Stock,
   rations: Rations,

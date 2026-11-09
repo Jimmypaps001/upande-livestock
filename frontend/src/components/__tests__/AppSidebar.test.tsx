@@ -71,6 +71,29 @@ function footer(container: HTMLElement): HTMLElement {
   return el;
 }
 
+describe("the Concentrate entry follows Pre-manufacture Concentrate", () => {
+  it("is offered by default, beside Feed Design", () => {
+    const { container } = mount();
+    expect(container.textContent).toContain("Concentrate");
+    expect(container.textContent).toContain("Feed Design");
+  });
+
+  it("is hidden when the farm does not pre-manufacture concentrate", () => {
+    window.LIVESTOCK = {
+      bootstrap: { user: "dairy@upande.com", full_name: "Jane Kamau", premanufacture_concentrate: false },
+    };
+    try {
+      const { container } = mount();
+      expect(container.textContent).not.toContain("Concentrate");
+      expect(container.textContent).toContain("Feed Design");
+    } finally {
+      window.LIVESTOCK = {
+        bootstrap: { user: "dairy@upande.com", full_name: "Jane Kamau", user_image: "", site_name: "kaitet", roles: [] },
+      };
+    }
+  });
+});
+
 describe("sidebar footer", () => {
   it("sits outside the scrolling nav, so the nav can scroll under it", () => {
     const { container } = mount();
