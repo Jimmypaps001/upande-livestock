@@ -346,6 +346,7 @@ def livestock_feeds():
 				"item_name": r.feed_name or r.item_code,
 				"category": r.category,
 				"is_made": is_made,
+				"recorded": True,
 				"has_data": is_complete(r),
 				"nutrient_source": r.nutrient_source,
 				"dry_matter_pct": flt(r.dry_matter_pct),
@@ -368,6 +369,7 @@ def livestock_feeds():
 					{
 						"item_code": code, "item_name": source.name(code),
 						"category": "Concentrate (made)", "is_made": True, "computed": True,
+						"recorded": False,
 						"nutrient_source": None, **_computed_row(code, source),
 					}
 				)
@@ -379,7 +381,7 @@ def livestock_feeds():
 				"Item", filters={"item_group": group, "disabled": 0},
 				fields=["name", "item_name"], order_by="item_name asc", limit=500,
 			)
-			if r.name not in recorded and r.name not in made
+			if r.name not in recorded and r.name not in made and not source.recipe(r.name)
 		]
 		return {
 			"ok": True,

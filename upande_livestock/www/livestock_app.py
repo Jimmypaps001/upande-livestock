@@ -27,6 +27,8 @@ import os
 
 import frappe
 
+from upande_livestock.serverscripts.feeding._concentrate import premanufacture_concentrate_on
+
 no_cache = 1
 
 
@@ -84,6 +86,7 @@ def get_context(context):
 			"user_image": user_doc.get("user_image") or "",
 			"site_name": frappe.local.site,
 			"roles": roles,
+			"premanufacture_concentrate": premanufacture_concentrate_on(),
 			"csrf_token": csrf_token,
 		}
 	)
