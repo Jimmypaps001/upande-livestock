@@ -98,6 +98,40 @@ keeps its kilos. A unit the item's table cannot turn into kilos is counted as
 kilos and says so: add the conversion on the Item. "Kg" and "Kilogram" are the
 same unit everywhere.
 
+## Kilos and shares in the Ration Editor
+
+Every feed line in the Ration Editor shows both its **amount** (kg, or its
+store unit) and its **share (%)** of intake, and you can type in either. Above
+the lines is **Kg per head per day** (per batch, for a concentrate): the total.
+It starts empty, showing the lines' sum in grey.
+
+- **No total typed.** Typing a line's kilos changes that line only. The total
+  is whatever the lines add up to and every share is worked out again. Nothing
+  locks.
+- **A total typed.** Typing a line's kilos *or* its % **locks** that line (a
+  padlock appears beside it). The total stays where it is, and the lines that
+  are still unlocked are scaled up or down, in proportion to what they have, so
+  the recipe still adds up to the total and to 100%. Type row 1 and it locks,
+  type row 2 and it locks, and so on: lines you have already typed keep their
+  figures. Click a padlock to unlock that line.
+- **Typing a % always locks.** With no total yet, the current sum becomes the
+  total (it fills in Kg per head), then the line locks as above.
+- **Nothing left to move.** If the locked lines leave no room, the figure you
+  typed is cut back to what is available, and the screen says so, for example
+  "Locked rows already use 13.2 of 14 kg — unlock a row to give it more".
+- **Changing the total** keeps every line's % (locked lines too) and the kilos
+  follow, so moving a group from 18 to 20 kg a head keeps its mix. Clearing the
+  total removes every lock.
+- A new line starts at nothing and unlocked. Taking a line out gives its share
+  to the unlocked lines.
+- Kilos are kept to 3 decimals and % to 2; the last unlocked line takes up the
+  rounding so the lines add up exactly.
+- Per-head doses in g or ml are outside the 100% and are never locked or moved.
+
+What is saved is each line's amount in its unit, as before. The shares and
+the locks are only a way of writing the recipe: they are not saved, and a
+recipe opens again with no total and no locks.
+
 ## If something is short
 
 The button is disabled and the shortfall is spelled out — which item, how much,
