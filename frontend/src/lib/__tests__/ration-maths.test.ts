@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  applyPercentages,
+  changeTotal,
   doseForHerd,
   isDoseUom,
   kgFromPercent,
@@ -15,7 +15,6 @@ import {
   swapKg,
   toLine,
   unitLabel,
-  withPercentages,
   type LineUnit,
 } from "@/lib/ration-maths";
 import { isKg, kgPerUnit, stockEquivalent, storeUnits } from "@/lib/units";
@@ -43,8 +42,7 @@ describe("percentage mode", () => {
   });
 
   it("rescales every kilogram line when the kilos per head change, doses untouched", () => {
-    const pct = withPercentages(rows);
-    const out = applyPercentages(pct, 24);
+    const out = changeTotal(rows, "", "24").rows;
     expect(out.map((r) => r.qty)).toEqual(["18", "6", "7"]);
   });
 
@@ -53,7 +51,7 @@ describe("percentage mode", () => {
   });
 
   it("a line with no percentage has no kilos", () => {
-    expect(applyPercentages([{ qty: "4", pct: "" }], 20)[0].qty).toBe("");
+    expect(changeTotal([{ qty: "4", pct: "" }, { qty: "2", pct: "100" }], "6", "20").rows[0].qty).toBe("");
   });
 });
 
@@ -106,7 +104,7 @@ describe("a line in the store's unit", () => {
 
   it("takes its share of intake by kilos, and gets its quantity back in litres", () => {
     expect(percentagesOf(rows)).toEqual(["78.13", "21.87", ""]);
-    const out = applyPercentages(withPercentages(rows.map((r) => ({ ...r, pct: "" }))), 38.4);
+    const out = changeTotal(rows, "", "38.4").rows;
     expect(Number(out[1].qty)).toBeCloseTo(6, 2);
     expect(out[2].qty).toBe("7");
   });
