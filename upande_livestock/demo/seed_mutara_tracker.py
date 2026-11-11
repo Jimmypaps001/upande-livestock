@@ -29,6 +29,16 @@ What it does
   (the 1000 kg batch) as a made concentrate. Cattle mix from raw, shoats use the made batch, where
   `concentrate_mode` exists.
 * Tagged animals from the RFID tabs with their weighings.
+* The breeding herd from "Breeders" and "Calves data": cows and heifers in In-calf / Lactating /
+  Heifers by their status, calves and weaners in a Calves herd (a Livestock Settings calf herd), dams
+  linked; the ID is the SA ear tag ("SA-913") and the old tag the burn name. Renaming an animal to its
+  RFID later carries tag_number, weighings and events with it.
+* History, all records and all backdated, on live too: earlier weighings of animals still on the farm
+  from the old sheets (matched by old tag), the sold animals of "Steers sold 2026", "Moyale sold" and
+  "Breeders sold" with their weighings and a backdated Sold disposal each (it retires the animal and
+  posts no invoice or journal; a priced sale must name a Customer, so they all name one "Livestock
+  buyer (tracker history)", and nothing is invoiced to it), and vaccinations, dewormings and treatments as backdated events
+  with no drug lines, so nothing is issued.
 * Livestock Daily Labour history, when that doctype exists; the Mixer Wagon's diesel as issues from
   the Fuel Store against the feedlot cost centre.
 * The old demo herds, flocks, feeds and animals are retired: disabled, never deleted.
@@ -52,6 +62,7 @@ OPENING_DATE = date(2026, 1, 2)          # before the first fuel issue (4 Jan 20
 OPENING_REMARK = "Mutara tracker: opening stock at Feed Rates prices"
 FUEL_REMARK = "Mutara tracker: {machine} diesel {date}"
 SEED_TAG = "seed:mutara-tracker"
+HISTORY_BUYER = "Livestock buyer (tracker history)"
 
 FEEDLOT_COST_CENTER = "Feedlot"
 FUEL_STORE = "Fuel Store"
@@ -145,7 +156,11 @@ CATTLE_HERDS = {
 	"In-calf": ("Breeding", 0, 0),
 	"Heifers": ("Other", 0, 0),
 	"Lactating": ("Breeding", 0, 0),
+	# Calves and weaners from Breeders / Calves data. A Calf herd has no ration: a suckling calf is not
+	# fed the herd ration, and a weaner shows on the separation-due list until it is moved.
+	"Calves": ("Calf", 0, 0),
 }
+CALF_HERD = "Calves"
 CATTLE_CONCENTRATE_MODE = "Mix from raw"
 SHOAT_CONCENTRATE_MODE = "Pre-manufacture"
 SHOAT_SPECIES = "Sheep"          # the groups mix sheep and goats; a herd has one species (see the JSON notes)
@@ -441,8 +456,11 @@ def ensure_herds(data):
 
 	cc = _full(FEEDLOT_COST_CENTER)
 	for name, (cls, lo, hi) in CATTLE_HERDS.items():
-		_herd(name, {"herd_class": cls, "min_weight_kg": lo, "max_weight_kg": hi, "counting": "Individual",
-		             "species": "Cattle", "cost_center": cc, "concentrate_mode": CATTLE_CONCENTRATE_MODE})
+		values = {"herd_class": cls, "min_weight_kg": lo, "max_weight_kg": hi, "counting": "Individual",
+		          "species": "Cattle", "cost_center": cc, "concentrate_mode": CATTLE_CONCENTRATE_MODE}
+		if cls == "Calf" and _has("Herds", "custom_is_calf_rearing"):
+			values["custom_is_calf_rearing"] = 1
+		_herd(name, values)
 	for g in data["shoat_groups"]:
 		_herd(g["herd"], {"herd_class": "Other", "counting": "By number", "species": SHOAT_SPECIES,
 		                  "concentrate_mode": SHOAT_CONCENTRATE_MODE})
@@ -513,8 +531,10 @@ def ensure_animals(data):
 
 
 def ensure_counts(data):
-	"""Herds with tagged animals count them; In-calf, Lactating and Heifers have no tagged animals yet and
-	carry the tracker's head; shoat groups open with a head count on the shoat sheet's date."""
+	"""Herds with animals count them. In-calf, Lactating and Heifers carried the tracker's head (25, 22,
+	40) until Breeders gave them animals; they now count those (11, 18, 4: the tracker's Heifers group
+	evidently fed the weaners too, and they are in Calves). A herd with none keeps the tracker's head.
+	Shoat groups open with a head count on the shoat sheet's date."""
 	from upande_livestock.serverscripts.common import shoats
 	from upande_livestock.serverscripts.common.animal import live_herd_count, recompute_herd_count
 
@@ -539,6 +559,186 @@ def ensure_counts(data):
 		doc.submit()
 		shoats.rebuild(g["herd"])
 		_log("{}: {} head".format(g["herd"], g["animals"]))
+
+
+# ---------------------------------------------------------------------------
+# history: breeders and calves, sold animals, old weighings, health
+# ---------------------------------------------------------------------------
+#
+# All of it is RECORDS: animals, weighings, events and disposals, every one dated in the past and
+# marked backdated. None of it issues stock or posts accounting, on any site: a backdated event
+# suppresses its drug issue (and these carry no drug lines at all), and a backdated disposal retires the
+# animal and posts no Sales Invoice or write-off (livestock_disposal.post_asset_disposal). That is why
+# these steps run on live without post_stock.
+
+
+def _weigh(animal, weights, until=None):
+	"""Submit a backdated weighing for each date the animal has none on; return how many. `until`
+	leaves out the sale day and after: the disposal carries the exit weight."""
+	made = 0
+	for w in weights:
+		if until and w["date"] >= until:
+			continue
+		if frappe.db.exists("Livestock Weight Record", {"animal": animal, "weight_date": w["date"], "docstatus": 1}):
+			continue
+		doc = frappe.get_doc({"doctype": "Livestock Weight Record", "animal": animal, "weight_date": w["date"],
+		                      "weight_kg": w["kg"], "custom_is_backdated": 1, "remarks": "Mutara tracker history"})
+		doc.insert(ignore_permissions=True)
+		doc.submit()
+		made += 1
+	return made
+
+
+def ensure_breeders(data):
+	"""The cows, heifers and calves on Breeders and Calves data. Cows first: a calf's dam must exist."""
+	made = 0
+	for a in sorted(data.get("breeders") or [], key=lambda a: bool(a.get("dam"))):
+		if frappe.db.exists("Animal", a["id"]):
+			continue
+		doc = {
+			"doctype": "Animal", "tag_number": a["id"], "burn_name": a["burn_name"], "book_number": a.get("book_number"),
+			"sex": a["sex"], "species": "Cattle", "date_of_birth": a.get("date_of_birth"), "dam": a.get("dam"),
+			"origin": a.get("origin"), "current_herd": a["herd"], "company": COMPANY, "status": "Active",
+			"stream": "Breeding", "repro_status": a["repro_status"], "parity": a.get("parity"),
+			"last_calving_date": a.get("last_calving_date"), "remarks": a["remarks"],
+		}
+		frappe.get_doc({k: v for k, v in doc.items() if v is not None}).insert(ignore_permissions=True)
+		made += 1
+	if made:
+		_log("{} breeders and calves".format(made))
+
+
+def ensure_history(data):
+	"""Earlier weighings of animals still on the farm (the old sheets, matched by old tag), and the
+	purchase Old New stock records for them where the animal has none."""
+	weighed = updated = 0
+	for n, (tag, h) in enumerate((data.get("history") or {}).items(), start=1):
+		if not frappe.db.exists("Animal", tag):
+			continue
+		weighed += _weigh(tag, h["weights"])
+		if h.get("acquired"):
+			have = frappe.db.get_value("Animal", tag, ["acquisition_date", "purchase_value", "remarks"], as_dict=True)
+			want = {}
+			if not have.acquisition_date:
+				want.update(acquisition_date=h["acquired"], origin="Purchased")
+			if not have.purchase_value and h.get("cost"):
+				want["purchase_value"] = h["cost"]
+			if want and h.get("source") and h["source"] not in (have.remarks or ""):
+				want["remarks"] = "; ".join(x for x in (have.remarks, "bought at " + h["source"]) if x)
+			if want:
+				frappe.db.set_value("Animal", tag, want, update_modified=False)
+				updated += 1
+		if n % 50 == 0:
+			frappe.db.commit()
+	if weighed or updated:
+		_log("history: {} earlier weighings, {} animals given their purchase".format(weighed, updated))
+
+
+def ensure_sold_animals(data):
+	"""The animals the sold sheets list, with their weighings before the sale. They are disposed of
+	later (ensure_disposals), after their health events, so nothing is recorded on a retired animal."""
+	made = weighed = 0
+	for n, s in enumerate(data.get("sales") or [], start=1):
+		if not frappe.db.exists("Animal", s["id"]):
+			frappe.get_doc({
+				"doctype": "Animal", "tag_number": s["id"], "burn_name": s["burn_name"], "sex": s["sex"],
+				"species": "Cattle", "current_herd": s["herd"], "company": COMPANY, "status": "Active",
+				"stream": "Breeding" if s["sheet"] == "Breeders sold" else "Feedlot",
+				"remarks": "From the farm's tracker, '{}'".format(s["sheet"]),
+			}).insert(ignore_permissions=True)
+			made += 1
+		weighed += _weigh(s["id"], s["weights"], until=s["date"])
+		if n % 50 == 0:
+			frappe.db.commit()
+	if made or weighed:
+		_log("sold animals: {} made, {} weighings".format(made, weighed))
+
+
+def ensure_health(data):
+	"""Vaccinations, dewormings and treatments as backdated Livestock Events on the animal, with no drug
+	lines. A history record issues nothing and leaves nothing waiting to be issued: the drugs were used
+	months ago, and today's store is not where they came from."""
+	operator = _operator() or frappe.db.get_value("Employee", {"status": "Active"}, "name")
+	made = 0
+	for n, e in enumerate(data.get("health") or [], start=1):
+		if not frappe.db.exists("Animal", e["animal"]):
+			continue
+		if frappe.db.exists("Livestock Event", {"animal": e["animal"], "event_type": e["event_type"],
+		                                        "event_date": e["date"], "docstatus": ["!=", 2]}):
+			continue
+		doc = frappe.get_doc({"doctype": "Livestock Event", "animal": e["animal"], "event_type": e["event_type"],
+		                      "event_date": e["date"], "operator": operator, "custom_is_backdated": 1,
+		                      "remarks": "{} ({})".format(e["remarks"], SEED_TAG)})
+		doc.insert(ignore_permissions=True)
+		doc.submit()
+		made += 1
+		if n % 50 == 0:
+			frappe.db.commit()
+	if made:
+		_log("{} health events".format(made))
+
+
+def ensure_buyer():
+	"""One Customer stands for every buyer in the tracker's sales, which name none. A Sold disposal
+	with a price cannot be submitted without a Customer."""
+	if frappe.db.exists("Customer", HISTORY_BUYER):
+		return HISTORY_BUYER
+	def leaf(doctype, setting, root):
+		# the selling default, else a real leaf (not one of ERPNext's _Test fixtures), else the root
+		return frappe.db.get_single_value("Selling Settings", setting) or frappe.db.get_value(
+			doctype, {"is_group": 0, "name": ["not like", "\\_Test%"]}, "name") or root
+
+	group = leaf("Customer Group", "customer_group", "All Customer Groups")
+	territory = leaf("Territory", "territory", "All Territories")
+	frappe.get_doc({"doctype": "Customer", "customer_name": HISTORY_BUYER, "customer_type": "Company",
+	                "customer_group": group, "territory": territory}).insert(ignore_permissions=True)
+	_log("customer " + HISTORY_BUYER)
+	return HISTORY_BUYER
+
+
+def ensure_disposals(data):
+	"""A backdated Sold disposal per sale: it retires the animal and posts no invoice or journal.
+
+	A priced sale goes through the disposal's own checks (price per kg, a Customer). A sale the tracker
+	gives no price for (Moyale sold, Breeders sold) cannot pass the price check, and there is no price
+	to invent: it is submitted with `flags.ignore_validate`, a server-side flag no client can set, so it
+	records the exit, the exit weight and the reason and leaves the price empty. on_submit still runs
+	and, the disposal being backdated, posts nothing."""
+	buyer = None
+	made = 0
+	for n, s in enumerate(data.get("sales") or [], start=1):
+		if not frappe.db.exists("Animal", s["id"]):
+			continue
+		if frappe.db.exists("Livestock Disposal", {"animal": s["id"], "docstatus": 1}):
+			continue
+		doc = frappe.get_doc({
+			"doctype": "Livestock Disposal", "animal": s["id"], "disposal_date": s["date"], "disposal_type": "Sold",
+			"custom_is_backdated": 1, "exit_weight_kg": s.get("exit_weight_kg"), "reason_details": _sale_reason(s),
+		})
+		if s.get("price_per_kg"):
+			buyer = buyer or ensure_buyer()
+			doc.update({"price_per_kg": s["price_per_kg"], "customer": buyer})
+		else:
+			doc.flags.ignore_validate = True
+		doc.insert(ignore_permissions=True)
+		doc.submit()
+		made += 1
+		if n % 50 == 0:
+			frappe.db.commit()
+	if made:
+		_log("{} sales recorded (backdated: no invoice, no journal)".format(made))
+
+
+def _sale_reason(s):
+	parts = ["Mutara tracker, '{}'".format(s["sheet"])]
+	if s.get("carcass_kg"):
+		parts.append("sold on carcass weight {} kg at {} KES/kg = {} KES".format(
+			s["carcass_kg"], s["carcass_rate"], s["sale_price"]))
+	elif s.get("sale_price"):
+		parts.append("{} kg at {} KES/kg = {} KES".format(s["exit_weight_kg"], s["price_per_kg"], s["sale_price"]))
+	if s.get("remarks"):
+		parts.append(s["remarks"])
+	return "; ".join(parts)
 
 
 # ---------------------------------------------------------------------------
@@ -622,6 +822,14 @@ def ensure_settings():
 		            "parentfield": "heifer_herds", "idx": len(rows) + 1})
 		row.insert(ignore_permissions=True)
 		_log("heifer herds: Heifers")
+	# The calf group the breeders' calves are in (calf_separation, herd_movement.calf_group_herds).
+	calves = frappe.get_all("Livestock Calf Herd", filters={"parent": "Livestock Settings"}, pluck="herd")
+	if frappe.db.exists("Herds", CALF_HERD) and CALF_HERD not in calves:
+		row = frappe.new_doc("Livestock Calf Herd")
+		row.update({"herd": CALF_HERD, "parent": "Livestock Settings", "parenttype": "Livestock Settings",
+		            "parentfield": "calf_herds", "idx": len(calves) + 1})
+		row.insert(ignore_permissions=True)
+		_log("calf herds: " + CALF_HERD)
 	frappe.clear_document_cache("Livestock Settings", "Livestock Settings")
 
 
@@ -670,6 +878,13 @@ def _execute(post_stock=True, retire=True):
 	ensure_rations(data)
 	frappe.db.commit()
 	ensure_animals(data)
+	ensure_breeders(data)
+	ensure_history(data)
+	ensure_sold_animals(data)
+	frappe.db.commit()
+	ensure_health(data)
+	frappe.db.commit()
+	ensure_disposals(data)
 	ensure_counts(data)
 	frappe.db.commit()
 	ensure_labour(data)
