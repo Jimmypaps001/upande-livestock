@@ -22,6 +22,15 @@ from upande_livestock.serverscripts.tests.test_feed_nutrition import Fake, rec
 SETTING = "premanufacture_concentrate"
 
 
+def _farm_off():
+	"""The farm switch off AND every herd following it. A herd on its own Pre-manufacture mode (Mutara's
+	shoat groups) keeps a concentrate stage whatever the farm says, which is the per-herd rule, not what
+	these tests are about. Rolled back with the test."""
+	frappe.db.set_single_value("Livestock Settings", SETTING, 0)
+	if frappe.get_meta("Herds").has_field("concentrate_mode"):
+		frappe.db.sql("update `tabHerds` set concentrate_mode = 'Farm default'")
+
+
 class TestTheSwitch(IntegrationTestCase):
 	def tearDown(self):
 		frappe.db.rollback()
@@ -34,12 +43,12 @@ class TestTheSwitch(IntegrationTestCase):
 		self.assertTrue(CN.premanufacture_concentrate_on())
 
 	def test_off_refuses_set_concentrate_with_a_clear_message(self):
-		self._set(0)
+		_farm_off()
 		got = set_concentrate({"name": "Whatever", "lines": [{"item_code": "x", "qty": 1}]})
 		self.assertIn("does not pre-manufacture", got["error"])
 
 	def test_off_refuses_manufacture_concentrate(self):
-		self._set(0)
+		_farm_off()
 		with patch("upande_livestock.serverscripts.feeding.manufacture_concentrate.guard_stock"):
 			got = manufacture_concentrate("whatever", qty=10)
 		self.assertIn("does not pre-manufacture", got["error"])
@@ -180,7 +189,7 @@ class TestManufactureAll(IntegrationTestCase):
 		self.assertEqual(by[self.half_herd]["status"], "made")
 
 	def test_with_the_switch_off_no_concentrate_is_planned(self):
-		frappe.db.set_single_value("Livestock Settings", SETTING, 0)
+		_farm_off()
 		with patch("upande_livestock.serverscripts.feeding.feed_day_status._issues_on", self._issues), patch.object(
 			MA, "guard_stock"
 		), patch.object(MA, "_plan_concentrates") as planned:

@@ -59,7 +59,8 @@ class TestReadingTheRations(IntegrationTestCase):
 
 	def test_it_says_whether_the_output_and_the_ingredients_agree(self):
 		for h in self.fed:
-			total = sum(flt(line["qty"]) for line in h["lines"])
+			# Per-head doses (g / ml) sit outside the kilos a head eats; every line here is in kilos.
+			total = sum(flt(line["qty"]) for line in h["lines"] if not line.get("is_dose"))
 			self.assertAlmostEqual(h["lines_total"], total, places=3)
 			self.assertEqual(h["balanced"], abs(total - h["per_head_kg"]) < 0.0005)
 
