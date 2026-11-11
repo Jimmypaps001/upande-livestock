@@ -93,6 +93,11 @@ def row_units(item_code, stock_uom, line, old_row=None):
 	if dose:
 		return dose, conversion_factor(item_code, dose)
 	uom = line.get("uom")
+	# A line that names no unit and replaces a dose row IS that dose, in its unit. The phone's manual
+	# feed (before it learned to send units) reads the recipe's 7 back and sends 7 with nothing else;
+	# written in the stock unit at one, 7 g of Diamond V a head would be mixed as 7 kg.
+	if not uom and old_row is not None and is_dose(old_row.uom):
+		return old_row.uom, old_row.conversion_factor
 	if old_row is not None and not is_dose(old_row.uom) and (not uom or uom == old_row.uom):
 		return old_row.uom, old_row.conversion_factor
 	if uom and uom != stock_uom:

@@ -144,6 +144,17 @@ class TestDoseLinesInARecipe(unittest.TestCase):
 				("Kilogram", 0.05),
 			)
 
+	def test_a_unitless_line_replacing_a_dose_stays_that_dose(self):
+		# The phone's manual feed sends {item_code, qty} only: 7 back for a 7 g row must stay 7 g, not 7 kg.
+		old = frappe._dict(uom="Gram", conversion_factor=0.001)
+		self.assertEqual(TB.row_units("yeast", "Kilogram", {"item_code": "yeast", "qty": 7}, old), ("Gram", 0.001))
+		# Naming kilograms is a deliberate change of unit and is honoured.
+		with patch.object(TB, "conversion_factor", return_value=1):
+			self.assertEqual(
+				TB.row_units("yeast", "Kilogram", {"item_code": "yeast", "qty": 0.007, "uom": "Kilogram"}, old),
+				("Kilogram", 1),
+			)
+
 	def test_row_units_defaults_to_the_stock_unit(self):
 		self.assertEqual(TB.row_units("bran", "Kilogram", {"item_code": "bran", "qty": 2}), ("Kilogram", 1))
 
