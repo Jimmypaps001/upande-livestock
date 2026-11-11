@@ -190,3 +190,7 @@ upande_livestock.patches.retire_bull_cull
 # Pre-manufacture Concentrate: on wherever it was never set, so today's two-stage
 # feeding is unchanged until a manager turns it off.
 upande_livestock.patches.default_premanufacture_concentrate
+
+# Livestock Nutritionist (Kaitet's Quality role, used for feed at Mutara): keeps the
+# feed library and designs rations; BOM read/create, Item and Work Order read, no stock.
+upande_livestock.patches.ensure_livestock_nutritionist_role

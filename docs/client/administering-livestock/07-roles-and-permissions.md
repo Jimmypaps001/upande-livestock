@@ -28,6 +28,7 @@ So the app now owns five roles, cut to the jobs those four people actually did.
 | **Livestock Breeder** | Service, pregnancy diagnosis, calving and births, breeds |
 | **Livestock Attendant** | Feeds herds, manufactures feed, moves animals, records weights |
 | **Livestock Stores** | Regulates feed stock |
+| **Livestock Nutritionist** | Keeps the feed library's nutrient figures and balances the herds' rations and concentrates on Feed Design. Moves no stock |
 
 `Livestock Manager` was adopted rather than recreated — it already existed, the
 app already used it in sixteen permission blocks, and it already fitted the
@@ -54,6 +55,15 @@ naming.
 | Livestock Alert | RWCD | RW | RW | RW | R |
 
 System Manager holds full permissions on everything.
+
+**Livestock Nutritionist** sits outside the matrix above: it reads no animals or
+events. It holds RWC on Livestock Feed, R on Herds and Livestock Settings, and,
+on the ERPNext side, BOM read and create (a ration or concentrate is a BOM;
+saving one creates it), Item read and Work Order read. It has no Stock Entry
+or Work Order create, so it saves recipes and Stores or the Manager mixes them.
+A user holding only this role sees just Feed Design, Ration Editor, Rations,
+Concentrate and Feed in Store in the web app, without the Mix and Manufacture
+all buttons. The role was ported from Kaitet's Livestock Quality role.
 
 Read the matrix as the design statement it is: a **Vet**
 cannot move an animal or dispose of one. Only the **Manager** can dispose of an

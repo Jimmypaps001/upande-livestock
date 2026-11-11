@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { bootstrap, isError } from "@/lib/frappe";
+import { canMix } from "@/lib/roles";
 import {
   concentrates,
   feedBatches,
@@ -314,13 +315,15 @@ export function Concentrate() {
                       <Button variant="secondary" onClick={() => edit(c)}>
                         Recipe
                       </Button>
-                      <Button disabled={mixing === c.item_code} onClick={() => void mix(c)}>
-                        {mixing === c.item_code ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          "Mix"
-                        )}
-                      </Button>
+                      {canMix() && (
+                        <Button disabled={mixing === c.item_code} onClick={() => void mix(c)}>
+                          {mixing === c.item_code ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            "Mix"
+                          )}
+                        </Button>
+                      )}
                     </div>
                   </div>
 

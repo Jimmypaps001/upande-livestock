@@ -80,6 +80,15 @@ LIVESTOCK_ROLES = (
 )
 
 
+# The nutritionist: keeps the feed library's nutrient figures and balances the
+# herds' rations and concentrates. Saves recipes; moves no stock (not in
+# STOCK_ROLES), so mixing and issuing stay with Stores and the Manager. Kept
+# out of LIVESTOCK_ROLES on purpose — that tuple means "may see animals and
+# events", which this role does not need. Ported from Kaitet's lab role
+# (Livestock Quality), which Mutara uses for feed instead of milk.
+NUTRITIONIST_ROLE = "Livestock Nutritionist"
+
+
 def guard_read_or_livestock(doctype: str) -> None:
 	"""Raise unless the user can read `doctype` or holds any livestock role.
 

@@ -18,6 +18,7 @@ import { Picker } from "@/components/ui/picker";
 import { useToast } from "@/components/Toast";
 import { setConcentrate } from "@/lib/feeding";
 import { isError } from "@/lib/frappe";
+import { canMix } from "@/lib/roles";
 import { getHerdRations, setHerdRation, type HerdRation } from "@/lib/herds";
 import {
   expandConcentrates, livestockFeeds, manufactureAllFeeds,
@@ -264,10 +265,13 @@ export function FeedDesign() {
         eyebrow="Upande Livestock · Feeding"
         title="Feed Design"
         actions={
-          <Button onClick={() => void openAll()} disabled={!library}>
-            <Factory className="mr-2 h-4 w-4" strokeWidth={1.75} />
-            Manufacture all
-          </Button>
+          // Mixing moves stock; the nutritionist designs and saves, Stores mixes.
+          canMix() ? (
+            <Button onClick={() => void openAll()} disabled={!library}>
+              <Factory className="mr-2 h-4 w-4" strokeWidth={1.75} />
+              Manufacture all
+            </Button>
+          ) : undefined
         }
       >
         Pick feeds, set the amounts, and see what is in the mix. Save it as a herd&rsquo;s ration

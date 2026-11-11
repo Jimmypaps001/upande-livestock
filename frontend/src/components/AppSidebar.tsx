@@ -49,6 +49,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { SidebarUser } from "@/components/SidebarUser";
 import { useUnreadNotifications } from "@/hooks/use-notifications";
 import { bootstrap } from "@/lib/frappe";
+import { viewAllowed } from "@/lib/roles";
 import { routeHash, type View } from "@/lib/router";
 import { cn } from "@/lib/utils";
 import upandeLogo from "@/assets/upande_logo.png";
@@ -344,10 +345,14 @@ export function AppSidebar({
               ...section,
               // A farm that mixes straight from raw ingredients has no
               // concentrate stage, so its page is not offered.
+              // A nutritionist-only user is shown the feed screens alone.
               items: section.items.filter(
-                (item) => premanufacture || item.view !== "concentrate",
+                (item) =>
+                  (premanufacture || item.view !== "concentrate") && viewAllowed(item.view),
               ),
-            })).map((section) => (
+            }))
+              .filter((section) => section.items.length > 0)
+              .map((section) => (
               <SidebarGroup key={section.label}>
                 <SidebarGroupLabel>{section.label}</SidebarGroupLabel>
                 <SidebarGroupContent>

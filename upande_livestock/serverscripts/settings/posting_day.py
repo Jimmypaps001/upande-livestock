@@ -14,7 +14,7 @@ import frappe
 from frappe.utils import today
 
 from upande_livestock.serverscripts.common import backdate
-from upande_livestock.serverscripts.common.envelope import guard_read, run
+from upande_livestock.serverscripts.common.envelope import NUTRITIONIST_ROLE, guard_read, run
 from upande_livestock.serverscripts.common.guards import employee_status
 
 
@@ -22,8 +22,10 @@ from upande_livestock.serverscripts.common.guards import employee_status
 def posting_day():
 	def go():
 		# Every record screen is about animals; whoever may read them may know
-		# what day it is to the server.
-		guard_read("Animal")
+		# what day it is to the server. The nutritionist reads no animals, and
+		# still dates the rations it saves.
+		if NUTRITIONIST_ROLE not in frappe.get_roles():
+			guard_read("Animal")
 		# is_employee rides along: it is the one extra fact the phone needs when it
 		# wakes, and this is the light call it already makes then. A user with no
 		# Employee is view-only (guards.require_employee refuses their records).

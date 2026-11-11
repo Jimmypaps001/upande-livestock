@@ -54,7 +54,7 @@ Mutara wants to design its cattle feeds knowing what is in them (protein, carboh
 | notes | Small Text | |
 | low_stock_threshold | Float | as on Spray Product |
 
-Validation: each percent 0–100; CP + carbohydrate + NDF + fat must not exceed 100 (a typo guard); DM required unless the category is a made feed. Permissions: Livestock Manager full, Livestock User / Livestock Quality read; System Manager full.
+Validation: each percent 0–100; CP + carbohydrate + NDF + fat must not exceed 100 (a typo guard); DM required unless the category is a made feed. Permissions: Livestock Manager full, Livestock Nutritionist read/write/create (it keeps the figures), the other livestock roles read; System Manager full.
 
 ### 2. Nutrition maths (`serverscripts/feeding/feed_nutrition.py`, pure + tested)
 

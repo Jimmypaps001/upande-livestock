@@ -1027,7 +1027,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-10-05 18:30:00.000000",
+ "modified": "2026-11-11 00:00:00.000000",
  "modified_by": "Administrator",
  "module": "Upande Livestock",
  "name": "Livestock Settings",
@@ -1082,6 +1082,10 @@
   {
    "read": 1,
    "role": "Livestock Stores"
+  },
+  {
+   "read": 1,
+   "role": "Livestock Nutritionist"
   }
  ],
  "row_format": "Dynamic",
