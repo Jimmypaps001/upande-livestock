@@ -9,15 +9,15 @@ import { cn } from "@/lib/utils";
 
 /**
  * The drawings, read from the files the desk serves
- * (upande_livestock/public/images/silhouettes/, written by
- * scripts/build_silhouettes.py) and inlined into the bundle, so they paint in
+ * (upande_livestock/public/images/silhouettes/, the supplied artwork traced by
+ * scripts/trace_silhouettes.py) and inlined into the bundle, so they paint in
  * the first frame and take the page's colour: every shape is `currentColor`.
+ * The grazing cow with its grass is for print and the phone, not the lists.
  */
-const FILES = import.meta.glob("../../../../upande_livestock/public/images/silhouettes/*.svg", {
-  query: "?raw",
-  import: "default",
-  eager: true,
-}) as Record<string, string>;
+const FILES = import.meta.glob(
+  ["../../../../upande_livestock/public/images/silhouettes/*.svg", "!**/*-grass.svg"],
+  { query: "?raw", import: "default", eager: true },
+) as Record<string, string>;
 
 const ART: Partial<Record<Silhouette, { viewBox: string; inner: string }>> = {};
 for (const [path, text] of Object.entries(FILES)) {
@@ -99,7 +99,9 @@ export function SilhouetteFrame({
         name={pickSilhouette(animal)}
         kind={silhouetteClass(animal)}
         label={label}
-        className={cn(round ? "w-[86%] translate-y-[4%]" : "w-4/5", "h-auto", artClassName)}
+        // the drawings differ in shape (a cow side on is wide, a calf facing us
+        // is tall), so each is fitted inside the same box rather than to a width
+        className={cn(round ? "h-[64%] w-[78%]" : "h-[62%] w-4/5", artClassName)}
       />
     </span>
   );

@@ -89,10 +89,14 @@ describe("the drawings", () => {
       const svg = container.querySelector("svg")!;
       expect(svg.getAttribute("data-pose")).toBe(name);
       expect(svg.innerHTML).toContain("currentColor");
-      expect(svg.querySelectorAll("path").length).toBeGreaterThan(1);
+      expect(svg.querySelectorAll("path").length).toBeGreaterThan(0);
     }
   });
 
+  it("sheep and goats, with no artwork of their own yet, wear the calf's", () => {
+    expect(POSES.sheep).toEqual(POSES.calf);
+    expect(POSES.goat).toEqual(POSES.calf);
+  });
   it("a photo-less row in the animal search wears its silhouette", () => {
     const a: AnimalSummary = {
       id: "B013/26", name: "B013/26", sex: "Male", herd: "Finishers", breed: "Boran",
@@ -107,11 +111,7 @@ describe("the drawings", () => {
 
 /** An animal whose pick is `name`, found by trying numbers in its class. */
 function findIdFor(name: string) {
-  const base = name.startsWith("sheep")
-    ? { species: "Sheep" }
-    : name.startsWith("goat")
-      ? { species: "Goat" }
-      : name.startsWith("calf")
+  const base = name.startsWith("calf")
         ? { sex: "Male", stage: "calf" as const }
         : name.startsWith("bull")
           ? { sex: "Male", stage: "bull" as const }

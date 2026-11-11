@@ -14,9 +14,10 @@
 
 THE SCENE (Livestock's own): the arrow shrinks into the centre of the disc, a
 strip of green grass draws across, and a cow walks in onto it — one solid
-side-on silhouette in the arrow's own grey (the ``cow`` of
-scripts/build_silhouettes.py, the same drawing that stands in for an animal with
-no photograph), the grass the one accent. The round is quiet: she stands and her
+side-on silhouette in the arrow's own grey (the supplied standing cow,
+``illustration 5.png``, traced by scripts/trace_silhouettes.py into
+``scripts/traced_cow.json`` with the tail cut free at the rump), the grass the
+one accent. The round is quiet: she stands and her
 tail swings a little. On the desk it eases in on hover, the round loops while
 the pointer stays, and on leave it all eases back out to the plain mark. The
 loader runs in → round → out.
@@ -32,11 +33,7 @@ It also writes the cow mark on its own into ``design/logo/`` for the mobile app:
 from __future__ import annotations
 
 import json
-import sys
 from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-import build_silhouettes  # noqa: E402
 
 REPO = Path(__file__).resolve().parents[1]
 ROOT = REPO / "upande_livestock" / "public" / "images"
@@ -58,25 +55,21 @@ ARROW = """<g class="arrow">
   </g>"""
 
 # The cow: side on, facing right, one solid silhouette in the arrow's own grey,
-# standing on a strip of green grass, the one accent colour. She is the ``cow``
-# of scripts/build_silhouettes.py (its 240 × 160 canvas, ground at y 152),
-# scaled into a 560 × 380 box whose grass runs at y 334; COW_AT places the box
-# on the disc. Her tail is its own group so the round can swing it.
+# standing on a strip of green grass, the one accent colour. She is the traced
+# cow of scripts/traced_cow.json (a 473 × 318 canvas, hooves on its bottom
+# edge), scaled into a 560 × 380 box whose grass runs at y 334; COW_AT places
+# the box on the disc. Her tail is its own path, swung about the tail head.
 COW_INK = "#45433f"
 GRASS = "#6a9a4c"
 COW_AT = "translate(50 158) scale(1.05)"
-COW_IN_BOX = "translate(10 0.6) scale(2.2)"     # the silhouette canvas into the box
+COW_IN_BOX = "translate(60 40) scale(0.93)"     # the traced canvas into the box
 
-_COW = build_silhouettes.cow_mark()
-_TAIL_D, _TAIL_W = _COW["tail_stroke"]
+_COW = json.loads((Path(__file__).resolve().parent / "traced_cow.json").read_text())
 
 
 def cow_paths(ink: str, indent: str = "      ") -> tuple[str, str]:
-    """(the body's paths, the tail's paths) in ``ink``."""
-    body = "\n".join(f'{indent}<path d="{d}"/>' for d in _COW["body"])
-    tail = (f'{indent}  <path d="{_TAIL_D}" fill="none" stroke="{ink}" stroke-width="{_TAIL_W}" '
-            f'stroke-linecap="round"/>\n{indent}  <path d="{_COW["tail"]}"/>')
-    return body, tail
+    """(the body's path, the tail's path); both take their colour from the group."""
+    return f'{indent}<path d="{_COW["body"]}"/>', f'{indent}  <path d="{_COW["tail"]}"/>'
 
 
 _BODY, _TAILS = cow_paths(COW_INK, "        ")
@@ -304,9 +297,9 @@ def write_design():
 
     body_paths, tail_paths = cow_paths("currentColor", "    ")
     cow = "\n".join([
-        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="16 14 216 146" role="img" aria-label="Cow">',
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="-10 0 493 330" role="img" aria-label="Cow">',
         note,
-        f'  <path d="M20 153 C60 150 190 150 228 153" fill="none" stroke="{GRASS}" stroke-width="4" stroke-linecap="round"/>',
+        f'  <path d="M-4 318 C80 313 390 313 477 318" fill="none" stroke="{GRASS}" stroke-width="8" stroke-linecap="round"/>',
         '  <g fill="currentColor">',
         tail_paths,
         body_paths,
