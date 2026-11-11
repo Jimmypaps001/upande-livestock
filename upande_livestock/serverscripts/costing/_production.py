@@ -24,8 +24,13 @@ from frappe.utils import flt
 from upande_livestock.serverscripts.costing._maths import as_date
 
 APP = "upande_production"
-ALLOCATION_COSTS = "upande_production.api.asset_allocation.allocation_costs"
-SILAGE_COST_SUMMARY = "upande_production.api.silage.silage_cost_summary"
+# Production's logic functions, not its whitelisted endpoints: the endpoints
+# guard on production's own roles (or Stock Entry read), which a livestock
+# manager does not hold, so every farm user would read "fuel not available".
+# The livestock endpoint that asks has already checked its own user, and only
+# the costs come back, not production's records.
+ALLOCATION_COSTS = "upande_production.production.logic.asset_allocation.allocation_costs"
+SILAGE_COST_SUMMARY = "upande_production.production.logic.silage.cost_summary"
 
 
 def installed() -> bool:
