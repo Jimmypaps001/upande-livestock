@@ -5,8 +5,8 @@
 
 The merge rules are tested without a site in `costing/test_maths.py`; this asks
 what only a site can answer — the doctype's own validation, that saving one
-posts nothing to the stores, and that the report uses a history day only where
-the ledger has no feed issue for it.
+posts nothing to the stores, that the report uses a history day only where
+the ledger has no feed issue for it, and that the Rations page shows it marked.
 """
 
 from unittest.mock import patch
@@ -17,6 +17,7 @@ from frappe.utils import getdate
 
 from upande_livestock.serverscripts.costing import _data, _production
 from upande_livestock.serverscripts.costing.cost_per_animal import report
+from upande_livestock.serverscripts.feeding.ration_history import ration_history
 from upande_livestock.serverscripts.tests.herd_fixture import cow_herd
 
 #: A day far enough back that no real feeding or history is on it.
@@ -87,6 +88,18 @@ class TestFeedHistory(IntegrationTestCase):
 		self.assertEqual(row["history_feed_cost"], 0)
 		herd = next(h for h in out["herds"] if h["herd"] == self.herd)
 		self.assertEqual((herd["feed_cost"], herd["history_days"]), (700, 0))
+
+	def test_the_rations_page_shows_history_marked(self):
+		self._history(head=40)
+		res = ration_history(herd=self.herd, from_date=DAY, to_date=DAY)
+		self.assertTrue(res.get("ok"), res)
+		rows = [r for r in res["rows"] if r["fed_on"] == DAY]
+		self.assertEqual(len(rows), 1)
+		row = rows[0]
+		self.assertTrue(row["from_history"])
+		self.assertEqual((row["bom_no"], row["qty"], row["uom"], row["heads"]), ("", 100, "Kg", 40))
+		self.assertEqual([(ln["item_code"], ln["qty"]) for ln in row["lines"]], [(self.item, 100)])
+		self.assertIn(self.herd, {h["herd"] for h in res["herds"]})
 
 	def test_the_nutritionist_may_read_but_not_write(self):
 		perm = {p.role: p for p in frappe.get_meta(DOCTYPE).permissions}

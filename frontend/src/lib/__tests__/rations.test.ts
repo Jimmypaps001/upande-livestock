@@ -62,6 +62,14 @@ describe("recipesUsed", () => {
     expect(used[1].qty).toBe(108);
     expect(used[1].last_fed).toBe("2026-07-10");
   });
+
+  it("leaves tracker history out: it has no BOM and is not a recipe", () => {
+    const used = recipesUsed([
+      row({ bom_no: "BOM-TMR Calves Meal-005", fed_on: "2026-07-09" }),
+      row({ bom_no: "", recipe: "Tracker history", fed_on: "2025-12-01", from_history: true }),
+    ]);
+    expect(used.map((u) => u.bom_no)).toEqual(["BOM-TMR Calves Meal-005"]);
+  });
 });
 
 describe("averageGain", () => {

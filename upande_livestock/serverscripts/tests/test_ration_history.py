@@ -61,6 +61,8 @@ class TestRationHistory(IntegrationTestCase):
 				by_wo.setdefault((getdate(wo.fed_on), wo.bom_no), []).append(wo.name)
 
 		for row in res["rows"]:
+			if row.get("from_history"):
+				continue          # tracker history: no Work Order behind it, by design
 			key = (getdate(row["fed_on"]), row["bom_no"])
 			self.assertIn(
 				key,
@@ -89,6 +91,8 @@ class TestRationHistory(IntegrationTestCase):
 
 		checked = 0
 		for row in res["rows"]:
+			if row.get("from_history"):
+				continue
 			key = (getdate(row["fed_on"]), row["herd"], row["bom_no"])
 			self.assertIn(key, expected)
 			qty, runs = expected[key]
@@ -161,7 +165,9 @@ class TestRationHistory(IntegrationTestCase):
 
 	def test_the_answer_is_bounded_and_says_when_it_was_cut_short(self):
 		full = ration_history(limit=1000)
-		self.assertFalse(full["truncated"])
+		# Tracker history (Livestock Feed History) can fill a thousand rows on its own.
+		if len(full["rows"]) < 1000:
+			self.assertFalse(full["truncated"])
 		total = len(full["rows"])
 		self.assertGreater(total, 3, "expected enough history to bound")
 
@@ -179,6 +185,8 @@ class TestRationHistory(IntegrationTestCase):
 		res = ration_history(limit=1)
 		listed = {h["herd"] for h in res["herds"]}
 		fed = {r.herd for r in _submitted_herd_work_orders()}
+		if frappe.db.table_exists("Livestock Feed History"):
+			fed.update(frappe.get_all("Livestock Feed History", pluck="herd", distinct=True, limit=0))
 		self.assertEqual(listed, fed)
 
 

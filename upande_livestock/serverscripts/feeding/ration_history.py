@@ -23,6 +23,13 @@ of 0.07, so the stock figure would show a fourteenth of the hay. The lines for
 every distinct recipe on the page are fetched in ONE query (`_recipe_lines`),
 not per row: the page returns up to a thousand rows and the same recipe fills
 most of them.
+
+**Days before the app are tracker history, and say so.** Mutara fed for a year
+on its spreadsheet; those days are Livestock Feed History records with no Work
+Order and no stock behind them. They join the page as rows with
+`from_history` set, no BOM, and the kilograms the sheet recorded — and only for
+a herd-day no Work Order covers, the same rule cost per animal keeps, so one
+day is never shown twice.
 """
 
 from itertools import groupby
@@ -41,6 +48,10 @@ from upande_livestock.serverscripts.feeding import _recipe_lines
 # says plainly when there is more behind it.
 DEFAULT_LIMIT = 200
 MAX_LIMIT = 1000
+
+HISTORY_DOCTYPE = "Livestock Feed History"
+HISTORY_ITEM_DOCTYPE = "Livestock Feed History Item"
+HISTORY_RECIPE = "Tracker history"
 
 
 def _bounds(from_date, to_date):
@@ -183,6 +194,88 @@ def _close_run(periods, herd, bom, start, end, by_day):
 			periods[(herd, day, bom)] = (start, end)
 
 
+def _wo_herd_days(herds, first, last):
+	"""{(herd, day)} with a submitted mix run: the herd-days tracker history must not repeat."""
+	if not herds or not first or not last:
+		return set()
+	rows = frappe.db.sql(
+		"""SELECT DISTINCT custom_herd AS herd, DATE(planned_start_date) AS day
+		   FROM `tabWork Order`
+		   WHERE docstatus = 1 AND custom_herd IN %(herds)s
+		     AND planned_start_date >= %(lo)s AND planned_start_date < %(hi)s""",
+		{"herds": tuple(herds), "lo": str(first), "hi": str(add_days(last, 1))},
+		as_dict=True,
+	)
+	return {(r.herd, getdate(r.day)) for r in rows}
+
+
+def _tracker_rows(herd, from_date, to_date, limit, labels):
+	"""Livestock Feed History as page rows, newest first, marked `from_history`.
+
+	The sheet's kilograms per feed are the row's lines, in kg; there is no BOM
+	because nothing was mixed through the app. A herd-day a Work Order covers is
+	left to the Work Order.
+	"""
+	if not frappe.db.table_exists(HISTORY_DOCTYPE):
+		return []
+	filters = {}
+	if herd:
+		filters["herd"] = herd
+	if from_date and to_date:
+		filters["date"] = ["between", [str(from_date), str(to_date)]]
+	elif from_date:
+		filters["date"] = [">=", str(from_date)]
+	elif to_date:
+		filters["date"] = ["<=", str(to_date)]
+	rows = frappe.get_all(
+		HISTORY_DOCTYPE, filters=filters,
+		fields=["name", "date", "herd", "head_count", "total_kg", "source"],
+		order_by="date desc, herd asc", limit=limit + 1,
+	)
+	if not rows:
+		return []
+	days = [getdate(r.date) for r in rows]
+	mixed = _wo_herd_days(sorted({r.herd for r in rows}), min(days), max(days))
+	rows = [r for r in rows if (r.herd, getdate(r.date)) not in mixed]
+	if not rows:
+		return []
+	lines = {}
+	for ln in frappe.get_all(
+		HISTORY_ITEM_DOCTYPE,
+		filters={"parenttype": HISTORY_DOCTYPE, "parent": ["in", [r.name for r in rows]]},
+		fields=["parent", "item", "qty_kg", "idx"], order_by="parent asc, idx asc", limit=0,
+	):
+		lines.setdefault(ln.parent, []).append(
+			{"item_code": ln.item, "item_name": ln.item, "qty": flt(ln.qty_kg), "uom": "Kg",
+			 "is_concentrate": False, "is_dose": False}
+		)
+	out = []
+	for r in rows:
+		day = getdate(r.date)
+		out.append({
+			"fed_on": str(day),
+			"herd": r.herd,
+			"herd_label": labels.get(r.herd, r.herd),
+			"bom_no": "",
+			"item_code": "",
+			"recipe": HISTORY_RECIPE,
+			"ration_kind": "",
+			"lines": lines.get(r.name, []),
+			"qty": flt(r.total_kg),
+			"uom": "Kg",
+			"runs": 0,
+			"heads": int(r.head_count or 0),
+			"feed_mode": "",
+			"avg_adg_kg": None,
+			"weighed_head": 0,
+			"period_start": str(day),
+			"period_end": str(day),
+			"from_history": True,
+			"history_source": r.source or "",
+		})
+	return out
+
+
 def _herds_with_history():
 	"""Every herd that appears anywhere in the ration history, for the filter.
 
@@ -196,8 +289,11 @@ def _herds_with_history():
 		   ORDER BY custom_herd""",
 		as_dict=True,
 	)
+	names = {r.custom_herd for r in rows}
+	if frappe.db.table_exists(HISTORY_DOCTYPE):
+		names.update(frappe.get_all(HISTORY_DOCTYPE, pluck="herd", distinct=True, limit=0))
 	labels = herd_label_map()
-	return [{"herd": r.custom_herd, "label": labels.get(r.custom_herd, r.custom_herd)} for r in rows]
+	return [{"herd": h, "label": labels.get(h, h)} for h in sorted(n for n in names if n)]
 
 
 @frappe.whitelist()
@@ -270,8 +366,16 @@ def ration_history(herd=None, from_date=None, to_date=None, limit=None):
 					# each period once rather than once per day row.
 					"period_start": str(span[0]),
 					"period_end": str(span[1]),
+					"from_history": False,
 				}
 			)
+
+		# Tracker history for the herd-days no mix run covers, merged in date order.
+		history = _tracker_rows(herd, f, t, cap, labels)
+		truncated = truncated or len(history) > cap
+		out = sorted(out + history[:cap], key=lambda r: r["fed_on"], reverse=True)
+		truncated = truncated or len(out) > cap
+		out = out[:cap]
 
 		return {
 			"ok": True,

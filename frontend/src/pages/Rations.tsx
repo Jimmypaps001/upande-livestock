@@ -114,8 +114,13 @@ function RationTable({
                     {row.recipe}
                     {/* The BOM number is what tells one "TMR Calves Meal" from the
                         next, so it is on the page, not in a tooltip. */}
-                    <div className="text-[11px] font-normal text-[var(--sd-quiet)]">
-                      {row.bom_no}
+                    <div
+                      className="text-[11px] font-normal text-[var(--sd-quiet)]"
+                      data-cell={row.from_history ? "ration-history" : undefined}
+                    >
+                      {row.from_history
+                        ? "from tracker history · no stock moved"
+                        : row.bom_no}
                       {row.ration_kind ? ` · ${row.ration_kind.toLowerCase()}` : ""}
                     </div>
                   </td>
@@ -189,7 +194,8 @@ export function Rations() {
       <PageHeading eyebrow="Upande Livestock · Feeding" title="Rations">
         Every recipe a herd was actually fed, the day it went out and how much was mixed —
         read from the mix run itself, so a recipe changed today does not rewrite what was
-        fed in April.
+        fed in April. Days fed before the app are shown from the farm's tracker, marked
+        as tracker history.
       </PageHeading>
 
       {error && <Notice tone="error">{error}</Notice>}

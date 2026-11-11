@@ -12,6 +12,10 @@ import type { RecipeLine } from "@/lib/feeding";
  * That is why `bom_no` travels beside `recipe` everywhere: "TMR Calves Meal"
  * names four different mixes over this farm's year, and only the BOM number
  * tells them apart.
+ *
+ * Days the farm fed before the app (Livestock Feed History, from its tracker)
+ * come back as rows with `from_history` and no BOM. They are not recipes: the
+ * page labels them and `recipesUsed` leaves them out.
  */
 
 const RATION_HISTORY =
@@ -50,6 +54,9 @@ export type RationRow = {
    *  period repeats the same gain, so a reader counts a period once. */
   period_start?: string;
   period_end?: string;
+  /** Tracker history: what the sheet recorded, no Work Order and no stock behind it. */
+  from_history?: boolean;
+  history_source?: string;
 };
 
 export type RationHistory = {
@@ -118,6 +125,8 @@ export function recipesUsed(
 ): Array<{ bom_no: string; recipe: string; days: number; last_fed: string; qty: number }> {
   const by = new Map<string, { bom_no: string; recipe: string; days: number; last_fed: string; qty: number }>();
   for (const row of rows || []) {
+    // Tracker history has no BOM: it is a record of kilos, not a recipe.
+    if (row.from_history) continue;
     const seen = by.get(row.bom_no);
     if (!seen) {
       by.set(row.bom_no, {
