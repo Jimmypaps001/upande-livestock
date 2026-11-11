@@ -1,0 +1,93 @@
+{
+ "actions": [],
+ "autoname": "field:labour_date",
+ "creation": "2026-11-11 12:00:00.000000",
+ "description": "The day's labour on the farm, entered by the feedlot manager: how many worked in each category and at what day rate. Cost per animal spreads it over every animal on the farm that day.",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "labour_date",
+  "cb_totals",
+  "total_workers",
+  "total_amount",
+  "sb_entries",
+  "entries",
+  "sb_notes",
+  "notes"
+ ],
+ "fields": [
+  {
+   "fieldname": "labour_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Date",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "cb_totals",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "total_workers",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Workers",
+   "read_only": 1
+  },
+  {
+   "fieldname": "total_amount",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Labour Cost",
+   "read_only": 1
+  },
+  {
+   "fieldname": "sb_entries",
+   "fieldtype": "Section Break",
+   "label": "Who worked"
+  },
+  {
+   "fieldname": "entries",
+   "fieldtype": "Table",
+   "label": "Labour",
+   "options": "Livestock Daily Labour Entry"
+  },
+  {
+   "fieldname": "sb_notes",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Small Text",
+   "label": "Notes"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-11-11 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Upande Livestock",
+ "name": "Livestock Daily Labour",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1, "delete": 1, "email": 1, "export": 1, "print": 1, "read": 1,
+   "report": 1, "role": "Livestock Manager", "share": 1, "write": 1
+  },
+  {
+   "create": 1, "delete": 1, "email": 1, "export": 1, "print": 1, "read": 1,
+   "report": 1, "role": "System Manager", "share": 1, "write": 1
+  },
+  {"read": 1, "report": 1, "role": "Livestock Attendant"},
+  {"read": 1, "report": 1, "role": "Livestock Breeder"},
+  {"read": 1, "report": 1, "role": "Livestock Vet"},
+  {"read": 1, "report": 1, "role": "Livestock Stores"}
+ ],
+ "sort_field": "labour_date",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

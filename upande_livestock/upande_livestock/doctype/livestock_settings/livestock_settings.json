@@ -150,7 +150,13 @@
   "sb_health_cases",
   "health_case_concern_days",
   "cb_health_cases",
-  "health_case_stale_days"
+  "health_case_stale_days",
+  "tab_costs",
+  "sb_labour_rates",
+  "labour_rate_feedlot_workers",
+  "cb_labour_rates",
+  "labour_rate_herders",
+  "labour_rate_other"
  ],
  "fields": [
   {
@@ -1021,13 +1027,46 @@
    "label": "Days a Paddock Rests Between Grazings",
    "default": "35",
    "description": "Regrowth wanted before a paddock is grazed again."
+  },
+  {
+   "fieldname": "tab_costs",
+   "fieldtype": "Tab Break",
+   "label": "Costs"
+  },
+  {
+   "fieldname": "sb_labour_rates",
+   "fieldtype": "Section Break",
+   "label": "Labour day rates",
+   "description": "What one worker is paid for a day, by category. The daily labour screen fills these in; a rate typed on the day wins. Cost per animal spreads the day's labour over every animal on the farm."
+  },
+  {
+   "fieldname": "labour_rate_feedlot_workers",
+   "fieldtype": "Currency",
+   "label": "Feedlot Worker Day Rate",
+   "non_negative": 1
+  },
+  {
+   "fieldname": "cb_labour_rates",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "labour_rate_herders",
+   "fieldtype": "Currency",
+   "label": "Herder Day Rate",
+   "non_negative": 1
+  },
+  {
+   "fieldname": "labour_rate_other",
+   "fieldtype": "Currency",
+   "label": "Other Worker Day Rate",
+   "non_negative": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-11-11 00:00:00.000000",
+ "modified": "2026-11-11 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Upande Livestock",
  "name": "Livestock Settings",

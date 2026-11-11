@@ -194,3 +194,7 @@ upande_livestock.patches.default_premanufacture_concentrate
 # Livestock Nutritionist (Kaitet's Quality role, used for feed at Mutara): keeps the
 # feed library and designs rations; BOM read/create, Item and Work Order read, no stock.
 upande_livestock.patches.ensure_livestock_nutritionist_role
+
+# Labour day rates (Costs tab): KES 400 for every category, from the farm's Labour Cost
+# sheet, written only where no rate is stored.
+upande_livestock.patches.seed_labour_day_rates
