@@ -45,7 +45,7 @@ vi.mock("@/lib/frappe", async () => {
 });
 
 const { Feeding } = await import("@/pages/Feeding");
-const { swapRow } = await import("@/components/feeding/ManualConfig");
+const { swapRow, manualUnitOptions, changeManualUnit } = await import("@/components/feeding/ManualConfig");
 
 beforeAll(() => {
   globalThis.ResizeObserver = class {
@@ -157,5 +157,27 @@ describe("swapping a forage at the mixer", () => {
     })!;
     expect(back.qty).toBe(10);
     expect(back.swapped_from).toBe("Maize Silage");
+  });
+});
+
+describe("a manual line in the store's unit", () => {
+  const units = {
+    molasses: { stock_uom: "Litre", uoms: [{ uom: "Litre", factor: 1, kg: 1.4 }, { uom: "Kg", factor: 0.714, kg: 1 }] },
+    hay: { stock_uom: "BALE", uoms: [{ uom: "BALE", factor: 1, kg: 1 / 0.07 }] },
+  };
+
+  it("offers kilos under the name the line already uses, and the store's units", () => {
+    expect(manualUnitOptions(units, { item_code: "molasses", uom: "Kg" })).toEqual(["Kg", "Litre"]);
+    expect(manualUnitOptions(units, { item_code: "hay", uom: "Kilogram" })).toEqual(["Kilogram", "BALE"]);
+  });
+
+  it("keeps the kilos when the unit changes", () => {
+    const row = { item_code: "molasses", item_name: "Molasses", uom: "Kg", qty: 4.2 };
+    expect(changeManualUnit(units, row, "Litre")).toEqual({ ...row, uom: "Litre", qty: 3 });
+  });
+
+  it("changes only the unit where nothing gives its kilos", () => {
+    const row = { item_code: "x", item_name: "X", uom: "Kg", qty: 2 };
+    expect(changeManualUnit(units, row, "Drum")).toEqual({ ...row, uom: "Drum", qty: 2 });
   });
 });

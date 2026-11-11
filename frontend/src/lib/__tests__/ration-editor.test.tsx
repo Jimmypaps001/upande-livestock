@@ -32,7 +32,10 @@ const library = {
       computed: true, recorded: false, has_data: true, nutrient_source: null, dry_matter_pct: 88, cp_pct: 14,
       carbohydrate_pct: 30, ndf_pct: 30, fat_pct: 4, me_mj_per_kg: 11 },
   ],
-  undescribed: [{ item_code: "ghost", item_name: "Ghost Feed", has_data: false }],
+  undescribed: [
+    { item_code: "ghost", item_name: "Ghost Feed", has_data: false },
+    { item_code: "molasses", item_name: "Molasses", has_data: false },
+  ],
 };
 
 const herds = [
@@ -75,8 +78,16 @@ const shoatMeal = {
 };
 
 let inUse = true;
+// What the stores count in: hay in bales (1 kg = 0.07 bale), molasses in
+// litres (1 kg = 0.714 L), both with a kilogram row; live names it "Kg".
+const units = {
+  hay: { stock_uom: "BALE", uoms: [{ uom: "BALE", factor: 1, kg: 1 / 0.07 }, { uom: "Kg", factor: 0.07, kg: 1 }] },
+  molasses: { stock_uom: "Litre", uoms: [{ uom: "Litre", factor: 1, kg: 1.4 }, { uom: "Kg", factor: 0.714, kg: 1 }] },
+};
+
 const call = vi.fn(async (method?: string, _args?: Record<string, unknown>) => {
   const m = method || "";
+  if (m.includes("feed_units")) return { ok: true, units };
   if (m.includes("livestock_feeds")) return { ...library, any_premanufacture: inUse };
   if (m.includes("feed_nutrition")) return { ok: true, as_fed_kg: 0, missing: [], unpriced: [], lines: [] };
   if (m.includes("herd_rations"))
@@ -177,7 +188,8 @@ describe("the Ration Editor, herd by herd", () => {
     await waitFor(() => expect(saveButton().disabled).toBe(false));
     // 25 + 1.5 across 69 head.
     expect(screen.getByText(/1,828.50 kg for 69 head/)).toBeTruthy();
-    expect(screen.getByText(/stocked in BALE/)).toBeTruthy();
+    // Hay is weighed in kilos and counted in bales: both are shown.
+    expect(await screen.findByText(/≈ 0\.1\d BALE/)).toBeTruthy();
   });
 
   it("calls out a recipe whose output and ingredients disagree, and not one that adds up", async () => {
@@ -312,5 +324,70 @@ describe("the Ration Editor, concentrates", () => {
     expect(screen.queryByRole("button", { name: /New concentrate/ })).toBeNull();
     expect(screen.queryByText("Shoat Meal")).toBeNull();
     expect(call.mock.calls.some(([m]) => String(m).includes("concentrates.concentrates"))).toBe(false);
+  });
+});
+
+describe("the Ration Editor, a line in the store's unit", () => {
+  async function addMolassesInLitres(qty: string) {
+    await pickHerd("Finishers");
+    fireEvent.click(await screen.findByLabelText("Add Molasses"));
+    const unitPickers = await screen.findAllByLabelText("Unit");
+    fireEvent.click(unitPickers[unitPickers.length - 1]);
+    fireEvent.click(await screen.findByRole("option", { name: "Litre" }));
+    fireEvent.change(await screen.findByLabelText("Amount (Litre)"), { target: { value: qty } });
+  }
+
+  it("offers the item's own units and shows the kilos beside the litres", async () => {
+    draw();
+    await addMolassesInLitres("3");
+    expect(await screen.findByText(/3 Litre ≈ 4\.20 kg/)).toBeTruthy();
+    // 15 + 5 kg + 3 L of molasses at 1.4 kg a litre.
+    expect(screen.getByText(/24\.20 kg/)).toBeTruthy();
+  });
+
+  it("saves the line in its unit and weighs it in kilos for the nutrition", async () => {
+    draw();
+    await addMolassesInLitres("3");
+    fireEvent.click(saveButton());
+    await waitFor(() => expect(sent("set_herd_ration")).toBeTruthy());
+    expect(sent("set_herd_ration")!.lines).toContainEqual({ item_code: "molasses", qty: 3, uom: "Litre" });
+    await waitFor(
+      () =>
+        expect(
+          call.mock.calls.some(
+            ([m, a]) =>
+              String(m).includes("feed_nutrition.feed_nutrition") &&
+              String((a as { lines: string }).lines).includes('{"item_code":"molasses","qty":4.2}'),
+          ),
+        ).toBe(true),
+      { timeout: 2000 },
+    );
+  });
+
+  it("keeps the kilos when the unit changes", async () => {
+    draw();
+    await pickHerd("Finishing group 1");
+    const unitPickers = await screen.findAllByLabelText("Unit");
+    // The hay line: 1.5 kg is 0.105 bale.
+    fireEvent.click(unitPickers[1]);
+    fireEvent.click(await screen.findByRole("option", { name: "BALE" }));
+    expect(((await screen.findByLabelText("Amount (BALE)")) as HTMLInputElement).value).toBe("0.105");
+  });
+
+  it("shares % of intake by kilos, whatever unit a line is in", async () => {
+    draw();
+    await addMolassesInLitres("3");
+    fireEvent.click(screen.getByRole("button", { name: "% of intake" }));
+    const shares = (await screen.findAllByLabelText("Share (%)")).map((e) => (e as HTMLInputElement).value);
+    // 15, 5 and 4.2 kg of 24.2.
+    expect(shares).toEqual(["61.98", "20.66", "17.36"]);
+    fireEvent.change(screen.getByLabelText("Kg per head per day"), { target: { value: "48.4" } });
+    fireEvent.click(saveButton());
+    await waitFor(() => expect(sent("set_herd_ration")).toBeTruthy());
+    // Doubled: about 6 L of molasses (the shares are kept to two places).
+    const molasses = (sent("set_herd_ration")!.lines as Array<{ item_code: string; qty: number; uom?: string }>)
+      .find((l) => l.item_code === "molasses")!;
+    expect(molasses.uom).toBe("Litre");
+    expect(molasses.qty).toBeCloseTo(6, 2);
   });
 });

@@ -28,8 +28,10 @@ import {
   expandConcentrates, livestockFeeds, type FeedLibrary, type LibraryFeed,
 } from "@/lib/nutrition";
 import {
-  doseForHerd, isDoseUom, kgTotal, toLine, unitLabel, type LineUnit,
+  doseForHerd, isDoseUom, isWeighed, kgTotal, qtyForKilos, rowKilos, toLine, toNutrientLine,
+  unitFromUom, unitLabel, type LineUnit,
 } from "@/lib/ration-maths";
+import { isKg, kgPerUnit, stockEquivalent, storeUnits, useFeedUnits, type UnitsMap } from "@/lib/units";
 import { concentratesInUse } from "@/lib/roles";
 import { hashParams } from "@/lib/router";
 import { useSaveShortcut } from "@/lib/use-save-shortcut";
@@ -64,8 +66,9 @@ function selectionFromHash(): Selection {
   return null;
 }
 
-function unitOf(uom: string | null | undefined, isDose?: boolean): LineUnit {
-  return (isDose === false ? "kg" : isDoseUom(uom) ? uom : "kg") as LineUnit;
+/** Kilos in one of a row's unit, when it is a store unit (Litre, BALE). */
+function kgPerOf(units: UnitsMap, item: string, unit: LineUnit | undefined): number | null {
+  return unit && unit !== "kg" && !isDoseUom(unit) ? kgPerUnit(units, item, unit) : null;
 }
 
 /**
@@ -229,14 +232,14 @@ export function RationEditor() {
     if (chosenHerd)
       return {
         lines: chosenHerd.lines.map((l) => ({
-          item_code: l.item_code, qty: l.qty, unit: unitOf(l.uom, l.is_dose),
+          item_code: l.item_code, qty: l.qty, unit: unitFromUom(l.uom, l.is_dose),
         })),
         name: chosenHerd.ration_name || chosenHerd.ration_item || "",
       };
     if (chosenConc)
       return {
         lines: chosenConc.lines.map((l) => ({
-          item_code: l.item_code, qty: l.recipe_qty, unit: unitOf(l.recipe_uom),
+          item_code: l.item_code, qty: l.recipe_qty, unit: unitFromUom(l.recipe_uom),
         })),
         name: chosenConc.item_name,
       };
@@ -248,16 +251,65 @@ export function RationEditor() {
   const seedKey = `${sel?.kind ?? ""}:${sel?.kind === "herd" ? sel.herd : sel?.kind === "concentrate" ? sel.item : ""}:${
     chosenHerd?.bom ?? chosenConc?.bom_no ?? ""
   }`;
+  // Every feed on screen, with the units it may be written in and their kilos.
+  const units = useFeedUnits(
+    useMemo(
+      () => [...rows.map((r) => r.item_code), ...baseline.lines.map((l) => l.item_code)].filter(Boolean),
+      [rows, baseline],
+    ),
+    data?.units,
+  );
+
   useEffect(() => {
     setRows(
       mode.seed(
-        baseline.lines.map((l) => ({ key: nextKey++, item_code: l.item_code, qty: String(l.qty), unit: l.unit })),
+        baseline.lines.map((l) => ({
+          key: nextKey++,
+          item_code: l.item_code,
+          qty: String(l.qty),
+          unit: l.unit,
+          kgPer: kgPerOf(units, l.item_code, l.unit),
+        })),
       ),
     );
     setName(baseline.name);
   }, [seedKey]);
 
+  // A store unit's kilos arrive with the units: fill them in on the rows, so
+  // the sums, the percentages and the nutrition run on kilos.
+  useEffect(() => {
+    setRows((s) => {
+      let changed = false;
+      const out = s.map((r) => {
+        const k = kgPerOf(units, r.item_code, r.unit);
+        if (k === (r.kgPer ?? null)) return r;
+        changed = true;
+        return { ...r, kgPer: k };
+      });
+      return changed ? out : s;
+    });
+  }, [units, rows.length]);
+
+  /** A line written in another unit: the kilos stay, the quantity follows. */
+  function changeUnit(index: number, unit: LineUnit) {
+    setRows((s) =>
+      s.map((x, j) => {
+        if (j !== index) return x;
+        const next = { ...x, unit, kgPer: kgPerOf(units, x.item_code, unit) };
+        const convertible = unit === "kg" || !!next.kgPer;
+        if (isWeighed(x) && isWeighed(next) && convertible && num(x.qty) > 0) {
+          next.qty = String(qtyForKilos(next, rowKilos(x)));
+        } else {
+          next.pct = "";
+        }
+        return next;
+      }),
+    );
+  }
+
   const lines = rows.filter((r) => r.item_code && num(r.qty) > 0).map(toLine);
+  // What the nutrition panel weighs: kilos, a store unit at its kilo equivalent.
+  const nutrientLines = rows.filter((r) => r.item_code && num(r.qty) > 0).map(toNutrientLine);
   // The recipe's kilos: doses are outside them, as the BOM's quantity is.
   const total = kgTotal(rows);
   const heads = chosenHerd?.heads ?? 0;
@@ -313,7 +365,7 @@ export function RationEditor() {
   }
 
   async function expand() {
-    const r = await expandConcentrates(lines);
+    const r = await expandConcentrates(nutrientLines);
     if (isError(r)) {
       toast(r.error, "error");
       return;
@@ -329,6 +381,26 @@ export function RationEditor() {
       ),
     );
     toast(`Rewrote ${r.expanded.join(", ")} into its ingredients. Save to make it the recipe.`, "info");
+  }
+
+  /** Beside a weighed line: the other unit's figure (kilos for a store
+   *  unit, the store's unit for kilos), and what the herd gets. */
+  function weighedHint(r: Row): string {
+    const unit = r.unit || "kg";
+    const kilos = rowKilos(r);
+    const parts: string[] = [];
+    if (unit === "kg") {
+      if (mode.on) parts.push(`${fmt(kilos)} kg`);
+      const eq = num(r.qty) > 0 ? stockEquivalent(units, r.item_code, kilos) : null;
+      if (eq) parts.push(`≈ ${fmt(eq.qty)} ${eq.uom}`);
+      else if (uomOf(r.item_code) && !isKg(uomOf(r.item_code))) parts.push(`stocked in ${uomOf(r.item_code)}`);
+    } else if (r.kgPer) {
+      parts.push(`${num(r.qty)} ${unit} ≈ ${fmt(kilos)} kg`);
+    } else {
+      parts.push(`no kilo figure for ${unit} — counted as kilos; add it to the item's UOM conversions`);
+    }
+    if (chosenHerd) parts.push(`${fmt(kilos * heads)} kg for the herd`);
+    return parts.join(" · ");
   }
 
   const canSave =
@@ -684,12 +756,11 @@ export function RationEditor() {
                           <UnitPicker
                             id={`re-unit-${r.key}`}
                             value={r.unit}
-                            onChange={(u) =>
-                              setRows((s) => s.map((x, j) => (j === i ? { ...x, unit: u, pct: "" } : x)))
-                            }
+                            onChange={(u) => changeUnit(i, u)}
+                            storeUnits={storeUnits(units, r.item_code).map((o) => o.uom)}
                           />
                         </div>
-                        {mode.on && unit === "kg" ? (
+                        {mode.on && isWeighed(r) ? (
                           <div className="flex flex-col gap-1.5">
                             <Label htmlFor={`re-pct-${r.key}`}>Share (%)</Label>
                             <Input
@@ -706,7 +777,11 @@ export function RationEditor() {
                         ) : (
                           <div className="flex flex-col gap-1.5">
                             <Label htmlFor={`re-qty-${r.key}`}>
-                              {unit === "kg" ? "Amount (kg)" : `Dose (${unitLabel(unit)} a head)`}
+                              {unit === "kg"
+                                ? "Amount (kg)"
+                                : isDoseUom(unit)
+                                  ? `Dose (${unitLabel(unit)} a head)`
+                                  : `Amount (${unit})`}
                             </Label>
                             <Input
                               id={`re-qty-${r.key}`}
@@ -722,18 +797,11 @@ export function RationEditor() {
                           </div>
                         )}
                         <span className="pb-2 text-[11.5px] tabular-nums text-[var(--sd-quiet)]">
-                          {unit !== "kg"
+                          {isDoseUom(unit)
                             ? `${unitLabel(unit)} a head, outside the 100%${
                                 chosenHerd ? ` · ${doseForHerd(r.qty, unit, heads)} for the herd` : ""
                               }`
-                            : chosenHerd
-                              ? `${mode.on ? `${fmt(num(r.qty))} ` : ""}kg · ${fmt(num(r.qty) * heads)} for the herd`
-                              : mode.on
-                                ? `${fmt(num(r.qty))} kg`
-                                : ""}
-                          {uomOf(r.item_code) && uomOf(r.item_code) !== "Kilogram"
-                            ? ` · stocked in ${uomOf(r.item_code)}`
-                            : ""}
+                            : weighedHint(r)}
                         </span>
                         <button
                           type="button"
@@ -759,7 +827,7 @@ export function RationEditor() {
                 <div className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--sd-radius-lg)] bg-[var(--sd-bg-soft)] px-4 py-3 shadow-[var(--sd-shadow-inset)]">
                   <span className="text-[12.5px] text-[var(--sd-muted)]">
                     {target === "ration" ? "One head, one day" : "One batch"}
-                    {rows.some((r) => (r.unit || "kg") !== "kg") ? " · doses not included" : ""}
+                    {rows.some((r) => isDoseUom(r.unit)) ? " · doses not included" : ""}
                   </span>
                   <span className="text-[15px] font-semibold tabular-nums text-[var(--sd-ink)]">
                     {fmt(total)} kg
@@ -796,7 +864,7 @@ export function RationEditor() {
 
         {/* Right: what is in it. */}
         <NutritionPanel
-          lines={lines}
+          lines={nutrientLines}
           perUnit={target === "ration" ? "head per day" : "batch"}
           className="self-start"
         />

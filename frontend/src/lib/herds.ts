@@ -316,6 +316,8 @@ export interface HerdRations {
   any_premanufacture?: boolean;
   /** Livestock Settings > Feed by Head Count. */
   feed_by_head_count?: boolean;
+  /** The units every feed in a ration may be written in, with their kilos. */
+  units?: import("@/lib/units").UnitsMap;
 }
 
 export function getHerdRations(): Promise<Envelope<HerdRations>> {

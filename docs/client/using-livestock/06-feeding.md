@@ -85,6 +85,19 @@ The feeding screens each do one job:
 The old **Feed Design** page is now the Ration Editor; links to it still open
 the Ration Editor.
 
+## Writing a line in the store's unit
+
+Some feeds are counted in the store in something other than kilos — molasses
+in litres, hay in bales. On the Ration Editor and on Feeding's Manual
+configuration each line has a **unit**: kilos, any unit the item is stocked or
+converted in (its UOM conversion table on the Item), or — in the Ration Editor
+— a per-head dose in g or ml. The other figure is shown beside it ("3 Litre ≈
+4.20 kg", or "≈ 0.11 BALE" beside a kilo line), and the nutrition, the % of
+intake and the ration's weight always use the kilos. Changing a line's unit
+keeps its kilos. A unit the item's table cannot turn into kilos is counted as
+kilos and says so: add the conversion on the Item. "Kg" and "Kilogram" are the
+same unit everywhere.
+
 ## If something is short
 
 The button is disabled and the shortfall is spelled out — which item, how much,

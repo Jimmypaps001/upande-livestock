@@ -7,11 +7,35 @@ import { Label } from "@/components/ui/label";
 import { Picker } from "@/components/ui/picker";
 import { isError, searchItems } from "@/lib/frappe";
 import { feedSubstitutes, type ManualRow, type Substitute } from "@/lib/feeding";
-import { swapKg } from "@/lib/ration-maths";
+import { isDoseUom, swapKg } from "@/lib/ration-maths";
+import { isKg, kgPerUnit, storeUnits, useFeedUnits, type UnitsMap } from "@/lib/units";
 import { fmt, num, todayISO } from "@/lib/utils";
 
-/** Units a swap can be weighed in: the server's factor is kilos per kilo. */
-const KILO_UNITS = ["Kilogram", "Kg", "kg"];
+/**
+ * The units a manual line may be written in: kilos, the units the store counts
+ * the item in (its stock unit and UOM conversions), and the line's own unit.
+ * Kilos are offered under the name the item or line already uses ("Kg" on
+ * live, "Kilogram" here), so the server matches it to the recipe's row.
+ */
+export function manualUnitOptions(units: UnitsMap, row: { item_code: string; uom: string }): string[] {
+  const own = row.uom || "";
+  const kgName = isKg(own)
+    ? own
+    : units[row.item_code]?.uoms.find((o) => isKg(o.uom))?.uom ||
+      (isKg(units[row.item_code]?.stock_uom) ? units[row.item_code]!.stock_uom : "Kg");
+  const out = [kgName, ...storeUnits(units, row.item_code).map((o) => o.uom)];
+  if (own && !out.includes(own)) out.push(own);
+  return out;
+}
+
+/** A manual line in another unit: the kilos stay and the quantity follows,
+ *  when both units have a kilo figure; otherwise only the unit changes. */
+export function changeManualUnit(units: UnitsMap, row: ManualRow, uom: string): ManualRow {
+  const was = kgPerUnit(units, row.item_code, row.uom);
+  const now = kgPerUnit(units, row.item_code, uom);
+  const qty = was && now ? Math.round(((num(row.qty) * was) / now) * 10000) / 10000 : row.qty;
+  return { ...row, uom, qty };
+}
 
 /**
  * A line swapped for another feed in its substitute group, kilos adjusted so
@@ -95,6 +119,7 @@ export function ManualConfig({
   >([]);
   const [searching, setSearching] = useState(false);
   const [subs, setSubs] = useState<Record<string, Substitute[]>>({});
+  const units = useFeedUnits(useMemo(() => (rows || []).map((r) => r.item_code), [rows]));
   const timer = useRef<number | undefined>(undefined);
 
   // What each line could be swapped for. Asked again only when the set of
@@ -116,7 +141,7 @@ export function ManualConfig({
 
   /** The swaps a line may take: weighed in kilos, balanced on dry matter, not already on the recipe. */
   function swapsFor(r: ManualRow): Substitute[] {
-    if (!KILO_UNITS.includes(r.uom)) return [];
+    if (!isKg(r.uom)) return [];
     return (subs[r.item_code] || []).filter((s) => s.factor && !already.has(s.item_code));
   }
   const box = useRef<HTMLDivElement | null>(null);
@@ -198,6 +223,9 @@ export function ManualConfig({
                 </div>
                 <div className="text-[11px] text-[var(--sd-quiet)]">
                   {r.uom} per head
+                  {!isKg(r.uom) && !isDoseUom(r.uom) && kgPerUnit(units, r.item_code, r.uom)
+                    ? ` ≈ ${fmt(num(r.qty) * kgPerUnit(units, r.item_code, r.uom)!)} kg`
+                    : ""}
                   {r.swapped_from ? ` · swapped in for ${r.swapped_from}, same dry matter` : ""}
                 </div>
               </div>
@@ -222,6 +250,21 @@ export function ManualConfig({
                   label={`Swap ${r.item_name || r.item_code}`}
                   placeholder="Swap for…"
                   className="w-40"
+                />
+              )}
+              {!isDoseUom(r.uom) && manualUnitOptions(units, r).length > 1 && (
+                <Picker
+                  id={`fm-unit-${i}`}
+                  value={r.uom}
+                  onChange={(uom) => {
+                    if (!uom || uom === r.uom) return;
+                    const next = rows.slice();
+                    next[i] = changeManualUnit(units, r, uom);
+                    onRowsChange(next);
+                  }}
+                  options={manualUnitOptions(units, r)}
+                  label={`Unit for ${r.item_name || r.item_code}`}
+                  className="w-28"
                 />
               )}
               <Input
@@ -345,7 +388,13 @@ export function ManualConfig({
             />
             <span className="text-[11px] text-[var(--sd-quiet)]">
               Suggested{" "}
-              {fmt(num(heads) * (rows || []).filter((r) => KILO_UNITS.includes(r.uom)).reduce((s, r) => s + num(r.qty), 0))}{" "}
+              {fmt(
+                num(heads) *
+                  (rows || []).reduce(
+                    (s, r) => s + (isDoseUom(r.uom) ? 0 : num(r.qty) * (kgPerUnit(units, r.item_code, r.uom) ?? 0)),
+                    0,
+                  ),
+              )}{" "}
               kg: head count &times; per head. What you type is what is mixed.
             </span>
           </div>

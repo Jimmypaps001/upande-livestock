@@ -122,4 +122,13 @@ each other. They now each do one job:
   labelled "Pre-manufacture Concentrate (farm default)" and the Herds page shows and
   changes each herd's mode (`herd_rations` returns `concentrate_mode`, `update_herd`
   accepts it).
+- **Units on every line.** A recipe line (Ration Editor) or manual feeding line
+  (Feeding) may be written in kilos, the item's stock unit or any UOM in its
+  conversion table, or a g/ml dose. The kilo equivalent is shown beside it and the
+  nutrition, % of intake and `BOM.quantity` use kilos (`feeding/_units.py`: `item_units`,
+  `line_kilos`; `kg_total(lines, kilos_of)`). The page sends the unit as `uom`;
+  `_tuned_bom.row_units` converts with the item's own table, so how stock posts is
+  unchanged. Units come from `herd_rations.units` and a new `feed_units(items)`.
+  "Kg" and "Kilogram" are both kilos everywhere (`_units.is_kg`, `units.ts: isKg`), and a
+  new feed item is stocked in whichever this site has (`_units.kilogram_uom`).
 
