@@ -5,7 +5,14 @@
 
     bench --site mutara.local execute upande_livestock.demo.seed_mutara_tracker.execute
 
-Run by hand on mutara.local only (refuses any site that is not `.local` unless force=True). Reads
+Run by hand. On a `.local` site it does everything below. Any other site (live) needs force=True and
+then, by default, loads RECORDS ONLY — no opening stock receipt, no diesel issues, no demo retirement:
+
+    bench --site <live> execute upande_livestock.demo.seed_mutara_tracker.execute --kwargs "{'force': True}"
+
+The farm receives its own stock on live, so a receipt at the sheet's prices (and diesel issued
+against it) would post stock and accounting nobody made; and a live site's herds are not demo herds.
+`post_stock=True` / `retire=True` turn those parts back on deliberately. Reads
 demo/data/mutara_tracker.json, which scripts/extract_mutara_tracker.py extracts from the farm's
 spreadsheet; the JSON's `notes` list every judgement made on the sheet's data.
 
@@ -208,6 +215,10 @@ def ensure_cost_center():
 		frappe.get_doc({"doctype": "Cost Center", "cost_center_name": FEEDLOT_COST_CENTER, "company": COMPANY,
 		                "parent_cost_center": _full(COMPANY), "is_group": 0}).insert(ignore_permissions=True)
 		_log("cost centre " + name)
+	if _has("Production Settings", "feedlot_cost_center"):
+		if not frappe.db.get_single_value("Production Settings", "feedlot_cost_center"):
+			frappe.db.set_single_value("Production Settings", "feedlot_cost_center", name)
+			_log("Production Settings feedlot cost centre " + name)
 	return name
 
 
@@ -617,23 +628,31 @@ def ensure_settings():
 # ---------------------------------------------------------------------------
 
 
-def execute(force=False):
+def execute(force=False, post_stock=None, retire=None):
 	"""Seed Mutara's tracker data. Idempotent; prints what it does. Backdating is opened for the history
-	load and put back as it was, even if the run fails."""
+	load and put back as it was, even if the run fails.
+
+	`post_stock` (the opening receipt and the diesel issues) and `retire` (disabling the demo herds,
+	flocks and animals) default to on for a `.local` site and OFF anywhere else; see the module docstring."""
 	site = frappe.local.site
-	if not force and not site.endswith(".local"):
+	local = site.endswith(".local")
+	if not force and not local:
 		frappe.throw("{} is not a .local site. Pass force=True only with approval.".format(site))
+	post_stock = local if post_stock is None else bool(post_stock)
+	retire = local if retire is None else bool(retire)
+	print("site {}: stock postings {}, demo retirement {}".format(
+		site, "on" if post_stock else "off", "on" if retire else "off"))
 	was = frappe.db.get_single_value("Livestock Settings", "custom_backdating_open")
 	frappe.db.set_single_value("Livestock Settings", "custom_backdating_open", 1)
 	frappe.db.commit()
 	try:
-		_execute()
+		_execute(post_stock=post_stock, retire=retire)
 	finally:
 		frappe.db.set_single_value("Livestock Settings", "custom_backdating_open", was or 0)
 		frappe.db.commit()
 
 
-def _execute():
+def _execute(post_stock=True, retire=True):
 	data = data_mod.load()
 	print("seeding Mutara from its tracker ({}, as of {})".format(data["source"], data["as_of"]))
 	ensure_cost_center()
@@ -641,10 +660,12 @@ def _execute():
 	ensure_items(data)
 	ensure_feed_records(data)
 	frappe.db.commit()
-	ensure_opening_stock(data)
-	frappe.db.commit()
-	retire_demo()
-	frappe.db.commit()
+	if post_stock:
+		ensure_opening_stock(data)
+		frappe.db.commit()
+	if retire:
+		retire_demo()
+		frappe.db.commit()
 	ensure_herds(data)
 	ensure_rations(data)
 	frappe.db.commit()
@@ -652,7 +673,8 @@ def _execute():
 	ensure_counts(data)
 	frappe.db.commit()
 	ensure_labour(data)
-	ensure_fuel(data)
+	if post_stock:
+		ensure_fuel(data)
 	ensure_settings()
 	frappe.db.commit()
 	counts = {h: frappe.db.get_value("Herds", h, "number_of_animals")
