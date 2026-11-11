@@ -940,7 +940,10 @@ class LivestockEvent(Document):
 			# makes current_herd equal new_herd and trips the guard below, so an
 			# animal that had NO herd could never be moved into one: the insert
 			# succeeded and the submit threw "cannot be the same".
-			if not self.current_herd and self.is_new():
+			# A history-only move (a birth's retro path, common/retro_birth) names
+			# the herd she LEFT on that day from her herd history, not from where
+			# she stands today, and may honestly name none.
+			if not self.current_herd and self.is_new() and not self.flags.history_only:
 				animal_herd = frappe.db.get_value("Animal", self.animal, "current_herd")
 				if animal_herd:
 					self.current_herd = animal_herd
@@ -981,7 +984,9 @@ class LivestockEvent(Document):
 		# HERD MOVEMENT PROCESSOR
 		# ============================================================
 
-		if self.event_type == "Movement" and self.animal and self.new_herd:
+		# A history-only move corrects where she WAS (common/retro_birth): it is
+		# a Movement so her herd history reads it, but she is not moved today.
+		if self.event_type == "Movement" and self.animal and self.new_herd and not self.flags.history_only:
 			try:
 				# Get the previous herd BEFORE updating
 				previous_herd = frappe.db.get_value("Animal", self.animal, "current_herd")
@@ -1241,6 +1246,7 @@ class LivestockEvent(Document):
 		# On submit, not validate: a draft calving is somebody still typing, and
 		# validate runs twice (insert and submit), which would race the move.
 		if self.event_type == "Calving":
+			self.settle_service_by_calving()
 			self.move_dam_after_calving()
 
 	def on_cancel(self):
@@ -1337,6 +1343,13 @@ class LivestockEvent(Document):
 
 		if frappe.db.get_value("Animal", self.animal, "current_herd") != self.new_herd:
 			return
+		# A later move stands (a back-recorded move from a birth's retro path is
+		# followed by the move that brought her where she is): where she is now
+		# is that move's doing, not this one's.
+		if frappe.db.exists("Livestock Event", {
+			"animal": self.animal, "event_type": "Movement", "docstatus": 1,
+			"event_date": [">", self.event_date], "name": ["!=", self.name]}):
+			return
 		frappe.db.set_value("Animal", self.animal, "current_herd", self.current_herd or None,
 		                    update_modified=False)
 		recompute_herd_count(self.new_herd)
@@ -1383,7 +1396,14 @@ class LivestockEvent(Document):
 		# shelf and the ledger disagree in the present to make them agree in the
 		# past. The rows stay on the document and the flag marks them, so a
 		# reconciliation can post them deliberately later.
+		#
+		# Unless the store could not have covered them on the day: then there is
+		# nothing on the shelf for a reconciliation to find, and the issue is put
+		# down as a draft placeholder dated the event's day, waiting on the
+		# Transactions page (stock.placeholder_if_short).
 		if backdate.suppresses_stock(self, self.get("custom_is_backdated")):
+			if self.backdated_placeholder():
+				return
 			if self.get("drug_issues") or self.get("semen_item"):
 				self.db_set("custom_unposted_drugs", 1, update_modified=False)
 			return
@@ -1438,6 +1458,59 @@ class LivestockEvent(Document):
 			for row in self.drug_issues or []:
 				if row.item_code:
 					row.db_set("stock_entry_ref", name, update_modified=False)
+
+	def settle_service_by_calving(self):
+		"""A calving from a service nobody diagnosed confirms that service.
+
+		A birth may now be recorded against a service whose date puts it inside
+		the birth window, with no pregnancy diagnosis (common/birth_window). The
+		calf is the proof the service held; left Pending, the cow would sit on
+		the pregnancy-check list and read "Served" for ever. Cancelling the
+		calving puts it back to Pending (beef_events._undo_calving).
+		"""
+		if not self.custom_related_pregnancy:
+			return
+		status = frappe.db.get_value("Livestock Event", self.custom_related_pregnancy,
+		                             "pregnancy_confirmation_status")
+		if status not in (None, "", "Pending"):
+			return
+		frappe.db.set_value("Livestock Event", self.custom_related_pregnancy, {
+			"pregnancy_confirmation_status": SERVICE_HELD,
+			"pregnancy_confirmation_date": self.event_date,
+		}, update_modified=False)
+		for todo in frappe.get_all("ToDo", filters={
+			"reference_type": "Livestock Event", "reference_name": self.custom_related_pregnancy,
+			"status": "Open"}, pluck="name"):
+			frappe.db.set_value("ToDo", todo, "status", "Closed", update_modified=False)
+
+	def backdated_placeholder(self):
+		"""A draft issue for a backdated event the store was short for on the day.
+
+		Returns its name, or None when the store had it (or nothing is issued).
+		The placeholder IS the posting, so the event is not also flagged
+		unposted for a reconciliation to post a second time."""
+		if not event_items.consumes_items(self.event_type):
+			return None
+		default_wh = event_items.default_store(self.event_type)
+		rows = [
+			{"item_code": row.item_code, "qty": row.qty, "warehouse": row.source_warehouse or default_wh,
+			 "batch_no": row.batch_no, "uom": row.uom}
+			for row in self.drug_issues or [] if row.item_code
+		]
+		name = livestock_stock.placeholder_if_short(
+			rows,
+			remarks=f"Livestock {self.event_type} - {self.animal} - {self.name}",
+			posting_date=self.event_date,
+			what=self.event_type,
+			employee=self.operator,
+		)
+		if not name:
+			return None
+		self.db_set("stock_entry", name, update_modified=False)
+		for row in self.drug_issues or []:
+			if row.item_code:
+				row.db_set("stock_entry_ref", name, update_modified=False)
+		return name
 
 	def refresh_calving_birth_count(self):
 		"""Recount the Birth events linked to this event's related calving, and

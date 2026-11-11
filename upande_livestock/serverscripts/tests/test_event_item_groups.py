@@ -101,11 +101,28 @@ class TestWhereTheItemsComeFrom(unittest.TestCase):
 		with patch.object(EI, "groups_for_event", return_value=["Dairy Drugs"]), \
 		     patch.object(EI, "_company_warehouses",
 		                  return_value=["Westwood Dairy Store - KR", "General Store Karen - KR"]), \
-		     patch.object(EI, "_balances", return_value=self.BALANCES):
+		     patch.object(EI, "_balances", return_value=self.BALANCES), \
+		     patch.object(EI, "_group_items", return_value=self.GROUP_ITEMS):
 			return EI.items_for_event("Vaccination", company="Karen Roses")
 
+	# Every item of the group, held or not: DRUG-C has none anywhere.
+	GROUP_ITEMS = [
+		{"name": "DRUG-A", "item_name": "Alamyan Spray", "stock_uom": "CAN"},
+		{"name": "DRUG-B", "item_name": "Sutures", "stock_uom": "Piece(s)"},
+		{"name": "DRUG-C", "item_name": "Bolus", "stock_uom": "Nos"},
+	]
+
+	def test_an_item_with_no_stock_is_listed_after_the_held_ones(self):
+		"""So it can be named, and its issue saved as a draft (common/stock)."""
+		items = self._items()
+		self.assertEqual([i["value"] for i in items], ["DRUG-A", "DRUG-B", "DRUG-C"])
+		c = items[-1]
+		self.assertEqual((c["in_stock"], c["qty"], c["locations"]), (False, 0.0, []))
+		self.assertIn("out of stock", c["label"])
+		self.assertTrue(all(i["in_stock"] for i in items[:2]))
+
 	def test_one_choice_per_item_not_per_shelf(self):
-		self.assertEqual(len(self._items()), 2)
+		self.assertEqual(len([i for i in self._items() if i["in_stock"]]), 2)
 
 	def test_the_choice_names_the_store_holding_the_most(self):
 		a = next(i for i in self._items() if i["value"] == "DRUG-A")

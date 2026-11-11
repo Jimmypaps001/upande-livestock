@@ -144,6 +144,10 @@ class Calving:
 
 	def __init__(self):
 		self.name = "CALVING-1"
+		self.flags = frappe._dict()
+
+	def get(self, key, default=None):
+		return getattr(self, key, default)
 
 	def insert(self):
 		pass
@@ -195,6 +199,10 @@ class TestRecordBirthUsesTheResolver(unittest.TestCase):
 			RB.frappe, "get_doc", side_effect=get_doc
 		), patch.object(RB.frappe, "new_doc", return_value=calving), patch.object(
 			RB.frappe.db, "get_value", side_effect=get_value
+		), patch.object(
+			# The birth window is its own test (test_birth_window); here the
+			# named service is taken as one the rule accepts.
+			RB.birth_window, "accepts", return_value=True
 		):
 			out = RB.record_birth(
 				{

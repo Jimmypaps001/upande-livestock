@@ -68,6 +68,8 @@ def record_calf_births(payload):
 				birth.sire = calving.sire
 				birth.sire_animal = calving.sire_animal
 				birth.is_stillborn = 1 if stillborn else 0
+				# Born the calving's day, so backdated exactly when the calving is.
+				birth.custom_is_backdated = calving.get("custom_is_backdated") or 0
 
 				if stillborn:
 					birth.remarks = f"Stillborn. Dam: {dam.tag_number or dam.burn_name}"

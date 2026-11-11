@@ -291,6 +291,13 @@ def _undo_calving(doc, exclude):
 			"event_type": "Pregnancy Diagnosis", "related_service": service, "docstatus": 1}, pluck="name"):
 			_cancel(dx)
 		_cancel(service)
+	elif service and not frappe.db.exists("Livestock Event", {
+			"event_type": "Pregnancy Diagnosis", "related_service": service, "docstatus": 1,
+			"diagnosis_result": "Confirmed"}):
+		# The calving was what confirmed it (LivestockEvent.settle_service_by_calving).
+		frappe.db.set_value("Livestock Event", service, {
+			"pregnancy_confirmation_status": "Pending", "pregnancy_confirmation_date": None},
+			update_modified=False)
 	parity = frappe.db.get_value("Animal", doc.animal, "parity")
 	if parity:
 		frappe.db.set_value("Animal", doc.animal, "parity", max(0, int(parity) - 1), update_modified=False)

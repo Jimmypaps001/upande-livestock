@@ -11,7 +11,7 @@ can cover it now.
 """
 
 import frappe
-from frappe.utils import get_fullname
+from frappe.utils import get_fullname, getdate
 
 from upande_livestock.serverscripts.common import stock as livestock_stock
 
@@ -160,6 +160,15 @@ def entry_rows(where="", args=None):
 					for r in rows
 				],
 				"can_post": draft and not short,
+				# A draft placeholder for a backdated record (common/stock): dated a day
+				# before it was made. Shown badged, so nobody reads it as today's issue.
+				"backdated": bool(
+					draft
+					and (
+						(e.remarks or "").startswith(livestock_stock.BACKDATED_PREFIX)
+						or getdate(e.posting_date) < getdate(e.creation)
+					)
+				),
 				"short": livestock_stock.shortage_message(short) if short else None,
 			}
 		)

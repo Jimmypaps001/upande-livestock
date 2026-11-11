@@ -73,7 +73,7 @@ def animal_profile(payload=None):
 			filters={"animal": name, "docstatus": 1},
 			fields=["name", "event_type", "event_date", "current_herd", "new_herd",
 			        "service_type", "diagnosis_result", "expected_calving_date",
-			        "custom_calving_outcome", "abortion_cause", "remarks"],
+			        "custom_calving_outcome", "abortion_cause", "remarks", "custom_is_backdated"],
 			order_by="event_date asc, creation asc",
 		)
 
@@ -273,7 +273,9 @@ def _milestones(events):
 			detail = e.abortion_cause
 		elif e.remarks:
 			detail = e.remarks[:120]
-		out.append({"kind": kind, "on": str(e.event_date), "label": label, "detail": detail})
+		out.append({"kind": kind, "on": str(e.event_date), "label": label, "detail": detail,
+		            # Entered after the day it describes: the page badges it.
+		            "backdated": bool(e.get("custom_is_backdated"))})
 	return out
 
 

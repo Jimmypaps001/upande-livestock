@@ -25,7 +25,8 @@ def breeding_lists():
 		# Pregnancy checks due: submitted Service events still pending, whose
 		# 35-day check window has arrived.
 		due = frappe.db.sql(
-			"""SELECT name, animal, current_herd, service_date, pregnancy_check_due_date
+			"""SELECT name, animal, current_herd, service_date, pregnancy_check_due_date,
+			          IFNULL(custom_is_backdated, 0) AS is_backdated
 			   FROM `tabLivestock Event`
 			   WHERE event_type = 'Service' AND docstatus = 1
 			     AND pregnancy_confirmation_status = 'Pending'
@@ -67,6 +68,8 @@ def breeding_lists():
 					"herd_label": labels.get(r.current_herd or "", r.current_herd or ""),
 					"service_date": str(r.service_date) if r.service_date else "",
 					"due": str(r.pregnancy_check_due_date) if r.pregnancy_check_due_date else "",
+					# The service was back-recorded: badge it, so nobody reads it as recent.
+					"is_backdated": bool(r.is_backdated),
 				}
 				for r in due
 			],

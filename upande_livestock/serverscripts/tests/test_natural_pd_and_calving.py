@@ -99,28 +99,32 @@ class TestNaturalPdAndCalving(IntegrationTestCase):
 		self.assertEqual((got["service_type"], got["sire_animal"], got["sire_inferred"]), ("A.I.", "", False))
 		self.assertEqual(frappe.db.get_value("Livestock Event", got["name"], "sire"), "Mazira")
 
-	def test_calving_with_no_service_derives_one_and_stamps_the_calf_sire(self):
+	def test_a_calving_with_no_service_is_refused_not_given_an_invented_one(self):
+		"""It used to derive a natural service at calving minus gestation. The farm
+		chose otherwise: a birth with no cause on record is refused, and the
+		service is back-recorded by a person through the retro path
+		(test_birth_window)."""
+		got = record_birth({
+			"dam": self.cow.name, "operator": self.op, "outcome": "Live Birth",
+			"calves": [{"sex": "Male", "birth_weight": 32}]})
+		self.assertEqual(got.get("code"), "birth_needs_service", got)
+		self.assertIn("no confirmed pregnancy", got["error"])
+
+	def test_a_natural_service_in_the_window_names_the_calf_sire(self):
+		frappe.db.set_single_value("Livestock Settings", "custom_backdating_open", 1)
+		svc = create_service_event({"animal": self.cow.name, "operator": self.op,
+		                            "service_type": "Natural", "event_date": ago(280)})
+		frappe.db.set_single_value("Livestock Settings", "custom_backdating_open", 0)
+		self.assertTrue(svc.get("ok"), svc)
 		got = record_birth({
 			"dam": self.cow.name, "operator": self.op, "outcome": "Live Birth",
 			"calves": [{"sex": "Male", "birth_weight": 32}]})
 		self.assertTrue(got.get("ok"), got)
-		self.assertTrue(got["service_created"])
-		svc = frappe.get_doc("Livestock Event", got["service"])
-		self.assertEqual(str(svc.conception_date), add_days(today(), -280))
-		self.assertEqual(svc.pregnancy_confirmation_status, "Confirmed")
-		calf = frappe.db.get_value("Animal", got["calves"][0]["animal"] if "animal" in got["calves"][0]
-		                           else got["calves"][0]["name"],
-		                           ["sire", "sire_name", "dam", "current_herd"], as_dict=True)
-		self.assertEqual((calf.sire, calf.sire_name, calf.dam), (self.bull.name, self.bull.name, self.cow.name))
+		self.assertEqual(got["service"], svc["name"])
+		calf = frappe.db.get_value("Animal", got["calves"][0]["animal"], ["sire", "dam", "current_herd"], as_dict=True)
+		self.assertEqual((calf.sire, calf.dam), (self.bull.name, self.cow.name))
 		# the calf lives in its mother's herd
 		self.assertEqual(calf.current_herd, self.group)
-
-	def test_the_dairy_default_still_refuses_a_calving_with_no_service(self):
-		frappe.db.set_single_value("Livestock Settings", "default_service_type", "A.I.")
-		got = record_birth({
-			"dam": self.cow.name, "operator": self.op, "outcome": "Live Birth",
-			"calves": [{"sex": "Male", "birth_weight": 32}]})
-		self.assertIn("No active pregnancy", got["error"])
 
 	def test_pd_without_a_date_or_service_is_refused(self):
 		got = self._pd()

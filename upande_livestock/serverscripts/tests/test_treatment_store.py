@@ -157,7 +157,7 @@ class TestEachRoundPostsOnItsOwnDay(unittest.TestCase):
 	"""Rows saved together posted as one issue on the latest date, under
 	Livestock Settings' company; and a backdated case swallowed today's rounds."""
 
-	def _calls(self, treatments, backdated=0):
+	def _calls(self, treatments, backdated=0, short_then=False):
 		calls = []
 
 		def fake_issue(rows, **kw):
@@ -169,7 +169,9 @@ class TestEachRoundPostsOnItsOwnDay(unittest.TestCase):
 		with patch.object(LHC.livestock_stock, "issue_items", side_effect=fake_issue), \
 		     patch.object(LHC.event_items, "consumes_items", return_value=True), \
 		     patch.object(LHC.event_items, "default_store", return_value="STORE"), \
-		     patch.object(LHC.livestock_cost_center, "herd_of", return_value=None):
+		     patch.object(LHC.livestock_cost_center, "herd_of", return_value=None), \
+		     patch.object(LHC.livestock_stock, "check_availability",
+		                  return_value=[{"item_code": "LSK-SEMEN-TEST"}] if short_then else []):
 			LHC.LivestockHealthCase.post_drug_issue(case)
 		return calls
 
@@ -190,6 +192,14 @@ class TestEachRoundPostsOnItsOwnDay(unittest.TestCase):
 
 		calls = self._calls([self._row("2026-01-10"), self._row(today())], backdated=1)
 		self.assertEqual([str(c["posting_date"]) for c in calls], [today()])
+
+	def test_an_old_round_the_store_could_not_cover_is_a_draft_placeholder(self):
+		"""Not moved when the store had it (above); a draft for its own day when not."""
+		from frappe.utils import today
+
+		calls = self._calls([self._row("2026-01-10"), self._row(today())], backdated=1, short_then=True)
+		self.assertEqual([str(c["posting_date"]) for c in calls], ["2026-01-10", today()])
+		self.assertTrue(calls[0]["draft_if_short"])
 
 
 class TestTheSlaughterSafeDate(unittest.TestCase):

@@ -2,13 +2,53 @@
 
 import frappe
 from frappe import _
-from frappe.utils import flt, today
+from frappe.utils import flt
 
 from upande_livestock.serverscripts.common import natural_service
 from upande_livestock.serverscripts.common.envelope import as_dict, guard, run
 from upande_livestock.serverscripts.common.event_items import consumes_items
 from upande_livestock.serverscripts.common.events import new_livestock_event
 from upande_livestock.serverscripts.husbandry._shared import append_items
+
+
+def build_service(d, retro=False):
+	"""Insert and submit one Service from payload `d`; return the event.
+
+	Shared by the endpoint below and a birth's retro path (breeding.record_birth),
+	so a back-recorded service is the same document, with the same straw rules,
+	as one recorded on the day. `retro` skips the backdating-window refusal: the
+	retro path has already decided who may write history (common/birth_window).
+	"""
+	if not d.get("animal"):
+		frappe.throw(_("Select an animal."))
+	doc = new_livestock_event(d, "Service", date_key="service_date", retro=retro)
+	doc.service_type = d.get("service_type")
+	doc.service_date = doc.event_date
+	doc.sire = d.get("sire")
+	doc.sire_animal = d.get("sire_animal") or None
+	doc.flags.sire_unknown = bool(d.get("sire_unknown"))
+	if d.get("conception_date"):
+		doc.conception_date = d["conception_date"]
+	if consumes_items("Service"):
+		# Service posts stock: the straw goes through the items table like
+		# every other event's items. A caller still sending only the old
+		# straw fields has them turned into an item row, not dropped.
+		if not d.get("items") and d.get("semen_item"):
+			d["items"] = [{"item_code": d.get("semen_item"), "qty": flt(d.get("semen_qty")) or 1,
+			               "source_warehouse": d.get("semen_warehouse") or None}]
+		append_items(doc, d)
+	else:
+		# Service posts no stock here: the straw is recorded on the event's
+		# own fields, where a calf's record finds its sire, and not issued.
+		doc.semen_item = d.get("semen_item") or None
+		doc.semen_qty = flt(d.get("semen_qty")) or 1
+		doc.semen_warehouse = d.get("semen_warehouse") or None
+	doc.insert()
+	doc.submit()
+	inference = doc.flags.get("sire_inference")
+	doc.reload()
+	doc.flags.sire_inference = inference
+	return doc
 
 
 @frappe.whitelist()
@@ -24,42 +64,14 @@ def create_service_event(payload):
 
 	def go():
 		guard("Livestock Event")
-		d = as_dict(payload)
-		if not d.get("animal"):
-			frappe.throw(_("Select an animal."))
-		doc = new_livestock_event(d, "Service", date_key="service_date")
-		doc.service_type = d.get("service_type")
-		doc.service_date = d.get("service_date") or today()
-		doc.sire = d.get("sire")
-		doc.sire_animal = d.get("sire_animal") or None
-		doc.flags.sire_unknown = bool(d.get("sire_unknown"))
-		if d.get("conception_date"):
-			doc.conception_date = d["conception_date"]
-		if consumes_items("Service"):
-			# Service posts stock: the straw goes through the items table like
-			# every other event's items. A caller still sending only the old
-			# straw fields has them turned into an item row, not dropped.
-			if not d.get("items") and d.get("semen_item"):
-				d["items"] = [{"item_code": d.get("semen_item"), "qty": flt(d.get("semen_qty")) or 1,
-				               "source_warehouse": d.get("semen_warehouse") or None}]
-			append_items(doc, d)
-		else:
-			# Service posts no stock here: the straw is recorded on the event's
-			# own fields, where a calf's record finds its sire, and not issued.
-			doc.semen_item = d.get("semen_item") or None
-			doc.semen_qty = flt(d.get("semen_qty")) or 1
-			doc.semen_warehouse = d.get("semen_warehouse") or None
-		doc.insert()
-		doc.submit()
-		inference = doc.flags.get("sire_inference")
-		doc.reload()
-		doc.flags.sire_inference = inference
+		doc = build_service(as_dict(payload))
 		return {
 			**natural_service.sire_report(doc),
 			"warnings": [],
 			"created": {"service": doc.name},
 			"ok": True,
 			"name": doc.name,
+			"is_backdated": bool(doc.get("custom_is_backdated")),
 			"expected_calving_date": str(doc.expected_calving_date or ""),
 			"pregnancy_check_due_date": str(doc.pregnancy_check_due_date or ""),
 			"stock_entry": doc.stock_entry or "",

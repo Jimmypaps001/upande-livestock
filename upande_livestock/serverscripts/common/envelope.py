@@ -143,9 +143,23 @@ def as_dict(value):
 
 
 def run(fn, log_title: str) -> dict:
-	"""Execute `fn`, returning its dict on success or {"error": msg} on failure."""
+	"""Execute `fn`, returning its dict on success or {"error": msg} on failure.
+
+	Only the OUTERMOST `run` of a request collects the drafts and warnings the
+	request made. An endpoint calling another (record_birth calls
+	record_calf_births; the phone's record_animal_event calls them all) used to
+	have the inner call take them onto an answer the outer one throws away, so
+	a straw saved as a draft placeholder went unmentioned.
+	"""
+	depth = frappe.flags.get("livestock_run_depth") or 0
 	try:
-		out = fn()
+		frappe.flags.livestock_run_depth = depth + 1
+		try:
+			out = fn()
+		finally:
+			frappe.flags.livestock_run_depth = depth
+		if depth:
+			return out
 		# Stock issues saved as drafts for want of stock (common/stock): the
 		# record stood, and the page must say what is still to post.
 		from upande_livestock.serverscripts.common.stock import drafts_made
@@ -171,6 +185,16 @@ def run(fn, log_title: str) -> dict:
 			# role and neither queue the item nor retry it.
 			out["code"] = "not_employee"
 		return out
+	except frappe.ValidationError as e:
+		frappe.db.rollback()
+		code = getattr(type(e), "code", None)
+		if not isinstance(code, str):
+			frappe.log_error(title=log_title)
+			return {"error": str(e) or _("Operation failed.")}
+		# A refusal that names what to do instead (birth_window.BirthNeedsService):
+		# the client gets a stable code and the facts to act on, and nothing is
+		# logged — being refused is an answer, not a fault.
+		return {"error": str(e), "code": code, **(getattr(e, "details", None) or {})}
 	except Exception as e:
 		frappe.db.rollback()
 		frappe.log_error(title=log_title)

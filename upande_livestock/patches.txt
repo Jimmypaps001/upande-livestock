@@ -202,3 +202,7 @@ upande_livestock.patches.seed_labour_day_rates
 # Feed by Head Count: on wherever it was never set, so every farm keeps feeding
 # head count x per head until a manager turns it off to type group totals.
 upande_livestock.patches.default_feed_by_head_count
+
+# Birth window (270–295 days after service) and the switch that lets a back-recorded
+# service carry its pregnancy diagnosis (on), written only where nothing is stored.
+upande_livestock.patches.seed_birth_window

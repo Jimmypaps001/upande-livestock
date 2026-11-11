@@ -74,6 +74,11 @@ TIMING_DEFAULTS = {
 	"diagnosis_latest_days": 70,
 	"gestation_short_warning_days": 260,
 	"gestation_long_warning_days": 300,
+	# The birth window (common/birth_window): a birth is recorded against a
+	# service only when it falls between service + min and service + max days.
+	# Cattle only — sheep and goats are kept by number and have no calving flow.
+	"gestation_window_min_days": 270,
+	"gestation_window_max_days": 295,
 	"calving_alert_lead_days": 7,
 	# Age/interval guard thresholds (upande_livestock.serverscripts.common.guards). These
 	# seven predate a later change and were, until now, excluded from this dict — which

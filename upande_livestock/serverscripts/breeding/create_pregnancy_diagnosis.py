@@ -12,6 +12,25 @@ from upande_livestock.serverscripts.husbandry._shared import append_items
 from upande_livestock.serverscripts.common import herd_movement, natural_service
 
 
+def build_diagnosis(d, retro=False):
+	"""Insert and submit one Pregnancy Diagnosis from payload `d`; return it.
+
+	Shared with a birth's retro path (breeding.record_birth), which names the
+	service it just back-recorded as `related_service`. `retro` skips the
+	backdating-window refusal, as for build_service.
+	"""
+	doc = new_livestock_event(d, "Pregnancy Diagnosis", date_key="diagnosis_date", retro=retro)
+	doc.diagnosis_date = doc.event_date
+	doc.diagnosis_result = d.get("diagnosis_result")
+	doc.diagnosis_remarks = d.get("diagnosis_remarks")
+	if d.get("related_service"):
+		doc.related_service = d.get("related_service")
+	append_items(doc, d)
+	doc.insert()
+	doc.submit()
+	return doc
+
+
 @frappe.whitelist()
 def create_pregnancy_diagnosis(payload):
 	"""Record a Pregnancy Diagnosis (Livestock Event only). The Server Script
@@ -45,16 +64,9 @@ def create_pregnancy_diagnosis(payload):
 				sire_animal=d.get("sire_animal") or None, sire_unknown=bool(d.get("sire_unknown")),
 				remarks=_("Derived from the pregnancy diagnosis"))
 			d["related_service"] = created.name
-		doc = new_livestock_event(d, "Pregnancy Diagnosis", date_key="diagnosis_date")
-		doc.diagnosis_date = d.get("diagnosis_date") or today()
-		doc.diagnosis_result = d.get("diagnosis_result")
-		doc.diagnosis_remarks = d.get("diagnosis_remarks")
-		if d.get("related_service"):
-			doc.related_service = d.get("related_service")
-		append_items(doc, d)
-		doc.insert()
-		doc.submit()
+		doc = build_diagnosis(d)
 		out = {"ok": True, "name": doc.name, "result": doc.diagnosis_result,
+		       "is_backdated": bool(doc.get("custom_is_backdated")),
 		       "service": doc.related_service, "service_created": bool(created),
 		       "created": {"pregnancy_diagnosis": doc.name, "service": created.name if created else None},
 		       "warnings": []}

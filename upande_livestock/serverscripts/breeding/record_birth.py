@@ -6,6 +6,7 @@ import frappe
 from frappe import _
 from frappe.utils import today
 
+from upande_livestock.serverscripts.common import backdate, birth_window, retro_birth
 from upande_livestock.serverscripts.common.employee import employee_or_throw
 from upande_livestock.serverscripts.breeding.record_calf_births import record_calf_births
 from upande_livestock.serverscripts.common.envelope import as_dict, guard, run
@@ -55,7 +56,22 @@ def _calf_row(calf, outcome):
 def record_birth(payload):
 	"""Record a calving: a Calving Livestock Event + (for live births) one Animal
 	record and a Birth event per calf. Ports the "Record Livestock Birth" Server
-	Script into a permission-checked whitelist call. No Stock Entry involved."""
+	Script into a permission-checked whitelist call. No Stock Entry involved.
+
+	THE BIRTH WINDOW (common/birth_window). The dam must have a confirmed
+	pregnancy, or a service that puts this birth inside the window; otherwise
+	the answer is refused with `code` "birth_needs_service" and what the client
+	needs to offer the retro path. A system-derived natural service is no
+	longer invented here for a birth with no cause on record.
+
+	THE RETRO PATH (common/retro_birth). `retro` = {service_date, service_type,
+	sire / sire_animal / items or semen_item, herd (where she was that day),
+	diagnosis: {diagnosis_date, ...} or none} back-records the service (and its
+	diagnosis and herd) first, in this same request — all of it or none of it.
+
+	A birth dated before today is stamped backdated, the calving and every
+	Birth event alike, so no list reads it as a same-day record.
+	"""
 
 	def go():
 		guard("Livestock Event")
@@ -65,7 +81,9 @@ def record_birth(payload):
 		if not dam_name:
 			frappe.throw(_("Select the dam."))
 		operator = employee_or_throw(d.get("operator"))
-		event_date = d.get("event_date") or today()
+		event_date = str(frappe.utils.getdate(d.get("event_date") or today()))
+		backdate.assert_not_future(event_date, _("Birth date"))
+		is_backdated = frappe.utils.getdate(event_date) < frappe.utils.getdate(today())
 		outcome = d.get("outcome") or "Live Birth"
 		related_pregnancy = d.get("related_pregnancy") or ""
 		remarks = d.get("remarks") or ""
@@ -91,6 +109,17 @@ def record_birth(payload):
 			except Exception:
 				pass
 
+		retro = d.get("retro") or None
+		made = {}
+		if retro:
+			made = retro_birth.record(dam_name, event_date, as_dict(retro), operator)
+			related_pregnancy = made["service"]
+		elif related_pregnancy and birth_window.accepts(dam_name, event_date, related_pregnancy):
+			# Named by the caller, and one the rule accepts.
+			pass
+		else:
+			related_pregnancy = birth_window.assert_birth_allowed(dam_name, event_date)["service"]
+
 		calving = frappe.new_doc("Livestock Event")
 		calving.animal = dam_name
 		calving.event_type = "Calving"
@@ -102,6 +131,7 @@ def record_birth(payload):
 		calving.remarks = remarks
 		if related_pregnancy:
 			calving.custom_related_pregnancy = related_pregnancy
+		calving.custom_is_backdated = 1 if is_backdated else 0
 		append_items(calving, d)
 		calving.insert()
 		calving.submit()
@@ -135,15 +165,19 @@ def record_birth(payload):
 
 		return {
 			"ok": True,
+			"is_backdated": bool(is_backdated),
+			"retro": made or None,
 			"service": calving.custom_related_pregnancy or "",
-			"service_created": bool(calving.flags.get("service_created")),
+			"service_created": bool(calving.flags.get("service_created") or made),
 			# Everything this call made, by name, so a client can show it and undo it.
 			"created": {
 				"calving": calving.name,
 				"births": [c.get("birth") for c in created if c.get("birth")],
 				"animals": [c.get("animal") for c in created if c.get("animal")],
-				"service": (calving.flags.get("derived_docs") or {}).get("service"),
-				"pregnancy_diagnosis": (calving.flags.get("derived_docs") or {}).get("pregnancy_diagnosis"),
+				"service": made.get("service") or (calving.flags.get("derived_docs") or {}).get("service"),
+				"pregnancy_diagnosis": made.get("pregnancy_diagnosis")
+				or (calving.flags.get("derived_docs") or {}).get("pregnancy_diagnosis"),
+				"movements": made.get("movements") or [],
 			},
 			"warnings": [],
 			"sire_animal": calving.get("sire_animal") or "",

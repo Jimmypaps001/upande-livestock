@@ -75,7 +75,18 @@ class TestEventUndo(IntegrationTestCase):
 		self.assertEqual(cow_state(self.cow.name).repro_status, "Open")
 		self.assertIsNone(cow_state(self.cow.name).last_service_date)
 
-	def test_cancelling_a_calving_cascades_to_births_calf_and_the_derived_pregnancy(self):
+	def _served_280_days_ago(self):
+		"""A service that puts today's birth inside the birth window (common/birth_window)."""
+		frappe.db.set_single_value("Livestock Settings", "custom_backdating_open", 1)
+		got = create_service_event({"animal": self.cow.name, "operator": self.op, "event_date": ago(280)})
+		frappe.db.set_single_value("Livestock Settings", "custom_backdating_open", 0)
+		self.assertTrue(got.get("ok"), got)
+		return got["name"]
+
+	def test_cancelling_a_calving_cascades_to_births_and_calf_and_reopens_its_service(self):
+		"""A calving no longer derives a pregnancy for itself: it needs a service in
+		the window, which the calf confirms — and cancelling it takes that back."""
+		service = self._served_280_days_ago()
 		got = record_birth({"dam": self.cow.name, "operator": self.op, "outcome": "Live Birth",
 		                    "calves": [{"sex": "Male", "birth_weight": 31}]})
 		self.assertTrue(got["ok"], got)
@@ -83,7 +94,8 @@ class TestEventUndo(IntegrationTestCase):
 		self.assertEqual(made["calving"], got["name"])
 		self.assertEqual(len(made["births"]), 1)
 		self.assertEqual(len(made["animals"]), 1)
-		self.assertTrue(made["service"] and made["pregnancy_diagnosis"])
+		self.assertEqual(got["service"], service)
+		self.assertEqual(frappe.db.get_value("Livestock Event", service, "pregnancy_confirmation_status"), "Confirmed")
 		self.assertTrue(frappe.db.exists("Animal", made["animals"][0]))
 		self.assertTrue(cow_state(self.cow.name).last_calving_date)
 
@@ -92,13 +104,14 @@ class TestEventUndo(IntegrationTestCase):
 		for birth in made["births"]:
 			self.assertEqual(frappe.db.get_value("Livestock Event", birth, "docstatus"), 2)
 		self.assertFalse(frappe.db.exists("Animal", made["animals"][0]))
-		self.assertEqual(frappe.db.get_value("Livestock Event", made["service"], "docstatus"), 2)
-		self.assertEqual(frappe.db.get_value("Livestock Event", made["pregnancy_diagnosis"], "docstatus"), 2)
+		# the service stands (a person recorded it) and waits for its check again
+		self.assertEqual(frappe.db.get_value("Livestock Event", service, "docstatus"), 1)
+		self.assertEqual(frappe.db.get_value("Livestock Event", service, "pregnancy_confirmation_status"), "Pending")
 		after = cow_state(self.cow.name)
-		self.assertEqual((after.repro_status, after.last_calving_date, after.last_service_date),
-		                 ("Open", None, None))
+		self.assertEqual((after.repro_status, after.last_calving_date), ("Served", None))
 
 	def test_a_calf_with_a_history_is_not_deleted_with_its_birth(self):
+		self._served_280_days_ago()
 		got = record_birth({"dam": self.cow.name, "operator": self.op, "outcome": "Live Birth",
 		                    "calves": [{"sex": "Female", "birth_weight": 30}]})
 		calf = got["created"]["animals"][0]

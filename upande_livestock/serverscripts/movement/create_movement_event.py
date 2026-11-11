@@ -24,6 +24,7 @@ def create_movement_event(payload):
 			"ok": True,
 			"warnings": [],
 			"name": doc.name,
+			"is_backdated": bool(doc.get("custom_is_backdated")),
 			"stream": frappe.db.get_value("Animal", doc.animal, "stream") or None,
 		}
 

@@ -150,11 +150,15 @@ def append_items(doc, d):
 	Shared by every creator that is not the husbandry endpoint, so that an event
 	type the farm mapped items to can record them without each endpoint growing
 	its own copy. Rows are cleaned (half-filled ones dropped), then checked
-	against the mapping for THIS type, then appended. The default warehouse is
-	None on purpose: a row whose store the picker could not place falls back
-	inside `post_stock_issue`, not here.
+	against the mapping for THIS type, then appended. A row that names no store
+	takes the event type's Default Store here — the same fallback
+	`post_stock_issue` applies — because the row's store is mandatory and a row
+	left without one could not even be saved (an out-of-stock item picked for
+	a draft placeholder often arrives that way).
 	"""
-	rows = _clean_drug_rows(d.get("items"), None)
+	from upande_livestock.serverscripts.common.event_items import default_store
+
+	rows = _clean_drug_rows(d.get("items"), default_store(doc.event_type))
 	_refuse_foreign_items(doc.event_type, rows)
 	for row in rows:
 		doc.append("drug_issues", row)

@@ -132,7 +132,15 @@ class LivestockHealthCase(Document):
 		# only the old ones: a round added today to a case opened late is given
 		# today and is issued like any other.
 		if self.get("custom_is_backdated"):
-			pending = [t for t in pending if t.treatment_date and getdate(t.treatment_date) >= getdate(today())]
+			old = [t for t in pending if not (t.treatment_date and getdate(t.treatment_date) >= getdate(today()))]
+			pending = [t for t in pending if t not in old]
+			# An old round the store could not have covered on its day is put
+			# down as a draft placeholder for that day (stock.placeholder_if_short).
+			old_by_day = {}
+			for t in old:
+				old_by_day.setdefault(getdate(t.treatment_date or self.get("opened_date") or today()), []).append(t)
+			for given, rows_of_day in sorted(old_by_day.items()):
+				self._issue_round(rows_of_day, given, default_wh, placeholder=True)
 		# One issue per day given. Rows from Oct 1 and Oct 5 saved together used
 		# to post as one entry, both on Oct 5.
 		by_day = {}
@@ -141,7 +149,7 @@ class LivestockHealthCase(Document):
 		for given, rows_of_day in sorted(by_day.items()):
 			self._issue_round(rows_of_day, given, default_wh)
 
-	def _issue_round(self, pending, given, default_wh):
+	def _issue_round(self, pending, given, default_wh, placeholder=False):
 		rows = [
 			{
 				"item_code": t.drug_item,
@@ -153,7 +161,9 @@ class LivestockHealthCase(Document):
 		]
 		# Posted on the day the treatment was given, not the day the case opened,
 		# and under the animal's company rather than Livestock Settings' default.
-		name = livestock_stock.issue_items(
+		issue = livestock_stock.placeholder_if_short if placeholder else livestock_stock.issue_items
+		extra = {} if placeholder else {"draft_if_short": True}
+		name = issue(
 			rows,
 			remarks=f"Livestock Treatment - {self.animal} - {self.name}",
 			what="Treatment",
@@ -163,7 +173,7 @@ class LivestockHealthCase(Document):
 			# A case is one animal, so its herd is unambiguous. Charged there
 			# rather than to whatever the company default happens to be.
 			herd=livestock_cost_center.herd_of(self.animal),
-			draft_if_short=True,
+			**extra,
 		)
 		if name:
 			for t in pending:

@@ -91,6 +91,11 @@ class FakeDoc:
 		self.ready_for_service_date = None
 		self.custom_related_pregnancy = None
 		self.diagnosis_result = None
+		self.event_date = "2026-01-01"
+		self.flags = frappe._dict()
+
+	def get(self, key, default=None):
+		return getattr(self, key, default)
 
 	def append(self, table, row):
 		getattr(self, table).append(row)
@@ -159,9 +164,11 @@ class TestEveryCreatorAcceptsItems(unittest.TestCase):
 		self._check(doc, out)
 
 	def test_pregnancy_diagnosis(self):
+		from upande_livestock.serverscripts.breeding import create_pregnancy_diagnosis as M
 		doc, out = self._run("diagnosis", "create_pregnancy_diagnosis", "Pregnancy Diagnosis",
 		                     {"animal": "A1", "diagnosis_result": "Confirmed",
-		                      "related_service": "S1", "items": ITEMS})
+		                      "related_service": "S1", "items": ITEMS},
+		                     extra_patches=[patch.object(M.natural_service, "sire_report", return_value={})])
 		self._check(doc, out)
 
 	def test_calving(self):
@@ -178,6 +185,8 @@ class TestEveryCreatorAcceptsItems(unittest.TestCase):
 				patch.object(M, "employee_or_throw", return_value="E1"),
 				patch.object(M.frappe, "get_doc", return_value=dam),
 				patch.object(M.frappe, "new_doc", return_value=doc),
+				# The birth window has its own test (test_birth_window).
+				patch.object(M.birth_window, "assert_birth_allowed", return_value={"service": "S1"}),
 			],
 		)
 		self._check(doc, out)

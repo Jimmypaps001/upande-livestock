@@ -31,6 +31,11 @@
   "gestation_short_warning_days",
   "gestation_long_warning_days",
   "default_calf_herd",
+  "sb_birth_window",
+  "gestation_window_min_days",
+  "gestation_window_max_days",
+  "cb_birth_window",
+  "allow_retro_pregnancy_diagnosis",
   "husbandry_tab",
   "vaccination_section",
   "min_vaccination_interval_days",
@@ -313,6 +318,37 @@
    "fieldtype": "Link",
    "label": "Default Calf Herd",
    "options": "Herds"
+  },
+  {
+   "fieldname": "sb_birth_window",
+   "fieldtype": "Section Break",
+   "label": "Birth Window",
+   "description": "A birth is recorded straight away when the dam has a confirmed pregnancy diagnosis, or a service whose date puts the birth between service + minimum and service + maximum days. Otherwise the service has to be back-recorded first (Livestock Manager, or anyone while Backdating Open is on)."
+  },
+  {
+   "default": "270",
+   "description": "Cattle: the earliest a calf can be born after the service that made it.",
+   "fieldname": "gestation_window_min_days",
+   "fieldtype": "Int",
+   "label": "Gestation Window Minimum (days)"
+  },
+  {
+   "default": "295",
+   "description": "Cattle: the latest a calf can be born after the service that made it.",
+   "fieldname": "gestation_window_max_days",
+   "fieldtype": "Int",
+   "label": "Gestation Window Maximum (days)"
+  },
+  {
+   "fieldname": "cb_birth_window",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "1",
+   "description": "When a birth needs its service back-recorded, also offer to record the pregnancy diagnosis that confirmed it (dated between the service and the birth).",
+   "fieldname": "allow_retro_pregnancy_diagnosis",
+   "fieldtype": "Check",
+   "label": "Allow pregnancy diagnosis when back-recording a service"
   },
   {
    "fieldname": "husbandry_tab",
@@ -1074,7 +1110,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-11-11 15:00:00.000000",
+ "modified": "2026-11-11 18:00:00.000000",
  "modified_by": "Administrator",
  "module": "Upande Livestock",
  "name": "Livestock Settings",

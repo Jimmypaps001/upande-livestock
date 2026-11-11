@@ -21,7 +21,7 @@ VET_EVENT_TYPES = (
 )
 
 
-def new_livestock_event(d, event_type, date_key=None, derived=False):
+def new_livestock_event(d, event_type, date_key=None, derived=False, retro=False):
 	"""Build an unsaved Livestock Event of `event_type`.
 
 	`event_date` is the canonical date for every event type: livestock_guards.py
@@ -35,6 +35,11 @@ def new_livestock_event(d, event_type, date_key=None, derived=False):
 	`derived=True` is for events the system itself dates in the past (see
 	common/natural_service): they skip the backdating-window refusal.
 
+	`retro=True` is for the records a birth's retro path back-records (see
+	common/birth_window): the caller has already decided this user may write
+	history — a Livestock Manager may with the window closed — so the window's
+	refusal is not asked a second time. Stamped backdated like any other.
+
 	The same date decides whether this is a historical record. `backdate.resolve`
 	uses exactly the precedence above, so the date the event carries and the date
 	it is judged by are the same date by construction rather than by agreement.
@@ -43,7 +48,7 @@ def new_livestock_event(d, event_type, date_key=None, derived=False):
 	# A record the SYSTEM dated (a natural service worked out from a perceived
 	# conception date or a calving) is not the user backdating, so a closed window
 	# does not refuse it; it is still stamped backdated.
-	if not derived:
+	if not derived and not retro:
 		backdate.assert_allowed(is_backdated)
 
 	doc = frappe.new_doc("Livestock Event")

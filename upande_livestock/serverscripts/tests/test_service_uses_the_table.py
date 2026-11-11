@@ -86,6 +86,11 @@ class FakeEvent:
 		self.event_type = "Service"
 		self.expected_calving_date = self.pregnancy_check_due_date = None
 		self.stock_entry = None
+		self.event_date = "2026-01-01"
+		self.flags = frappe._dict()
+
+	def get(self, key, default=None):
+		return getattr(self, key, default)
 
 	def append(self, table, row):
 		self.rows.append(row)
@@ -105,6 +110,7 @@ class TestTheCreatorFollowsTheMapping(unittest.TestCase):
 		from upande_livestock.serverscripts.breeding import create_service_event as CS
 		doc = FakeEvent()
 		with patch.object(CS, "guard"), \
+		     patch.object(CS.natural_service, "sire_report", return_value={}), \
 		     patch.object(CS, "new_livestock_event", return_value=doc), \
 		     patch.object(CS, "consumes_items", return_value=mapped, create=True), \
 		     patch.object(CS, "append_items", side_effect=lambda d, p: d.append("drug_issues", p["items"][0]), create=True):
