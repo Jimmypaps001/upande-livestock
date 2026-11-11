@@ -24,7 +24,7 @@ import hashlib
 
 import frappe
 
-from upande_livestock.serverscripts.common import herd_movement
+from upande_livestock.serverscripts.common import event_types, herd_movement
 from upande_livestock.serverscripts.common.choices import herd_label_map, select_options
 from upande_livestock.serverscripts.common.company import default_company
 from upande_livestock.serverscripts.common.employee import current_employee
@@ -148,6 +148,11 @@ def get_bootstrap_bundle(version=None):
 				fields=["name", "creates_animal", "detail_doctype"],
 				order_by="name asc",
 			),
+			# The event types the farm switched off (Settings → Events): the
+			# phone hides their menu entries, quick actions and due prompts,
+			# offline too. Named, not merely absent from `event_types`, so a
+			# phone can tell "off" from "this server predates the switch".
+			"disabled_events": event_types.disabled_events(),
 			# The N+1 this bundle exists to remove: every issuable item with its
 			# on-hand quantity, for the store the issue will actually draw from.
 			# Each from its event types' rules (Settings → Stock).

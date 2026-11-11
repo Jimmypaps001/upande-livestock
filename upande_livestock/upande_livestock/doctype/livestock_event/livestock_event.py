@@ -22,7 +22,7 @@ from frappe.utils import getdate, nowdate
 from upande_livestock.serverscripts.common import backdate
 from upande_livestock.serverscripts.common import beef_events, natural_service
 from upande_livestock.serverscripts.common.beef_settings import default_service_type
-from upande_livestock.serverscripts.common import event_items
+from upande_livestock.serverscripts.common import event_items, event_types
 from upande_livestock.serverscripts.common import stock as livestock_stock
 
 from upande_livestock.serverscripts.common.animal import create_calf
@@ -282,7 +282,8 @@ class LivestockEvent(Document):
 					}
 				)
 
-				if not existing_todo:
+				# No "check due" reminder on a farm that does not diagnose.
+				if not existing_todo and event_types.is_enabled("Pregnancy Diagnosis"):
 					todo = frappe.get_doc(
 						{
 							"doctype": "ToDo",
@@ -336,7 +337,7 @@ class LivestockEvent(Document):
 					}
 				)
 
-				if not existing_rebreeding_todo:
+				if not existing_rebreeding_todo and event_types.is_enabled("Service"):
 					todo = frappe.get_doc(
 						{
 							"doctype": "ToDo",
@@ -380,6 +381,17 @@ class LivestockEvent(Document):
 		self.set(twin, self.event_date)
 
 	def validate(self):
+		# ============================================================
+		# AN EVENT THE FARM SWITCHED OFF
+		# ============================================================
+		# The menus hide it, but a stale phone or a hand-made request does not
+		# read menus. Only a NEW record is refused: one already on file can still
+		# be corrected, submitted or cancelled after the switch. Internal
+		# history-only writes (the retro birth path's movement) set the flag:
+		# they are plumbing for another event, not a record of this one.
+		if self.is_new() and not self.flags.ignore_event_enabled:
+			event_types.assert_enabled(self.event_type)
+
 		# ============================================================
 		# THE DATE, BEFORE ANYTHING TRUSTS IT
 		# ============================================================
@@ -1117,7 +1129,7 @@ class LivestockEvent(Document):
 					}
 				)
 
-				if not existing_calving_todo:
+				if not existing_calving_todo and event_types.is_enabled("Calving"):
 					todo = frappe.get_doc(
 						{
 							"doctype": "ToDo",
@@ -1162,7 +1174,7 @@ class LivestockEvent(Document):
 		anyway), a timeline mirror (its source holds the drugs), and a Natural
 		service, which uses a bull and no straw.
 		"""
-		from upande_livestock.serverscripts.common import event_items
+		from upande_livestock.serverscripts.common import event_items, event_types
 
 		if not event_items.must_name_item(self.event_type):
 			return
@@ -1361,7 +1373,7 @@ class LivestockEvent(Document):
 		(Posts Stock Entry, with item groups). See common.event_items."""
 		if not self.event_type:
 			return False
-		from upande_livestock.serverscripts.common import event_items
+		from upande_livestock.serverscripts.common import event_items, event_types
 
 		return event_items.consumes_items(self.event_type)
 

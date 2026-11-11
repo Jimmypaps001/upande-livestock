@@ -32,10 +32,11 @@
   },
   {
    "default": "1",
+   "description": "Off: the farm does not record this event. It disappears from the menus, its alerts and due lists stop, and the server refuses a new one. Records already made stay.",
    "fieldname": "is_active",
    "fieldtype": "Check",
    "in_list_view": 1,
-   "label": "Is Active"
+   "label": "Enabled"
   },
   {
    "fieldname": "cb_details",
@@ -100,7 +101,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-10-05 18:30:00.000000",
+ "modified": "2026-11-11 09:00:00.000000",
  "modified_by": "Administrator",
  "module": "Upande Livestock",
  "name": "Livestock Event Type",

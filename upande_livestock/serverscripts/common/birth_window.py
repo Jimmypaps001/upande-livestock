@@ -143,7 +143,16 @@ def retro_refusal():
 
 
 def allows_diagnosis():
-	"""Livestock Settings → Allow pregnancy diagnosis when back-recording a service."""
+	"""Livestock Settings → Allow pregnancy diagnosis when back-recording a service.
+
+	Never while Pregnancy Diagnosis itself is switched off (Settings → Events):
+	a farm that does not diagnose has no diagnosis to back-record, whatever
+	this setting says, and the retro path hides the step.
+	"""
+	from upande_livestock.serverscripts.common.event_types import is_enabled
+
+	if not is_enabled("Pregnancy Diagnosis"):
+		return False
 	raw = frappe.db.get_single_value("Livestock Settings", "allow_retro_pregnancy_diagnosis")
 	return True if raw is None else bool(cint(raw))
 

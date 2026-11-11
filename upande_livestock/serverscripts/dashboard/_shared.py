@@ -57,6 +57,12 @@ def _zeros() -> dict:
 
 
 def _open_alerts(kind) -> int:
+	# A tile prompting for an event the farm switched off reads 0, as its
+	# alerts are no longer raised (common/event_types.ALERT_EVENT).
+	from upande_livestock.serverscripts.common.event_types import alert_wanted
+
+	if not alert_wanted(kind):
+		return 0
 	return frappe.db.count("Livestock Alert", {"alert_kind": kind, "status": "Open"})
 
 

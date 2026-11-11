@@ -27,7 +27,7 @@ import frappe
 from frappe import _
 from frappe.utils import formatdate, getdate, today
 
-from upande_livestock.serverscripts.common import backdate, birth_window, herd_history
+from upande_livestock.serverscripts.common import backdate, birth_window, event_types, herd_history
 
 RETRO_REMARK = "Back-recorded with the birth on {0}"
 
@@ -66,6 +66,9 @@ def check(dam, birth_date, retro):
 		frappe.throw(_("{0} is not a herd on this farm.").format(herd))
 	dx = retro.get("diagnosis") or None
 	if dx:
+		# Pregnancy Diagnosis switched off says so in its own words, not as the
+		# back-recording setting it overrides.
+		event_types.assert_enabled("Pregnancy Diagnosis")
 		if not birth_window.allows_diagnosis():
 			frappe.throw(_(
 				"Livestock Settings does not allow a pregnancy diagnosis to be back-recorded with a service. "
@@ -87,6 +90,9 @@ def _move(dam, on, from_herd, to_herd, operator, remarks):
 	move.operator = operator
 	move.remarks = remarks
 	move.flags.history_only = True
+	# Plumbing for the birth, not a movement recorded in its own right: a farm
+	# that switched Movement off still back-records where its dam was.
+	move.flags.ignore_event_enabled = True
 	# `current_herd` fetches from the animal (where she stands TODAY) on every
 	# save; here it is where she was that day, already checked (`check`).
 	move.flags.ignore_links = True

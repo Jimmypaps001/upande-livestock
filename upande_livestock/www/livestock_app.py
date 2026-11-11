@@ -27,6 +27,7 @@ import os
 
 import frappe
 
+from upande_livestock.serverscripts.common.event_types import disabled_events
 from upande_livestock.serverscripts.feeding._concentrate import any_herd_premanufactures
 from upande_livestock.serverscripts.feeding._head_count import feed_by_head_count_on
 
@@ -92,6 +93,9 @@ def get_context(context):
 			# sees it for the shoats' batch (`Herds.concentrate_mode`).
 			"premanufacture_concentrate": any_herd_premanufactures(),
 			"feed_by_head_count": feed_by_head_count_on(),
+			# Event types the farm switched off (Settings → Events): their
+			# pages leave the menu and their routes send you elsewhere.
+			"disabled_events": disabled_events(),
 			"csrf_token": csrf_token,
 		}
 	)

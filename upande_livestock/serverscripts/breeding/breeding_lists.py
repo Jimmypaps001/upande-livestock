@@ -12,6 +12,7 @@ import frappe
 from frappe.utils import today
 
 from upande_livestock.serverscripts.common.choices import RETIRED_STATUSES, animal_label, herd_label_map
+from upande_livestock.serverscripts.common import event_types
 from upande_livestock.serverscripts.common.envelope import guard_read, run
 
 
@@ -34,7 +35,7 @@ def breeding_lists():
 			   ORDER BY pregnancy_check_due_date ASC LIMIT 200""",
 			{"today": today(), "retired": tuple(RETIRED_STATUSES)},
 			as_dict=True,
-		)
+		) if event_types.is_enabled("Pregnancy Diagnosis") else []
 		# Ready for service: active, not currently confirmed-pregnant, no pending
 		# service, and past the post-partum window (ready_for_service_date on the
 		# last calving, else nothing pending).

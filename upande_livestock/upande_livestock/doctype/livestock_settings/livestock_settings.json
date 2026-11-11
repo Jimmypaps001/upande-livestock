@@ -921,7 +921,7 @@
    "fieldname": "stock_rules_note",
    "fieldtype": "HTML",
    "label": "Event stock rules",
-   "options": "<p>Whether an event posts a Stock Entry, the item groups it draws on, its default store and whether it must name an item are set per event type — on each <a href='/app/livestock-event-type'>Livestock Event Type</a>, or all together on the app's <b>Settings → Stock</b> tab.</p>"
+   "options": "<p>Whether an event posts a Stock Entry, the item groups it draws on, its default store and whether it must name an item are set per event type — on each <a href='/app/livestock-event-type'>Livestock Event Type</a>, or all together on the app's <b>Settings → Events</b> tab, where an event can also be switched off.</p>"
   },
   {
    "description": "Where a cow goes the moment she calves, and where she is served again from. Leave blank to keep her in the herd she is in.",
@@ -1110,7 +1110,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-11-11 18:00:00.000000",
+ "modified": "2026-11-11 09:00:00.000000",
  "modified_by": "Administrator",
  "module": "Upande Livestock",
  "name": "Livestock Settings",
