@@ -4,7 +4,7 @@ import { BackdatingSetting } from "@/components/settings/BackdatingSetting";
 import { ChildTableEditor } from "@/components/settings/ChildTableEditor";
 import { FeedlotBandsCard } from "@/components/settings/FeedlotBandsCard";
 import { SettingField } from "@/components/settings/SettingField";
-import { StockRulesCard } from "@/components/settings/StockRulesCard";
+import { EventsCard } from "@/components/settings/EventsCard";
 import { AmberNotice, Notice } from "@/components/feeding/Notice";
 import { Page, PageHeading } from "@/components/PageShell";
 import { Button } from "@/components/ui/button";
@@ -43,6 +43,9 @@ import {
  * unset values get coerced to 0 and how every age and interval guard on the
  * farm gets switched off at once — which has happened here before.
  */
+/** The Events tab: not a doctype tab, so a name no doctype tab can have. */
+const EVENTS_TAB = "__events";
+
 export function Settings() {
   const [doc, setDoc] = useState<LivestockSettingsDoc | null>(null);
   const [draft, setDraft] = useState<Record<string, SettingsValue>>({});
@@ -163,14 +166,26 @@ export function Settings() {
                 {tab.label}
               </TabsTrigger>
             ))}
+            <TabsTrigger value={EVENTS_TAB}>Events</TabsTrigger>
           </TabsList>
+
+          {/* Which events the farm records, and each one's stock and timing.
+              The switch and the stock rule live on each Livestock Event Type,
+              not on this doctype, so the tab is the page's own. */}
+          <TabsContent value={EVENTS_TAB}>
+            <EventsCard
+              canWrite={!readOnly}
+              fields={fields}
+              values={values}
+              onSettingsSaved={(next) =>
+                setDoc((current) => (current ? { ...current, values: next } : current))
+              }
+            />
+          </TabsContent>
 
           {doc.tabs.map((tab) => (
             <TabsContent key={tab.fieldname} value={tab.fieldname}>
               <div className="flex flex-col gap-5">
-                {/* The event rules live on each Livestock Event Type, not on this
-                    doctype, so the Stock tab shows them with their own editor. */}
-                {tab.fieldname === "tab_stock" && <StockRulesCard canWrite={!readOnly} />}
                 {tab.sections.map((section) => (
                   <SectionCard
                     key={section.fieldname}

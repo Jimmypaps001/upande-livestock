@@ -83,7 +83,7 @@ export function StockPicker({
     ) : (
       <Notice tone="info">
         This event is not set to post stock, so it cannot use anything from the
-        store. Set that in Settings &rarr; Stock.
+        store. Set that in Settings &rarr; Events.
       </Notice>
     );
 

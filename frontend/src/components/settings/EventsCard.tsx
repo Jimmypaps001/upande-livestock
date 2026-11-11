@@ -1,13 +1,23 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Loader2, X } from "lucide-react";
 import { LinkPicker } from "@/components/settings/LinkPicker";
+import { SettingField } from "@/components/settings/SettingField";
 import { useToast } from "@/components/Toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { isError } from "@/lib/frappe";
 import {
+  changePayload,
+  pendingChanges,
+  saveLivestockSettings,
+  type SettingsField,
+  type SettingsValue,
+} from "@/lib/settings";
+import {
+  detailsShown,
   ruleProblem,
+  ruleSummary,
   sameRule,
   saveStockRules,
   stockRules,
@@ -15,16 +25,36 @@ import {
 } from "@/lib/stock-rules";
 
 /**
- * Settings → Stock: which events post a Stock Entry, from which item groups,
- * out of which store by default, and whether the item must be named.
+ * Settings → Events: which events this farm records, and for each one it does,
+ * what it uses from stock and how often it comes round.
  *
- * One row per event type. An event can always be recorded without stock; a
- * ticked type is offered items from its groups and posts what is entered. The
- * whole list saves at once, and only the rows that changed are written.
+ * One row per event type, led by its Enabled switch. Some farms do not do a
+ * pregnancy diagnosis; switched off, an event leaves the menus (web and phone),
+ * its alerts and due lists stop and the server refuses a new one. Its details
+ * are shown and editable only while it is on — off, the row folds to one line
+ * and keeps the details as they were, so switching it back on restores them.
+ *
+ * "Uses stock" is the event type's own rule (item groups, default store, must
+ * name an item). "How often" is the Livestock Settings timings that govern the
+ * event — the same fields the guards and alerts read, shown here beside the
+ * event they belong to rather than copied. One Save writes both.
  */
-export function StockRulesCard({ canWrite }: { canWrite: boolean }) {
+export function EventsCard({
+  canWrite,
+  fields,
+  values,
+  onSettingsSaved,
+}: {
+  canWrite: boolean;
+  /** Every Livestock Settings field, for the timings' labels, help and controls. */
+  fields: SettingsField[];
+  values: Record<string, SettingsValue>;
+  /** The settings as stored after a timing save, so the rest of the page redraws from them. */
+  onSettingsSaved: (values: Record<string, SettingsValue>) => void;
+}) {
   const [saved, setSaved] = useState<StockRule[] | null>(null);
   const [rows, setRows] = useState<StockRule[]>([]);
+  const [timingDraft, setTimingDraft] = useState<Record<string, SettingsValue>>({});
   const [failure, setFailure] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const toast = useToast();
@@ -44,11 +74,19 @@ export function StockRulesCard({ canWrite }: { canWrite: boolean }) {
     void load();
   }, [load]);
 
+  const byName = useMemo(() => new Map(fields.map((f) => [f.fieldname, f])), [fields]);
   const changed = useMemo(
     () => rows.filter((row, i) => saved && !sameRule(row, saved[i])),
     [rows, saved],
   );
+  // Only the timings of events that are on: a folded event's fields are not on screen.
+  const timingChanges = useMemo(() => {
+    const shown = new Set(rows.filter(detailsShown).flatMap((r) => r.timings));
+    const draft = Object.fromEntries(Object.entries(timingDraft).filter(([f]) => shown.has(f)));
+    return pendingChanges(fields, values, draft);
+  }, [rows, timingDraft, fields, values]);
   const problems = changed.map(ruleProblem).filter(Boolean) as string[];
+  const pending = changed.length + timingChanges.length;
 
   function update(index: number, patch: Partial<StockRule>) {
     setRows((current) => current.map((row, i) => (i === index ? { ...row, ...patch } : row)));
@@ -56,30 +94,48 @@ export function StockRulesCard({ canWrite }: { canWrite: boolean }) {
 
   async function save() {
     setBusy(true);
-    const r = await saveStockRules(changed);
-    setBusy(false);
-    if (isError(r)) {
-      toast(r.error, "error");
-      return;
+    const said: string[] = [];
+    if (changed.length) {
+      const r = await saveStockRules(changed);
+      if (isError(r)) {
+        setBusy(false);
+        toast(r.error, "error");
+        return;
+      }
+      setSaved(r.rules);
+      setRows(r.rules);
+      said.push(...r.changed);
     }
-    setSaved(r.rules);
-    setRows(r.rules);
-    toast(
-      r.changed.length
-        ? `Saved: ${r.changed.join(", ")}.`
-        : "Nothing had changed.",
-      "ok",
-    );
+    if (timingChanges.length) {
+      const r = await saveLivestockSettings(changePayload(timingChanges));
+      if (isError(r)) {
+        setBusy(false);
+        // The server's words: it names the field and says why (a 0, a blank).
+        toast(r.error, "error");
+        return;
+      }
+      setTimingDraft({});
+      onSettingsSaved(r.values);
+      said.push(...Object.keys(r.changed || {}).map((f) => byName.get(f)?.label || f));
+    }
+    setBusy(false);
+    toast(said.length ? `Saved: ${said.join(", ")}.` : "Nothing had changed.", "ok");
+  }
+
+  function discard() {
+    if (saved) setRows(saved);
+    setTimingDraft({});
   }
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>What each event posts to stock</CardTitle>
+        <CardTitle>Events this farm records</CardTitle>
         <CardDescription>
-          Tick an event to offer items from its item groups and post a Stock Entry for what is
-          entered. An event can still be recorded without one, unless it must name an item.
-          Lines with no store come off the default store.
+          Switch off an event the farm does not do — a pregnancy diagnosis, say. It leaves the
+          menus on the web and the phone, its alerts and due lists stop, and it cannot be
+          recorded. Records already made stay. While an event is on, set whether it uses stock
+          and how often it comes round.
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
@@ -94,86 +150,141 @@ export function StockRulesCard({ canWrite }: { canWrite: boolean }) {
           <div className="flex flex-col divide-y divide-[var(--sd-line)]">
             {rows.map((row, i) => {
               const problem = ruleProblem(row);
+              const open = detailsShown(row);
+              const timingFields = row.timings
+                .map((f) => byName.get(f))
+                .filter((f): f is SettingsField => !!f);
               return (
-                <div key={row.event_type} className="flex flex-col gap-2 py-3 lg:flex-row lg:items-start lg:gap-4">
-                  <label className="flex min-w-[170px] items-center gap-2 text-[13px] font-medium text-[var(--sd-ink)]">
-                    <Switch
-                      checked={row.posts_stock_entry}
-                      disabled={!canWrite}
-                      onCheckedChange={(on) =>
-                        update(i, on ? { posts_stock_entry: true } : {
-                          posts_stock_entry: false, must_name_item: false,
-                        })
-                      }
-                      aria-label={`${row.event_type} posts a stock entry`}
-                    />
-                    {row.event_type}
-                  </label>
+                <section
+                  key={row.event_type}
+                  aria-label={row.event_type}
+                  data-enabled={open ? "true" : "false"}
+                  className="flex flex-col gap-3 py-3"
+                >
+                  <div className="flex flex-wrap items-center gap-3">
+                    <label className="flex min-w-[200px] items-center gap-2 text-[13.5px] font-semibold text-[var(--sd-ink)]">
+                      <Switch
+                        checked={row.enabled}
+                        disabled={!canWrite}
+                        onCheckedChange={(on) => update(i, { enabled: on })}
+                        aria-label={`${row.event_type} enabled`}
+                      />
+                      <span className={open ? "" : "text-[var(--sd-quiet)]"}>{row.event_type}</span>
+                    </label>
+                    <span className="text-[12.5px] text-[var(--sd-quiet)]">{ruleSummary(row)}</span>
+                  </div>
 
-                  {row.posts_stock_entry ? (
-                    <div className="grid flex-1 gap-2 lg:grid-cols-[2fr_1.4fr_auto]">
-                      <div className="flex flex-col gap-1.5">
-                        <div className="flex flex-wrap gap-1.5">
-                          {row.item_groups.map((g) => (
-                            <span
-                              key={g}
-                              className="inline-flex items-center gap-1 rounded-[var(--sd-radius-pill)] bg-[var(--sd-bg-soft)] px-2.5 py-1 text-[12px] text-[var(--sd-ink)]"
-                            >
-                              {g}
-                              {canWrite && (
-                                <button
-                                  type="button"
-                                  aria-label={`Remove ${g}`}
-                                  onClick={() => update(i, { item_groups: row.item_groups.filter((x) => x !== g) })}
-                                  className="text-[var(--sd-quiet)] hover:text-[var(--sd-sev-critical)]"
+                  {open && (
+                    <div className="grid gap-4 pl-1 lg:grid-cols-2 lg:pl-11">
+                      <div className="flex flex-col gap-2">
+                        <span className="text-[11px] uppercase tracking-[0.12em] text-[var(--sd-quiet)]">
+                          Uses stock
+                        </span>
+                        <label className="flex items-center gap-2 text-[12.5px] text-[var(--sd-muted)]">
+                          <Switch
+                            checked={row.posts_stock_entry}
+                            disabled={!canWrite}
+                            onCheckedChange={(on) =>
+                              update(i, on ? { posts_stock_entry: true } : {
+                                posts_stock_entry: false, must_name_item: false,
+                              })
+                            }
+                            aria-label={`${row.event_type} uses stock`}
+                          />
+                          {row.posts_stock_entry ? "Yes — offers items and posts a Stock Entry" : "No"}
+                        </label>
+
+                        {row.posts_stock_entry && (
+                          <div className="flex flex-col gap-2">
+                            <div className="flex flex-wrap gap-1.5">
+                              {row.item_groups.map((g) => (
+                                <span
+                                  key={g}
+                                  className="inline-flex items-center gap-1 rounded-[var(--sd-radius-pill)] bg-[var(--sd-bg-soft)] px-2.5 py-1 text-[12px] text-[var(--sd-ink)]"
                                 >
-                                  <X className="h-3 w-3" />
-                                </button>
-                              )}
-                            </span>
-                          ))}
-                        </div>
-                        {canWrite && (
-                          <span className="text-[11px] uppercase tracking-[0.12em] text-[var(--sd-quiet)]">
-                            {row.item_groups.length ? "Add another item group" : "Add an item group"}
+                                  {g}
+                                  {canWrite && (
+                                    <button
+                                      type="button"
+                                      aria-label={`Remove ${g}`}
+                                      onClick={() => update(i, { item_groups: row.item_groups.filter((x) => x !== g) })}
+                                      className="text-[var(--sd-quiet)] hover:text-[var(--sd-sev-critical)]"
+                                    >
+                                      <X className="h-3 w-3" />
+                                    </button>
+                                  )}
+                                </span>
+                              ))}
+                            </div>
+                            {canWrite && (
+                              <>
+                                <span className="text-[11px] text-[var(--sd-quiet)]">
+                                  {row.item_groups.length ? "Add another item group" : "Add the item group it draws from"}
+                                </span>
+                                <LinkPicker
+                                  doctype="Item Group"
+                                  value={null}
+                                  onChange={(g) => {
+                                    if (g && !row.item_groups.includes(g)) {
+                                      update(i, { item_groups: [...row.item_groups, g] });
+                                    }
+                                  }}
+                                />
+                              </>
+                            )}
+                            {problem && <span className="text-[11.5px] text-[var(--sd-sev-high)]">{problem}</span>}
+                            <span className="text-[11px] text-[var(--sd-quiet)]">Default store</span>
+                            <LinkPicker
+                              doctype="Warehouse"
+                              value={row.default_store}
+                              disabled={!canWrite}
+                              onChange={(store) => update(i, { default_store: store })}
+                            />
+                            <label className="flex items-center gap-2 text-[12.5px] text-[var(--sd-muted)]">
+                              <Switch
+                                checked={row.must_name_item}
+                                disabled={!canWrite}
+                                onCheckedChange={(on) => update(i, { must_name_item: on })}
+                                aria-label={`${row.event_type} must name an item`}
+                              />
+                              Must name an item
+                            </label>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex flex-col gap-2">
+                        <span className="text-[11px] uppercase tracking-[0.12em] text-[var(--sd-quiet)]">
+                          How often
+                        </span>
+                        {timingFields.length ? (
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            {timingFields.map((field) => (
+                              <SettingField
+                                key={field.fieldname}
+                                field={field}
+                                stored={values[field.fieldname] ?? null}
+                                value={
+                                  field.fieldname in timingDraft
+                                    ? timingDraft[field.fieldname]
+                                    : (values[field.fieldname] ?? null)
+                                }
+                                onChange={(next) =>
+                                  setTimingDraft((d) => ({ ...d, [field.fieldname]: next }))
+                                }
+                                disabled={!canWrite}
+                              />
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-[12.5px] text-[var(--sd-quiet)]">
+                            Recorded when it happens; no due rule.
                           </span>
                         )}
-                        {canWrite && (
-                          <LinkPicker
-                            doctype="Item Group"
-                            value={null}
-                            onChange={(g) => {
-                              if (g && !row.item_groups.includes(g)) {
-                                update(i, { item_groups: [...row.item_groups, g] });
-                              }
-                            }}
-                          />
-                        )}
-                        {problem && <span className="text-[11.5px] text-[var(--sd-sev-high)]">{problem}</span>}
                       </div>
-                      <div className="flex flex-col gap-1">
-                        <span className="text-[11px] uppercase tracking-[0.12em] text-[var(--sd-quiet)]">Default store</span>
-                        <LinkPicker
-                          doctype="Warehouse"
-                          value={row.default_store}
-                          disabled={!canWrite}
-                          onChange={(store) => update(i, { default_store: store })}
-                        />
-                      </div>
-                      <label className="flex items-center gap-2 text-[12.5px] text-[var(--sd-muted)] lg:pt-5">
-                        <Switch
-                          checked={row.must_name_item}
-                          disabled={!canWrite}
-                          onCheckedChange={(on) => update(i, { must_name_item: on })}
-                          aria-label={`${row.event_type} must name an item`}
-                        />
-                        Must name an item
-                      </label>
                     </div>
-                  ) : (
-                    <span className="text-[12.5px] text-[var(--sd-quiet)] lg:pt-1">Posts no stock.</span>
                   )}
-                </div>
+                </section>
               );
             })}
           </div>
@@ -182,13 +293,13 @@ export function StockRulesCard({ canWrite }: { canWrite: boolean }) {
         {saved && canWrite && (
           <div className="flex flex-wrap items-center justify-end gap-2 pt-1">
             <span className="mr-auto text-[12.5px] text-[var(--sd-muted)]">
-              {changed.length === 0 ? "No unsaved changes" : `${changed.length} event ${changed.length === 1 ? "type" : "types"} changed`}
+              {pending === 0 ? "No unsaved changes" : `${pending} unsaved ${pending === 1 ? "change" : "changes"}`}
             </span>
-            <Button variant="outline" size="sm" disabled={!changed.length || busy} onClick={() => setRows(saved)}>
+            <Button variant="outline" size="sm" disabled={!pending || busy} onClick={discard}>
               Discard
             </Button>
-            <Button size="sm" disabled={!changed.length || busy || problems.length > 0} onClick={save}>
-              {busy ? "Saving…" : "Save stock rules"}
+            <Button size="sm" disabled={!pending || busy || problems.length > 0} onClick={save}>
+              {busy ? "Saving…" : "Save events"}
             </Button>
           </div>
         )}

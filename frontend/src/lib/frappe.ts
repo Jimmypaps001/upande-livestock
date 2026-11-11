@@ -32,6 +32,9 @@ export interface LivestockBootstrap {
    *  head count x per head as a suggestion and the operator types the group's
    *  total. Unset means on. */
   feed_by_head_count: boolean;
+  /** Livestock Event Types the farm switched off (Settings → Events). Their
+   *  record pages leave the menu (lib/roles: viewOpen). Unset means none. */
+  disabled_events: string[];
 }
 
 declare global {
@@ -58,6 +61,7 @@ export function bootstrap(): LivestockBootstrap {
     roles: Array.isArray(raw.roles) ? (raw.roles as string[]) : [],
     premanufacture_concentrate: raw.premanufacture_concentrate !== false,
     feed_by_head_count: raw.feed_by_head_count !== false,
+    disabled_events: Array.isArray(raw.disabled_events) ? (raw.disabled_events as string[]) : [],
   };
 }
 

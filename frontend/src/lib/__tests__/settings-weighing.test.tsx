@@ -38,7 +38,7 @@ vi.mock("@/lib/frappe", async () => {
   const actual = await vi.importActual<typeof import("@/lib/frappe")>("@/lib/frappe");
   return { ...actual, call };
 });
-vi.mock("@/components/settings/StockRulesCard", () => ({ StockRulesCard: () => null }));
+vi.mock("@/components/settings/EventsCard", () => ({ EventsCard: () => null }));
 
 const { Settings } = await import("@/pages/Settings");
 

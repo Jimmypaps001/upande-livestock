@@ -169,7 +169,7 @@ export function Husbandry() {
       vet_fee: external && Number(fee) > 0 ? Number(fee) : undefined,
       remarks: remarks.trim() || undefined,
       // A line the picker could not place falls back, on the server, to the
-      // event type's Default Store (Settings → Stock).
+      // event type's Default Store (Settings → Events).
       // Each line is drawn from the store the operator saw it in (the one
       // holding the most unless they moved it). One warehouse for the whole
       // round meant issuing off a shelf the picker never claimed it was on.

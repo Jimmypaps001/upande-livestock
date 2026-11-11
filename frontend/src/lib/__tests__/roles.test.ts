@@ -61,3 +61,42 @@ describe("the Concentrate window", () => {
     expect(viewOpen("feeding", only, true)).toBe(false);
   });
 });
+
+describe("an event the farm switched off", () => {
+  const manager = ["Livestock Manager"];
+
+  it("closes the page that records it, and only that page", async () => {
+    const { viewOpen: open } = await import("@/lib/roles");
+    const off = ["Pregnancy Diagnosis"];
+    expect(open("diagnosis", manager, true, off)).toBe(false);
+    expect(open("service", manager, true, off)).toBe(true);
+    expect(open("calving", manager, true, off)).toBe(true);
+    expect(open("diagnosis", manager, true, [])).toBe(true);
+  });
+
+  it("keeps a page of several events while any of them is on", async () => {
+    const { viewOpen: open } = await import("@/lib/roles");
+    expect(open("husbandry", manager, true, ["Vaccination", "Deworming"])).toBe(true);
+    expect(open("husbandry", manager, true, ["Vaccination", "Deworming", "Dehorning", "Hoof Trimming"])).toBe(false);
+  });
+
+  it("never closes a page that records no event type of its own", async () => {
+    const { viewOpen: open } = await import("@/lib/roles");
+    const everything = ["Movement", "Calving", "Feeding", "Weight Recording", "Pregnancy Diagnosis"];
+    for (const view of ["feeding", "animals", "settings", "dashboard"] as const) {
+      expect(open(view, manager, true, everything)).toBe(true);
+    }
+  });
+
+  it("reads the switched-off list from the page's bootstrap", async () => {
+    const { eventEnabled, viewEventsOn } = await import("@/lib/roles");
+    window.LIVESTOCK = { bootstrap: { disabled_events: ["Heat Detection"] } };
+    try {
+      expect(eventEnabled("Heat Detection")).toBe(false);
+      expect(viewEventsOn("heat")).toBe(false);
+      expect(viewEventsOn("service")).toBe(true);
+    } finally {
+      delete window.LIVESTOCK;
+    }
+  });
+});

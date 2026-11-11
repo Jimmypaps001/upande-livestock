@@ -102,7 +102,7 @@ describe("quantity defaults and an empty mapping", () => {
       </TooltipProvider>,
     );
     expect(screen.getByText(/not set to post stock/)).toBeTruthy();
-    expect(screen.getByText(/Settings → Stock/)).toBeTruthy();
+    expect(screen.getByText(/Settings → Events/)).toBeTruthy();
     expect(screen.queryByText(/hold no items/)).toBeNull();
   });
 });
