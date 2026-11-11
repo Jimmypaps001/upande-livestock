@@ -358,4 +358,14 @@ html { font-size: 85%; }
   --sd-amber: #b45309;
   --sd-amber-bg: #fef6e7;
   --sd-amber-line: rgba(180, 83, 9, 0.28);
+  /* The row tint of a backdated record: present, never loud. */
+  --sd-amber-tint: rgba(233, 162, 59, 0.08);
+}
+/* A dark shell (the desk's dark theme) keeps the amber readable. */
+.dark,
+[data-theme="dark"] {
+  --sd-amber: #f4b860;
+  --sd-amber-bg: rgba(244, 184, 96, 0.14);
+  --sd-amber-line: rgba(244, 184, 96, 0.35);
+  --sd-amber-tint: rgba(244, 184, 96, 0.07);
 }

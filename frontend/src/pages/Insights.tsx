@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Activity, HeartPulse } from "lucide-react";
+import { BackdatedBadge, backdatedTint } from "@/components/BackdatedBadge";
 import { Figure, FigureRow } from "@/components/Figure";
 import { Notice } from "@/components/feeding/Notice";
 import { STICKY_HEAD, ScrollTable } from "@/components/ScrollTable";
@@ -139,11 +140,19 @@ export function Events() {
                 </thead>
                 <tbody>
                   {rows.map((r) => (
-                    <tr key={r.name} className="border-t border-[var(--sd-line)]">
+                    <tr
+                      key={r.name}
+                      className={cn("border-t border-[var(--sd-line)]", backdatedTint(r.custom_is_backdated))}
+                    >
                       <td className="py-2.5 pr-3 tabular-nums text-[var(--sd-muted)]">
                         {r.event_date || "—"}
                       </td>
-                      <td className="py-2.5 pr-3 text-[var(--sd-ink)]">{r.event_type || "—"}</td>
+                      <td className="py-2.5 pr-3 text-[var(--sd-ink)]">
+                        <span className="inline-flex flex-wrap items-center gap-2">
+                          {r.event_type || "—"}
+                          {!!r.custom_is_backdated && <BackdatedBadge />}
+                        </span>
+                      </td>
                       <td className="py-2.5 pr-3 tabular-nums text-[var(--sd-muted)]">
                         {r.animal || "—"}
                       </td>

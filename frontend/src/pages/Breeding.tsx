@@ -12,6 +12,8 @@ import {
   type BreedingOptions,
   type HealthOptions,
   type MovementOptions,
+  choiceLabel,
+  outOfStock,
 } from "@/lib/events";
 
 /**
@@ -60,7 +62,12 @@ export function Service() {
           // operator changes straw would be a round trip for something it
           // already sent: `locations` is every store holding any, most first.
           const straw = o.semen_items.find((i) => i.value === v.semen_item);
-          const stores = straw?.locations ?? [];
+          const stores = straw?.locations?.length
+            ? straw.locations
+            : straw?.warehouse
+              ? [{ warehouse: straw.warehouse, qty: 0 }]
+              : [];
+          const strawOut = outOfStock(straw);
           const legacyStraw: FieldSpec[] = mapped
             ? []
             : [
@@ -68,10 +75,12 @@ export function Service() {
                   // The LABEL, not the bare item code. `4040030118` tells a
                   // herdsman nothing; "Semen Chico · 12 Nos in Westwood Dairy
                   // Store" tells him which bull and which fridge.
-                  options: o.semen_items.map((i) => ({ value: i.value, label: i.label })),
-                  hint: o.semen_items.length
-                    ? "Only straws the stores actually hold are offered."
-                    : "No straws in stock in any configured store." },
+                  options: o.semen_items.map((i) => ({ value: i.value, label: choiceLabel(i) })),
+                  hint: strawOut
+                    ? "None of this straw is in store: the service is recorded and the straw's issue waits as a draft on Transactions."
+                    : o.semen_items.length
+                      ? "Straws the stores hold come first; one marked out of stock is saved as a draft."
+                      : "No straws are set up for Service." },
                 // How many straws this session actually used. A double
                 // insemination within one day is real practice (guards.py says
                 // so in as many words), and without this every service deducted

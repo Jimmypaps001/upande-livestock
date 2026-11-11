@@ -90,7 +90,7 @@ describe("quantity defaults and an empty mapping", () => {
         <StockPicker choices={[]} rows={[blankRow()]} onChange={vi.fn()} />
       </TooltipProvider>,
     );
-    expect(screen.getByText(/Nothing mapped to this event is in stock right now/)).toBeTruthy();
+    expect(screen.getByText(/groups this event uses hold no items/)).toBeTruthy();
     expect(screen.queryByText(/not set to post stock/)).toBeNull();
     expect(screen.queryByText(/Settings/)).toBeNull();
   });
@@ -103,7 +103,7 @@ describe("quantity defaults and an empty mapping", () => {
     );
     expect(screen.getByText(/not set to post stock/)).toBeTruthy();
     expect(screen.getByText(/Settings → Stock/)).toBeTruthy();
-    expect(screen.queryByText(/in stock right now/)).toBeNull();
+    expect(screen.queryByText(/hold no items/)).toBeNull();
   });
 });
 

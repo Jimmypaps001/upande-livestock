@@ -29,6 +29,9 @@ export interface StockEntryRow {
   can_post: boolean;
   /** What a draft is still missing, in words. */
   short: string | null;
+  /** A draft placeholder for a backdated record: dated a day before it was
+   *  made (common/stock). Badged, so nobody reads it as today's issue. */
+  backdated?: boolean;
 }
 
 /** One day's counts on the calendar. */

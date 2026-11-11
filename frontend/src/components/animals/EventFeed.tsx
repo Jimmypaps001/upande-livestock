@@ -9,7 +9,9 @@ import {
   Sparkle,
   type LucideIcon,
 } from "lucide-react";
+import { BackdatedBadge, backdatedTint } from "@/components/BackdatedBadge";
 import { MILESTONE_TONE, type Milestone, type MilestoneKind } from "@/lib/animals";
+import { cn } from "@/lib/utils";
 
 /**
  * Everything that has happened to her, newest first.
@@ -70,7 +72,10 @@ export function EventFeed({ milestones }: { milestones: Milestone[] }) {
               return (
                 <li
                   key={`${m.on}-${i}`}
-                  className="group flex items-start gap-3 rounded-[var(--sd-radius)] px-2 py-2.5 transition-colors hover:bg-[var(--sd-bg-soft)]"
+                  className={cn(
+                    "group flex items-start gap-3 rounded-[var(--sd-radius)] px-2 py-2.5 transition-colors hover:bg-[var(--sd-bg-soft)]",
+                    backdatedTint(m.backdated),
+                  )}
                 >
                   <span
                     className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full"
@@ -83,8 +88,9 @@ export function EventFeed({ milestones }: { milestones: Milestone[] }) {
                     />
                   </span>
                   <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                    <span className="text-[13.5px] font-medium text-[var(--sd-ink)]">
+                    <span className="flex flex-wrap items-center gap-2 text-[13.5px] font-medium text-[var(--sd-ink)]">
                       {m.label}
+                      {m.backdated && <BackdatedBadge />}
                     </span>
                     {m.detail && (
                       <span className="text-[12px] text-[var(--sd-muted)]">{m.detail}</span>

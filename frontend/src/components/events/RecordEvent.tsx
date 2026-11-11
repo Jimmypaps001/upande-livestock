@@ -277,7 +277,9 @@ export function RecordEvent<O>({
       toast(r.error, "error");
       return;
     }
-    toast(said(r, picked));
+    // A record dated before today is stamped backdated on the server; say so,
+    // so nobody takes it for a same-day record.
+    toast(`${said(r, picked)}${(r as { is_backdated?: boolean }).is_backdated ? " Marked backdated." : ""}`);
     setPicked(null);
     setItemRows([blankRow()]);
     void refresh();

@@ -17,14 +17,28 @@ import { useToast } from "@/components/Toast";
 import { useSaveShortcut } from "@/lib/use-save-shortcut";
 import { isError } from "@/lib/frappe";
 import {
+  getBreedingOptions,
   getCalvingDestinations,
   getMovementOptions,
   recordBirth,
   type AnimalChoice,
+  type BreedingOptions,
   type CalvingDestinations,
   type MovementOptions,
 } from "@/lib/events";
 import { OperatorField } from "@/components/events/OperatorField";
+import { RetroBirth } from "@/components/events/RetroBirth";
+import { BackdatedBadge } from "@/components/BackdatedBadge";
+import {
+  birthCheck,
+  blankRetro,
+  needsService,
+  retroPayload,
+  retroProblems,
+  type BirthCheck,
+  type RetroForm,
+} from "@/lib/birth-window";
+import { usePostingDay } from "@/lib/posting-day";
 import { StockPicker, blankRow, type ItemRow } from "@/components/stock/StockPicker";
 import { useBatchPlans } from "@/lib/use-batch-plans";
 import { useOperator } from "@/lib/operator";
@@ -77,6 +91,55 @@ export function Calving() {
   const toast = useToast();
   const [term, setTerm] = useState("");
   const who = useOperator(options?.employee);
+  // THE BIRTH WINDOW (lib/birth-window). Asked the moment a cow and a day are
+  // picked: may this birth be recorded as it stands, and if not, the retro path.
+  const day = usePostingDay();
+  const birthDate = when || day?.today || todayISO();
+  const [check, setCheck] = useState<BirthCheck | null>(null);
+  const [retro, setRetro] = useState<RetroForm>(blankRetro);
+  const [breeding, setBreeding] = useState<BreedingOptions | null>(null);
+  const needRetro = !!check && check.allowed === false;
+
+  useEffect(() => {
+    let live = true;
+    setCheck(null);
+    setRetro(blankRetro());
+    if (!dam) return;
+    void birthCheck({ dam, birth_date: birthDate }).then((r) => {
+      if (live && !isError(r)) setCheck(r);
+    });
+    return () => {
+      live = false;
+    };
+  }, [dam, birthDate]);
+
+  // The service form needs the breeding screen's choices; only fetched when the
+  // retro path is actually shown.
+  useEffect(() => {
+    if (!needRetro || breeding) return;
+    void getBreedingOptions().then((r) => {
+      if (!isError(r)) setBreeding(r);
+    });
+  }, [needRetro, breeding]);
+
+  // A service date picked: where her history puts her that day starts the herd
+  // picker, unless somebody has already chosen one.
+  const serviceDate = retro.service_date;
+  useEffect(() => {
+    let live = true;
+    if (!dam || !needRetro || !serviceDate) return;
+    void birthCheck({ dam, birth_date: birthDate, service_date: serviceDate }).then((r) => {
+      if (!live || isError(r)) return;
+      setCheck((c) => (c ? { ...c, herd_on_service_date: r.herd_on_service_date } : c));
+      if (r.herd_on_service_date) setRetro((f) => (f.herd ? f : { ...f, herd: r.herd_on_service_date || "" }));
+    });
+    return () => {
+      live = false;
+    };
+  }, [dam, birthDate, needRetro, serviceDate]);
+
+  const problems = needRetro && check ? retroProblems(retro, birthDate, check) : [];
+  const blocked = needRetro && (!check?.retro_allowed || problems.length > 0);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -130,13 +193,18 @@ export function Calving() {
     );
   }, [animals, term]);
 
-  useSaveShortcut(() => void send(), !!dam && !busy && !who.needed);
+  useSaveShortcut(() => void send(), !!dam && !busy && !who.needed && !blocked);
 
   async function send() {
     if (!dam) return;
+    if (blocked) {
+      toast(check?.retro_allowed === false ? check.retro_refusal : problems.join(" "), "error");
+      return;
+    }
     setBusy(true);
     const r = await recordBirth({
       dam,
+      retro: needRetro && check ? retroPayload(retro, check) : undefined,
       event_date: when,
       remarks: remarks.trim() || undefined,
       operator: who.value,
@@ -160,14 +228,22 @@ export function Calving() {
     });
     setBusy(false);
     if (isError(r)) {
+      // "Record the service first": the screen opens the retro path rather
+      // than leaving the refusal as words only.
+      if (needsService(r)) setCheck({ ...(r as unknown as BirthCheck), allowed: false });
       toast(r.error, "error");
       return;
     }
+    const back = r.retro
+      ? ` Back-recorded (backdated): service ${r.retro.service}${
+          r.retro.pregnancy_diagnosis ? `, diagnosis ${r.retro.pregnancy_diagnosis}` : ""
+        }${r.retro.movements?.length ? `, ${r.retro.movements.length} herd move(s)` : ""}.`
+      : "";
     const born = (r.calves || []).map((c) => c.animal).filter(Boolean);
     toast(
       born.length
-        ? `${dam} calved — ${born.join(", ")} ${born.length === 1 ? "is" : "are"} on the farm, numbered in order.`
-        : `${dam} calved — ${r.name}.`,
+        ? `${dam} calved — ${born.join(", ")} ${born.length === 1 ? "is" : "are"} on the farm, numbered in order.${back}`
+        : `${dam} calved — ${r.name}.${back}`,
     );
     setDam(null);
     setCalves([blankCalf()]);
@@ -291,6 +367,32 @@ export function Calving() {
                       <EventDate id="c-when" value={when} onChange={setWhen} />
                     </div>
                   </div>
+
+                  {check?.allowed && check.basis && (
+                    <p className="text-[12.5px] text-[var(--sd-muted)]" data-testid="birth-basis">
+                      {check.basis.kind === "diagnosis"
+                        ? `Recorded against her confirmed pregnancy (service ${check.basis.service}, ${check.basis.service_date}).`
+                        : `Recorded against her service on ${check.basis.service_date} (${check.basis.service}), which fits the ${check.window.min_days}–${check.window.max_days} day window.`}
+                    </p>
+                  )}
+                  {when && day && when < day.today && (
+                    <div className="flex items-center gap-2 text-[12px] text-[var(--sd-muted)]">
+                      <BackdatedBadge /> This calving is dated before today and will be marked backdated.
+                    </div>
+                  )}
+                  {needRetro && check && (
+                    <RetroBirth
+                      dam={chosen.label}
+                      birthDate={birthDate}
+                      check={check}
+                      form={retro}
+                      onChange={setRetro}
+                      serviceTypes={breeding?.service_types ?? []}
+                      sires={breeding?.sires ?? []}
+                      straws={breeding?.items_by_event?.["Service"] ?? breeding?.semen_items ?? []}
+                      herds={options?.herds ?? []}
+                    />
+                  )}
 
                   <div className="flex flex-col gap-2">
                     <Label>The calves</Label>
@@ -433,11 +535,18 @@ export function Calving() {
                   {who.mustAsk && (
                     <OperatorField operator={who.operator} onChange={who.setOperator} />
                   )}
-                  <Button onClick={send} disabled={busy || who.needed}>
+                  {needRetro && check?.retro_allowed && problems.length > 0 && (
+                    <ul className="list-disc pl-5 text-[12px] text-[var(--sd-muted)]" data-testid="retro-problems">
+                      {problems.map((p) => <li key={p}>{p}</li>)}
+                    </ul>
+                  )}
+                  <Button onClick={send} disabled={busy || who.needed || blocked}>
                     <Baby className="mr-2 h-4 w-4" strokeWidth={1.75} />
                     {busy
                       ? "Recording…"
-                      : `Record the calving (${calves.length} calf${calves.length === 1 ? "" : "s"})`}
+                      : needRetro
+                        ? `Back-record the service and record the calving (${calves.length} calf${calves.length === 1 ? "" : "s"})`
+                        : `Record the calving (${calves.length} calf${calves.length === 1 ? "" : "s"})`}
                   </Button>
                 </>
               )}

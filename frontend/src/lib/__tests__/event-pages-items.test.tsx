@@ -146,7 +146,7 @@ describe("each screen reads its own event type's list", () => {
     fireEvent.click(await screen.findByText("Daisy"));
     await screen.findByRole("button", { name: "Record the heat" });
     expect(screen.queryByLabelText("Item")).toBeNull();
-    expect(screen.queryByText(/in stock right now|not set to post stock/)).toBeNull();
+    expect(screen.queryByText(/hold no items|not set to post stock/)).toBeNull();
   });
 
   it("an event type absent from the payload shows nothing, not 'nothing is mapped'", async () => {
@@ -162,6 +162,6 @@ describe("each screen reads its own event type's list", () => {
     state.byEvent = { "Heat Detection": [] };
     wrap(<Heat />);
     fireEvent.click(await screen.findByText("Daisy"));
-    expect(await screen.findByText(/Nothing mapped to this event is in stock right now/)).toBeTruthy();
+    expect(await screen.findByText(/groups this event uses hold no items/)).toBeTruthy();
   });
 });

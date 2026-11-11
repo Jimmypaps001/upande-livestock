@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ExternalLink, Loader2, X } from "lucide-react";
+import { BackdatedBadge, backdatedTint } from "@/components/BackdatedBadge";
 import { Notice } from "@/components/feeding/Notice";
 import { Page, PageHeading } from "@/components/PageShell";
 import { RefreshButton } from "@/components/RefreshButton";
@@ -80,7 +81,12 @@ function EntryRow({
 }) {
   const draft = entry.status === "Draft";
   return (
-    <li className="flex flex-col gap-2 border-t border-[var(--sd-line)] px-5 py-3 first:border-t-0">
+    <li
+      className={cn(
+        "flex flex-col gap-2 border-t border-[var(--sd-line)] px-5 py-3 first:border-t-0",
+        backdatedTint(entry.backdated),
+      )}
+    >
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="flex min-w-0 items-start gap-2.5">
           <span
@@ -94,6 +100,7 @@ function EntryRow({
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-[14px] font-semibold text-[var(--sd-ink)]">{entry.label ?? entry.stock_entry_type}</span>
               <StatusBadge entry={entry} />
+              {entry.backdated && <BackdatedBadge />}
             </div>
             <div className="mt-0.5 text-[12.5px] text-[var(--sd-muted)]">
               {entry.source?.animal || entry.source?.herd ? `${entry.source.animal || entry.source.herd} · ` : ""}
@@ -131,6 +138,12 @@ function EntryRow({
         ))}
       </ul>
       {entry.short && <p className="pl-[18px] text-[12.5px] text-[var(--sd-amber)]">Still short: {entry.short}</p>}
+      {draft && entry.backdated && (
+        <p className="pl-[18px] text-[12.5px] text-[var(--sd-muted)]">
+          A placeholder for a record dated {dayLabel(entry.posting_date)}, when the store had none. Posting it takes the
+          items out today.
+        </p>
+      )}
     </li>
   );
 }

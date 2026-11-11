@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Picker } from "@/components/ui/picker";
 import { SearchPicker } from "@/components/ui/search-picker";
 import { Notice } from "@/components/feeding/Notice";
-import type { StockChoice } from "@/lib/events";
+import { choiceLabel, outOfStock, type StockChoice } from "@/lib/events";
 import type { BatchPlan } from "@/lib/feeding";
 import { planKey } from "@/lib/use-batch-plans";
 import { cn } from "@/lib/utils";
@@ -77,8 +77,8 @@ export function StockPicker({
   if (!choices.length)
     return mapped ? (
       <Notice tone="info">
-        Nothing mapped to this event is in stock right now, so it cannot use
-        anything from the store.
+        The item groups this event uses hold no items, so there is nothing to
+        pick. Add items to those groups.
       </Notice>
     ) : (
       <Notice tone="info">
@@ -88,7 +88,9 @@ export function StockPicker({
     );
 
   const where = new Map(choices.map((c) => [c.value, c]));
-  const options = choices.map((c) => ({ value: c.value, label: c.label, short: c.item_name || undefined }));
+  // Out-of-stock items are offered too, marked: the record stands and its issue
+  // waits as a draft on Transactions until the store has it (common/stock).
+  const options = choices.map((c) => ({ value: c.value, label: choiceLabel(c), short: c.item_name || undefined }));
 
   function set(key: number, patch: Partial<ItemRow>) {
     onChange(rows.map((r) => (r.key === key ? { ...r, ...patch } : r)));
@@ -161,10 +163,7 @@ export function StockPicker({
                     id={`store-${r.key}`}
                     value={r.store}
                     onChange={(next) => set(r.key, { store: next, batch: "" })}
-                    options={(chosen?.locations ?? []).map((l) => ({
-                      value: l.warehouse,
-                      label: `${l.warehouse} · ${l.qty} ${chosen?.uom ?? ""}`.trim(),
-                    }))}
+                    options={storeOptions(chosen)}
                     label="From store"
                     placeholder="—"
                     className={FLUSH}
@@ -207,6 +206,15 @@ export function StockPicker({
           })}
         </div>
       </div>
+      {rows.some((r) => short(where.get(r.item), r)) && (
+        <Notice tone="info">
+          {rows
+            .filter((r) => short(where.get(r.item), r))
+            .map((r) => where.get(r.item)?.item_name || r.item)
+            .join(", ")}
+          {": the store cannot cover this. The record is still saved, and its issue waits as a draft on Transactions until the stock is in."}
+        </Notice>
+      )}
       <div>
         <Button
           type="button"
@@ -220,4 +228,23 @@ export function StockPicker({
       </div>
     </div>
   );
+}
+
+/** The stores a row may draw from: those holding the item, or — for an item
+ *  the stores hold none of — the store its draft will name. */
+function storeOptions(chosen: StockChoice | undefined) {
+  const held = (chosen?.locations ?? []).map((l) => ({
+    value: l.warehouse,
+    label: `${l.warehouse} · ${l.qty} ${chosen?.uom ?? ""}`.trim(),
+  }));
+  if (held.length || !chosen?.warehouse) return held;
+  return [{ value: chosen.warehouse, label: `${chosen.warehouse} · none in store` }];
+}
+
+/** Will this row's issue be saved as a draft for want of stock? */
+function short(chosen: StockChoice | undefined, row: ItemRow): boolean {
+  if (!chosen || !row.item) return false;
+  if (outOfStock(chosen)) return true;
+  const here = chosen.locations?.find((l) => l.warehouse === row.store)?.qty;
+  return here !== undefined && Number(row.qty) > here;
 }

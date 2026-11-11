@@ -79,6 +79,8 @@ export interface Milestone {
   on: string;
   label: string;
   detail?: string;
+  /** Entered after the day it describes (custom_is_backdated). */
+  backdated?: boolean;
 }
 
 /** A stretch of her life spent in one herd — the bands under the timeline. */

@@ -36,6 +36,25 @@ export interface StockChoice {
   warehouse?: string;
   /** Every store holding any, most first, so a short line has somewhere to try. */
   locations?: { warehouse: string; qty: number }[];
+  /** False for an item of the event's groups the stores hold none of. Still
+   *  offered: the record stands and its issue is saved as a draft (common/stock).
+   *  Absent on an older server, where every choice was in stock. */
+  in_stock?: boolean;
+}
+
+/** "out of stock — saved as a draft": what an out-of-stock choice is marked with. */
+export const OUT_OF_STOCK_NOTE = "out of stock — saved as a draft";
+
+/** Is this choice one the stores hold none of? */
+export function outOfStock(c: StockChoice | undefined): boolean {
+  return !!c && (c.in_stock === false || (c.in_stock === undefined && c.qty !== undefined && c.qty <= 0));
+}
+
+/** The label a picker shows: an out-of-stock choice says so, and what happens. */
+export function choiceLabel(c: StockChoice): string {
+  if (!outOfStock(c)) return c.label;
+  const name = c.item_name || c.label.replace(/\s*·\s*out of stock\s*$/i, "");
+  return `${name} · ${OUT_OF_STOCK_NOTE}`;
 }
 
 export interface AnimalChoice {
@@ -212,8 +231,16 @@ export interface CalvingDestinations {
 
 export const getCalvingDestinations = (dam: string) =>
   call<CalvingDestinations>(`${NS}.breeding.calving_destinations.calving_destinations`, { dam });
+export interface BirthRecorded {
+  name: string;
+  calves: { animal: string }[];
+  /** The calving is dated before today. */
+  is_backdated?: boolean;
+  /** What the retro path back-recorded with it (lib/birth-window). */
+  retro?: { service: string; pregnancy_diagnosis: string | null; movements: string[]; stock_entry: string } | null;
+}
 export const recordBirth = (p: Payload) =>
-  post<{ name: string; calves: { animal: string }[] }>(`${NS}.breeding.record_birth.record_birth`, p);
+  post<BirthRecorded>(`${NS}.breeding.record_birth.record_birth`, p);
 
 /* --------------------------------------------------------- read-only views */
 
@@ -225,6 +252,8 @@ export interface EventRow {
   event_type: string | null;
   event_date: string | null;
   service_type?: string | null;
+  /** 1 when entered after the day it describes. */
+  custom_is_backdated?: number | boolean | null;
 }
 
 export interface EventsView {
