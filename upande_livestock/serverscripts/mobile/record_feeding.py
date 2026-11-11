@@ -57,6 +57,13 @@ def record_feeding(payload=None):
 				portion=d.get("portion", 1.0),
 				posting_date=d.get("posting_date"),
 				bom_no=d.get("bom_no"),
+				# The web Feeding page sends a store and a batch per ingredient;
+				# dropped here, the run silently used the engine's own choice.
+				source_warehouse=d.get("source_warehouse"),
+				source_by_item=d.get("source_by_item"),
+				batch_by_item=d.get("batch_by_item"),
+				# The group's typed day total, on a farm not feeding by head count.
+				total_qty=d.get("total_qty"),
 			)
 		if action == "issue":
 			return issue_feed(
@@ -74,6 +81,7 @@ def record_feeding(payload=None):
 					# The recipe the operator tuned from. Left out, the tuned BOM
 					# descends from the herd's registered one, not what was on screen.
 					"base_bom": d.get("base_bom"),
+					"total_qty": d.get("total_qty"),
 				}
 			)
 		frappe.throw(

@@ -3,6 +3,9 @@ import { AlertTriangle, Plus, Save, X } from "lucide-react";
 import { Figure, FigureRow } from "@/components/Figure";
 import { Notice } from "@/components/feeding/Notice";
 import { NutritionPanel } from "@/components/feeding/NutritionPanel";
+import {
+  RecipeModeBar, UnitPicker, usePercentMode, type ModeRow,
+} from "@/components/feeding/RecipeMode";
 import { Page, PageHeading } from "@/components/PageShell";
 import { RefreshButton } from "@/components/RefreshButton";
 import { Button } from "@/components/ui/button";
@@ -21,13 +24,12 @@ import {
   describeChange, getHerdRations, setHerdRation,
   type HerdRation, type HerdRations, type RationDifference,
 } from "@/lib/herds";
+import {
+  doseForHerd, isDoseUom, kgTotal, toLine, unitLabel, type LineUnit,
+} from "@/lib/ration-maths";
 import { cn, fmt } from "@/lib/utils";
 
-interface EditRow {
-  key: number;
-  item_code: string;
-  qty: string;
-}
+type EditRow = ModeRow;
 
 let nextKey = 1;
 
@@ -48,7 +50,10 @@ let nextKey = 1;
  *
  * Lines are in the units the RECIPE is written in — hay in kilograms even
  * though the store holds bales — because that is what the person at the mixer
- * weighs out.
+ * weighs out. They may be typed as kilos per head and a share of it each, and
+ * an additive as a dose a head in grams or millilitres, outside the 100%.
+ *
+ * A herd that mixes from raw (Herds > Concentrate) is offered raw feeds only.
  */
 export function RationEditor() {
   const [data, setData] = useState<HerdRations | null>(null);
@@ -60,6 +65,7 @@ export function RationEditor() {
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
   const toast = useToast();
+  const mode = usePercentMode(rows, setRows);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -82,8 +88,9 @@ export function RationEditor() {
   // Off: this farm mixes straight from raw ingredients, so a line may name raw
   // feeds only. A made concentrate already in the recipe stays nameable so the
   // row does not blank, and is warned about below.
-  const rawOnly = data?.premanufacture_concentrate === false;
   const chosen = useMemo(() => herds.find((h) => h.herd === picked) || null, [herds, picked]);
+  // Per herd: its own Concentrate setting, the farm's switch when it has none.
+  const rawOnly = (chosen?.premanufacture ?? data?.premanufacture_concentrate) === false;
 
   // The edit starts as what the herd is actually fed, so "save" with nothing
   // touched is a no-op the server recognises rather than a new revision.
@@ -94,7 +101,14 @@ export function RationEditor() {
       return;
     }
     setRows(
-      chosen.lines.map((l) => ({ key: nextKey++, item_code: l.item_code, qty: String(l.qty) })),
+      mode.seed(
+        chosen.lines.map((l) => ({
+          key: nextKey++,
+          item_code: l.item_code,
+          qty: String(l.qty),
+          unit: (l.is_dose && isDoseUom(l.uom) ? l.uom : "kg") as LineUnit,
+        })),
+      ),
     );
     // Seeded with what the ration is called, blank for a herd that has none —
     // which is the field that lets that herd be given its first one at all.
@@ -102,14 +116,20 @@ export function RationEditor() {
     setChanges(null);
   }, [chosen?.herd, chosen?.bom]);
 
-  const total = rows.reduce((s, r) => s + (Number(r.qty) || 0), 0);
+  // The ration's kilos; a dose is outside them, as the BOM's quantity is.
+  const total = kgTotal(rows);
   const heads = chosen?.heads ?? 0;
   const dirty =
     !!chosen &&
     (rows.length !== chosen.lines.length ||
       rows.some((r, i) => {
         const was = chosen.lines[i];
-        return !was || was.item_code !== r.item_code || Math.abs(was.qty - Number(r.qty)) > 0.0005;
+        return (
+          !was ||
+          was.item_code !== r.item_code ||
+          Math.abs(was.qty - Number(r.qty)) > 0.0005 ||
+          !!was.is_dose !== ((r.unit || "kg") !== "kg")
+        );
       }));
 
   // The one line of a TMR the farm mixes itself. Read off the choices rather
@@ -122,14 +142,21 @@ export function RationEditor() {
   const stranded = rawOnly ? rows.filter((r) => r.item_code && isConcentrate(r.item_code)) : [];
 
   async function expand() {
-    const r = await expandConcentrates(
-      rows.filter((x) => x.item_code && Number(x.qty) > 0).map((x) => ({ item_code: x.item_code, qty: Number(x.qty) })),
-    );
+    const r = await expandConcentrates(rows.filter((x) => x.item_code && Number(x.qty) > 0).map(toLine));
     if (isError(r)) {
       toast(r.error, "error");
       return;
     }
-    setRows(r.lines.map((l) => ({ key: nextKey++, item_code: l.item_code, qty: String(l.qty) })));
+    setRows(
+      mode.seed(
+        r.lines.map((l) => ({
+          key: nextKey++,
+          item_code: l.item_code,
+          qty: String(l.qty),
+          unit: (l.dose_uom || "kg") as LineUnit,
+        })),
+      ),
+    );
     toast(`Rewrote ${r.expanded.join(", ")} into its ingredients. Save to make it the recipe.`, "info");
   }
 
@@ -141,9 +168,7 @@ export function RationEditor() {
     const r = await setHerdRation({
       herd: chosen.herd,
       ration_item: name.trim() || chosen.ration_item || undefined,
-      lines: rows
-        .filter((x) => x.item_code && Number(x.qty) > 0)
-        .map((x) => ({ item_code: x.item_code, qty: Number(x.qty) })),
+      lines: rows.filter((x) => x.item_code && Number(x.qty) > 0).map(toLine),
     });
     setBusy(false);
     if (isError(r)) {
@@ -294,6 +319,8 @@ export function RationEditor() {
                   </Notice>
                 )}
 
+                <RecipeModeBar mode={mode} idPrefix="r" />
+
                 <div className="flex flex-col gap-2">
                   <Label>What goes in, per head, per day</Label>
                   {rows.map((r, i) => (
@@ -331,23 +358,61 @@ export function RationEditor() {
                         />
                       </div>
                       <div className="flex flex-col gap-1.5">
-                        <Label htmlFor={`r-qty-${r.key}`}>Amount</Label>
-                        <Input
-                          id={`r-qty-${r.key}`}
-                          type="number"
-                          min={0}
-                          step="any"
-                          value={r.qty}
-                          onChange={(e) =>
-                            setRows((s) =>
-                              s.map((x, j) => (j === i ? { ...x, qty: e.target.value } : x)),
-                            )
+                        <Label htmlFor={`r-unit-${r.key}`}>Unit</Label>
+                        <UnitPicker
+                          id={`r-unit-${r.key}`}
+                          value={r.unit}
+                          onChange={(unit) =>
+                            setRows((s) => s.map((x, j) => (j === i ? { ...x, unit, pct: "" } : x)))
                           }
-                          className="w-28 text-right tabular-nums"
                         />
                       </div>
+                      {mode.on && (r.unit || "kg") === "kg" ? (
+                        <div className="flex flex-col gap-1.5">
+                          <Label htmlFor={`r-pct-${r.key}`}>Share (%)</Label>
+                          <Input
+                            id={`r-pct-${r.key}`}
+                            type="number"
+                            min={0}
+                            max={100}
+                            step="any"
+                            value={r.pct ?? ""}
+                            onChange={(e) => mode.changePct(r.key, e.target.value)}
+                            className="w-24 text-right tabular-nums"
+                          />
+                        </div>
+                      ) : (
+                        <div className="flex flex-col gap-1.5">
+                          <Label htmlFor={`r-qty-${r.key}`}>
+                            {(r.unit || "kg") === "kg" ? "Amount" : "Dose"}
+                          </Label>
+                          <Input
+                            id={`r-qty-${r.key}`}
+                            type="number"
+                            min={0}
+                            step="any"
+                            value={r.qty}
+                            onChange={(e) =>
+                              setRows((s) =>
+                                s.map((x, j) => (j === i ? { ...x, qty: e.target.value } : x)),
+                              )
+                            }
+                            className="w-28 text-right tabular-nums"
+                          />
+                        </div>
+                      )}
                       <span className="pb-2 text-[11.5px] text-[var(--sd-quiet)]">
-                        kg · {fmt((Number(r.qty) || 0) * heads)} for the herd
+                        {(r.unit || "kg") !== "kg" ? (
+                          <>
+                            {unitLabel(r.unit!)} a head, outside the 100% ·{" "}
+                            {doseForHerd(r.qty, r.unit as "Gram" | "Millilitre", heads)} for the herd
+                          </>
+                        ) : (
+                          <>
+                            {mode.on ? `${fmt(Number(r.qty) || 0)} ` : ""}kg ·{" "}
+                            {fmt((Number(r.qty) || 0) * heads)} for the herd
+                          </>
+                        )}
                         {uomOf(r.item_code) && uomOf(r.item_code) !== "Kilogram"
                           ? ` · stocked in ${uomOf(r.item_code)}`
                           : ""}
@@ -377,6 +442,7 @@ export function RationEditor() {
                 <div className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--sd-radius-lg)] bg-[var(--sd-bg-soft)] px-4 py-3 shadow-[var(--sd-shadow-inset)]">
                   <span className="text-[12.5px] text-[var(--sd-muted)]">
                     One head, one day
+                    {rows.some((r) => (r.unit || "kg") !== "kg") ? " · doses not included" : ""}
                   </span>
                   <span className="text-[15px] font-semibold tabular-nums text-[var(--sd-ink)]">
                     {fmt(total)} kg
@@ -388,9 +454,7 @@ export function RationEditor() {
 
                 <NutritionPanel
                   perUnit="head per day"
-                  lines={rows
-                    .filter((x) => x.item_code && Number(x.qty) > 0)
-                    .map((x) => ({ item_code: x.item_code, qty: Number(x.qty) }))}
+                  lines={rows.filter((x) => x.item_code && Number(x.qty) > 0).map(toLine)}
                 />
 
                 <div className="flex flex-wrap items-center gap-3">

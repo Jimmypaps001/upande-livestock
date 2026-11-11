@@ -17,36 +17,53 @@ from frappe.utils import flt
 
 from upande_livestock.serverscripts.common.envelope import as_dict, guard_read, run
 from upande_livestock.serverscripts.feeding._concentrate import concentrate_items
+from upande_livestock.serverscripts.feeding._doses import dose_uom_of
 from upande_livestock.serverscripts.feeding.feed_nutrition import DbSource
 
 MAX_DEPTH = 6
 
 
 def expand_lines(lines, source=None, concentrates=None):
-	"""([{item_code, qty}, ...], [item_code expanded]) with concentrates replaced."""
+	"""([{item_code, qty[, dose_uom]}, ...], [item_code expanded]) with
+	concentrates replaced.
+
+	A per-head dose in the ration is carried through untouched. A dose inside
+	a concentrate's recipe is stated per batch, so it becomes a per-head dose
+	at the share of the batch the line carried: 50 g in a 1000 kg batch, for a
+	2 kg line, is 0.1 g a head — still grams, never added to the kilos.
+	"""
 	source = source or DbSource()
 	concentrates = concentrate_items() if concentrates is None else concentrates
 	merged, expanded = {}, []
 
-	def add(item, qty, depth=0):
-		recipe = source.recipe(item) if item in concentrates and depth < MAX_DEPTH else None
+	def add(item, qty, depth=0, dose=None):
+		recipe = (
+			source.recipe(item) if not dose and item in concentrates and depth < MAX_DEPTH else None
+		)
 		if not recipe:
-			merged[item] = merged.get(item, 0.0) + qty
+			merged[(item, dose)] = merged.get((item, dose), 0.0) + qty
 			return
 		if item not in expanded:
 			expanded.append(item)
 		base = recipe[0] or sum(q for _i, q in recipe[1]) or 1.0
 		for sub, sub_qty in recipe[1]:
 			add(sub, qty * sub_qty / base, depth + 1)
+		for sub, sub_qty, uom in recipe[3] if len(recipe) > 3 else []:
+			add(sub, qty * sub_qty / base, depth + 1, dose=uom)
 
 	order = []
 	for row in lines or []:
 		code, qty = row.get("item_code"), flt(row.get("qty"))
 		if code and qty > 0:
-			order.append((code, qty))
-	for code, qty in order:
-		add(code, qty)
-	out = [{"item_code": k, "qty": round(v, 4)} for k, v in merged.items()]
+			order.append((code, qty, dose_uom_of(row)))
+	for code, qty, dose in order:
+		add(code, qty, dose=dose)
+	out = []
+	for (item, dose), v in merged.items():
+		line = {"item_code": item, "qty": round(v, 4)}
+		if dose:
+			line["dose_uom"] = dose
+		out.append(line)
 	return out, expanded
 
 

@@ -34,6 +34,7 @@
   "section_break_69rv",
   "bom",
   "paddock",
+  "concentrate_mode",
   "sb_acct",
   "cost_center"
  ],
@@ -234,12 +235,20 @@
    "options": "Warehouse",
    "link_filters": "[[\"Warehouse\",\"warehouse_type\",\"in\",[\"Paddock\",\"Pen\"]]]",
    "description": "Where the herd stands. Its feed is moved here after it is mixed, and the feeding issue is taken from here."
+  },
+  {
+   "default": "Farm default",
+   "description": "Whether this herd's concentrate is mixed ahead as a batch for the store (Pre-manufacture) or its ration is mixed straight from raw ingredients (Mix from raw). Farm default follows Livestock Settings > Pre-manufacture Concentrate.",
+   "fieldname": "concentrate_mode",
+   "fieldtype": "Select",
+   "label": "Concentrate",
+   "options": "Farm default\nPre-manufacture\nMix from raw"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-11-11 00:00:00.000000",
+ "modified": "2026-11-11 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Upande Livestock",
  "name": "Herds",

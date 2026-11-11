@@ -9,6 +9,7 @@
   "item",
   "feed_name",
   "category",
+  "substitute_group",
   "disabled",
   "nutrients_section",
   "dry_matter_pct",
@@ -54,6 +55,13 @@
    "label": "Category",
    "options": "\nForage\nEnergy (grain / by-product)\nProtein\nMineral & vitamin\nAdditive\nConcentrate (made)\nRation (made)",
    "description": "A made feed (concentrate or ration) takes its nutrition from its recipe; only a raw feed's figures below are used."
+  },
+  {
+   "description": "Feeds that can stand in for one another at the mixer, e.g. \"Wet forage\" for maize silage, chopped maize, Napier and sorghum silage. On the Feeding page one can be swapped for another in the same group, with the kilos adjusted so the herd gets the same dry matter.",
+   "fieldname": "substitute_group",
+   "fieldtype": "Data",
+   "label": "Substitute Group",
+   "in_standard_filter": 1
   },
   {
    "fieldname": "disabled",
@@ -150,7 +158,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-11-11 00:00:00.000000",
+ "modified": "2026-11-11 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Upande Livestock",
  "name": "Livestock Feed",

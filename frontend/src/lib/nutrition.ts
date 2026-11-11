@@ -5,7 +5,9 @@ import { call, type Envelope } from "@/lib/frappe";
    page sends facts (item and kilos); every figure, the recursive expansion of
    made feeds and the verdict on missing data are the server's. */
 
-export type NutrientLine = { item_code: string; qty: number };
+/** Kilos as fed, or a per-head dose with its unit — the server weighs the
+ *  first and only lists the second (`_doses`). */
+export type NutrientLine = { item_code: string; qty: number; dose_uom?: "Gram" | "Millilitre" };
 
 export type MissingFeed = {
   item_code: string;
@@ -45,6 +47,8 @@ export type Nutrition = {
   missing: MissingFeed[];
   unpriced: Array<{ item_code: string; item_name: string }>;
   lines: NutritionLine[];
+  /** Per-head doses, listed and never weighed. */
+  doses?: Array<{ item_code: string; item_name: string; qty: number; uom: string }>;
 };
 
 export type LibraryFeed = {
@@ -64,13 +68,18 @@ export type LibraryFeed = {
   ndf_pct: number;
   fat_pct: number;
   me_mj_per_kg: number;
+  /** Feeds in the same group stand in for one another at the mixer. */
+  substitute_group?: string | null;
 };
 
 export type FeedLibrary = {
   feeds: LibraryFeed[];
   /** Feed items nobody has described yet. */
   undescribed: Array<{ item_code: string; item_name: string; has_data: false }>;
+  /** The farm's switch — the default for a herd that does not say. */
   premanufacture_concentrate: boolean;
+  /** Some herd eats a pre-made concentrate, so concentrates are offered. */
+  any_premanufacture?: boolean;
 };
 
 const NS = "upande_livestock.serverscripts.feeding";
@@ -102,6 +111,11 @@ export type AllFeedsHerd = {
   heads: number;
   portion: number;
   qty: number;
+  /** Head count x per head for what is left of the day — the suggestion when
+   *  the farm does not feed by head count. */
+  suggested_qty?: number;
+  /** This herd eats a pre-made concentrate. */
+  premanufacture?: boolean;
   short?: Array<{ item_code: string; item_name: string; short_qty: number; uom: string }>;
   status?: "made" | "waiting for stock" | "error";
   work_order?: string;
@@ -126,6 +140,8 @@ export type AllFeeds = {
   preview: boolean;
   date: string;
   premanufacture_concentrate: boolean;
+  /** Off: `totals` are what is mixed, and a herd without one is left out. */
+  feed_by_head_count?: boolean;
   concentrates: AllFeedsConcentrate[];
   herds: AllFeedsHerd[];
   skipped: Array<{ herd: string; reason: string }>;
@@ -135,11 +151,14 @@ export function manufactureAllFeeds(args: {
   date?: string;
   portion?: number;
   preview?: boolean;
+  /** {herd: kg} the operator typed, on a farm not feeding by head count. */
+  totals?: Record<string, number>;
 }): Promise<Envelope<AllFeeds>> {
   return call<AllFeeds>(`${NS}.manufacture_all_feeds.manufacture_all_feeds`, {
     date: args.date,
     portion: args.portion ?? 1,
     preview: args.preview ? 1 : 0,
+    ...(args.totals ? { totals: JSON.stringify(args.totals) } : {}),
   });
 }
 

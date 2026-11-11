@@ -25,6 +25,10 @@ export interface LivestockBootstrap {
    *  Concentrate page and offers raw feeds only; unset means on, so an older
    *  page shell that does not send it behaves as it always did. */
   premanufacture_concentrate: boolean;
+  /** Livestock Settings > Feed by Head Count. Off: the feeding screens show
+   *  head count x per head as a suggestion and the operator types the group's
+   *  total. Unset means on. */
+  feed_by_head_count: boolean;
 }
 
 declare global {
@@ -50,6 +54,7 @@ export function bootstrap(): LivestockBootstrap {
     site_name: typeof raw.site_name === "string" ? raw.site_name : "",
     roles: Array.isArray(raw.roles) ? (raw.roles as string[]) : [],
     premanufacture_concentrate: raw.premanufacture_concentrate !== false,
+    feed_by_head_count: raw.feed_by_head_count !== false,
   };
 }
 

@@ -251,6 +251,8 @@ export interface RationRow {
   item_name: string;
   qty: number;
   uom: string;
+  /** A per-head dose in grams or millilitres (`uom`), outside the kilos. */
+  is_dose?: boolean;
 }
 
 export interface HerdRation {
@@ -265,6 +267,9 @@ export interface HerdRation {
   lines_total: number;
   /** Whether the stated output and the lines add up to the same number. */
   balanced: boolean;
+  /** This herd eats a pre-made concentrate (Herds > Concentrate, the farm's
+   *  switch by default). False: its ration is offered raw feeds only. */
+  premanufacture?: boolean;
 }
 
 export interface FeedChoice {
@@ -281,8 +286,12 @@ export interface FeedChoice {
 export interface HerdRations {
   herds: HerdRation[];
   feeds: FeedChoice[];
-  /** Livestock Settings > Pre-manufacture Concentrate. Off: raw feeds only. */
+  /** Livestock Settings > Pre-manufacture Concentrate: the farm default. */
   premanufacture_concentrate?: boolean;
+  /** Some herd still eats a pre-made concentrate. */
+  any_premanufacture?: boolean;
+  /** Livestock Settings > Feed by Head Count. */
+  feed_by_head_count?: boolean;
 }
 
 export function getHerdRations(): Promise<Envelope<HerdRations>> {

@@ -2,6 +2,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ExternalLink, Factory, Loader2, Plus, Save, X } from "lucide-react";
 import { Notice } from "@/components/feeding/Notice";
 import { NutritionPanel } from "@/components/feeding/NutritionPanel";
+import {
+  RecipeModeBar, UnitPicker, usePercentMode, type ModeRow,
+} from "@/components/feeding/RecipeMode";
 import { Page, PageHeading } from "@/components/PageShell";
 import { RefreshButton } from "@/components/RefreshButton";
 import { Badge } from "@/components/ui/badge";
@@ -24,9 +27,12 @@ import {
   expandConcentrates, livestockFeeds, manufactureAllFeeds,
   type AllFeeds, type FeedLibrary, type LibraryFeed,
 } from "@/lib/nutrition";
+import {
+  doseForHerd, isDoseUom, kgTotal, toLine, unitLabel, type LineUnit,
+} from "@/lib/ration-maths";
 import { cn, fmt, num, todayISO } from "@/lib/utils";
 
-type Row = { key: number; item_code: string; qty: string };
+type Row = ModeRow;
 let nextKey = 1;
 
 type Target = "ration" | "concentrate";
@@ -48,9 +54,18 @@ function deskLink(f: LibraryFeed): string {
  * `set_herd_ration` / `set_concentrate` the other pages use. Nothing here
  * works out stock or money.
  *
- * With Pre-manufacture Concentrate off there is no concentrate stage: the
- * pickers offer raw feeds only, and a ration that still names a concentrate
- * says so and can be rewritten from that concentrate's own recipe.
+ * A herd that mixes from raw (Herds > Concentrate, the farm's Pre-manufacture
+ * Concentrate switch by default) has no concentrate stage: designing its
+ * ration offers raw feeds only, and a ration that still names a concentrate
+ * says so and can be rewritten from that concentrate's own recipe. The
+ * concentrate target itself is offered while any herd still eats one.
+ *
+ * A ration may be typed as kilos per head and a percentage per line, and a
+ * line may be a per-head dose in grams or millilitres outside the 100%. What
+ * is saved is kilogram lines and dose lines, as the BOM holds them.
+ *
+ * On a farm that does not feed by head count, Manufacture all offers head
+ * count x per head as a suggestion and mixes the totals the operator types.
  */
 export function FeedDesign() {
   const [library, setLibrary] = useState<FeedLibrary | null>(null);
@@ -68,7 +83,10 @@ export function FeedDesign() {
   const [allOpen, setAllOpen] = useState(false);
   const [allBusy, setAllBusy] = useState(false);
   const [allDone, setAllDone] = useState<AllFeeds | null>(null);
+  // The group totals typed on a farm that does not feed by head count.
+  const [allTotals, setAllTotals] = useState<Record<string, string>>({});
   const toast = useToast();
+  const mode = usePercentMode(rows, setRows);
 
   const load = useCallback(async () => {
     const [lib, hr] = await Promise.all([livestockFeeds(), getHerdRations()]);
@@ -85,7 +103,14 @@ export function FeedDesign() {
     void load();
   }, [load]);
 
-  const switchOn = library?.premanufacture_concentrate !== false;
+  const farmOn = library?.premanufacture_concentrate !== false;
+  // Some herd still eats a pre-made concentrate: concentrates may be designed.
+  const anyOn = library?.any_premanufacture ?? farmOn;
+  const chosenHerd = herds.find((h) => h.herd === herd) || null;
+  // Whether THIS recipe may name a concentrate: a herd's own setting for its
+  // ration, the farm's reach for a concentrate or an unattached design.
+  const switchOn =
+    target === "ration" && chosenHerd ? (chosenHerd.premanufacture ?? farmOn) : anyOn;
 
   // What a line may name. Off: raw feeds only — the server says which are made.
   // A ration is never an ingredient of another one.
@@ -132,20 +157,29 @@ export function FeedDesign() {
     return all.filter((f) => !q || f.item_name.toLowerCase().includes(q));
   }, [pickable, library, search]);
 
-  const chosenHerd = herds.find((h) => h.herd === herd) || null;
-
   function loadHerd(next: string) {
     setHerd(next);
     const h = herds.find((x) => x.herd === next);
     if (!h) return;
-    setRows(h.lines.map((l) => ({ key: nextKey++, item_code: l.item_code, qty: String(l.qty) })));
+    setRows(
+      mode.seed(
+        h.lines.map((l) => ({
+          key: nextKey++,
+          item_code: l.item_code,
+          qty: String(l.qty),
+          unit: (l.is_dose && isDoseUom(l.uom) ? l.uom : "kg") as LineUnit,
+        })),
+      ),
+    );
     setName(h.ration_name || h.ration_item || "");
   }
 
   /** Point one line at `code`, merging into a line that already has it (kg summed). */
   function pickFor(index: number, code: string) {
     setRows((s) => {
-      const dup = s.findIndex((r, j) => j !== index && r.item_code === code);
+      const dup = s.findIndex(
+        (r, j) => j !== index && r.item_code === code && (r.unit || "kg") === (s[index].unit || "kg"),
+      );
       if (dup < 0 || !code) return s.map((x, j) => (j === index ? { ...x, item_code: code } : x));
       const sum = num(s[dup].qty) + num(s[index].qty);
       return s
@@ -170,10 +204,9 @@ export function FeedDesign() {
     });
   }
 
-  const lines = rows
-    .filter((r) => r.item_code && num(r.qty) > 0)
-    .map((r) => ({ item_code: r.item_code, qty: num(r.qty) }));
-  const total = lines.reduce((s, l) => s + l.qty, 0);
+  const lines = rows.filter((r) => r.item_code && num(r.qty) > 0).map(toLine);
+  // The ration's kilos: doses are outside them, as the BOM's quantity is.
+  const total = kgTotal(rows);
 
   // A made concentrate in a recipe on a farm that no longer pre-mixes it.
   const stranded = !switchOn
@@ -186,7 +219,16 @@ export function FeedDesign() {
       toast(r.error, "error");
       return;
     }
-    setRows(r.lines.map((l) => ({ key: nextKey++, item_code: l.item_code, qty: String(l.qty) })));
+    setRows(
+      mode.seed(
+        r.lines.map((l) => ({
+          key: nextKey++,
+          item_code: l.item_code,
+          qty: String(l.qty),
+          unit: (l.dose_uom || "kg") as LineUnit,
+        })),
+      ),
+    );
     toast(`Rewrote ${r.expanded.join(", ")} into its ingredients. Save to make it the recipe.`, "info");
   }
 
@@ -242,11 +284,22 @@ export function FeedDesign() {
       return;
     }
     setAll(r);
+    setAllTotals(Object.fromEntries(r.herds.map((h) => [h.herd, String(h.suggested_qty ?? h.qty)])));
   }
+
+  // Off, the operator's totals are what is mixed; a herd left blank is not fed.
+  const typingTotals = all?.feed_by_head_count === false;
 
   async function confirmAll() {
     setAllBusy(true);
-    const r = await manufactureAllFeeds({ date: todayISO() });
+    const totals = typingTotals
+      ? Object.fromEntries(
+          Object.entries(allTotals)
+            .map(([h, v]) => [h, num(v)] as const)
+            .filter(([, v]) => v > 0),
+        )
+      : undefined;
+    const r = await manufactureAllFeeds({ date: todayISO(), totals });
     setAllBusy(false);
     if (isError(r)) {
       toast(r.error, "error");
@@ -417,6 +470,8 @@ export function FeedDesign() {
               </Notice>
             )}
 
+            <RecipeModeBar mode={mode} idPrefix="fd" per={target === "ration" ? "head per day" : "batch"} />
+
             <div className="flex flex-col gap-2">
               {rows.map((r, i) => (
                 <div
@@ -435,19 +490,58 @@ export function FeedDesign() {
                     />
                   </div>
                   <div className="flex flex-col gap-1.5">
-                    <Label htmlFor={`fd-qty-${r.key}`}>Amount (kg)</Label>
-                    <Input
-                      id={`fd-qty-${r.key}`}
-                      type="number"
-                      min={0}
-                      step="any"
-                      className="w-28 text-right tabular-nums"
-                      value={r.qty}
-                      onChange={(e) =>
-                        setRows((s) => s.map((x, j) => (j === i ? { ...x, qty: e.target.value } : x)))
+                    <Label htmlFor={`fd-unit-${r.key}`}>Unit</Label>
+                    <UnitPicker
+                      id={`fd-unit-${r.key}`}
+                      value={r.unit}
+                      onChange={(unit) =>
+                        setRows((s) => s.map((x, j) => (j === i ? { ...x, unit, pct: "" } : x)))
                       }
                     />
                   </div>
+                  {mode.on && (r.unit || "kg") === "kg" ? (
+                    <div className="flex flex-col gap-1.5">
+                      <Label htmlFor={`fd-pct-${r.key}`}>Share (%)</Label>
+                      <Input
+                        id={`fd-pct-${r.key}`}
+                        type="number"
+                        min={0}
+                        max={100}
+                        step="any"
+                        className="w-24 text-right tabular-nums"
+                        value={r.pct ?? ""}
+                        onChange={(e) => mode.changePct(r.key, e.target.value)}
+                      />
+                    </div>
+                  ) : (
+                    <div className="flex flex-col gap-1.5">
+                      <Label htmlFor={`fd-qty-${r.key}`}>
+                        {(r.unit || "kg") === "kg" ? "Amount (kg)" : `Dose (${unitLabel(r.unit!)} a head)`}
+                      </Label>
+                      <Input
+                        id={`fd-qty-${r.key}`}
+                        type="number"
+                        min={0}
+                        step="any"
+                        className="w-28 text-right tabular-nums"
+                        value={r.qty}
+                        onChange={(e) =>
+                          setRows((s) => s.map((x, j) => (j === i ? { ...x, qty: e.target.value } : x)))
+                        }
+                      />
+                    </div>
+                  )}
+                  <span className="pb-2 text-[11.5px] tabular-nums text-[var(--sd-quiet)]">
+                    {(r.unit || "kg") !== "kg"
+                      ? `dose, outside the 100%${
+                          target === "ration" && chosenHerd
+                            ? ` · ${doseForHerd(r.qty, r.unit as "Gram" | "Millilitre", chosenHerd.heads)} for the herd`
+                            : ""
+                        }`
+                      : mode.on
+                        ? `${fmt(num(r.qty))} kg`
+                        : ""}
+                  </span>
                   <button
                     type="button"
                     onClick={() => setRows((s) => s.filter((_, j) => j !== i))}
@@ -471,6 +565,7 @@ export function FeedDesign() {
             <div className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--sd-radius-lg)] bg-[var(--sd-bg-soft)] px-4 py-3 shadow-[var(--sd-shadow-inset)]">
               <span className="text-[12.5px] text-[var(--sd-muted)]">
                 {target === "ration" ? "One head, one day" : "One batch"}
+                {rows.some((r) => (r.unit || "kg") !== "kg") ? " · doses not included" : ""}
               </span>
               <span className="text-[15px] font-semibold tabular-nums text-[var(--sd-ink)]">
                 {fmt(total)} kg
@@ -542,7 +637,10 @@ export function FeedDesign() {
                       <th className="py-1 pr-4 font-medium">Herd</th>
                       <th className="py-1 pr-4 text-right font-medium">Head</th>
                       <th className="py-1 pr-4 text-right font-medium">Portion</th>
-                      <th className="py-1 pr-4 text-right font-medium">Mix (kg)</th>
+                      <th className="py-1 pr-4 text-right font-medium">
+                        {typingTotals ? "Suggested (kg)" : "Mix (kg)"}
+                      </th>
+                      {typingTotals && <th className="py-1 pr-4 text-right font-medium">Total fed (kg)</th>}
                       <th className="py-1 pl-4 text-left font-medium">Stock</th>
                     </tr>
                   </thead>
@@ -552,7 +650,22 @@ export function FeedDesign() {
                         <td className="py-1.5 pr-4 align-top">{h.herd}</td>
                         <td className="py-1.5 pr-4 text-right align-top tabular-nums">{h.heads}</td>
                         <td className="py-1.5 pr-4 text-right align-top tabular-nums">{fmt(h.portion)}</td>
-                        <td className="py-1.5 pr-4 text-right align-top tabular-nums">{fmt(h.qty)}</td>
+                        <td className="py-1.5 pr-4 text-right align-top tabular-nums">
+                          {fmt(typingTotals ? (h.suggested_qty ?? h.qty) : h.qty)}
+                        </td>
+                        {typingTotals && (
+                          <td className="py-1 pr-4 text-right align-top">
+                            <Input
+                              aria-label={`Total fed to ${h.herd} (kg)`}
+                              type="number"
+                              min={0}
+                              step="any"
+                              className="ml-auto h-8 w-24 text-right tabular-nums"
+                              value={allTotals[h.herd] ?? ""}
+                              onChange={(e) => setAllTotals((s) => ({ ...s, [h.herd]: e.target.value }))}
+                            />
+                          </td>
+                        )}
                         <td className="max-w-[220px] py-1.5 pl-4 align-top text-[12px] break-words">
                           {h.short?.length ? (
                             <span className="text-[var(--sd-sev-critical)]">
@@ -566,6 +679,13 @@ export function FeedDesign() {
                     ))}
                   </tbody>
                 </table>
+              )}
+              {typingTotals && (
+                <p className="text-[12px] text-[var(--sd-muted)]">
+                  This farm does not feed by head count: the suggestion is head count &times; ration
+                  per head ({fmt(all.herds.reduce((s, h) => s + (h.suggested_qty ?? h.qty), 0))} kg in
+                  all). What you type is what is mixed; a herd left blank is not fed.
+                </p>
               )}
               {all.skipped.length > 0 && (
                 <p className="text-[12px] text-[var(--sd-muted)]">

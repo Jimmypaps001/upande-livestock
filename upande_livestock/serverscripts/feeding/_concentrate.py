@@ -42,7 +42,9 @@ from frappe import _
 from frappe.utils import cint, flt
 
 from upande_livestock.serverscripts.feeding._standing_ration import feed_item_for
-from upande_livestock.serverscripts.feeding._tuned_bom import _clean
+from upande_livestock.serverscripts.feeding._doses import kg_total
+from upande_livestock.serverscripts.feeding._tuned_bom import _clean, _rows_of, row_units
+from upande_livestock.serverscripts.feeding._tuned_bom import _signature as _line_signature
 
 #: `BOM.custom_ration_kind`. Standing and Tuned are a herd's; this is neither.
 CONCENTRATE = "Concentrate"
@@ -60,15 +62,76 @@ def premanufacture_concentrate_on():
 	return True if value in (None, "") else bool(cint(value))
 
 
+#: `Herds.concentrate_mode`. The farm-wide switch is the default; a herd may
+#: say otherwise. Mutara mixes its cattle rations from raw and feeds its
+#: shoats a concentrate made a tonne at a time, on the same farm.
+FARM_DEFAULT = "Farm default"
+PRE_MANUFACTURE = "Pre-manufacture"
+MIX_FROM_RAW = "Mix from raw"
+CONCENTRATE_MODES = (FARM_DEFAULT, PRE_MANUFACTURE, MIX_FROM_RAW)
+
+
+def resolve_premanufacture(mode, farm_on):
+	"""Does a herd with `mode` use a pre-made concentrate? Pure.
+
+	Anything that is not one of the two explicit answers — blank on a herd
+	saved before the field existed, or "Farm default" — follows the farm.
+	"""
+	if mode == PRE_MANUFACTURE:
+		return True
+	if mode == MIX_FROM_RAW:
+		return False
+	return bool(farm_on)
+
+
+def herd_premanufactures(herd, farm_on=None):
+	"""Does this herd's ration consume a concentrate mixed ahead for the store?
+
+	`farm_on` may be passed by a caller looping over herds, so the setting is
+	read once rather than once per herd.
+	"""
+	if farm_on is None:
+		farm_on = premanufacture_concentrate_on()
+	mode = frappe.db.get_value("Herds", herd, "concentrate_mode") if herd else None
+	return resolve_premanufacture(mode, farm_on)
+
+
+def premanufacture_by_herd(farm_on=None):
+	"""{herd: bool} for every herd, in one query."""
+	if farm_on is None:
+		farm_on = premanufacture_concentrate_on()
+	fields = ["name"]
+	if frappe.db.has_column("Herds", "concentrate_mode"):
+		fields.append("concentrate_mode")
+	return {
+		h.name: resolve_premanufacture(h.get("concentrate_mode"), farm_on)
+		for h in frappe.get_all("Herds", fields=fields)
+	}
+
+
+def any_herd_premanufactures():
+	"""Is there a concentrate stage anywhere on this farm?
+
+	What decides whether the Concentrate page is shown and whether a
+	concentrate may be set or mixed at all: with the farm switch off but the
+	shoat groups on Pre-manufacture, the shoats' batch still has to be made
+	somewhere. A farm with no herds answers with its own switch.
+	"""
+	farm_on = premanufacture_concentrate_on()
+	by_herd = premanufacture_by_herd(farm_on)
+	return any(by_herd.values()) if by_herd else farm_on
+
+
 def refuse_without_concentrate_stage():
-	"""Concentrate cannot be set or manufactured on a farm that mixes straight
-	from raw ingredients. The recipes already there stay readable."""
-	if not premanufacture_concentrate_on():
+	"""Concentrate cannot be set or manufactured on a farm where every herd
+	mixes straight from raw ingredients. The recipes already there stay
+	readable. One herd on Pre-manufacture is enough to keep the stage."""
+	if not any_herd_premanufactures():
 		frappe.throw(
 			_(
 				"This farm does not pre-manufacture concentrate (Livestock Settings > "
-				"Pre-manufacture Concentrate is off). Mix the ration straight from its "
-				"ingredients on the Feed Design page."
+				"Pre-manufacture Concentrate is off and no herd is set to Pre-manufacture). "
+				"Mix the ration straight from its ingredients on the Feed Design page."
 			)
 		)
 
@@ -102,13 +165,17 @@ def total_of(lines):
 	permits 5000 kg and 6000 kg of ingredients producing 100 kg of meal, which
 	is not a recipe anyone can check against a mixer. A ration's quantity has
 	always been the sum of its lines; a concentrate's is too.
+
+	Its kilogram lines: a dose in grams or millilitres is outside the weight
+	(`_doses`).
 	"""
-	return sum(flt(row.get("qty")) for row in lines or [])
+	return kg_total(lines)
 
 
 def _signature(lines):
-	"""What makes one recipe the same as another: its lines, order-insensitive."""
-	return sorted((row["item_code"], round(flt(row["qty"]), 4)) for row in lines)
+	"""What makes one recipe the same as another: its lines, order-insensitive,
+	a dose's unit included (`_tuned_bom._signature`)."""
+	return list(_line_signature(lines))
 
 
 def _matching_concentrate(item, signature, base_qty):
@@ -121,8 +188,8 @@ def _matching_concentrate(item, signature, base_qty):
 	):
 		if abs(flt(bom.quantity) - flt(base_qty)) >= 0.0005:
 			continue
-		rows = frappe.get_all("BOM Item", filters={"parent": bom.name}, fields=["item_code", "qty"])
-		if _signature([{"item_code": r.item_code, "qty": r.qty} for r in rows]) == signature:
+		rows = frappe.get_all("BOM Item", filters={"parent": bom.name}, fields=["item_code", "qty", "uom"])
+		if _signature(_rows_of(rows)) == signature:
 			return bom.name
 	return None
 
@@ -161,16 +228,18 @@ def _build_concentrate(item, lines, farm=None, template=None):
 	doc.set("items", [])
 	for row in lines:
 		item_doc = frappe.get_cached_doc("Item", row["item_code"])
-		old = old_row_by_item.get(row["item_code"])
+		uom, factor = row_units(
+			row["item_code"], item_doc.stock_uom, row, old_row_by_item.get(row["item_code"])
+		)
 		doc.append(
 			"items",
 			{
 				"item_code": row["item_code"],
 				"item_name": item_doc.item_name,
 				"qty": row["qty"],
-				"uom": old.uom if old else item_doc.stock_uom,
+				"uom": uom,
 				"stock_uom": item_doc.stock_uom,
-				"conversion_factor": old.conversion_factor if old else 1,
+				"conversion_factor": factor,
 			},
 		)
 	doc.insert(ignore_permissions=True)

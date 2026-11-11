@@ -149,6 +149,15 @@ export function NutritionPanel({
               No price for {data.unpriced.map((u) => u.item_name).join(", ")}; the cost leaves it out.
             </p>
           )}
+          {!!data.doses?.length && (
+            <p className="text-[12px] text-[var(--sd-muted)]">
+              Doses a head, not in these figures:{" "}
+              {data.doses
+                .map((d) => `${d.item_name} ${fmt(d.qty)} ${d.uom === "Gram" ? "g" : d.uom === "Millilitre" ? "ml" : d.uom}`)
+                .join(", ")}
+              .
+            </p>
+          )}
         </>
       )}
     </div>

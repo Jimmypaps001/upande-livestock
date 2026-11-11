@@ -30,18 +30,26 @@ import frappe
 from frappe import _
 from frappe.utils import flt
 
+from upande_livestock.serverscripts.feeding._doses import kg_total
 from upande_livestock.serverscripts.feeding._tuned_bom import (
 	_carry_forward,
 	_clean,
+	_rows_of,
 	_signature,
+	row_units,
 )
 
 STANDING = "Standing"
 
 
 def per_head_kg(lines):
-	"""What one animal's ration weighs — the BOM's output quantity."""
-	return flt(sum(flt(row["qty"]) for row in lines))
+	"""What one animal's ration weighs — the BOM's output quantity.
+
+	Its kilogram lines only. A per-head dose (7 g of yeast, 60 ml of a
+	tonic) is outside the ration's weight on the farm's sheet and here, and
+	millilitres cannot be added to kilos anyway — see `_doses`.
+	"""
+	return flt(kg_total(lines))
 
 
 def _matching(item, signature, quantity):
@@ -58,8 +66,8 @@ def _matching(item, signature, quantity):
 		order_by="creation desc",
 	):
 		rows = frappe.get_all("BOM Item", filters={"parent": name},
-		                      fields=["item_code", "qty"])
-		if _signature([{"item_code": r.item_code, "qty": r.qty} for r in rows]) == signature:
+		                      fields=["item_code", "qty", "uom"])
+		if _signature(_rows_of(rows)) == signature:
 			return name
 	return None
 
@@ -124,14 +132,16 @@ def _build(item, lines, herd, farm, template=None):
 	doc.set("items", [])
 	for row in lines:
 		item_doc = frappe.get_cached_doc("Item", row["item_code"])
-		old = old_row_by_item.get(row["item_code"])
+		uom, factor = row_units(
+			row["item_code"], item_doc.stock_uom, row, old_row_by_item.get(row["item_code"])
+		)
 		doc.append("items", {
 			"item_code": row["item_code"],
 			"item_name": item_doc.item_name,
 			"qty": row["qty"],
-			"uom": old.uom if old else item_doc.stock_uom,
+			"uom": uom,
 			"stock_uom": item_doc.stock_uom,
-			"conversion_factor": old.conversion_factor if old else 1,
+			"conversion_factor": factor,
 		})
 	doc.insert(ignore_permissions=True)
 	doc.submit()
@@ -216,9 +226,8 @@ def set_standing_ration(herd, lines, ration_item=None, farm=None):
 
 	if previous and frappe.db.get_value("BOM", previous, "item") == item:
 		rows = frappe.get_all("BOM Item", filters={"parent": previous},
-		                      fields=["item_code", "qty"])
-		same_lines = _signature(
-			[{"item_code": r.item_code, "qty": r.qty} for r in rows]) == signature
+		                      fields=["item_code", "qty", "uom"])
+		same_lines = _signature(_rows_of(rows)) == signature
 		if same_lines and abs(flt(frappe.db.get_value("BOM", previous, "quantity"))
 		                      - quantity) < 0.0005:
 			_adopt(previous, herd, farm)

@@ -87,6 +87,8 @@ export type FeedDayStatus = {
   issued_kg: number;
   remaining_kg: number;
   complete: boolean;
+  /** Off: every figure above is a suggestion and the operator types the total. */
+  feed_by_head_count?: boolean;
 };
 
 export type FeedRunResult = {
@@ -253,6 +255,9 @@ export function manufactureFeed(args: {
   batch_by_item?: string;
   /** Who gave the feed; unnamed, the Employee linked to the signed-in user. */
   employee?: string;
+  /** The group's kilos, typed, on a farm not feeding by head count. Ignored
+   *  by the server while Feed by Head Count is on. */
+  total_qty?: number;
 }): Promise<Envelope<FeedRunResult>> {
   return call(RECORD_FEEDING, { payload: { action: "manufacture", ...args } });
 }
@@ -270,13 +275,17 @@ export function manufactureFeed(args: {
  *  the half/full switch even when it runs through here for a tuned recipe. */
 export function manualFeed(args: {
   herd: string;
-  lines: Array<{ item_code: string; qty: number }>;
+  /** `uom` is the line's recipe unit, sent back so a dose stays a dose and a
+   *  swapped-in feed weighed in kilos is converted to its stock unit. */
+  lines: Array<{ item_code: string; qty: number; uom?: string }>;
   heads: number;
   posting_date: string;
   base_bom?: string;
   portion?: number;
   /** Who gave the feed; unnamed, the Employee linked to the signed-in user. */
   employee?: string;
+  /** The group's kilos, typed, on a farm not feeding by head count. */
+  total_qty?: number;
 }): Promise<Envelope<FeedRunResult>> {
   const { portion, ...rest } = args;
   return call(MANUAL_FEED, { payload: { ...rest, portion: portion ?? 1 } });
@@ -382,7 +391,33 @@ export type ManualRow = {
   uom: string;
   /** Per ONE head, in `uom`. */
   qty: number;
+  /** The feed this line replaced at the mixer, when it was swapped in. Shown,
+   *  never sent: the swap is just a different line in a tuned recipe. */
+  swapped_from?: string;
 };
+
+/** A feed that can stand in for another (`Livestock Feed.substitute_group`). */
+export type Substitute = {
+  item_code: string;
+  item_name: string;
+  group: string;
+  dry_matter_pct: number;
+  /** Kilos of this per kilo of the feed it replaces, on dry matter. Null when
+   *  either side has no dry matter recorded: shown, not swappable. */
+  factor: number | null;
+  reason: string | null;
+  stock_uom?: string;
+  on_hand?: number;
+};
+
+const FEED_SUBSTITUTES = "upande_livestock.serverscripts.feeding.feed_substitutes.feed_substitutes";
+
+/** {item_code: substitutes} for the items asked about; items with none are absent. */
+export function feedSubstitutes(
+  items: string[],
+): Promise<Envelope<{ substitutes: Record<string, Substitute[]> }>> {
+  return call(FEED_SUBSTITUTES, { items: JSON.stringify(items) });
+}
 
 /**
  * Seed the manual rows from the herd's own programme.

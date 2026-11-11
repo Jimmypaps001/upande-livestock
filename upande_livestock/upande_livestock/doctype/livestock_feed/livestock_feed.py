@@ -42,6 +42,9 @@ class LivestockFeed(Document):
 	def validate(self):
 		if self.item and not self.feed_name:
 			self.feed_name = frappe.db.get_value("Item", self.item, "item_name")
+		# Matched case-insensitively at the mixer, but stored tidy: " Wet forage"
+		# and "Wet forage" are one group to the farm.
+		self.substitute_group = (self.substitute_group or "").strip() or None
 		self._validate_percents()
 		self._validate_dry_matter()
 		if flt_(self.energy_me_mj_per_kg) < 0:
