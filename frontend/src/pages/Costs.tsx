@@ -20,6 +20,8 @@ import {
   fmtMoney,
   fmtPerAnimal,
   getCostPerAnimal,
+  HISTORY_LABEL,
+  historyDaysLabel,
   monthLabel,
   monthWindow,
   recentMonths,
@@ -37,6 +39,7 @@ const HEAD_ROW =
   "border-b border-[var(--sd-line)] text-left text-[11px] uppercase tracking-[0.1em] text-[var(--sd-quiet)]";
 const BODY_ROW = "border-b border-[var(--sd-line-soft)] last:border-0";
 const FRAME = "rounded-[var(--sd-radius-lg)] border border-[var(--sd-line)]";
+const HISTORY_TAG = "block text-[11px] font-normal text-[var(--sd-quiet)]";
 
 /**
  * Costs: what keeping an animal costs, day by day.
@@ -151,6 +154,12 @@ export function Costs() {
               loading={waiting}
             />
           </FigureRow>
+          {!!total?.history_feed_cost && (
+            <Notice tone="info">
+              KES {fmtMoney(total.history_feed_cost)} of this month's feed is {HISTORY_LABEL}: days the
+              herds were fed before the app, never issued from the stores. Those days are marked.
+            </Notice>
+          )}
           {data && !data.fuel_available && data.production_installed && data.fuel_note && (
             <Notice tone="info">Fuel is not counted: {data.fuel_note}</Notice>
           )}
@@ -187,7 +196,14 @@ function DayTable({ data, loading }: { data: CostReport | null; loading: boolean
           {data.days.map((d) => (
             <tr key={d.date} className={BODY_ROW}>
               <td className={TD}>{d.date}</td>
-              <td className={TDR}>{fmtMoney(d.feed_cost)}</td>
+              <td className={TDR}>
+                {fmtMoney(d.feed_cost)}
+                {d.feed_from_history && (
+                  <span className={HISTORY_TAG} data-cell="feed-history">
+                    {HISTORY_LABEL}
+                  </span>
+                )}
+              </td>
               <td className={TDR}>{fmtMoney(d.medicine_cost)}</td>
               <td className={TDR}>{fmtMoney(d.labour_cost)}</td>
               <td className={TDR}>{fuelShown ? fmtMoney(d.fuel_cost) : "—"}</td>
@@ -230,7 +246,7 @@ function HerdCard({ data, loading }: { data: CostReport | null; loading: boolean
           <CardTitle>Feed per head</CardTitle>
           <CardDescription>
             What each herd's feed cost per head per day: the feed issued to it over the head-days it
-            carried.
+            carried. A day {HISTORY_LABEL} counts the tracker's cost over the head the tracker fed.
           </CardDescription>
         </CardHeading>
       </CardHeaderRow>
@@ -253,7 +269,14 @@ function HerdCard({ data, loading }: { data: CostReport | null; loading: boolean
               <tbody>
                 {data.herds.map((h) => (
                   <tr key={h.herd} className={BODY_ROW}>
-                    <td className="px-3 py-2.5">{h.herd}</td>
+                    <td className="px-3 py-2.5">
+                      {h.herd}
+                      {!!h.history_days && (
+                        <span className={HISTORY_TAG} data-cell="herd-history">
+                          {historyDaysLabel(h.history_days)}
+                        </span>
+                      )}
+                    </td>
                     <td className={TDR}>{fmtMoney(h.feed_cost)}</td>
                     <td className={TDR}>{h.average_heads}</td>
                     <td className={`${TDR} font-medium`}>{fmtPerAnimal(h.feed_cost_per_head_day)}</td>

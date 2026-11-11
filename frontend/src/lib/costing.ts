@@ -6,7 +6,10 @@ import { call, type Envelope } from "@/lib/frappe";
  * Shapes follow `serverscripts/costing/*`. The rules the page leans on:
  * labour, fuel and medicine are spread over every animal on the farm that day;
  * feed stays with the herd that ate it; a day with no animals has no cost per
- * animal (`null`, drawn as a dash), never a zero.
+ * animal (`null`, drawn as a dash), never a zero. A herd-day the stores never
+ * issued feed for may take its cost from the farm's tracker history (Livestock
+ * Feed History); those days are flagged and the page labels them, so nobody
+ * mistakes the sheet's figure for a stock valuation.
  */
 
 const BASE = "upande_livestock.serverscripts.costing";
@@ -26,6 +29,9 @@ export type CostDay = {
   animals: number;
   cost_per_animal: number | null;
   diesel_litres?: number;
+  /** Of `feed_cost`, what came from tracker history rather than the stock ledger. */
+  history_feed_cost?: number;
+  feed_from_history?: boolean;
 };
 
 export type CostMonth = {
@@ -39,6 +45,7 @@ export type CostMonth = {
   fuel_cost: number;
   total_cost: number;
   cost_per_animal: number | null;
+  history_feed_cost?: number;
 };
 
 export type HerdFeedCost = {
@@ -47,7 +54,16 @@ export type HerdFeedCost = {
   head_days: number;
   average_heads: number;
   feed_cost_per_head_day: number | null;
-  days: Array<{ date: string; feed_cost: number; heads: number; feed_cost_per_head: number | null }>;
+  /** Days whose feed came from tracker history, and what it cost. */
+  history_days?: number;
+  history_feed_cost?: number;
+  days: Array<{
+    date: string;
+    feed_cost: number;
+    heads: number;
+    feed_cost_per_head: number | null;
+    from_history?: boolean;
+  }>;
 };
 
 export type MachineWork = {
@@ -122,6 +138,16 @@ export function saveDailyLabour(payload: {
   notes?: string;
 }): Promise<Envelope<{ name: string; date: string; total_workers: number; total_amount: number }>> {
   return call(PATH.saveLabour, { payload });
+}
+
+/** The label on a figure that came from tracker history, not the stock ledger. */
+export const HISTORY_LABEL = "from tracker history";
+
+/** "3 days from tracker history" — a herd row's note; empty when none. */
+export function historyDaysLabel(n: number | null | undefined): string {
+  const k = Math.max(0, Math.trunc(Number(n) || 0));
+  if (!k) return "";
+  return `${k} ${k === 1 ? "day" : "days"} ${HISTORY_LABEL}`;
 }
 
 /** KES, whole shillings, thousands separated; a missing figure is a dash. */

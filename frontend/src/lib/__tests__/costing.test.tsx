@@ -15,17 +15,23 @@ const day = (date: string, o: Record<string, unknown> = {}) => ({
 
 let production = true;
 let refuse = false;
+/** The 1 November feed came from tracker history (Livestock Feed History), not the ledger. */
+let history = false;
 const report = () => ({
   ok: true,
   from_date: "2026-11-01",
   to_date: "2026-11-02",
-  days: [day("2026-11-01"), day("2026-11-02", { total_cost: 0, animals: 0, cost_per_animal: null })],
+  days: [
+    day("2026-11-01", history ? { history_feed_cost: 1000, feed_from_history: true } : {}),
+    day("2026-11-02", { total_cost: 0, animals: 0, cost_per_animal: null }),
+  ],
   months: [{ month: "2026-11", days: 2, animal_days: 100, average_animals: 50, feed_cost: 1000,
-    medicine_cost: 100, labour_cost: 2400, fuel_cost: 0, total_cost: 3500, cost_per_animal: 35 }],
+    medicine_cost: 100, labour_cost: 2400, fuel_cost: 0, total_cost: 3500, cost_per_animal: 35,
+    history_feed_cost: history ? 1000 : 0 }],
   herds: [{ herd: "Finishers", feed_cost: 1000, head_days: 80, average_heads: 40,
-    feed_cost_per_head_day: 12.5, days: [] }],
+    feed_cost_per_head_day: 12.5, history_days: history ? 1 : 0, history_feed_cost: history ? 1000 : 0, days: [] }],
   total: { days: 2, animal_days: 100, feed_cost: 1000, medicine_cost: 100, labour_cost: 2400,
-    fuel_cost: 0, total_cost: 3500, cost_per_animal: 35 },
+    fuel_cost: 0, total_cost: 3500, cost_per_animal: 35, history_feed_cost: history ? 1000 : 0 },
   fuel_available: production,
   fuel_note: production ? null : "upande_production is not installed.",
   production_installed: production,
@@ -84,6 +90,7 @@ beforeEach(() => {
   call.mockClear();
   production = true;
   refuse = false;
+  history = false;
 });
 
 describe("costing helpers", () => {
@@ -104,6 +111,11 @@ describe("costing helpers", () => {
     expect(lib.labourAmount({ category: "Herders", workers: 3, day_rate: null }, d)).toBe(1200);
     expect(lib.labourAmount({ category: "Herders", workers: 3, day_rate: 500 }, d)).toBe(1500);
     expect(lib.labourAmount({ category: "Herders", workers: -2, day_rate: 500 }, d)).toBe(0);
+  });
+  it("counts a herd's history days in words", () => {
+    expect(lib.historyDaysLabel(0)).toBe("");
+    expect(lib.historyDaysLabel(1)).toBe("1 day from tracker history");
+    expect(lib.historyDaysLabel(12)).toBe("12 days from tracker history");
   });
   it("picks the latest day with animals and cost", () => {
     const r = report();
@@ -128,6 +140,24 @@ describe("the Costs page", () => {
     const [method, args] = call.mock.calls.find(([m]) => String(m).endsWith("cost_per_animal"))!;
     expect(method).toContain("costing.cost_per_animal.cost_per_animal");
     expect((args as { from_date: string }).from_date.endsWith("-01")).toBe(true);
+  });
+
+  it("labels feed that came from tracker history, and only that", async () => {
+    history = true;
+    draw(<Costs />);
+    const days = await screen.findByTestId("cost-days");
+    const rows = within(days).getAllByRole("row");
+    expect(within(rows[1]).getByText("from tracker history", { selector: "[data-cell='feed-history']" })).toBeTruthy();
+    expect(within(rows[2]).queryByText("from tracker history")).toBeNull();
+    expect(within(screen.getByTestId("cost-herds")).getByText("1 day from tracker history")).toBeTruthy();
+    expect(screen.getByText(/of this month's feed is from tracker history/)).toBeTruthy();
+  });
+
+  it("says nothing of history when there is none", async () => {
+    draw(<Costs />);
+    await screen.findByTestId("cost-days");
+    expect(document.querySelector("[data-cell='feed-history'], [data-cell='herd-history']")).toBeNull();
+    expect(screen.queryByText(/of this month's feed is from tracker history/)).toBeNull();
   });
 
   it("leaves the production panels out without production", async () => {
