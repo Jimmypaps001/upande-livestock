@@ -126,6 +126,17 @@ class TestDoseLinesInARecipe(unittest.TestCase):
 			TB._signature([{"item_code": "hay", "qty": 5, "uom": "Kilogram"}]),
 		)
 
+	def test_three_litres_is_not_three_kilos(self):
+		# A line's chosen unit is part of the recipe: changing kg to Litre must save a new revision.
+		self.assertNotEqual(
+			TB._signature([{"item_code": "molasses", "qty": 3, "uom": "Kg"}]),
+			TB._signature([{"item_code": "molasses", "qty": 3, "uom": "Litre"}]),
+		)
+		self.assertEqual(
+			TB._signature([{"item_code": "molasses", "qty": 3, "uom": "Kg"}]),
+			TB._signature([{"item_code": "molasses", "qty": 3}]),
+		)
+
 	def test_row_units_for_a_dose(self):
 		with patch.object(TB, "conversion_factor", return_value=0.001):
 			self.assertEqual(

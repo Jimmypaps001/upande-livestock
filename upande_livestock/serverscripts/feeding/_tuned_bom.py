@@ -27,17 +27,21 @@ from upande_livestock.serverscripts.feeding._doses import conversion_factor, dos
 def _signature(lines):
 	"""A stable key for a set of (item, qty) pairs, order-independent.
 
-	A dose (`_doses`) carries its unit in the key: 7 g of yeast and 7 kg of
-	yeast are different recipes. A kilogram line keeps the two-part key it
-	always had, so every recipe already on the site still matches itself.
+	A line written in anything but kilograms carries its unit in the key: 7 g
+	and 7 kg of yeast are different recipes, and so are 3 kg and 3 litres of
+	molasses (the Ration Editor lets each line pick its unit). A kilogram line,
+	or one that names no unit, keeps the two-part key it always had, so every
+	recipe already on the site still matches itself.
 	"""
 	return tuple(sorted(_key(row) for row in lines))
 
 
 def _key(row):
+	from upande_livestock.serverscripts.feeding._units import is_kg
+
 	key = (row["item_code"], round(flt(row["qty"]), 4))
-	dose = dose_uom_of(row)
-	return key + (dose,) if dose else key
+	unit = dose_uom_of(row) or row.get("uom")
+	return key + (unit,) if unit and not is_kg(unit) else key
 
 
 def _rows_of(bom_rows):
