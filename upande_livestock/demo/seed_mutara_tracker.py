@@ -956,6 +956,14 @@ def ensure_settings():
 		            "parentfield": "calf_herds", "idx": len(calves) + 1})
 		row.insert(ignore_permissions=True)
 		_log("calf herds: " + CALF_HERD)
+	# The farm's in-calf group, so "In-calf" on the phone and the web counts its cows (it read 0 without it).
+	in_calf = frappe.get_all("Livestock In-calf Herd", filters={"parent": "Livestock Settings"}, pluck="herd")
+	if frappe.db.exists("Herds", "In-calf") and "In-calf" not in in_calf:
+		row = frappe.new_doc("Livestock In-calf Herd")
+		row.update({"herd": "In-calf", "parent": "Livestock Settings", "parenttype": "Livestock Settings",
+		            "parentfield": "in_calf_herds", "idx": len(in_calf) + 1})
+		row.insert(ignore_permissions=True)
+		_log("in-calf herds: In-calf")
 	frappe.clear_document_cache("Livestock Settings", "Livestock Settings")
 
 
