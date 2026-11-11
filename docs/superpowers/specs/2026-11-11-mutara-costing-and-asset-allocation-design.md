@@ -1,6 +1,6 @@
 # Mutara: asset allocation, silage production, cost per animal, and feeding the way the farm feeds
 
-Date: 2026-11-11 · Repos: `upande_production` (branch `mutara-asset-allocation`, off `main`) and `upande_livestock` (branch `mutara-livestock-feeds`) · Site: mutara.local (Frappe v16 bench `/mnt/data/code/frappe16-mutara`)
+Date: 2026-11-11 · Repos: `upande_production` (branch `mutara-asset-allocation`, off `main`; silage merged in) and `upande_livestock` (branch `mutara-livestock-feeds`) · Site: mutara.local (Frappe v16 bench `/mnt/data/code/frappe16-mutara`)
 
 Source data: Mutara's own tracker, `/mnt/data/code/mona/apps/upande_scp/apps/Updated Animal_Production_Tracker .xlsx` (sheets "Feed lot rations 2026", "Shoats ration 2026", "Daily Feed Tracker", "Daily Totals", "Labour Cost", "Fuel Cost", "Feed Rates", RFID herd tabs).
 
@@ -8,7 +8,7 @@ Source data: Mutara's own tracker, `/mnt/data/code/mona/apps/upande_scp/apps/Upd
 
 Mutara runs a beef feedlot with shoats (sheep and goats) beside it, and grows its own silage. Today it tracks all of this in one spreadsheet. The figure the farm looks at is **cost per animal per day**: feed + labour + fuel + medicine, divided over every animal on the farm.
 
-We are building an ecosystem rather than two islands. **upande_production** produces: silage, and the machines that do the work (asset allocation). **upande_livestock** consumes: it feeds silage and other feeds from stock, and shows the costs on its dashboard by calling upande_production's API.
+The two apps talk to each other rather than standing apart. **upande_production** produces: silage, and the machines that do the work (asset allocation). **upande_livestock** consumes: it feeds silage and other feeds from stock, and shows the costs on its dashboard by calling upande_production's API.
 
 ## Decisions taken with the farm (2026-11-11)
 
