@@ -21,7 +21,9 @@ One query for the animals and one each for the removals. No per-row `get_doc`:
 at 300 animals that is the difference between one round-trip and a minute.
 
 The fields are the ones the Animals page's portrait shows (see
-`animals/animal_profile`): her picture, age, breed, herd, sex, dam and sire. The
+`animals/animal_profile`): her picture, age, breed, herd, sex, dam and sire,
+and the stream a male was put in (Feedlot / Breeding), which the phone's
+animal page shows on her picture even offline. The
 weighing carries its date (`last_weight_date`, the latest submitted Livestock
 Weight Record) so the phone can warn that an animal was weighed a few days ago.
 A weighing writes Animal.last_weight_kg without touching `modified`, so the
@@ -62,7 +64,7 @@ def animals_since(since=None):
 			or_filters=or_filters,
 			fields=["name", "disabled", "tag_number", "burn_name", "sex", "breed", "date_of_birth",
 			        "current_herd", "status", "repro_status", "image", "dam",
-			        "sire_name", "parity", "last_weight_kg", "modified"],
+			        "sire_name", "parity", "last_weight_kg", "stream", "modified"],
 			order_by="tag_number asc",
 			limit_page_length=0,
 		)
@@ -98,6 +100,7 @@ def animals_since(since=None):
 					"animal_name": r.burn_name,
 					"sex": r.sex,
 					"breed": r.breed,
+					"stream": r.stream,
 					"dob": r.date_of_birth,
 					"herd": r.current_herd,
 					"status": r.status,

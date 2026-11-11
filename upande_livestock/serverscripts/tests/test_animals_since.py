@@ -106,3 +106,10 @@ class TestAnimalsSince(IntegrationTestCase):
 		row = next((x for x in animals_since(self.past)["animals"] if x["name"] == self.b.name), None)
 		self.assertIsNotNone(row)
 		self.assertEqual(row["last_weight_date"], str(today()))
+
+	def test_rows_carry_breed_and_stream(self):
+		frappe.db.set_value("Animal", self.a.name, "stream", "Breeding", update_modified=False)
+		rows = {x["name"]: x for x in animals_since()["animals"]}
+		self.assertEqual(rows[self.a.name]["stream"], "Breeding")
+		self.assertIn("breed", rows[self.a.name])
+		self.assertIn(rows[self.b.name]["stream"], (None, ""))
