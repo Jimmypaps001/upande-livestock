@@ -11,7 +11,7 @@ const DEBOUNCE_MS = 350;
 /**
  * What a recipe contains, live.
  *
- * Shared by Feed Design, the Ration Editor and the Concentrate page so the
+ * Used by the Ration Editor, the one screen a recipe is written on, so the
  * numbers are visible wherever a recipe is edited. It computes NOTHING: the
  * lines go to `feed_nutrition` (debounced, so typing a quantity is one call and
  * not one per keystroke) and the answer is drawn as it comes back — including

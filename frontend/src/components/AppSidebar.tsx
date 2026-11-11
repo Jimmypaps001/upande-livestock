@@ -50,8 +50,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { SidebarUser } from "@/components/SidebarUser";
 import { useUnreadNotifications } from "@/hooks/use-notifications";
-import { bootstrap } from "@/lib/frappe";
-import { viewAllowed } from "@/lib/roles";
+import { viewOpen } from "@/lib/roles";
 import { routeHash, type View } from "@/lib/router";
 import { cn } from "@/lib/utils";
 import upandeLogo from "@/assets/upande_logo.png";
@@ -67,7 +66,7 @@ type NavSection = { label: string; items: NavItem[] };
  * that says so rather than miming a screen that does not work — see
  * pages/Stub.tsx.
  */
-const NAV: NavSection[] = [
+export const NAV: NavSection[] = [
   {
     label: "Herd",
     items: [
@@ -142,19 +141,19 @@ const NAV: NavSection[] = [
         view: "feeding",
         label: "Feeding",
         icon: Utensils,
-        hint: "Mix and issue a herd's ration",
+        hint: "Mix and issue the day's feed — one herd, or every herd at once",
       },
       {
-        view: "feed-design",
-        label: "Feed Design",
+        view: "ration-editor",
+        label: "Ration Editor",
         icon: FlaskConical,
-        hint: "Design a feed with its nutrition in view, and mix every herd's feed for the day",
+        hint: "Design what a herd eats, or a concentrate, with its nutrition in view",
       },
       {
         view: "concentrate",
         label: "Concentrate",
         icon: Wheat,
-        hint: "What to mix, and what it would take",
+        hint: "Mix a concentrate batch for the store",
       },
       {
         view: "stock",
@@ -164,15 +163,9 @@ const NAV: NavSection[] = [
       },
       {
         view: "rations",
-        label: "Rations",
+        label: "Ration History",
         icon: ClipboardPen,
-        hint: "Which recipe each herd was fed",
-      },
-      {
-        view: "ration-editor",
-        label: "Ration Editor",
-        icon: ClipboardPen,
-        hint: "Change what a herd is fed — it becomes the next mix",
+        hint: "Which recipe each herd was actually fed, day by day",
       },
       {
         view: "procurement",
@@ -213,11 +206,25 @@ const NAV: NavSection[] = [
   },
 ];
 
+/**
+ * The sections and entries this user is shown on this farm.
+ *
+ * The Concentrate window only where some herd eats a pre-made concentrate
+ * (lib/roles: concentratesInUse); a nutritionist-only user is shown the feed
+ * screens alone. The same rule guards the route in App, so a hidden entry is
+ * also an unreachable one. Empty sections are dropped.
+ */
+export function visibleNav(open: (view: View) => boolean = (v) => viewOpen(v)): NavSection[] {
+  return NAV.map((section) => ({
+    ...section,
+    items: section.items.filter((item) => open(item.view)),
+  })).filter((section) => section.items.length > 0);
+}
+
 /** Which views this slice actually implements. The rest render a placeholder. */
 export const BUILT_VIEWS: ReadonlySet<View> = new Set<View>([
   "dashboard",
   "feeding",
-  "feed-design",
   "concentrate",
   "stock",
   "rations",
@@ -261,7 +268,6 @@ export function AppSidebar({
   const { state, toggle } = useSidebar();
   const collapsed = state === "collapsed";
   const { unread } = useUnreadNotifications();
-  const premanufacture = bootstrap().premanufacture_concentrate;
 
   // The footer is pinned: SidebarContent is the only flexible row in the card
   // (flex-1 min-h-0, overflow hidden) and the nav scrolls INSIDE the ScrollArea
@@ -362,17 +368,7 @@ export function AppSidebar({
               "group-data-[collapsible=icon]:p-[0.8rem]",
             )}
           >
-            {NAV.map((section) => ({
-              ...section,
-              // A farm that mixes straight from raw ingredients has no
-              // concentrate stage, so its page is not offered.
-              // A nutritionist-only user is shown the feed screens alone.
-              items: section.items.filter(
-                (item) =>
-                  (premanufacture || item.view !== "concentrate") && viewAllowed(item.view),
-              ),
-            }))
-              .filter((section) => section.items.length > 0)
+            {visibleNav()
               .map((section) => (
               <SidebarGroup key={section.label}>
                 <SidebarGroupLabel>{section.label}</SidebarGroupLabel>

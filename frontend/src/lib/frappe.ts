@@ -21,9 +21,12 @@ export interface LivestockBootstrap {
   user_image: string;
   site_name: string;
   roles: string[];
-  /** Livestock Settings > Pre-manufacture Concentrate. Off hides the
-   *  Concentrate page and offers raw feeds only; unset means on, so an older
-   *  page shell that does not send it behaves as it always did. */
+  /** Is concentrate in use on this farm: does at least one herd eat a
+   *  pre-made one (its Herds > Concentrate, or the farm's Pre-manufacture
+   *  Concentrate switch for a herd on Farm default)? The server's
+   *  `any_herd_premanufactures`, not the raw switch. False hides the
+   *  Concentrate window (lib/roles: concentratesInUse); unset means on, so an
+   *  older page shell that does not send it behaves as it always did. */
   premanufacture_concentrate: boolean;
   /** Livestock Settings > Feed by Head Count. Off: the feeding screens show
    *  head count x per head as a suggestion and the operator types the group's

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AlertTriangle, Plus, Save, X } from "lucide-react";
+import { AlertTriangle, ExternalLink, Loader2, Plus, Save, X } from "lucide-react";
 import { Figure, FigureRow } from "@/components/Figure";
 import { Notice } from "@/components/feeding/Notice";
 import { NutritionPanel } from "@/components/feeding/NutritionPanel";
@@ -8,6 +8,8 @@ import {
 } from "@/components/feeding/RecipeMode";
 import { Page, PageHeading } from "@/components/PageShell";
 import { RefreshButton } from "@/components/RefreshButton";
+import { RowsSkeleton } from "@/components/Loading";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card, CardContent, CardDescription, CardHeaderRow, CardHeading, CardTitle, CardTools,
@@ -15,134 +17,303 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Picker } from "@/components/ui/picker";
-import { RowsSkeleton } from "@/components/Loading";
 import { useToast } from "@/components/Toast";
-import { useSaveShortcut } from "@/lib/use-save-shortcut";
+import { concentrates, setConcentrate, type Concentrate } from "@/lib/feeding";
 import { isError } from "@/lib/frappe";
-import { expandConcentrates } from "@/lib/nutrition";
 import {
   describeChange, getHerdRations, setHerdRation,
-  type HerdRation, type HerdRations, type RationDifference,
+  type FeedChoice, type HerdRations, type RationDifference,
 } from "@/lib/herds";
+import {
+  expandConcentrates, livestockFeeds, type FeedLibrary, type LibraryFeed,
+} from "@/lib/nutrition";
 import {
   doseForHerd, isDoseUom, kgTotal, toLine, unitLabel, type LineUnit,
 } from "@/lib/ration-maths";
-import { cn, fmt } from "@/lib/utils";
+import { concentratesInUse } from "@/lib/roles";
+import { hashParams } from "@/lib/router";
+import { useSaveShortcut } from "@/lib/use-save-shortcut";
+import { cn, fmt, num } from "@/lib/utils";
 
-type EditRow = ModeRow;
-
+type Row = ModeRow;
 let nextKey = 1;
 
+/** What is being edited: a herd's standing ration, or a concentrate (a known
+ *  one by item code, or `null` for a new one). */
+type Selection =
+  | { kind: "herd"; herd: string }
+  | { kind: "concentrate"; item: string | null }
+  | null;
+
+type Baseline = { lines: Array<{ item_code: string; qty: number; unit: LineUnit }>; name: string };
+
+/** The desk form for a feed: its record, or a new one already pointing at the item. */
+function deskLink(f: LibraryFeed): string {
+  return f.recorded
+    ? `/app/livestock-feed/${encodeURIComponent(f.item_code)}`
+    : `/app/livestock-feed/new?item=${encodeURIComponent(f.item_code)}`;
+}
+
+/** What a link to this page asked for: `?herd=X`, `?concentrate=X` or `?concentrate=new`. */
+function selectionFromHash(): Selection {
+  const p = hashParams();
+  const herd = p.get("herd");
+  if (herd) return { kind: "herd", herd };
+  const c = p.get("concentrate");
+  if (c) return { kind: "concentrate", item: c === "new" ? null : c };
+  return null;
+}
+
+function unitOf(uom: string | null | undefined, isDose?: boolean): LineUnit {
+  return (isDose === false ? "kg" : isDoseUom(uom) ? uom : "kg") as LineUnit;
+}
+
 /**
- * Changing what a herd is fed.
+ * The Ration Editor: THE one place a recipe is written.
  *
- * NO APPROVAL, BY DESIGN. The herdsman or the manager decides what goes in the
- * mixer; this is not a request for permission, it is the change. What it is
- * not is an EDIT: a submitted BOM seals, so saving supersedes the recipe with
- * a new revision and points the herd at it. Every feed run already posted
- * still names the recipe it was mixed from, which is the whole reason the old
- * one is left alone.
+ * It used to be two screens — Feed Design and this one — that both edited a
+ * herd's standing ration, each with half the tools. They are one now: the feed
+ * library with its nutrient badges, recipe lines in kilos or as a share of
+ * intake with per-head doses in grams or millilitres, the live nutrition panel
+ * with its targets, a herd's ration loaded and saved as its standing ration,
+ * and — only where concentrate is in use on this farm — a concentrate designed
+ * and saved too. Mixing is not here: a herd's feed is mixed on Feeding (one
+ * herd, or Manufacture all), a concentrate batch on the Concentrate page.
  *
- * A FEED THAT IS NOT AVAILABLE IS SUBSTITUTED HERE. There is no separate
- * substitution flow and there does not need to be: swapping silage for sorghum
- * is changing the mixture, and changing the mixture is this screen. The next
- * Work Order uses what the herd now points at.
+ * NO APPROVAL, BY DESIGN. The herdsman, the manager or the nutritionist decides
+ * what goes in the mixer; saving is the change. What it is not is an EDIT: a
+ * submitted BOM seals, so saving supersedes the recipe with a new revision and
+ * points the herd at it. Every feed run already posted still names the recipe
+ * it was mixed from, which is the whole reason the old one is left alone.
+ * Saving is offered only once something has changed, so a farm re-saving the
+ * same mix every morning does not accumulate a BOM a day.
  *
- * Lines are in the units the RECIPE is written in — hay in kilograms even
- * though the store holds bales — because that is what the person at the mixer
- * weighs out. They may be typed as kilos per head and a share of it each, and
- * an additive as a dose a head in grams or millilitres, outside the 100%.
+ * THE PAGE SENDS FACTS. Every nutrition figure comes from `feed_nutrition`,
+ * saving goes through `set_herd_ration` / `set_concentrate`, and what is saved
+ * is kilogram lines and dose lines, as the BOM holds them. Lines are in the
+ * units the RECIPE is written in — hay in kilograms even though the store
+ * holds bales — because that is what the person at the mixer weighs out.
  *
- * A herd that mixes from raw (Herds > Concentrate) is offered raw feeds only.
+ * A herd that mixes from raw (Herds > Concentrate, the farm's Pre-manufacture
+ * Concentrate switch by default) is offered raw feeds only, and a ration that
+ * still names a concentrate says so and can be rewritten from that
+ * concentrate's own recipe.
  */
 export function RationEditor() {
   const [data, setData] = useState<HerdRations | null>(null);
+  const [library, setLibrary] = useState<FeedLibrary | null>(null);
+  const [concList, setConcList] = useState<Concentrate[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [failure, setFailure] = useState<string | null>(null);
-  const [changes, setChanges] = useState<RationDifference[] | null>(null);
-  const [picked, setPicked] = useState<string | null>(null);
-  const [rows, setRows] = useState<EditRow[]>([]);
+  const [search, setSearch] = useState("");
+
+  const [sel, setSel] = useState<Selection>(selectionFromHash);
+  const [rows, setRows] = useState<Row[]>([]);
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
+  const [changes, setChanges] = useState<RationDifference[] | null>(null);
   const toast = useToast();
   const mode = usePercentMode(rows, setRows);
 
+  // Does this farm have a concentrate stage at all? The server's fresh answer
+  // where it has given one, the page's bootstrap until then.
+  const inUse =
+    data?.any_premanufacture ?? library?.any_premanufacture ?? concentratesInUse();
+  const farmOn = data?.premanufacture_concentrate ?? library?.premanufacture_concentrate ?? true;
+
   const load = useCallback(async () => {
     setLoading(true);
-    const r = await getHerdRations();
+    const [hr, lib] = await Promise.all([getHerdRations(), livestockFeeds()]);
     setLoading(false);
-    if (isError(r)) {
-      setFailure(r.error);
+    if (isError(hr)) {
+      setFailure(hr.error);
       return;
     }
-    setFailure(null);
-    setData(r);
+    setFailure(isError(lib) ? lib.error : null);
+    setData(hr);
+    if (!isError(lib)) setLibrary(lib);
+  }, []);
+
+  const loadConcentrates = useCallback(async () => {
+    const r = await concentrates();
+    setConcList(isError(r) ? [] : r.concentrates);
   }, []);
 
   useEffect(() => {
     void load();
   }, [load]);
 
-  const herds = data?.herds ?? [];
-  const feeds = data?.feeds ?? [];
-  // Off: this farm mixes straight from raw ingredients, so a line may name raw
-  // feeds only. A made concentrate already in the recipe stays nameable so the
-  // row does not blank, and is warned about below.
-  const chosen = useMemo(() => herds.find((h) => h.herd === picked) || null, [herds, picked]);
-  // Per herd: its own Concentrate setting, the farm's switch when it has none.
-  const rawOnly = (chosen?.premanufacture ?? data?.premanufacture_concentrate) === false;
-
-  // The edit starts as what the herd is actually fed, so "save" with nothing
-  // touched is a no-op the server recognises rather than a new revision.
+  // The concentrates are priced against the stores, so they are only asked
+  // for where the farm has a concentrate stage to show them in.
   useEffect(() => {
-    if (!chosen) {
-      setRows([]);
-      setName("");
-      return;
+    if (inUse) void loadConcentrates();
+  }, [inUse, loadConcentrates]);
+
+  const herds = data?.herds ?? [];
+  const choices: FeedChoice[] = data?.feeds ?? [];
+  const chosenHerd = sel?.kind === "herd" ? herds.find((h) => h.herd === sel.herd) || null : null;
+  const chosenConc =
+    sel?.kind === "concentrate" && sel.item
+      ? (concList ?? []).find((c) => c.item_code === sel.item) || null
+      : null;
+  const target: "ration" | "concentrate" = sel?.kind === "concentrate" ? "concentrate" : "ration";
+  // Something the recipe can be saved to: a herd that exists, or a concentrate.
+  const editing = !!chosenHerd || sel?.kind === "concentrate";
+
+  // No concentrate stage on this farm: a link asking for one opens nothing.
+  useEffect(() => {
+    if (!inUse && sel?.kind === "concentrate") setSel(null);
+  }, [inUse, sel]);
+
+  // Whether THIS recipe may name a made concentrate: a herd's own setting for
+  // its ration, the farm's reach for a concentrate or an unattached recipe.
+  const switchOn = chosenHerd ? (chosenHerd.premanufacture ?? farmOn) : inUse;
+
+  const byCode = useMemo(() => {
+    const m = new Map<string, LibraryFeed>();
+    for (const f of library?.feeds ?? []) m.set(f.item_code, f);
+    return m;
+  }, [library]);
+  const choiceByCode = useMemo(() => new Map(choices.map((c) => [c.value, c])), [choices]);
+
+  const isConcentrate = useCallback(
+    (code: string) =>
+      !!code && (!!choiceByCode.get(code)?.is_concentrate || (byCode.get(code)?.is_made ?? false)),
+    [byCode, choiceByCode],
+  );
+  const labelOf = (code: string) =>
+    byCode.get(code)?.item_name || choiceByCode.get(code)?.label || code;
+  const uomOf = (code: string) => choiceByCode.get(code)?.uom || "";
+
+  // What the library offers. Off: raw feeds only. A ration is never an
+  // ingredient of another one.
+  const pickable = useMemo(
+    () =>
+      (library?.feeds ?? []).filter(
+        (f) => f.category !== "Ration (made)" && (switchOn || !f.is_made),
+      ),
+    [library, switchOn],
+  );
+
+  // What a line may name: the library, the feeds nobody has described yet, and
+  // every feed already in a recipe on this farm. A line already in the recipe
+  // stays nameable even if the picker no longer offers it, so it does not blank.
+  const options = useMemo(() => {
+    const out = new Map<string, string>();
+    for (const f of pickable) out.set(f.item_code, f.item_name);
+    for (const u of library?.undescribed ?? []) out.set(u.item_code, `${u.item_name} (no data)`);
+    for (const c of choices) {
+      if (out.has(c.value) || (!switchOn && c.is_concentrate)) continue;
+      out.set(c.value, c.label);
     }
+    for (const r of rows) if (r.item_code && !out.has(r.item_code)) out.set(r.item_code, labelOf(r.item_code));
+    return [...out].map(([value, label]) => ({ value, label })).sort((a, b) => a.label.localeCompare(b.label));
+    // labelOf reads the same maps listed here.
+  }, [pickable, library, choices, switchOn, rows, byCode, choiceByCode]);
+
+  const shown = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    const all = [
+      ...pickable,
+      ...(library?.undescribed ?? []).map(
+        (u) => ({ ...u, category: null, recorded: false, is_made: false, nutrient_source: null, dry_matter_pct: 0,
+                  cp_pct: 0, carbohydrate_pct: 0, ndf_pct: 0, fat_pct: 0, me_mj_per_kg: 0 }) as LibraryFeed,
+      ),
+    ];
+    return all.filter((f) => !q || f.item_name.toLowerCase().includes(q));
+  }, [pickable, library, search]);
+
+  // What the recipe was when it was loaded, so "save" with nothing touched is
+  // not offered — the server would recognise it, but a no-op is cheaper here.
+  const baseline: Baseline = useMemo(() => {
+    if (chosenHerd)
+      return {
+        lines: chosenHerd.lines.map((l) => ({
+          item_code: l.item_code, qty: l.qty, unit: unitOf(l.uom, l.is_dose),
+        })),
+        name: chosenHerd.ration_name || chosenHerd.ration_item || "",
+      };
+    if (chosenConc)
+      return {
+        lines: chosenConc.lines.map((l) => ({
+          item_code: l.item_code, qty: l.recipe_qty, unit: unitOf(l.recipe_uom),
+        })),
+        name: chosenConc.item_name,
+      };
+    return { lines: [], name: "" };
+  }, [chosenHerd, chosenConc]);
+
+  // Seed the recipe whenever a different thing is picked, or the one picked is
+  // saved as a new revision (its BOM changes).
+  const seedKey = `${sel?.kind ?? ""}:${sel?.kind === "herd" ? sel.herd : sel?.kind === "concentrate" ? sel.item : ""}:${
+    chosenHerd?.bom ?? chosenConc?.bom_no ?? ""
+  }`;
+  useEffect(() => {
     setRows(
       mode.seed(
-        chosen.lines.map((l) => ({
-          key: nextKey++,
-          item_code: l.item_code,
-          qty: String(l.qty),
-          unit: (l.is_dose && isDoseUom(l.uom) ? l.uom : "kg") as LineUnit,
-        })),
+        baseline.lines.map((l) => ({ key: nextKey++, item_code: l.item_code, qty: String(l.qty), unit: l.unit })),
       ),
     );
-    // Seeded with what the ration is called, blank for a herd that has none —
-    // which is the field that lets that herd be given its first one at all.
-    setName(chosen.ration_name || chosen.ration_item || "");
-    setChanges(null);
-  }, [chosen?.herd, chosen?.bom]);
+    setName(baseline.name);
+  }, [seedKey]);
 
-  // The ration's kilos; a dose is outside them, as the BOM's quantity is.
+  const lines = rows.filter((r) => r.item_code && num(r.qty) > 0).map(toLine);
+  // The recipe's kilos: doses are outside them, as the BOM's quantity is.
   const total = kgTotal(rows);
-  const heads = chosen?.heads ?? 0;
+  const heads = chosenHerd?.heads ?? 0;
   const dirty =
-    !!chosen &&
-    (rows.length !== chosen.lines.length ||
-      rows.some((r, i) => {
-        const was = chosen.lines[i];
-        return (
-          !was ||
-          was.item_code !== r.item_code ||
-          Math.abs(was.qty - Number(r.qty)) > 0.0005 ||
-          !!was.is_dose !== ((r.unit || "kg") !== "kg")
-        );
-      }));
+    rows.length !== baseline.lines.length ||
+    rows.some((r, i) => {
+      const was = baseline.lines[i];
+      return (
+        !was ||
+        was.item_code !== r.item_code ||
+        Math.abs(was.qty - num(r.qty)) > 0.0005 ||
+        was.unit !== (r.unit || "kg")
+      );
+    }) ||
+    (!!name.trim() && name.trim() !== baseline.name);
 
-  // The one line of a TMR the farm mixes itself. Read off the choices rather
-  // than the saved line, so picking a different feed lights up straight away.
-  const isConcentrate = (code: string) =>
-    !!feeds.find((f) => f.value === code)?.is_concentrate;
-  const labelOf = (code: string) => feeds.find((f) => f.value === code)?.label || code;
-  const uomOf = (code: string) => feeds.find((f) => f.value === code)?.uom || "";
+  // A made concentrate in a recipe that may no longer name one.
+  const stranded = !switchOn ? rows.filter((r) => isConcentrate(r.item_code)) : [];
 
-  const stranded = rawOnly ? rows.filter((r) => r.item_code && isConcentrate(r.item_code)) : [];
+  function pick(next: Selection) {
+    setSel(next);
+    setChanges(null);
+  }
+
+  /** Point one line at `code`, merging into a line that already has it (kg summed). */
+  function pickFor(index: number, code: string) {
+    setRows((s) => {
+      const dup = s.findIndex(
+        (r, j) => j !== index && r.item_code === code && (r.unit || "kg") === (s[index].unit || "kg"),
+      );
+      if (dup < 0 || !code) return s.map((x, j) => (j === index ? { ...x, item_code: code } : x));
+      const sum = num(s[dup].qty) + num(s[index].qty);
+      return s
+        .map((x, j) => (j === dup ? { ...x, qty: sum ? String(sum) : "" } : x))
+        .filter((_, j) => j !== index);
+    });
+  }
+
+  function addFeed(code: string) {
+    const have = rows.find((r) => r.item_code === code);
+    if (have) {
+      // Already in the recipe: take the person to that line, not a second one.
+      const el = document.getElementById(`re-qty-${have.key}`) as HTMLInputElement | null;
+      el?.focus();
+      el?.select();
+      return;
+    }
+    setRows((s) => {
+      const empty = s.find((r) => !r.item_code);
+      if (empty) return s.map((r) => (r === empty ? { ...r, item_code: code } : r));
+      return [...s, { key: nextKey++, item_code: code, qty: "" }];
+    });
+  }
 
   async function expand() {
-    const r = await expandConcentrates(rows.filter((x) => x.item_code && Number(x.qty) > 0).map(toLine));
+    const r = await expandConcentrates(lines);
     if (isError(r)) {
       toast(r.error, "error");
       return;
@@ -160,45 +331,81 @@ export function RationEditor() {
     toast(`Rewrote ${r.expanded.join(", ")} into its ingredients. Save to make it the recipe.`, "info");
   }
 
-  useSaveShortcut(() => void save(), !!chosen && dirty && !busy && rows.length > 0);
+  const canSave =
+    !busy &&
+    editing &&
+    lines.length > 0 &&
+    dirty &&
+    (target === "ration" ? !!chosenHerd : !!name.trim());
+
+  useSaveShortcut(() => void save(), canSave);
 
   async function save() {
-    if (!chosen) return;
+    if (!canSave) return;
     setBusy(true);
-    const r = await setHerdRation({
-      herd: chosen.herd,
-      ration_item: name.trim() || chosen.ration_item || undefined,
-      lines: rows.filter((x) => x.item_code && Number(x.qty) > 0).map(toLine),
-    });
+    if (target === "ration" && chosenHerd) {
+      const r = await setHerdRation({
+        herd: chosenHerd.herd,
+        ration_item: name.trim() || chosenHerd.ration_item || undefined,
+        lines,
+      });
+      setBusy(false);
+      if (isError(r)) {
+        toast(r.error, "error");
+        setChanges(null);
+        return;
+      }
+      setChanges(r.differences);
+      toast(
+        r.changed
+          ? `${chosenHerd.herd} now eats ${fmt(r.per_head_kg)} kg a head — ${fmt(r.day_kg)} kg a day. Recipe ${r.bom}${
+              r.superseded ? `, superseding ${r.superseded}` : ""
+            }.`
+          : `Nothing changed — ${chosenHerd.herd} already eats exactly this.`,
+        r.changed ? "ok" : "info",
+      );
+      void load();
+      return;
+    }
+    const r = await setConcentrate({ name: name.trim(), lines });
     setBusy(false);
     if (isError(r)) {
       toast(r.error, "error");
-      setChanges(null);
       return;
     }
-    setChanges(r.differences);
     toast(
       r.changed
-        ? `${chosen.herd} now eats ${fmt(r.per_head_kg)} kg a head — ${fmt(r.day_kg)} kg a day. Recipe ${r.bom}${r.superseded ? `, superseding ${r.superseded}` : ""}.`
-        : `Nothing changed — ${chosen.herd} already eats exactly this.`,
+        ? `${r.item} makes ${fmt(r.base_qty)} kg from these ingredients — recipe ${r.bom}.`
+        : `Nothing changed — ${r.item} already says exactly this.`,
       r.changed ? "ok" : "info",
     );
+    setSel({ kind: "concentrate", item: r.item });
+    void loadConcentrates();
     void load();
   }
 
+  const recipeTitle = chosenHerd
+    ? `${chosenHerd.herd} · ration`
+    : sel?.kind === "concentrate"
+      ? chosenConc
+        ? `${chosenConc.item_name} · concentrate`
+        : "New concentrate"
+      : "Nothing selected";
+
   return (
     <Page>
-      <PageHeading eyebrow="Upande Livestock · Feeding" title="Rations">
-        What each herd is fed, per head, per day. Changing it makes a new
-        revision and points the herd at it — the old one stays readable, because
-        every feed run already posted names the recipe it was mixed from.
+      <PageHeading eyebrow="Upande Livestock · Feeding" title="Ration Editor">
+        What each herd eats, per head, per day
+        {inUse ? " — and what goes into each concentrate the farm mixes" : ""}. Pick a herd
+        {inUse ? " or a concentrate" : ""}, change the recipe with its nutrition in view, and save
+        it. Saving makes a new revision; every feed run already posted keeps the recipe it was
+        mixed from. The feed itself is mixed on Feeding
+        {inUse ? ", and concentrate batches on Concentrate" : ""}.
       </PageHeading>
 
       {failure && <Notice tone="error">{failure}</Notice>}
       {!!changes?.length && (
-        <Notice tone="info">
-          {changes.map((c) => describeChange(c)).join("\n")}
-        </Notice>
+        <Notice tone="info">{changes.map((c) => describeChange(c)).join("\n")}</Notice>
       )}
 
       <FigureRow>
@@ -206,102 +413,220 @@ export function RationEditor() {
                 hint={`of ${herds.length}`} />
         <Figure loading={!data} label="Without a ration" value={String(herds.filter((h) => !h.bom).length)}
                 hint="nothing is mixed for them" />
-        <Figure loading={!data} label="Feeds in use" value={String(feeds.length)} hint="named in a recipe" />
         <Figure
           loading={!data} label="Whole farm"
           value={fmt(herds.reduce((s, h) => s + h.day_kg, 0))}
           unit="kg"
           hint="a day, at today's head counts"
         />
+        {inUse && (
+          <Figure loading={!concList} label="Concentrates" value={String(concList?.length ?? 0)}
+                  hint="recipes the farm mixes" />
+        )}
       </FigureRow>
 
-      <div className="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,320px)_minmax(0,1fr)]">
-        <Card>
-          <CardHeaderRow>
-            <CardHeading>
-              <CardTitle>Herds</CardTitle>
-              <CardDescription>What each one eats a head, a day.</CardDescription>
-            </CardHeading>
-            <CardTools>
-              <RefreshButton onClick={load} loading={loading} label="the rations" />
-            </CardTools>
-          </CardHeaderRow>
-          <CardContent className="pt-0">
-            {!data && <RowsSkeleton rows={8} />}
-            <ul className="flex flex-col gap-1">
-              {herds.map((h) => (
-                <li key={h.herd}>
-                  <button
-                    type="button"
-                    onClick={() => setPicked(h.herd)}
-                    className={cn(
-                      "flex w-full items-center gap-3 rounded-[var(--sd-radius-lg)] px-3 py-2.5 text-left transition-all",
-                      h.herd === picked ? "bg-[var(--sd-bg-soft)]" : "hover:bg-[var(--sd-bg-soft)]",
-                    )}
-                  >
-                    <span className="flex min-w-0 flex-1 flex-col">
-                      <span className="truncate text-[13px] font-medium text-[var(--sd-ink)]">
-                        {h.herd}
+      <div className="grid min-w-0 gap-5 xl:grid-cols-[minmax(0,300px)_minmax(0,1fr)_minmax(0,340px)]">
+        {/* Left: what to edit, and what it can be made of. */}
+        <div className="flex min-w-0 flex-col gap-5">
+          <Card>
+            <CardHeaderRow>
+              <CardHeading>
+                <CardTitle>Herds</CardTitle>
+                <CardDescription>What each one eats a head, a day.</CardDescription>
+              </CardHeading>
+              <CardTools>
+                <RefreshButton onClick={load} loading={loading} label="the rations" />
+              </CardTools>
+            </CardHeaderRow>
+            <CardContent className="pt-0">
+              {!data && <RowsSkeleton rows={6} />}
+              <ul className="flex max-h-[360px] flex-col gap-1 overflow-auto">
+                {herds.map((h) => (
+                  <li key={h.herd}>
+                    <button
+                      type="button"
+                      onClick={() => pick({ kind: "herd", herd: h.herd })}
+                      aria-pressed={chosenHerd?.herd === h.herd}
+                      className={cn(
+                        "flex w-full items-center gap-3 rounded-[var(--sd-radius-lg)] px-3 py-2.5 text-left transition-all",
+                        chosenHerd?.herd === h.herd ? "bg-[var(--sd-bg-soft)]" : "hover:bg-[var(--sd-bg-soft)]",
+                      )}
+                    >
+                      <span className="flex min-w-0 flex-1 flex-col">
+                        <span className="truncate text-[13px] font-medium text-[var(--sd-ink)]">{h.herd}</span>
+                        <span className="text-[11.5px] tabular-nums text-[var(--sd-muted)]">
+                          {h.bom ? `${fmt(h.per_head_kg)} kg × ${h.heads} head` : "no ration"}
+                        </span>
                       </span>
-                      <span className="text-[11.5px] tabular-nums text-[var(--sd-muted)]">
-                        {h.bom
-                          ? `${fmt(h.per_head_kg)} kg × ${h.heads} head`
-                          : "no ration"}
-                      </span>
-                    </span>
-                    {!h.balanced && h.bom && (
-                      <AlertTriangle
-                        className="h-4 w-4 shrink-0 text-[var(--sd-sev-critical)]"
-                        strokeWidth={1.75}
-                      />
-                    )}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </CardContent>
-        </Card>
+                      {inUse && (h.premanufacture ?? farmOn) && (
+                        <Badge variant="outline" title="Eats a pre-made concentrate (Herds > Concentrate)">
+                          concentrate
+                        </Badge>
+                      )}
+                      {!h.balanced && h.bom && (
+                        <AlertTriangle className="h-4 w-4 shrink-0 text-[var(--sd-sev-critical)]" strokeWidth={1.75} />
+                      )}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
 
-        <Card>
+          {inUse && (
+            <Card>
+              <CardHeaderRow>
+                <CardHeading>
+                  <CardTitle>Concentrates</CardTitle>
+                  <CardDescription>Mixes made for the store, by the batch.</CardDescription>
+                </CardHeading>
+              </CardHeaderRow>
+              <CardContent className="flex flex-col gap-2 pt-0">
+                {!concList && <Loader2 className="h-4 w-4 animate-spin" />}
+                <ul className="flex flex-col gap-1">
+                  {(concList ?? []).map((c) => (
+                    <li key={c.item_code}>
+                      <button
+                        type="button"
+                        onClick={() => pick({ kind: "concentrate", item: c.item_code })}
+                        aria-pressed={chosenConc?.item_code === c.item_code}
+                        className={cn(
+                          "flex w-full flex-col rounded-[var(--sd-radius-lg)] px-3 py-2.5 text-left transition-all",
+                          chosenConc?.item_code === c.item_code ? "bg-[var(--sd-bg-soft)]" : "hover:bg-[var(--sd-bg-soft)]",
+                        )}
+                      >
+                        <span className="truncate text-[13px] font-medium text-[var(--sd-ink)]">{c.item_name}</span>
+                        <span className="text-[11.5px] tabular-nums text-[var(--sd-muted)]">
+                          {c.lines.length} ingredients · makes {fmt(c.base_qty)} {c.uom || "kg"}
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="self-start"
+                  onClick={() => pick({ kind: "concentrate", item: null })}
+                >
+                  <Plus className="mr-1.5 h-3.5 w-3.5" strokeWidth={2.5} />
+                  New concentrate
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+
+          <Card>
+            <CardHeaderRow>
+              <CardHeading>
+                <CardTitle>Feed library</CardTitle>
+                <CardDescription>Click a feed to add it to the recipe.</CardDescription>
+              </CardHeading>
+            </CardHeaderRow>
+            <CardContent className="flex flex-col gap-3 pt-0">
+              <Input
+                aria-label="Search feeds"
+                placeholder="Search feeds…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+              {!library && <Loader2 className="h-4 w-4 animate-spin" />}
+              <ul className="flex max-h-[480px] flex-col gap-1 overflow-auto">
+                {shown.map((f) => (
+                  <li key={f.item_code}>
+                    <div className="flex items-start gap-2 rounded-[var(--sd-radius-lg)] px-3 py-2.5 hover:bg-[var(--sd-bg-soft)]">
+                      <button
+                        type="button"
+                        onClick={() => addFeed(f.item_code)}
+                        disabled={!editing}
+                        className="flex min-w-0 flex-1 flex-col items-start text-left disabled:cursor-default"
+                        aria-label={`Add ${f.item_name}`}
+                        title={editing ? undefined : "Pick a herd or a concentrate first"}
+                      >
+                        <span className="flex flex-wrap items-center gap-1.5 text-[13px] font-medium text-[var(--sd-ink)]">
+                          {f.item_name}
+                          {f.is_made && <Badge variant="outline">made</Badge>}
+                          {!f.has_data && <Badge variant="secondary">no data</Badge>}
+                        </span>
+                        <span className="text-[11.5px] tabular-nums text-[var(--sd-muted)]">
+                          {f.category ? `${f.category} · ` : ""}
+                          {f.has_data || f.is_made
+                            ? `DM ${fmt(f.dry_matter_pct)}% · CP ${fmt(f.cp_pct)}% · carb ${fmt(f.carbohydrate_pct)}% · ME ${fmt(f.me_mj_per_kg)}`
+                            : "nutrients not recorded"}
+                        </span>
+                      </button>
+                      <a
+                        href={deskLink(f)}
+                        target="_blank"
+                        rel="noreferrer"
+                        title="Edit this feed in the desk"
+                        className="mt-0.5 text-[var(--sd-quiet)] hover:text-[var(--sd-ink)]"
+                      >
+                        <ExternalLink className="h-3.5 w-3.5" />
+                      </a>
+                    </div>
+                  </li>
+                ))}
+                {library && shown.length === 0 && (
+                  <li className="px-3 py-2 text-[13px] text-[var(--sd-muted)]">No feeds match.</li>
+                )}
+              </ul>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Centre: the recipe. */}
+        <Card className="self-start">
           <CardHeaderRow>
             <CardHeading>
-              <CardTitle>{chosen ? `${chosen.herd} · TMR` : "Nothing selected"}</CardTitle>
+              <CardTitle>{recipeTitle}</CardTitle>
               <CardDescription>
-                {chosen
-                  ? chosen.bom
-                    ? `Total mixed ration · recipe ${chosen.bom}`
-                    : "This herd has no TMR yet. Name one below and it is created."
-                  : "Pick a herd on the left."}
+                {chosenHerd
+                  ? chosenHerd.bom
+                    ? `What one animal eats in a day, as fed · recipe ${chosenHerd.bom}`
+                    : "This herd has no ration yet. Name one below and it is created."
+                  : sel?.kind === "concentrate"
+                    ? chosenConc
+                      ? `What goes into one batch, as fed · recipe ${chosenConc.bom_no}`
+                      : "Name it and list what goes into one batch."
+                    : inUse
+                      ? "Pick a herd or a concentrate on the left."
+                      : "Pick a herd on the left."}
               </CardDescription>
             </CardHeading>
           </CardHeaderRow>
           <CardContent className="flex flex-col gap-4 pt-0">
-            {!chosen ? (
+            {!editing ? (
               <p className="text-[13px] text-[var(--sd-muted)]">
-                A ration is what goes in the mixer for one animal for one day.
+                A ration is what goes in the mixer for one animal for one day
+                {inUse ? "; a concentrate is a mix made for the store, by the batch" : ""}.
               </p>
             ) : (
               <>
-                {!chosen.balanced && chosen.bom && (
+                {chosenHerd && !chosenHerd.balanced && chosenHerd.bom && (
                   <Notice tone="error">
-                    This recipe says it makes {fmt(chosen.per_head_kg)} kg while its
-                    ingredients add up to {fmt(chosen.lines_total)}. It issues less feed than
+                    This recipe says it makes {fmt(chosenHerd.per_head_kg)} kg while its
+                    ingredients add up to {fmt(chosenHerd.lines_total)}. It issues less feed than
                     it consumes. Saving here puts the two back in step.
                   </Notice>
                 )}
 
                 <div className="flex flex-col gap-1.5">
-                  <Label htmlFor="r-name">TMR name</Label>
+                  <Label htmlFor="re-name">{target === "ration" ? "Ration name" : "Concentrate name"}</Label>
                   <Input
-                    id="r-name"
+                    id="re-name"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="e.g. Finishing group 1"
+                    placeholder={target === "ration" ? "e.g. Finishing group 1" : "e.g. Shoat Concentrate"}
                   />
                   <p className="text-[12px] text-[var(--sd-muted)]">
-                    {chosen.bom
-                      ? "Renaming makes a new ration; the herd is moved onto it."
-                      : "Naming this ration creates it and gives it to the herd."}
+                    {target === "ration"
+                      ? chosenHerd?.bom
+                        ? "Renaming makes a new ration; the herd is moved onto it."
+                        : "Naming this ration creates it and gives it to the herd."
+                      : chosenConc
+                        ? "Renaming makes a new concentrate; the old one stays as it is."
+                        : "Naming it creates the concentrate the first time it is saved."}
                   </p>
                 </div>
 
@@ -309,8 +634,8 @@ export function RationEditor() {
                   <Notice tone="info">
                     <span className="flex flex-wrap items-center gap-3">
                       <span>
-                        This farm no longer pre-manufactures concentrate, but this ration still
-                        uses {stranded.map((r) => labelOf(r.item_code)).join(", ")}.
+                        {chosenHerd ? `${chosenHerd.herd} mixes from raw ingredients` : "This farm no longer pre-manufactures concentrate"},
+                        but the recipe still uses {stranded.map((r) => labelOf(r.item_code)).join(", ")}.
                       </span>
                       <Button variant="secondary" size="sm" onClick={() => void expand()}>
                         Expand into ingredients
@@ -319,119 +644,111 @@ export function RationEditor() {
                   </Notice>
                 )}
 
-                <RecipeModeBar mode={mode} idPrefix="r" />
+                <RecipeModeBar mode={mode} idPrefix="re" per={target === "ration" ? "head per day" : "batch"} />
 
                 <div className="flex flex-col gap-2">
-                  <Label>What goes in, per head, per day</Label>
-                  {rows.map((r, i) => (
-                    <div
-                      key={r.key}
-                      className={
-                        "flex flex-wrap items-end gap-3 rounded-[var(--sd-radius-lg)] px-3.5 py-3 shadow-[var(--sd-shadow-inset)] " +
-                        (isConcentrate(r.item_code)
-                          ? "bg-[var(--sd-accent-soft,#eef4ff)] ring-1 ring-[var(--sd-accent,#3b82f6)]/30"
-                          : "bg-[var(--sd-bg-soft)]")
-                      }
-                    >
-                      <div className="flex min-w-[220px] flex-1 flex-col gap-1.5">
-                        <Label htmlFor={`r-item-${r.key}`}>
-                          Feed
-                          {isConcentrate(r.item_code) ? (
-                            <span className="ml-2 text-[11px] font-medium text-[var(--sd-accent,#3b82f6)]">
-                              concentrate
-                            </span>
-                          ) : null}
-                        </Label>
-                        <Picker
-                          id={`r-item-${r.key}`}
-                          value={r.item_code}
-                          onChange={(next) =>
-                            setRows((s) =>
-                              s.map((x, j) => (j === i ? { ...x, item_code: next } : x)),
-                            )
-                          }
-                          options={feeds
-                            .filter((f) => !rawOnly || !f.is_concentrate || f.value === r.item_code)
-                            .map((f) => ({ value: f.value, label: f.label }))}
-                          label="Feed"
-                          placeholder="Choose a feed…"
-                        />
-                      </div>
-                      <div className="flex flex-col gap-1.5">
-                        <Label htmlFor={`r-unit-${r.key}`}>Unit</Label>
-                        <UnitPicker
-                          id={`r-unit-${r.key}`}
-                          value={r.unit}
-                          onChange={(unit) =>
-                            setRows((s) => s.map((x, j) => (j === i ? { ...x, unit, pct: "" } : x)))
-                          }
-                        />
-                      </div>
-                      {mode.on && (r.unit || "kg") === "kg" ? (
-                        <div className="flex flex-col gap-1.5">
-                          <Label htmlFor={`r-pct-${r.key}`}>Share (%)</Label>
-                          <Input
-                            id={`r-pct-${r.key}`}
-                            type="number"
-                            min={0}
-                            max={100}
-                            step="any"
-                            value={r.pct ?? ""}
-                            onChange={(e) => mode.changePct(r.key, e.target.value)}
-                            className="w-24 text-right tabular-nums"
-                          />
-                        </div>
-                      ) : (
-                        <div className="flex flex-col gap-1.5">
-                          <Label htmlFor={`r-qty-${r.key}`}>
-                            {(r.unit || "kg") === "kg" ? "Amount" : "Dose"}
-                          </Label>
-                          <Input
-                            id={`r-qty-${r.key}`}
-                            type="number"
-                            min={0}
-                            step="any"
-                            value={r.qty}
-                            onChange={(e) =>
-                              setRows((s) =>
-                                s.map((x, j) => (j === i ? { ...x, qty: e.target.value } : x)),
-                              )
-                            }
-                            className="w-28 text-right tabular-nums"
-                          />
-                        </div>
-                      )}
-                      <span className="pb-2 text-[11.5px] text-[var(--sd-quiet)]">
-                        {(r.unit || "kg") !== "kg" ? (
-                          <>
-                            {unitLabel(r.unit!)} a head, outside the 100% ·{" "}
-                            {doseForHerd(r.qty, r.unit as "Gram" | "Millilitre", heads)} for the herd
-                          </>
-                        ) : (
-                          <>
-                            {mode.on ? `${fmt(Number(r.qty) || 0)} ` : ""}kg ·{" "}
-                            {fmt((Number(r.qty) || 0) * heads)} for the herd
-                          </>
+                  <Label>{target === "ration" ? "What goes in, per head, per day" : "What goes in, per batch"}</Label>
+                  {rows.map((r, i) => {
+                    const unit = r.unit || "kg";
+                    const conc = isConcentrate(r.item_code);
+                    return (
+                      <div
+                        key={r.key}
+                        className={cn(
+                          "flex flex-wrap items-end gap-3 rounded-[var(--sd-radius-lg)] px-3.5 py-3 shadow-[var(--sd-shadow-inset)]",
+                          conc
+                            ? "bg-[var(--sd-accent-soft,#eef4ff)] ring-1 ring-[var(--sd-accent,#3b82f6)]/30"
+                            : "bg-[var(--sd-bg-soft)]",
                         )}
-                        {uomOf(r.item_code) && uomOf(r.item_code) !== "Kilogram"
-                          ? ` · stocked in ${uomOf(r.item_code)}`
-                          : ""}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setRows((s) => s.filter((_, j) => j !== i))}
-                        aria-label={`Take ${labelOf(r.item_code)} out of the ration`}
-                        className="mb-2 text-[var(--sd-quiet)] transition-colors hover:text-[var(--sd-sev-critical)]"
                       >
-                        <X className="h-4 w-4" />
-                      </button>
-                    </div>
-                  ))}
+                        <div className="flex min-w-[200px] flex-1 flex-col gap-1.5">
+                          <Label htmlFor={`re-item-${r.key}`}>
+                            Feed
+                            {conc ? (
+                              <span className="ml-2 text-[11px] font-medium text-[var(--sd-accent,#3b82f6)]">
+                                concentrate
+                              </span>
+                            ) : null}
+                          </Label>
+                          <Picker
+                            id={`re-item-${r.key}`}
+                            value={r.item_code}
+                            onChange={(next) => pickFor(i, next)}
+                            options={options}
+                            label="Feed"
+                            placeholder="Choose a feed…"
+                          />
+                        </div>
+                        <div className="flex flex-col gap-1.5">
+                          <Label htmlFor={`re-unit-${r.key}`}>Unit</Label>
+                          <UnitPicker
+                            id={`re-unit-${r.key}`}
+                            value={r.unit}
+                            onChange={(u) =>
+                              setRows((s) => s.map((x, j) => (j === i ? { ...x, unit: u, pct: "" } : x)))
+                            }
+                          />
+                        </div>
+                        {mode.on && unit === "kg" ? (
+                          <div className="flex flex-col gap-1.5">
+                            <Label htmlFor={`re-pct-${r.key}`}>Share (%)</Label>
+                            <Input
+                              id={`re-pct-${r.key}`}
+                              type="number"
+                              min={0}
+                              max={100}
+                              step="any"
+                              className="w-24 text-right tabular-nums"
+                              value={r.pct ?? ""}
+                              onChange={(e) => mode.changePct(r.key, e.target.value)}
+                            />
+                          </div>
+                        ) : (
+                          <div className="flex flex-col gap-1.5">
+                            <Label htmlFor={`re-qty-${r.key}`}>
+                              {unit === "kg" ? "Amount (kg)" : `Dose (${unitLabel(unit)} a head)`}
+                            </Label>
+                            <Input
+                              id={`re-qty-${r.key}`}
+                              type="number"
+                              min={0}
+                              step="any"
+                              className="w-28 text-right tabular-nums"
+                              value={r.qty}
+                              onChange={(e) =>
+                                setRows((s) => s.map((x, j) => (j === i ? { ...x, qty: e.target.value } : x)))
+                              }
+                            />
+                          </div>
+                        )}
+                        <span className="pb-2 text-[11.5px] tabular-nums text-[var(--sd-quiet)]">
+                          {unit !== "kg"
+                            ? `${unitLabel(unit)} a head, outside the 100%${
+                                chosenHerd ? ` · ${doseForHerd(r.qty, unit, heads)} for the herd` : ""
+                              }`
+                            : chosenHerd
+                              ? `${mode.on ? `${fmt(num(r.qty))} ` : ""}kg · ${fmt(num(r.qty) * heads)} for the herd`
+                              : mode.on
+                                ? `${fmt(num(r.qty))} kg`
+                                : ""}
+                          {uomOf(r.item_code) && uomOf(r.item_code) !== "Kilogram"
+                            ? ` · stocked in ${uomOf(r.item_code)}`
+                            : ""}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setRows((s) => s.filter((_, j) => j !== i))}
+                          aria-label={`Take ${labelOf(r.item_code) || "this feed"} out`}
+                          className="mb-2 text-[var(--sd-quiet)] transition-colors hover:text-[var(--sd-sev-critical)]"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    );
+                  })}
                   <button
                     type="button"
-                    onClick={() =>
-                      setRows((s) => [...s, { key: nextKey++, item_code: "", qty: "" }])
-                    }
+                    onClick={() => setRows((s) => [...s, { key: nextKey++, item_code: "", qty: "" }])}
                     className="inline-flex w-fit items-center gap-1.5 text-[12.5px] font-medium text-[var(--sd-muted)] transition-colors hover:text-[var(--sd-ink)]"
                   >
                     <Plus className="h-3.5 w-3.5" strokeWidth={2.5} />
@@ -441,30 +758,34 @@ export function RationEditor() {
 
                 <div className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--sd-radius-lg)] bg-[var(--sd-bg-soft)] px-4 py-3 shadow-[var(--sd-shadow-inset)]">
                   <span className="text-[12.5px] text-[var(--sd-muted)]">
-                    One head, one day
+                    {target === "ration" ? "One head, one day" : "One batch"}
                     {rows.some((r) => (r.unit || "kg") !== "kg") ? " · doses not included" : ""}
                   </span>
                   <span className="text-[15px] font-semibold tabular-nums text-[var(--sd-ink)]">
                     {fmt(total)} kg
-                    <span className="ml-2 text-[12px] font-normal text-[var(--sd-muted)]">
-                      · {fmt(total * heads)} kg for {heads} head
-                    </span>
+                    {chosenHerd && (
+                      <span className="ml-2 text-[12px] font-normal text-[var(--sd-muted)]">
+                        · {fmt(total * heads)} kg for {heads} head
+                      </span>
+                    )}
                   </span>
                 </div>
 
-                <NutritionPanel
-                  perUnit="head per day"
-                  lines={rows.filter((x) => x.item_code && Number(x.qty) > 0).map(toLine)}
-                />
-
                 <div className="flex flex-wrap items-center gap-3">
-                  <Button onClick={save} disabled={busy || !dirty || !rows.length}>
+                  <Button onClick={() => void save()} disabled={!canSave}>
                     <Save className="mr-2 h-4 w-4" strokeWidth={1.75} />
-                    {busy ? "Saving…" : "Save as a new revision"}
+                    {busy
+                      ? "Saving…"
+                      : chosenHerd
+                        ? `Save as the ${chosenHerd.herd} ration`
+                        : "Save the concentrate"}
+                  </Button>
+                  <Button variant="secondary" onClick={() => setRows([])} disabled={!rows.length}>
+                    Start blank
                   </Button>
                   <span className="text-[11.5px] text-[var(--sd-muted)]">
                     {dirty
-                      ? "The old recipe stays readable; the herd points at the new one."
+                      ? "Saving makes a new revision; the old recipe stays readable."
                       : "Nothing has changed yet."}
                   </span>
                 </div>
@@ -472,6 +793,13 @@ export function RationEditor() {
             )}
           </CardContent>
         </Card>
+
+        {/* Right: what is in it. */}
+        <NutritionPanel
+          lines={lines}
+          perUnit={target === "ration" ? "head per day" : "batch"}
+          className="self-start"
+        />
       </div>
     </Page>
   );

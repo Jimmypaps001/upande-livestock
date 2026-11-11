@@ -5,7 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { ToastProvider } from "@/components/Toast";
 import { PageSkeleton } from "@/components/Loading";
 import { Stub } from "@/pages/Stub";
-import { NUTRITIONIST_VIEWS, viewAllowed } from "@/lib/roles";
+import { landingView, viewOpen } from "@/lib/roles";
 import { useRoute, type View } from "@/lib/router";
 
 /**
@@ -57,9 +57,6 @@ const warm = warmChunks();
 // and the next slices can add pages without growing it.
 const Feeding = page(() =>
   import("@/pages/Feeding").then((m) => ({ default: m.Feeding })),
-);
-const FeedDesign = page(() =>
-  import("@/pages/FeedDesign").then((m) => ({ default: m.FeedDesign })),
 );
 const Concentrate = page(() =>
   import("@/pages/Concentrate").then((m) => ({ default: m.Concentrate })),
@@ -137,10 +134,9 @@ const TITLES: Record<View, string> = {
   health: "Health",
   reports: "Reports",
   feeding: "Feeding",
-  "feed-design": "Feed Design",
   concentrate: "Concentrate",
   stock: "Feed in Store",
-  rations: "Rations",
+  rations: "Ration History",
   "ration-editor": "Ration Editor",
   procurement: "Procurement",
   movement: "Movement",
@@ -169,7 +165,6 @@ const TITLES: Record<View, string> = {
  *  placeholder that says the desk block still does the work. */
 const PAGES: Partial<Record<View, React.ComponentType>> = {
   feeding: Feeding,
-  "feed-design": FeedDesign,
   concentrate: Concentrate,
   stock: Stock,
   rations: Rations,
@@ -207,10 +202,11 @@ const PAGES: Partial<Record<View, React.ComponentType>> = {
 export function App() {
   const [view, navigate] = useRoute();
   const Built = PAGES[view];
-  // A nutritionist-only user lands on, and stays within, the feed screens.
-  const allowed = viewAllowed(view);
+  // A nutritionist-only user lands on, and stays within, the feed screens; the
+  // Concentrate window opens only on a farm that has a concentrate stage.
+  const allowed = viewOpen(view);
   useEffect(() => {
-    if (!allowed) navigate(NUTRITIONIST_VIEWS[0]);
+    if (!allowed) navigate(landingView());
   }, [allowed, navigate]);
 
   // Once the first screen is on the page, quietly pull the rest of the code so
