@@ -30,6 +30,7 @@ from frappe import _
 
 from upande_livestock.serverscripts.common.envelope import as_dict, guard_stock, run
 from upande_livestock.serverscripts.feeding._engine import manufacture_herd_feed
+from upande_livestock.serverscripts.feeding._head_count import feed_by_head_count_on
 from upande_livestock.serverscripts.feeding._tuned_bom import tuned_bom
 
 
@@ -64,6 +65,9 @@ def manual_feed(payload):
 			bom_no=bom_no,
 			heads=heads,
 			feed_mode="Manual",
+			# A farm not feeding by head count says what the group got in kilos;
+			# the tuned lines are scaled to it. Ignored on a head-count farm.
+			typed_total=None if feed_by_head_count_on() else d.get("total_qty"),
 		)
 
 	return run(go, "livestock manual_feed failed")

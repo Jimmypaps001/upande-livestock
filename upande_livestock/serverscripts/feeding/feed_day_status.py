@@ -25,6 +25,7 @@ from frappe.utils import flt, getdate, today
 
 from upande_livestock.serverscripts.common.envelope import guard_read, run
 from upande_livestock.serverscripts.feeding import _engine as feeding
+from upande_livestock.serverscripts.feeding._head_count import feed_by_head_count_on
 
 # What the farm feeds in a day, so a fresh day offers a half rather than the lot.
 RUNS_PER_DAY = 2
@@ -150,6 +151,9 @@ def feed_day_status(herd):
 			"issued_kg": issued,
 			"remaining_kg": remaining,
 			"complete": remaining <= 0,
+			# Off, every figure above is a suggestion and the operator types
+			# the group's total (`_head_count`).
+			"feed_by_head_count": feed_by_head_count_on(),
 		}
 
 	return run(go, "livestock feed_day_status failed")

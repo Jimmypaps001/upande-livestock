@@ -75,6 +75,7 @@
   "custom_dairy_section",
   "custom_feed_wip_warehouse",
   "premanufacture_concentrate",
+  "feed_by_head_count",
   "custom_concentrate_cover_days",
   "sb_feed_sources",
   "feed_source_warehouses",
@@ -444,6 +445,13 @@
    "fieldname": "premanufacture_concentrate",
    "fieldtype": "Check",
    "label": "Pre-manufacture Concentrate"
+  },
+  {
+   "default": "1",
+   "description": "On: a herd's day of feed is its head count times the ration per head, as it always was. Off: the Feeding page and Manufacture all show head count times per head only as a suggestion; the operator types the kilos the group was given and that total is mixed, scaled from the ration.",
+   "fieldname": "feed_by_head_count",
+   "fieldtype": "Check",
+   "label": "Feed by Head Count"
   },
   {
    "fieldname": "sb_feed_sources",
@@ -1027,7 +1035,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-11-11 00:00:00.000000",
+ "modified": "2026-11-11 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Upande Livestock",
  "name": "Livestock Settings",

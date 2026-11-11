@@ -25,19 +25,25 @@ what this always did.
 `source_by_item` and `batch_by_item` are finer than that, and are what the
 Feeding page actually sends: a store and a batch per INGREDIENT, because a TMR
 draws its silage from a pit and its concentrate from the mixing store, and one
-dropdown for all four lines is a run nobody can post as the farm works."""
+dropdown for all four lines is a run nobody can post as the farm works.
+
+`total_qty` is the group's day total in kilos, typed by the operator on a farm
+that does not feed by head count (Livestock Settings > Feed by Head Count off).
+It is ignored while that switch is on, so a stale field on a handset cannot
+change what a head-count farm mixes. See `_head_count`."""
 
 import frappe
 
 from upande_livestock.serverscripts.common.envelope import guard_stock, run
 from upande_livestock.serverscripts.feeding import _engine as feeding
+from upande_livestock.serverscripts.feeding._head_count import feed_by_head_count_on
 from upande_livestock.serverscripts.feeding._tuned_bom import _base_for
 
 
 @frappe.whitelist()
 def manufacture_feed(
 	herd, allow_shortage=False, employee=None, portion=1.0, posting_date=None, bom_no=None,
-	source_warehouse=None, source_by_item=None, batch_by_item=None,
+	source_warehouse=None, source_by_item=None, batch_by_item=None, total_qty=None,
 ):
 	def go():
 		guard_stock("Work Order", "Stock Entry")
@@ -52,6 +58,7 @@ def manufacture_feed(
 			source_warehouse=source_warehouse,
 			source_by_item=frappe.parse_json(source_by_item) if source_by_item else None,
 			batch_by_item=frappe.parse_json(batch_by_item) if batch_by_item else None,
+			typed_total=None if feed_by_head_count_on() else total_qty,
 		)
 		res["ok"] = True
 		return res

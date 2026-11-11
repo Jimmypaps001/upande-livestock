@@ -58,6 +58,7 @@ from upande_livestock.serverscripts.common import cost_center as livestock_cost_
 from upande_livestock.serverscripts.common import backdate
 from upande_livestock.serverscripts.common import stock as livestock_stock
 from upande_livestock.serverscripts.common.company import default_company
+from upande_livestock.serverscripts.feeding._head_count import clean_total, portion_for_total
 from upande_livestock.serverscripts.projection import paddocks as herd_paddocks
 
 # _availability imports resolve_requirement from this module, so this cannot be
@@ -755,8 +756,15 @@ def manufacture_herd_feed(
 	source_warehouse=None,
 	source_by_item=None,
 	batch_by_item=None,
+	typed_total=None,
 ):
 	"""Manufacture the herd's TMR and issue the whole batch to that herd.
+
+	`typed_total` is the group's kilos as the operator weighed them, for a farm
+	that does not feed by head count (`_head_count`). It replaces heads x per
+	head x portion as the quantity mixed; the ration's lines scale to it
+	through the Work Order exactly as they scale to a head-count total, and the
+	run is recorded as the share of a head-count day it amounts to.
 
 	`source_by_item` and `batch_by_item` are the operator's choices per
 	ingredient — the silage from a pit, the concentrate from the mixing store,
@@ -833,6 +841,12 @@ def manufacture_herd_feed(
 	if portion <= 0:
 		frappe.throw(_("A feeding run has to be for more than nothing."))
 	total_qty = manufacture_qty(per_head, heads, portion)
+	if clean_total(typed_total):
+		# What the operator weighed is what is mixed. Rounded the way
+		# `manufacture_qty` rounds, so the Work Order and the Stock Entries
+		# agree about the number (see its docstring).
+		total_qty = manufacture_qty(clean_total(typed_total), 1, 1)
+		portion = round(portion_for_total(per_head, heads, total_qty), 4) or portion
 	pending = None
 
 	# Availability first — it writes nothing, and a shortage is the more useful
