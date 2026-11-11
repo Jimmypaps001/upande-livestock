@@ -114,6 +114,8 @@ export interface AnimalSummary {
   photo: string | null;
   /** ~240 px list thumbnail of `photo`; lists use it, only the portrait loads `photo`. */
   thumb?: string | null;
+  /** Cattle, Sheep, Goat… Absent on older servers, which only kept cattle. */
+  species?: string | null;
 }
 
 export interface AnimalProfile extends AnimalSummary {
@@ -160,8 +162,6 @@ export function cycleKind(cycle: CycleState): CycleKind {
   return cycle.kind ?? "repro";
 }
 
-export type PlaceholderKind = "bull" | "steer" | "calf" | "heifer" | "cow";
-
 /**
  * The sex chips on the animal search: All / Cows / Bulls.
  *
@@ -175,15 +175,6 @@ export type SexFilter = "all" | "cows" | "bulls";
 export function matchesSex(a: { sex?: string | null }, f: SexFilter): boolean {
   if (f === "all") return true;
   return f === "bulls" ? a.sex === "Male" : a.sex !== "Male";
-}
-
-/** Which generic picture stands in for an animal with no photograph: sex AND stage. */
-export function placeholderKind(sex: string | null | undefined, stage: CycleStage): PlaceholderKind {
-  if (stage === "calf") return "calf";
-  if (sex === "Male") return stage === "bull" ? "bull" : "steer";
-  if (stage === "heifer") return "heifer";
-  if (sex === "Female") return "cow";
-  return "steer";
 }
 
 export const MILESTONE_TONE: Record<MilestoneKind, string> = {

@@ -1,5 +1,5 @@
-import { STAGES, ageFrom, placeholderKind, type AnimalProfile } from "@/lib/animals";
-import { AnimalSilhouette } from "@/components/animals/AnimalSilhouette";
+import { STAGES, ageFrom, type AnimalProfile } from "@/lib/animals";
+import { SilhouetteFrame } from "@/components/animals/AnimalSilhouette";
 import { cn } from "@/lib/utils";
 
 /**
@@ -29,21 +29,17 @@ export function AnimalPortrait({ animal }: { animal: AnimalProfile }) {
             className="h-full w-full object-cover"
           />
         ) : (
-          // A silhouette picked by sex and stage, not an apology. Most of this herd has no photograph
-          // and probably never will; a panel that said so on every animal would
-          // be reporting the same absence three hundred times. Set in the
-          // stage's own colour so the frame still identifies her at a glance.
-          <div
-            className="flex h-full w-full items-center justify-center"
-            style={{ background: `color-mix(in srgb, ${stage.tone} 16%, var(--sd-bg-soft))` }}
-            aria-label={`${animal.name} — no photograph`}
-          >
-            <AnimalSilhouette
-              kind={placeholderKind(animal.sex, animal.stage)}
-              color={`color-mix(in srgb, ${stage.tone} 72%, var(--sd-ink))`}
-              label={`${stage.label} ${animal.sex === "Male" ? "male" : "female"}`}
-            />
-          </div>
+          // A silhouette picked by species, age, sex and stage (and a pose by her
+          // number), not an apology. Most of this herd has no photograph and
+          // probably never will; a panel that said so on every animal would be
+          // reporting the same absence three hundred times. Set in the stage's
+          // own colour so the frame still identifies her at a glance.
+          <SilhouetteFrame
+            animal={animal}
+            tone={stage.tone}
+            className="h-full w-full pb-[18%]"
+            label={`${animal.name} — no photograph; ${stage.label.toLowerCase()} ${animal.sex === "Male" ? "male" : "female"}`}
+          />
         )}
 
         {/* The number, on the picture. It is what she is called on paper, in the

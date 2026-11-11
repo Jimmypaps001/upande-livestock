@@ -62,7 +62,8 @@ def animal_profile(payload=None):
 		a = frappe.db.get_value(
 			"Animal", name,
 			["name", "burn_name", "sex", "current_herd", "breed", "date_of_birth",
-			 "status", "disabled", "image", "dam", "sire_name", "repro_status", "stream", "last_weight_kg"],
+			 "status", "disabled", "image", "dam", "sire_name", "repro_status", "stream", "last_weight_kg",
+			 "species"],
 			as_dict=True)
 		if not a:
 			frappe.throw(frappe._("{0} is not an animal on this farm.").format(name))
@@ -95,6 +96,7 @@ def animal_profile(payload=None):
 			"stage": cycle["stage"],
 			"photo": a.image,
 			"thumb": thumbs.existing_thumb(a.image) if a.image else None,
+			"species": a.species,
 			"dam": a.dam,
 			"sire": a.sire_name,
 			"lastCalving": last_calving,

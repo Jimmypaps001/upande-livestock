@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { ChevronRight, Search, X } from "lucide-react";
 import { STAGES, ageFrom, matchesSex, type AnimalSummary, type SexFilter } from "@/lib/animals";
+import { SilhouetteFrame } from "@/components/animals/AnimalSilhouette";
 import { Input } from "@/components/ui/input";
 import { Picker } from "@/components/ui/picker";
 import { cn } from "@/lib/utils";
@@ -41,7 +42,7 @@ function rememberedSex(): SexFilter {
   }
 }
 
-/** The row's face: the lazy ~240 px thumbnail (full image only if no thumb), else the initials. */
+/** The row's face: the lazy ~240 px thumbnail (full image only if no thumb), else her silhouette. */
 function RowAvatar({ a }: { a: AnimalSummary }) {
   const src = a.thumb || a.photo;
   if (src) {
@@ -55,15 +56,7 @@ function RowAvatar({ a }: { a: AnimalSummary }) {
       />
     );
   }
-  return (
-    <span
-      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold text-white"
-      style={{ background: STAGES[a.stage].tone }}
-      aria-hidden
-    >
-      {a.name.slice(0, 2).toUpperCase()}
-    </span>
-  );
+  return <SilhouetteFrame animal={a} tone={STAGES[a.stage].tone} round className="h-9 w-9 shrink-0" />;
 }
 
 function standing(a: AnimalSummary): string {

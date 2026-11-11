@@ -1,49 +1,106 @@
-import type { PlaceholderKind } from "@/lib/animals";
+import type { CSSProperties } from "react";
+import {
+  pickSilhouette,
+  silhouetteClass,
+  type Silhouette,
+  type SilhouetteSubject,
+} from "@/lib/silhouettes";
+import { cn } from "@/lib/utils";
 
 /**
- * The generic picture for an animal with no photograph, chosen by sex AND stage
- * (see `placeholderKind`): a bull has the neck hump and horns, a steer a plain
- * frame, a calf is small with a big head, a heifer is slim and a cow carries an
- * udder. Drawn in one colour so the stage's own tone shows through.
+ * The drawings, read from the files the desk serves
+ * (upande_livestock/public/images/silhouettes/, written by
+ * scripts/build_silhouettes.py) and inlined into the bundle, so they paint in
+ * the first frame and take the page's colour: every shape is `currentColor`.
  */
+const FILES = import.meta.glob("../../../../upande_livestock/public/images/silhouettes/*.svg", {
+  query: "?raw",
+  import: "default",
+  eager: true,
+}) as Record<string, string>;
+
+const ART: Partial<Record<Silhouette, { viewBox: string; inner: string }>> = {};
+for (const [path, text] of Object.entries(FILES)) {
+  const name = path.split("/").pop()!.replace(/\.svg$/, "") as Silhouette;
+  const viewBox = /viewBox="([^"]+)"/.exec(text)?.[1] ?? "0 0 240 160";
+  const inner = text
+    .replace(/^[\s\S]*?<svg[^>]*>/, "")
+    .replace(/<\/svg>\s*$/, "")
+    .replace(/<!--[\s\S]*?-->/g, "");
+  ART[name] = { viewBox, inner };
+}
+
+/** One drawing, in the current text colour. */
 export function AnimalSilhouette({
+  name,
   kind,
-  color,
   label,
+  className,
 }: {
-  kind: PlaceholderKind;
-  color: string;
-  label: string;
+  name: Silhouette;
+  /** Its class (cow, bull, steer…), carried as data-kind for tests and styling. */
+  kind?: string;
+  label?: string;
+  className?: string;
 }) {
-  const calf = kind === "calf";
-  const s = calf ? 0.62 : 1;
-  const bodyRy = kind === "bull" ? 30 : kind === "heifer" ? 22 : 26;
+  const art = ART[name] ?? ART.cow;
   return (
-    <svg viewBox="0 0 200 160" className="h-2/5 w-4/5" role="img" aria-label={label} data-kind={kind}>
-      <g
-        fill={color}
-        transform={`translate(${calf ? 38 : 0} ${calf ? 52 : 0}) scale(${s})`}
-      >
-        {/* body */}
-        <ellipse cx="100" cy="78" rx="58" ry={bodyRy} />
-        {/* shoulder hump: the bull's */}
-        {kind === "bull" && <ellipse cx="136" cy="56" rx="24" ry="20" />}
-        {/* legs */}
-        {[58, 74, 126, 142].map((x) => (
-          <rect key={x} x={x} y="90" width="9" height="46" rx="3" />
-        ))}
-        {/* udder: the cow's */}
-        {kind === "cow" && <ellipse cx="68" cy="108" rx="11" ry="9" />}
-        {/* neck and head */}
-        <rect x="140" y="52" width="26" height="30" rx="10" transform="rotate(-18 150 66)" />
-        <ellipse cx="170" cy="82" rx={calf ? 17 : 14} ry={calf ? 15 : 12} />
-        {/* horns */}
-        {(kind === "bull" || kind === "steer") && (
-          <path d="M160 66 q-6 -16 4 -22 M174 66 q4 -14 -2 -22" stroke={color} strokeWidth="4" fill="none" strokeLinecap="round" />
-        )}
-        {/* tail */}
-        <path d="M44 70 q-16 8 -14 36" stroke={color} strokeWidth="4" fill="none" strokeLinecap="round" />
-      </g>
-    </svg>
+    <svg
+      viewBox={art?.viewBox ?? "0 0 240 160"}
+      className={className}
+      role={label ? "img" : undefined}
+      aria-label={label}
+      aria-hidden={label ? undefined : true}
+      data-kind={kind}
+      data-pose={name}
+      // Our own files, read at build time: no user content reaches this.
+      dangerouslySetInnerHTML={{ __html: art?.inner ?? "" }}
+    />
+  );
+}
+
+/**
+ * The stand-in for a photograph: a soft card tinted with the stage's colour
+ * and the animal's silhouette in a deeper shade of it, like a picture in a
+ * frame. The drawing is picked from the animal (see `pickSilhouette`), so the
+ * same cow wears the same picture in the list, the portrait and the compare
+ * dialog. `round` makes it a list avatar.
+ */
+export function SilhouetteFrame({
+  animal,
+  tone = "var(--sd-quiet)",
+  round = false,
+  label,
+  className,
+  artClassName,
+}: {
+  animal: SilhouetteSubject;
+  tone?: string;
+  round?: boolean;
+  label?: string;
+  className?: string;
+  artClassName?: string;
+}) {
+  const style: CSSProperties = {
+    background: `color-mix(in srgb, ${tone} 15%, var(--sd-bg-soft))`,
+    color: `color-mix(in srgb, ${tone} 58%, var(--sd-ink))`,
+  };
+  return (
+    <span
+      className={cn(
+        "flex items-center justify-center overflow-hidden",
+        round ? "rounded-full" : "rounded-[inherit]",
+        className,
+      )}
+      style={style}
+      aria-hidden={label ? undefined : true}
+    >
+      <AnimalSilhouette
+        name={pickSilhouette(animal)}
+        kind={silhouetteClass(animal)}
+        label={label}
+        className={cn(round ? "w-[86%] translate-y-[4%]" : "w-4/5", "h-auto", artClassName)}
+      />
+    </span>
   );
 }
