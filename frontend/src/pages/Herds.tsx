@@ -79,7 +79,7 @@ export function Herds() {
     // failure here costs the editor, not the page, so it is not surfaced.
     const h = await getHerdRations();
     if (!isError(h)) {
-      setModes(h.herds.map((x) => ({ herd: x.herd, concentrate_mode: x.concentrate_mode })));
+      setModes((h.herds || []).map((x) => ({ herd: x.herd, concentrate_mode: x.concentrate_mode })));
       setFarmOn(h.premanufacture_concentrate !== false);
       setBands(
         ((h as { herds?: Array<Partial<HerdBand> & { herd: string }> }).herds || []).map(
