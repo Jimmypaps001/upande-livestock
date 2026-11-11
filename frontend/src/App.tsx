@@ -122,6 +122,8 @@ const Treatment = page(() => import("@/pages/Treatment").then((m) => ({ default:
 // as one chunk rather than four copies of it.
 const Events = page(() => import("@/pages/Insights").then((m) => ({ default: m.Events })));
 const Reports = page(() => import("@/pages/Insights").then((m) => ({ default: m.Reports })));
+const Costs = page(() => import("@/pages/Costs").then((m) => ({ default: m.Costs })));
+const Labour = page(() => import("@/pages/Labour").then((m) => ({ default: m.Labour })));
 const HealthDashboard = page(() =>
   import("@/pages/HealthDashboard").then((m) => ({ default: m.HealthDashboard })),
 );
@@ -159,6 +161,8 @@ const TITLES: Record<View, string> = {
   settings: "Settings",
   notifications: "Notifications",
   transactions: "Transactions",
+  costs: "Cost per Animal",
+  labour: "Daily Labour",
 };
 
 /** The surfaces this frontend implements. Everything else renders a
@@ -196,6 +200,8 @@ const PAGES: Partial<Record<View, React.ComponentType>> = {
   health: HealthDashboard,
   "ration-editor": RationEditor,
   transactions: Transactions,
+  costs: Costs,
+  labour: Labour,
 };
 
 export function App() {

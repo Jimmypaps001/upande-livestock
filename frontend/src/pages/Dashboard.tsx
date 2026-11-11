@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { ProjectionBody } from "@/pages/Projection";
+import { CostPanel } from "@/components/costing/CostPanel";
 import { Figure, FigureRow } from "@/components/Figure";
 import { Notice } from "@/components/feeding/Notice";
 import { Page, PageHeading } from "@/components/PageShell";
@@ -21,8 +22,8 @@ import { formatWeight, getBeefDashboard, type BeefDashboard } from "@/lib/perfor
  *
  * Above, the beef figures: head count, average weight and average daily gain
  * for each herd, then what needs doing (weighings late, animals due to change
- * band, animals ready to leave). Below, the feed projection — what it will take
- * to keep the herds fed.
+ * band, animals ready to leave). Then what an animal costs a day, and below,
+ * the feed projection — what it will take to keep the herds fed.
  */
 export function Dashboard() {
   return (
@@ -32,6 +33,8 @@ export function Dashboard() {
       </PageHeading>
 
       <BeefTiles />
+
+      <CostPanel />
 
       <ProjectionBody />
     </Page>

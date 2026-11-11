@@ -6,8 +6,10 @@ import {
   Baby,
   Beaker,
   Bell,
+  Coins,
   ClipboardList,
   ClipboardPen,
+  HardHat,
   FileText,
   Heart,
   HeartPulse,
@@ -113,6 +115,23 @@ const NAV: NavSection[] = [
         label: "Paddock Map",
         icon: MapIcon,
         hint: "Which herd stands on which paddock or pen",
+      },
+    ],
+  },
+  {
+    label: "Costs",
+    items: [
+      {
+        view: "costs",
+        label: "Cost per Animal",
+        icon: Coins,
+        hint: "Feed, medicine, labour and fuel per animal per day",
+      },
+      {
+        view: "labour",
+        label: "Daily Labour",
+        icon: HardHat,
+        hint: "Who worked on the farm today, at what rate",
       },
     ],
   },
@@ -228,6 +247,8 @@ export const BUILT_VIEWS: ReadonlySet<View> = new Set<View>([
   "notifications",
   "animals",
   "transactions",
+  "costs",
+  "labour",
 ]);
 
 export function AppSidebar({
