@@ -8,7 +8,11 @@
 Run by hand. On a `.local` site it does everything below. Any other site (live) needs force=True and
 then, by default, loads RECORDS ONLY — no opening stock receipt, no diesel issues, no demo retirement:
 
-    bench --site <live> execute upande_livestock.demo.seed_mutara_tracker.execute --kwargs "{'force': True}"
+    bench --site <live> execute upande_livestock.demo.seed_mutara_tracker.execute --kwargs "{'force': True, 'operator': 'HR-EMP-00001'}"
+
+The company, store parent, farm and feed item group are found on the site (`_configure_for_site`);
+`operator` is the Employee the head counts and health events are recorded by (needed only where no
+Employee is linked to saitoti@mutaraorchards.com).
 
 The farm receives its own stock on live, so a receipt at the sheet's prices (and diesel issued
 against it) would post stock and accounting nobody made; and a live site's herds are not demo herds.
@@ -215,8 +219,51 @@ def _ration_item(herd):
 	return "Ration - " + herd.replace("/", " and ")
 
 
+#: Set by execute(operator=...): the Employee who signs the head counts and health events loaded here.
+OPERATOR = None
+
+
 def _operator():
-	return frappe.db.get_value("Employee", {"user_id": "saitoti@mutaraorchards.com"}, "name")
+	return OPERATOR or frappe.db.get_value("Employee", {"user_id": "saitoti@mutaraorchards.com"}, "name")
+
+
+def _configure_for_site(operator=None):
+	"""Point the seeder at this site's own company, stores, feed group and operator.
+
+	Written against mutara.local, where the company is "Mutara" (MUT). Live is "Mutara Orchards" (MO)
+	with its stores under "Mutara Stores - MO" and its feed in "Animal Feed": names that differ by
+	site are looked up here, once, instead of assumed. Refuses before writing anything when no
+	operator can be found, rather than half-seeding a site.
+	"""
+	global COMPANY, OPERATOR
+	from upande_livestock.demo import seed_mutara_stores as stores
+
+	company = COMPANY if frappe.db.exists("Company", COMPANY) else (
+		frappe.db.get_value("Company", {"company_name": ["like", "Mutara%"]}, "name")
+		or frappe.defaults.get_global_default("company"))
+	if not company:
+		frappe.throw("No company to seed into.")
+	COMPANY = stores.COMPANY = company
+	abbr = frappe.db.get_value("Company", company, "abbr")
+	for parent in ("Mutara - {}".format(abbr), "Mutara Stores - {}".format(abbr), "All Warehouses - {}".format(abbr)):
+		if frappe.db.exists("Warehouse", parent):
+			stores.PARENT = parent
+			break
+	if not frappe.db.exists("Farm", stores.FARM):
+		stores.FARM = frappe.db.get_value("Farm", {}, "name")
+	if not frappe.db.get_single_value("Livestock Settings", "custom_feed_item_group") and frappe.db.exists(
+			"Item Group", "Animal Feed"):
+		frappe.db.set_single_value("Livestock Settings", "custom_feed_item_group", "Animal Feed")
+		_log("Livestock Settings feed item group Animal Feed")
+	if operator:
+		if not frappe.db.exists("Employee", operator):
+			frappe.throw("Employee {} does not exist.".format(operator))
+		OPERATOR = operator
+	if not _operator():
+		frappe.throw("No operator: pass operator='<Employee ID>' (the person the head counts and health "
+		             "events are recorded by), or link an Employee to saitoti@mutaraorchards.com.")
+	print("company {} ({}), stores under {}, farm {}, operator {}".format(
+		company, abbr, stores.PARENT, stores.FARM, _operator()))
 
 
 # ---------------------------------------------------------------------------
@@ -227,8 +274,9 @@ def _operator():
 def ensure_cost_center():
 	name = _full(FEEDLOT_COST_CENTER)
 	if not frappe.db.exists("Cost Center", name):
+		parent = _full("Animal Production") if frappe.db.exists("Cost Center", _full("Animal Production")) else _full(COMPANY)
 		frappe.get_doc({"doctype": "Cost Center", "cost_center_name": FEEDLOT_COST_CENTER, "company": COMPANY,
-		                "parent_cost_center": _full(COMPANY), "is_group": 0}).insert(ignore_permissions=True)
+		                "parent_cost_center": parent, "is_group": 0}).insert(ignore_permissions=True)
 		_log("cost centre " + name)
 	if _has("Production Settings", "feedlot_cost_center"):
 		if not frappe.db.get_single_value("Production Settings", "feedlot_cost_center"):
@@ -836,7 +884,7 @@ def ensure_settings():
 # ---------------------------------------------------------------------------
 
 
-def execute(force=False, post_stock=None, retire=None):
+def execute(force=False, post_stock=None, retire=None, operator=None):
 	"""Seed Mutara's tracker data. Idempotent; prints what it does. Backdating is opened for the history
 	load and put back as it was, even if the run fails.
 
@@ -850,6 +898,7 @@ def execute(force=False, post_stock=None, retire=None):
 	retire = local if retire is None else bool(retire)
 	print("site {}: stock postings {}, demo retirement {}".format(
 		site, "on" if post_stock else "off", "on" if retire else "off"))
+	_configure_for_site(operator)
 	was = frappe.db.get_single_value("Livestock Settings", "custom_backdating_open")
 	frappe.db.set_single_value("Livestock Settings", "custom_backdating_open", 1)
 	frappe.db.commit()
