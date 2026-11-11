@@ -4,7 +4,7 @@ import { Figure, FigureRow } from "@/components/Figure";
 import { Notice } from "@/components/feeding/Notice";
 import { NutritionPanel } from "@/components/feeding/NutritionPanel";
 import {
-  RecipeModeBar, UnitPicker, usePercentMode, type ModeRow,
+  LockButton, RecipeTotalBar, UnitPicker, useRecipeBalance, type ModeRow,
 } from "@/components/feeding/RecipeMode";
 import { Page, PageHeading } from "@/components/PageShell";
 import { RefreshButton } from "@/components/RefreshButton";
@@ -116,7 +116,7 @@ export function RationEditor() {
   const [busy, setBusy] = useState(false);
   const [changes, setChanges] = useState<RationDifference[] | null>(null);
   const toast = useToast();
-  const mode = usePercentMode(rows, setRows);
+  const mode = useRecipeBalance(rows, setRows);
 
   // Does this farm have a concentrate stage at all? The server's fresh answer
   // where it has given one, the page's bootstrap until then.
@@ -292,15 +292,17 @@ export function RationEditor() {
 
   /** A line written in another unit: the kilos stay, the quantity follows. */
   function changeUnit(index: number, unit: LineUnit) {
-    setRows((s) =>
-      s.map((x, j) => {
+    mode.settle(
+      rows.map((x, j) => {
         if (j !== index) return x;
         const next = { ...x, unit, kgPer: kgPerOf(units, x.item_code, unit) };
         const convertible = unit === "kg" || !!next.kgPer;
         if (isWeighed(x) && isWeighed(next) && convertible && num(x.qty) > 0) {
           next.qty = String(qtyForKilos(next, rowKilos(x)));
         } else {
+          // Its kilos changed (or it became a dose): it is not held any more.
           next.pct = "";
+          next.locked = false;
         }
         return next;
       }),
@@ -336,16 +338,21 @@ export function RationEditor() {
 
   /** Point one line at `code`, merging into a line that already has it (kg summed). */
   function pickFor(index: number, code: string) {
-    setRows((s) => {
-      const dup = s.findIndex(
-        (r, j) => j !== index && r.item_code === code && (r.unit || "kg") === (s[index].unit || "kg"),
-      );
-      if (dup < 0 || !code) return s.map((x, j) => (j === index ? { ...x, item_code: code } : x));
-      const sum = num(s[dup].qty) + num(s[index].qty);
-      return s
-        .map((x, j) => (j === dup ? { ...x, qty: sum ? String(sum) : "" } : x))
-        .filter((_, j) => j !== index);
-    });
+    const s = rows;
+    const dup = s.findIndex(
+      (r, j) => j !== index && r.item_code === code && (r.unit || "kg") === (s[index].unit || "kg"),
+    );
+    if (dup < 0 || !code) {
+      setRows(s.map((x, j) => (j === index ? { ...x, item_code: code } : x)));
+      return;
+    }
+    // Merged: the two lines' kilos together, unlocked, so its % is worked out again.
+    const sum = num(s[dup].qty) + num(s[index].qty);
+    mode.settle(
+      s
+        .map((x, j) => (j === dup ? { ...x, qty: sum ? String(sum) : "", locked: false } : x))
+        .filter((_, j) => j !== index),
+    );
   }
 
   function addFeed(code: string) {
@@ -390,7 +397,6 @@ export function RationEditor() {
     const kilos = rowKilos(r);
     const parts: string[] = [];
     if (unit === "kg") {
-      if (mode.on) parts.push(`${fmt(kilos)} kg`);
       const eq = num(r.qty) > 0 ? stockEquivalent(units, r.item_code, kilos) : null;
       if (eq) parts.push(`≈ ${fmt(eq.qty)} ${eq.uom}`);
       else if (uomOf(r.item_code) && !isKg(uomOf(r.item_code))) parts.push(`stocked in ${uomOf(r.item_code)}`);
@@ -716,7 +722,7 @@ export function RationEditor() {
                   </Notice>
                 )}
 
-                <RecipeModeBar mode={mode} idPrefix="re" per={target === "ration" ? "head per day" : "batch"} />
+                <RecipeTotalBar mode={mode} idPrefix="re" per={target === "ration" ? "head per day" : "batch"} />
 
                 <div className="flex flex-col gap-2">
                   <Label>{target === "ration" ? "What goes in, per head, per day" : "What goes in, per batch"}</Label>
@@ -760,7 +766,25 @@ export function RationEditor() {
                             storeUnits={storeUnits(units, r.item_code).map((o) => o.uom)}
                           />
                         </div>
-                        {mode.on && isWeighed(r) ? (
+                        <div className="flex flex-col gap-1.5">
+                          <Label htmlFor={`re-qty-${r.key}`}>
+                            {unit === "kg"
+                              ? "Amount (kg)"
+                              : isDoseUom(unit)
+                                ? `Dose (${unitLabel(unit)} a head)`
+                                : `Amount (${unit})`}
+                          </Label>
+                          <Input
+                            id={`re-qty-${r.key}`}
+                            type="number"
+                            min={0}
+                            step="any"
+                            className="w-28 text-right tabular-nums"
+                            value={r.qty}
+                            onChange={(e) => mode.editQty(r.key, e.target.value)}
+                          />
+                        </div>
+                        {isWeighed(r) && (
                           <div className="flex flex-col gap-1.5">
                             <Label htmlFor={`re-pct-${r.key}`}>Share (%)</Label>
                             <Input
@@ -770,31 +794,17 @@ export function RationEditor() {
                               max={100}
                               step="any"
                               className="w-24 text-right tabular-nums"
-                              value={r.pct ?? ""}
-                              onChange={(e) => mode.changePct(r.key, e.target.value)}
+                              value={mode.shares[i] ?? ""}
+                              onChange={(e) => mode.editPct(r.key, e.target.value)}
                             />
                           </div>
-                        ) : (
-                          <div className="flex flex-col gap-1.5">
-                            <Label htmlFor={`re-qty-${r.key}`}>
-                              {unit === "kg"
-                                ? "Amount (kg)"
-                                : isDoseUom(unit)
-                                  ? `Dose (${unitLabel(unit)} a head)`
-                                  : `Amount (${unit})`}
-                            </Label>
-                            <Input
-                              id={`re-qty-${r.key}`}
-                              type="number"
-                              min={0}
-                              step="any"
-                              className="w-28 text-right tabular-nums"
-                              value={r.qty}
-                              onChange={(e) =>
-                                setRows((s) => s.map((x, j) => (j === i ? { ...x, qty: e.target.value } : x)))
-                              }
-                            />
-                          </div>
+                        )}
+                        {isWeighed(r) && mode.definite && (
+                          <LockButton
+                            locked={!!r.locked}
+                            label={labelOf(r.item_code) || "this feed"}
+                            onClick={() => mode.toggleLock(r.key)}
+                          />
                         )}
                         <span className="pb-2 text-[11.5px] tabular-nums text-[var(--sd-quiet)]">
                           {isDoseUom(unit)
@@ -805,7 +815,7 @@ export function RationEditor() {
                         </span>
                         <button
                           type="button"
-                          onClick={() => setRows((s) => s.filter((_, j) => j !== i))}
+                          onClick={() => mode.settle(rows.filter((_, j) => j !== i))}
                           aria-label={`Take ${labelOf(r.item_code) || "this feed"} out`}
                           className="mb-2 text-[var(--sd-quiet)] transition-colors hover:text-[var(--sd-sev-critical)]"
                         >
@@ -848,7 +858,7 @@ export function RationEditor() {
                         ? `Save as the ${chosenHerd.herd} ration`
                         : "Save the concentrate"}
                   </Button>
-                  <Button variant="secondary" onClick={() => setRows([])} disabled={!rows.length}>
+                  <Button variant="secondary" onClick={() => setRows(mode.seed([]))} disabled={!rows.length}>
                     Start blank
                   </Button>
                   <span className="text-[11.5px] text-[var(--sd-muted)]">

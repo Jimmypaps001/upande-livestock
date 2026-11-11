@@ -156,6 +156,9 @@ function sent(method: string) {
   return (c?.[1] as { payload: { lines: unknown[]; name?: string } } | undefined)?.payload;
 }
 
+const amounts = () => screen.getAllByLabelText("Amount (kg)").map((e) => (e as HTMLInputElement).value);
+const shares = () => screen.getAllByLabelText("Share (%)").map((e) => (e as HTMLInputElement).value);
+
 const saveButton = () => screen.getByRole("button", { name: /^Save / }) as HTMLButtonElement;
 
 describe("the Ration Editor, herd by herd", () => {
@@ -224,14 +227,16 @@ describe("the Ration Editor, herd by herd", () => {
     ]);
   });
 
-  it("in percentage mode, changing kg per head rescales every kilogram line", async () => {
+  it("typing the kg per head rescales every kilogram line and keeps the shares", async () => {
     draw();
     await pickHerd("Finishers");
-    fireEvent.click(await screen.findByRole("button", { name: "% of intake" }));
-    const perHead = await screen.findByLabelText("Kg per head per day");
-    expect((perHead as HTMLInputElement).value).toBe("20");
+    const perHead = (await screen.findByLabelText("Kg per head per day")) as HTMLInputElement;
+    // No total of its own yet: the lines' sum is only a hint.
+    expect(perHead.value).toBe("");
+    expect(perHead.placeholder).toBe("20");
     expect(screen.getAllByLabelText("Share (%)").map((e) => (e as HTMLInputElement).value)).toEqual(["75", "25"]);
     fireEvent.change(perHead, { target: { value: "24" } });
+    expect(shares()).toEqual(["75", "25"]);
     fireEvent.click(saveButton());
     await waitFor(() => expect(sent("set_herd_ration")).toBeTruthy());
     expect(sent("set_herd_ration")!.lines).toEqual([
@@ -239,6 +244,61 @@ describe("the Ration Editor, herd by herd", () => {
       { item_code: "germ", qty: 6 },
       { item_code: "dv", qty: 7, dose_uom: "Gram" },
     ]);
+  });
+
+  it("shows kilos and % on every weighed line, both editable, and no mode switch", async () => {
+    draw();
+    await pickHerd("Finishers");
+    const amounts = await screen.findAllByLabelText("Amount (kg)");
+    expect(amounts.map((e) => (e as HTMLInputElement).readOnly)).toEqual([false, false]);
+    expect(screen.getAllByLabelText("Share (%)")).toHaveLength(2);
+    expect(screen.queryByRole("button", { name: "% of intake" })).toBeNull();
+    // The dose has no share and no lock.
+    expect(screen.getByLabelText("Dose (g a head)")).toBeTruthy();
+  });
+
+  it("with no total, typing kilos changes that line only and nothing locks", async () => {
+    draw();
+    await pickHerd("Finishers");
+    fireEvent.change((await screen.findAllByLabelText("Amount (kg)"))[0], { target: { value: "35" } });
+    expect(amounts()).toEqual(["35", "5"]);
+    expect(shares()).toEqual(["87.5", "12.5"]);
+    expect(screen.queryByRole("button", { name: /^(Un)?lock / })).toBeNull();
+  });
+
+  it("typing a % makes the sum the total, locks the line and rebalances the rest", async () => {
+    draw();
+    await pickHerd("Finishers");
+    fireEvent.change((await screen.findAllByLabelText("Share (%)"))[1], { target: { value: "40" } });
+    expect((screen.getByLabelText("Kg per head per day") as HTMLInputElement).value).toBe("20");
+    expect(amounts()).toEqual(["12", "8"]);
+    expect(screen.getByRole("button", { name: "Unlock Maize Germ" }).getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getByRole("button", { name: "Lock Maize Silage" })).toBeTruthy();
+    fireEvent.click(saveButton());
+    await waitFor(() => expect(sent("set_herd_ration")).toBeTruthy());
+    expect(sent("set_herd_ration")!.lines).toEqual([
+      { item_code: "silage", qty: 12 },
+      { item_code: "germ", qty: 8 },
+      { item_code: "dv", qty: 7, dose_uom: "Gram" },
+    ]);
+  });
+
+  it("with a total, the last unlocked line cannot move and the screen says why", async () => {
+    draw();
+    await pickHerd("Finishers");
+    fireEvent.change(await screen.findByLabelText("Kg per head per day"), { target: { value: "20" } });
+    fireEvent.change(screen.getAllByLabelText("Amount (kg)")[0], { target: { value: "16" } });
+    expect(amounts()).toEqual(["16", "4"]);
+    fireEvent.change(screen.getAllByLabelText("Amount (kg)")[1], { target: { value: "9" } });
+    expect(amounts()).toEqual(["16", "4"]);
+    expect(screen.getByRole("status").textContent).toBe(
+      "Locked rows already use 16 of 20 kg — unlock a row to give it more.",
+    );
+    // Unlocking the silage frees it to take up the germ's change.
+    fireEvent.click(screen.getByRole("button", { name: "Unlock Maize Silage" }));
+    fireEvent.change(screen.getAllByLabelText("Amount (kg)")[1], { target: { value: "9" } });
+    expect(amounts()).toEqual(["11", "9"]);
+    expect(screen.queryByRole("status")).toBeNull();
   });
 
   it("asks the server for the nutrition once lines are in", async () => {
@@ -377,7 +437,6 @@ describe("the Ration Editor, a line in the store's unit", () => {
   it("shares % of intake by kilos, whatever unit a line is in", async () => {
     draw();
     await addMolassesInLitres("3");
-    fireEvent.click(screen.getByRole("button", { name: "% of intake" }));
     const shares = (await screen.findAllByLabelText("Share (%)")).map((e) => (e as HTMLInputElement).value);
     // 15, 5 and 4.2 kg of 24.2.
     expect(shares).toEqual(["61.98", "20.66", "17.36"]);

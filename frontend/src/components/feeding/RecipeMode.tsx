@@ -1,20 +1,26 @@
 import { useState, type Dispatch, type SetStateAction } from "react";
+import { Lock, LockOpen } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Picker } from "@/components/ui/picker";
 import {
-  applyPercentages,
-  kgFromPercent,
+  changeTotal as totalChanged,
+  editLine,
+  hasDefiniteTotal,
   kgTotal,
   percentTotal,
-  qtyForKilos,
-  withPercentages,
+  rebalance,
+  sharesOf,
+  toggleLock as lockToggled,
+  unheld,
+  type Balanced,
   type LineUnit,
 } from "@/lib/ration-maths";
 import { cn, fmt } from "@/lib/utils";
 
 /** A recipe row the editors share the shape of. `kgPer` is kilos in one of
- *  `unit` when it is a store unit (Litre, BALE), so the sums run on kilos. */
+ *  `unit` when it is a store unit (Litre, BALE), so the sums run on kilos.
+ *  `locked` is screen state: it is never saved. */
 export type ModeRow = {
   key: number;
   item_code: string;
@@ -22,115 +28,142 @@ export type ModeRow = {
   pct?: string;
   unit?: LineUnit;
   kgPer?: number | null;
+  locked?: boolean;
 };
 
 /**
- * Kilos per line, or kilos per head and a percentage per line.
+ * Kilos AND % of intake on every line, both editable, with locks.
  *
- * Mutara's ration sheet is written the second way: "Finishers, 18 kg a head:
- * silage 62.5%, maize germ 20%…". Percentage mode lets the editors take it
- * like that and still save kilogram lines, which is all a BOM holds — the
- * percentages are a way of typing, not something stored. Changing the kilos
- * per head rescales every line, so a group moved up to 20 kg keeps its mix.
+ * Mutara's ration sheet is written "Finishers, 18 kg a head: silage 62.5%,
+ * maize germ 20%…", and the herdsman also thinks in kilos ("give them 8 kg
+ * of silage"). So every weighed line takes either, and the kilos per head is
+ * an optional total. The rule (typing locks a line against a definite total,
+ * the unlocked lines take up the difference, a % with no total makes the sum
+ * the total, changing the total keeps every %) is pure and lives in
+ * `ration-maths.ts` (`editLine`, `changeTotal`, `rebalance`), where it is
+ * tested; this only holds the total, the notice and the rows.
  *
- * Doses (grams, millilitres a head) sit outside the 100% and never move. A
- * line in a store unit (3 Litre of molasses) takes its share by its kilos.
+ * What is saved is kilogram lines (or a store unit, or a dose), as before:
+ * the percentages and the locks are a way of writing the recipe, not part of
+ * it. Doses (g, ml a head) sit outside the 100% and outside the locks.
  */
-export function usePercentMode<T extends ModeRow>(rows: T[], setRows: Dispatch<SetStateAction<T[]>>) {
-  const [on, setOn] = useState(false);
-  const [kgPerHead, setKgPerHead] = useState("");
+export function useRecipeBalance<T extends ModeRow>(rows: T[], setRows: Dispatch<SetStateAction<T[]>>) {
+  const [total, setTotal] = useState("");
+  const [notice, setNotice] = useState<string | null>(null);
+  const definite = hasDefiniteTotal(total);
 
-  function toggle(next: boolean) {
-    if (next) {
-      setKgPerHead(String(kgTotal(rows)));
-      setRows((s) => withPercentages(s));
-    }
-    setOn(next);
+  function take(b: Balanced<T>) {
+    setRows(b.rows);
+    setTotal(b.total);
+    setNotice(b.notice);
   }
 
-  /** New rows (a herd loaded, a recipe expanded) arrive in kilos. */
+  const at = (key: number) => rows.findIndex((r) => r.key === key);
+
+  /** New rows (a herd loaded, a recipe expanded) arrive in kilos, with no total. */
   function seed(next: T[]): T[] {
-    if (!on) return next;
-    setKgPerHead(String(kgTotal(next)));
-    return withPercentages(next);
+    setTotal("");
+    setNotice(null);
+    return unheld(next);
   }
 
-  function changeKgPerHead(value: string) {
-    setKgPerHead(value);
-    setRows((s) => applyPercentages(s, value));
-  }
+  // Each line's % as shown: the held figures against a total; worked out from
+  // the kilos without one (a store unit's kilos can arrive after the rows).
+  const shares = definite ? rows.map((r) => r.pct ?? "") : sharesOf(rows);
 
-  function changePct(key: number, value: string) {
-    setRows((s) =>
-      s.map((r) =>
-        r.key === key ? { ...r, pct: value, qty: String(qtyForKilos(r, kgFromPercent(kgPerHead, value))) } : r,
-      ),
-    );
-  }
-
-  return { on, toggle, seed, kgPerHead, changeKgPerHead, changePct, pctTotal: percentTotal(rows) };
+  return {
+    total,
+    definite,
+    notice,
+    /** What the lines weigh: the total when none is set. */
+    sum: kgTotal(rows),
+    shares,
+    pctTotal: percentTotal(rows.map((r, i) => ({ unit: r.unit, pct: shares[i] }))),
+    seed,
+    editQty: (key: number, value: string) => take(editLine(rows, total, at(key), "qty", value)),
+    editPct: (key: number, value: string) => take(editLine(rows, total, at(key), "pct", value)),
+    changeTotal: (value: string) => take(totalChanged(rows, total, value)),
+    toggleLock: (key: number) => setRows(lockToggled(rows, at(key), total)),
+    /** After a line is added, taken out, merged or put in another unit. */
+    settle: (next: T[]) => take(rebalance(next, total)),
+  };
 }
 
-export type PercentMode = ReturnType<typeof usePercentMode>;
+export type RecipeBalance = ReturnType<typeof useRecipeBalance>;
 
-/** The switch between kilos and percentages, and the kilos-per-head field. */
-export function RecipeModeBar({
+/** The kilos-per-head total, what is allocated, and why a figure was held back. */
+export function RecipeTotalBar({
   mode,
   idPrefix,
   per = "head per day",
 }: {
-  mode: PercentMode;
+  mode: RecipeBalance;
   idPrefix: string;
   /** What the kilos are per: a head per day for a ration, a batch for a concentrate. */
   per?: string;
 }) {
-  const off100 = mode.on && Math.abs(mode.pctTotal - 100) > 0.01;
+  const off100 = mode.definite && Math.abs(mode.pctTotal - 100) > 0.01;
   return (
-    <div className="flex flex-wrap items-end gap-3">
-      <div className="flex flex-col gap-1.5">
-        <Label>Enter as</Label>
-        <div className="inline-flex overflow-hidden rounded-[var(--sd-radius-lg)] border border-[var(--sd-line)]">
-          {([false, true] as const).map((pct) => (
-            <button
-              key={String(pct)}
-              type="button"
-              onClick={() => mode.toggle(pct)}
-              aria-pressed={mode.on === pct}
-              className={cn(
-                "px-3 py-1.5 text-[12.5px] font-medium",
-                mode.on === pct ? "bg-[var(--sd-ink)] text-white" : "text-[var(--sd-muted)]",
-              )}
-            >
-              {pct ? "% of intake" : "Kilos"}
-            </button>
-          ))}
+    <div className="flex flex-col gap-2">
+      <div className="flex flex-wrap items-end gap-3">
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor={`${idPrefix}-kg-per`}>Kg per {per}</Label>
+          <Input
+            id={`${idPrefix}-kg-per`}
+            type="number"
+            min={0}
+            step="any"
+            className="w-28 text-right tabular-nums"
+            value={mode.total}
+            placeholder={mode.sum ? String(mode.sum) : "optional"}
+            onChange={(e) => mode.changeTotal(e.target.value)}
+          />
         </div>
+        <span
+          className={cn(
+            "pb-2 text-[12px] tabular-nums",
+            off100 ? "text-[var(--sd-sev-critical)]" : "text-[var(--sd-muted)]",
+          )}
+        >
+          {mode.definite
+            ? `${fmt(mode.pctTotal)}% allocated${off100 ? " — the lines should add up to 100%" : ""}. Typing a line's kilos or % locks it; the unlocked lines make up the rest.`
+            : "No total set: the lines add up to whatever they come to. Type a total (or any line's %) to hold the recipe to it."}
+        </span>
       </div>
-      {mode.on && (
-        <>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor={`${idPrefix}-kg-per`}>Kg per {per}</Label>
-            <Input
-              id={`${idPrefix}-kg-per`}
-              type="number"
-              min={0}
-              step="any"
-              className="w-28 text-right tabular-nums"
-              value={mode.kgPerHead}
-              onChange={(e) => mode.changeKgPerHead(e.target.value)}
-            />
-          </div>
-          <span
-            className={cn(
-              "pb-2 text-[12px] tabular-nums",
-              off100 ? "text-[var(--sd-sev-critical)]" : "text-[var(--sd-muted)]",
-            )}
-          >
-            {fmt(mode.pctTotal)}% allocated{off100 ? " — the lines should add up to 100%" : ""}
-          </span>
-        </>
+      {mode.notice && (
+        <p role="status" className="text-[12px] text-[var(--sd-sev-warning,#b45309)]">
+          {mode.notice}
+        </p>
       )}
     </div>
+  );
+}
+
+/** A line's lock: shown against a definite total, click to lock or unlock. */
+export function LockButton({
+  locked,
+  label,
+  onClick,
+}: {
+  locked: boolean;
+  /** The feed's name, for the button's accessible name. */
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={locked}
+      aria-label={`${locked ? "Unlock" : "Lock"} ${label}`}
+      title={locked ? "Locked: other lines move around it. Click to unlock." : "Unlocked: takes up changes elsewhere. Click to lock."}
+      className={cn(
+        "mb-2 transition-colors",
+        locked ? "text-[var(--sd-ink)]" : "text-[var(--sd-quiet)] hover:text-[var(--sd-ink)]",
+      )}
+    >
+      {locked ? <Lock className="h-4 w-4" /> : <LockOpen className="h-4 w-4" />}
+    </button>
   );
 }
 
