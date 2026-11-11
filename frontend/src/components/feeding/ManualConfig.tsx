@@ -4,9 +4,33 @@ import { AmberNotice, Mark, Notice } from "@/components/feeding/Notice";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { searchItems } from "@/lib/frappe";
-import type { ManualRow } from "@/lib/feeding";
-import { num, todayISO } from "@/lib/utils";
+import { Picker } from "@/components/ui/picker";
+import { isError, searchItems } from "@/lib/frappe";
+import { feedSubstitutes, type ManualRow, type Substitute } from "@/lib/feeding";
+import { swapKg } from "@/lib/ration-maths";
+import { fmt, num, todayISO } from "@/lib/utils";
+
+/** Units a swap can be weighed in: the server's factor is kilos per kilo. */
+const KILO_UNITS = ["Kilogram", "Kg", "kg"];
+
+/**
+ * A line swapped for another feed in its substitute group, kilos adjusted so
+ * the herd gets the same dry matter. Pure, so the page and the tests agree.
+ * Returns null when the swap cannot be balanced (no dry matter recorded).
+ */
+export function swapRow(row: ManualRow, sub: Substitute): ManualRow | null {
+  const qty = swapKg(row.qty, sub.factor);
+  if (qty == null) return null;
+  return {
+    item_code: sub.item_code,
+    item_name: sub.item_name,
+    // Weighed in kilos, whatever it is stocked in: the server converts a
+    // line that names its unit (`_tuned_bom.row_units`).
+    uom: row.uom,
+    qty,
+    swapped_from: row.swapped_from || row.item_name || row.item_code,
+  };
+}
 
 export const MANUAL_WARNING =
   "You are setting the recipe and the head count yourself. This moves real " +
@@ -22,6 +46,14 @@ export const MANUAL_WARNING =
  * exactly that unit. Nothing on this screen converts between recipe and stock
  * units: hay is written in kg on the herd BOM but stocked in BALE at 0.07
  * bale/kg, and a conversion here would issue roughly fourteen times the hay.
+ *
+ * A line whose feed has a substitute group (`Livestock Feed.substitute_group`)
+ * can be swapped for another in the group, its kilos adjusted by the server's
+ * dry-matter factor. It is a change to today's mix only, posted as a tuned
+ * recipe; the herd's ration is not touched.
+ *
+ * On a farm that does not feed by head count, `total` is the group's kilos as
+ * weighed, and the per-head lines are scaled to it.
  */
 export function ManualConfig({
   rows,
@@ -32,6 +64,9 @@ export function ManualConfig({
   onSubmit,
   busy,
   disabledReason,
+  byHeadCount = true,
+  total = "",
+  onTotalChange,
 }: {
   rows: ManualRow[] | null;
   onRowsChange: (next: ManualRow[]) => void;
@@ -44,6 +79,10 @@ export function ManualConfig({
   onSubmit: () => void;
   busy: boolean;
   disabledReason: string | null;
+  /** Livestock Settings > Feed by Head Count. Off: `total` is typed. */
+  byHeadCount?: boolean;
+  total?: string;
+  onTotalChange?: (next: string) => void;
 }) {
   const [term, setTerm] = useState("");
   const [open, setOpen] = useState(false);
@@ -55,7 +94,31 @@ export function ManualConfig({
     Array<{ name: string; item_name: string; stock_uom: string }>
   >([]);
   const [searching, setSearching] = useState(false);
+  const [subs, setSubs] = useState<Record<string, Substitute[]>>({});
   const timer = useRef<number | undefined>(undefined);
+
+  // What each line could be swapped for. Asked again only when the set of
+  // feeds on the recipe changes, not on every quantity typed.
+  const itemsKey = (rows || []).map((r) => r.item_code).sort().join("|");
+  useEffect(() => {
+    if (!itemsKey) {
+      setSubs({});
+      return;
+    }
+    let live = true;
+    feedSubstitutes(itemsKey.split("|")).then((r) => {
+      if (live && !isError(r)) setSubs(r.substitutes || {});
+    });
+    return () => {
+      live = false;
+    };
+  }, [itemsKey]);
+
+  /** The swaps a line may take: weighed in kilos, balanced on dry matter, not already on the recipe. */
+  function swapsFor(r: ManualRow): Substitute[] {
+    if (!KILO_UNITS.includes(r.uom)) return [];
+    return (subs[r.item_code] || []).filter((s) => s.factor && !already.has(s.item_code));
+  }
   const box = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -135,8 +198,32 @@ export function ManualConfig({
                 </div>
                 <div className="text-[11px] text-[var(--sd-quiet)]">
                   {r.uom} per head
+                  {r.swapped_from ? ` · swapped in for ${r.swapped_from}, same dry matter` : ""}
                 </div>
               </div>
+              {swapsFor(r).length > 0 && (
+                <Picker
+                  id={`fm-swap-${i}`}
+                  value=""
+                  onChange={(code) => {
+                    const sub = swapsFor(r).find((s) => s.item_code === code);
+                    const next = sub ? swapRow(r, sub) : null;
+                    if (!next) return;
+                    const out = rows.slice();
+                    out[i] = next;
+                    onRowsChange(out);
+                  }}
+                  options={swapsFor(r).map((s) => ({
+                    value: s.item_code,
+                    label: `${s.item_name} — ${fmt(swapKg(r.qty, s.factor) ?? 0)} ${r.uom}${
+                      s.on_hand != null ? ` (${fmt(s.on_hand)} ${s.stock_uom || ""} in store)` : ""
+                    }`,
+                  }))}
+                  label={`Swap ${r.item_name || r.item_code}`}
+                  placeholder="Swap for…"
+                  className="w-40"
+                />
+              )}
               <Input
                 type="number"
                 min={0}
@@ -242,6 +329,27 @@ export function ManualConfig({
             onChange={(e) => onHeadsChange(e.target.value)}
           />
         </div>
+        {!byHeadCount && (
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="fm-total" className="text-[var(--sd-muted)]">
+              Total fed (kg)
+            </Label>
+            <Input
+              id="fm-total"
+              type="number"
+              min={0}
+              step="any"
+              className="w-36 text-right tabular-nums"
+              value={total}
+              onChange={(e) => onTotalChange?.(e.target.value)}
+            />
+            <span className="text-[11px] text-[var(--sd-quiet)]">
+              Suggested{" "}
+              {fmt(num(heads) * (rows || []).filter((r) => KILO_UNITS.includes(r.uom)).reduce((s, r) => s + num(r.qty), 0))}{" "}
+              kg: head count &times; per head. What you type is what is mixed.
+            </span>
+          </div>
+        )}
       </div>
 
       <div className="flex flex-wrap items-center gap-3">

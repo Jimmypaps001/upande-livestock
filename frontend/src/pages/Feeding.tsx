@@ -19,6 +19,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Picker } from "@/components/ui/picker";
 import {
@@ -29,7 +30,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { isError } from "@/lib/frappe";
+import { bootstrap, isError } from "@/lib/frappe";
 import {
   feedDayStatus,
   feedOptions,
@@ -99,6 +100,11 @@ export function Feeding() {
   // System tab
   const [portion, setPortion] = useState(0.5);
   const [mixing, setMixing] = useState(false);
+  // The group's kilos as weighed, on a farm that does not feed by head count.
+  // Seeded with the suggestion (head count x per head x portion) and then the
+  // operator's: what they type is what is mixed.
+  const [systemTotal, setSystemTotal] = useState("");
+  const [manualTotal, setManualTotal] = useState("");
 
   // Manual tab — seeded once per herd (and once per recipe pick), then the
   // operator's edits are left alone: re-seeding on every refresh would wipe a
@@ -287,6 +293,10 @@ export function Feeding() {
 
   async function mixAndFeed() {
     if (!program) return;
+    if (!byHeadCount && num(systemTotal) <= 0) {
+      toast("Enter the kilos this group was given.", "error");
+      return;
+    }
     setMixing(true);
     // The System tab always runs through manufactureFeed, standing ration or
     // a previously-used recipe alike — bom_no carries the picker's choice,
@@ -301,6 +311,7 @@ export function Feeding() {
       posting_date: effectiveDate,
       bom_no: selectedBom || undefined,
       employee: who.operator || undefined,
+      total_qty: byHeadCount ? undefined : num(systemTotal),
     });
     setMixing(false);
     if (isError(r)) {
@@ -328,8 +339,10 @@ export function Feeding() {
   async function submitManual() {
     if (!program) return;
     const heads = num(manualHeads);
+    // The unit goes back with each line: a dose stays a dose, and a feed
+    // swapped in by weight is converted to its stock unit by the server.
     const lines = (manualRows || [])
-      .map((r) => ({ item_code: r.item_code, qty: num(r.qty) }))
+      .map((r) => ({ item_code: r.item_code, qty: num(r.qty), uom: r.uom }))
       .filter((l) => l.qty > 0);
     if (heads <= 0) {
       toast("Enter how many animals were fed.", "error");
@@ -337,6 +350,10 @@ export function Feeding() {
     }
     if (!lines.length) {
       toast("Enter a quantity for at least one ingredient.", "error");
+      return;
+    }
+    if (!byHeadCount && num(manualTotal) <= 0) {
+      toast("Enter the kilos this group was given.", "error");
       return;
     }
     setManualBusy(true);
@@ -351,6 +368,7 @@ export function Feeding() {
       posting_date: effectiveDate,
       base_bom: selectedBom || undefined,
       employee: who.operator || undefined,
+      total_qty: byHeadCount ? undefined : num(manualTotal),
     });
     setManualBusy(false);
     if (isError(r)) {
@@ -382,6 +400,12 @@ export function Feeding() {
   const kg = runKg(day, portion, selectedRecipe, program?.heads);
   const rationQty = runRationQty(program, portion, selectedRecipe);
   const manualDisabled = !program ? "Select a herd first." : null;
+  // Livestock Settings > Feed by Head Count. Off: `kg` is only a suggestion.
+  const byHeadCount = day?.feed_by_head_count ?? bootstrap().feed_by_head_count;
+
+  useEffect(() => {
+    if (!byHeadCount) setSystemTotal(kg == null ? "" : String(Math.round(kg * 1000) / 1000));
+  }, [byHeadCount, kg, program?.herd]);
 
   return (
     <Page>
@@ -540,17 +564,37 @@ export function Feeding() {
                       <Label className="text-[var(--sd-muted)]">This run</Label>
                       <PortionSwitch portion={portion} onChange={setPortion} />
                     </div>
+                    {!byHeadCount && (
+                      <div className="flex flex-col gap-1.5">
+                        <Label htmlFor="f-total" className="text-[var(--sd-muted)]">
+                          Total fed (kg)
+                        </Label>
+                        <Input
+                          id="f-total"
+                          type="number"
+                          min={0}
+                          step="any"
+                          className="w-36 text-right tabular-nums"
+                          value={systemTotal}
+                          onChange={(e) => setSystemTotal(e.target.value)}
+                        />
+                        <span className="text-[11px] text-[var(--sd-quiet)]">
+                          Suggested {kg == null ? "—" : fmt(kg)} kg: head count &times; per head. What
+                          you type is what is mixed.
+                        </span>
+                      </div>
+                    )}
                     <div className="flex flex-col gap-1">
                       <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-[var(--sd-quiet)]">
                         Goes in the trough
                       </span>
                       <span className="text-[26px] font-semibold leading-none tracking-[-0.02em] text-[var(--sd-ink)] tabular-nums">
-                        {kg == null ? "—" : fmt(kg)}
+                        {byHeadCount ? (kg == null ? "—" : fmt(kg)) : fmt(num(systemTotal))}
                         <span className="ml-1 text-[13px] font-medium text-[var(--sd-muted)]">
                           kg
                         </span>
                       </span>
-                      {rationQty != null && (
+                      {byHeadCount && rationQty != null && (
                         <span className="text-[11px] text-[var(--sd-quiet)]">
                           {fmt(rationQty)}{" "}
                           {selectedRecipe && !selectedRecipe.is_standing
@@ -600,6 +644,9 @@ export function Feeding() {
                   onSubmit={submitManual}
                   busy={manualBusy}
                   disabledReason={manualDisabled}
+                  byHeadCount={byHeadCount}
+                  total={manualTotal}
+                  onTotalChange={setManualTotal}
                 />
               </TabsContent>
             </Tabs>
