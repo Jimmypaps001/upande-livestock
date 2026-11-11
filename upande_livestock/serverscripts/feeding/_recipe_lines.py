@@ -19,6 +19,8 @@ row on a page that already reads 5,000 Work Orders.
 import frappe
 from frappe.utils import flt
 
+from upande_livestock.serverscripts.feeding._doses import is_dose
+
 
 def _concentrate_items():
 	"""Item codes that are a concentrate rather than a raw ingredient.
@@ -69,6 +71,9 @@ def lines_for(bom_nos):
 				# present, never absent-meaning-false: the editor highlights on
 				# it and a missing key would read as false forever.
 				"is_concentrate": row.item_code in concentrates,
+				# A per-head dose in grams or millilitres, outside the ration's
+				# kilos. The editors show it as a dose and send its unit back.
+				"is_dose": is_dose(row.uom),
 			}
 		)
 	return out

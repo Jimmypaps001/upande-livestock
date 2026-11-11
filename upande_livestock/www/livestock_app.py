@@ -27,7 +27,8 @@ import os
 
 import frappe
 
-from upande_livestock.serverscripts.feeding._concentrate import premanufacture_concentrate_on
+from upande_livestock.serverscripts.feeding._concentrate import any_herd_premanufactures
+from upande_livestock.serverscripts.feeding._head_count import feed_by_head_count_on
 
 no_cache = 1
 
@@ -86,7 +87,11 @@ def get_context(context):
 			"user_image": user_doc.get("user_image") or "",
 			"site_name": frappe.local.site,
 			"roles": roles,
-			"premanufacture_concentrate": premanufacture_concentrate_on(),
+			# Whether the Concentrate page is shown: true when ANY herd eats a
+			# made concentrate, so a farm that mixes its cattle from raw still
+			# sees it for the shoats' batch (`Herds.concentrate_mode`).
+			"premanufacture_concentrate": any_herd_premanufactures(),
+			"feed_by_head_count": feed_by_head_count_on(),
 			"csrf_token": csrf_token,
 		}
 	)

@@ -26,7 +26,11 @@ Read-guarded on BOM: it discloses what the farm feeds.
 import frappe
 from frappe.utils import flt
 
-from upande_livestock.serverscripts.feeding._concentrate import premanufacture_concentrate_on
+from upande_livestock.serverscripts.feeding._concentrate import (
+	premanufacture_by_herd,
+	premanufacture_concentrate_on,
+)
+from upande_livestock.serverscripts.feeding._head_count import feed_by_head_count_on
 from upande_livestock.serverscripts.feeding._recipe_lines import _concentrate_items
 
 from upande_livestock.serverscripts.common.calf_separation import head_breakdown
@@ -52,6 +56,8 @@ def herd_rations(payload=None):
 				fields=["name", "item", "item_name", "quantity", "uom"])
 		}
 
+		farm_on = premanufacture_concentrate_on()
+		premade = premanufacture_by_herd(farm_on)
 		rows = []
 		for h in herds:
 			bom = boms.get(h.bom or "")
@@ -82,18 +88,29 @@ def herd_rations(payload=None):
 				# rations state an output their own lines do not add up to, so
 				# they issue less feed than they consume. Said on the screen
 				# rather than left for somebody to notice.
-				"lines_total": round(sum(flt(r["qty"]) for r in ration), 3),
-				"balanced": abs(sum(flt(r["qty"]) for r in ration) - per_head) < 0.0005,
+				# Doses (grams, millilitres a head) sit outside the per-head
+				# weight, exactly as the BOM's quantity leaves them out.
+				"lines_total": round(_kg_total(ration), 3),
+				"balanced": abs(_kg_total(ration) - per_head) < 0.0005,
+				# Per herd, not per farm: a herd on Mix from raw is offered raw
+				# feeds only, one on Pre-manufacture its concentrate too.
+				"premanufacture": premade.get(h.name, farm_on),
 			})
 
 		return {
 			"ok": True, "herds": rows, "feeds": _feeds(),
 			# Off: the picker offers raw feeds only (the page filters on
 			# `is_concentrate`), and a ration still naming one is warned about.
-			"premanufacture_concentrate": premanufacture_concentrate_on(),
+			"premanufacture_concentrate": farm_on,
+			"any_premanufacture": any(premade.values()) if premade else farm_on,
+			"feed_by_head_count": feed_by_head_count_on(),
 		}
 
 	return run(go, "livestock herd_rations failed")
+
+
+def _kg_total(ration):
+	return sum(flt(r["qty"]) for r in ration if not r.get("is_dose"))
 
 
 def _feeds():

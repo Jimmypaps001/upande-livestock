@@ -21,29 +21,83 @@ import frappe
 from frappe import _
 from frappe.utils import flt
 
+from upande_livestock.serverscripts.feeding._doses import conversion_factor, dose_uom_of, is_dose
+
 
 def _signature(lines):
-	"""A stable key for a set of (item, qty) pairs, order-independent."""
-	return tuple(sorted((row["item_code"], round(flt(row["qty"]), 4)) for row in lines))
+	"""A stable key for a set of (item, qty) pairs, order-independent.
+
+	A dose (`_doses`) carries its unit in the key: 7 g of yeast and 7 kg of
+	yeast are different recipes. A kilogram line keeps the two-part key it
+	always had, so every recipe already on the site still matches itself.
+	"""
+	return tuple(sorted(_key(row) for row in lines))
+
+
+def _key(row):
+	key = (row["item_code"], round(flt(row["qty"]), 4))
+	dose = dose_uom_of(row)
+	return key + (dose,) if dose else key
+
+
+def _rows_of(bom_rows):
+	"""BOM Item rows as the line dicts `_signature` reads, unit included."""
+	return [{"item_code": r.item_code, "qty": r.qty, "uom": r.get("uom")} for r in bom_rows]
 
 
 def _clean(lines):
 	"""Drop empty/zero rows and merge duplicate item_codes by summing their
 	qty — a caller submitting the same ingredient twice (e.g. added once by
 	hand and once by a recipe default) means "this much in total", not two
-	separate BOM Item rows for the same item."""
-	totals = {}
+	separate BOM Item rows for the same item.
+
+	A dose and a kilogram line of the same item are not summed (grams and
+	kilos do not add); the dose survives as `dose_uom` on its line. A line's
+	own recipe unit, when it names one, is kept for `row_units`."""
+	totals, units = {}, {}
 	order = []
 	for row in lines or []:
 		item = (row.get("item_code") or "").strip()
 		qty = flt(row.get("qty"))
 		if not item or qty <= 0:
 			continue
-		if item not in totals:
-			order.append(item)
-			totals[item] = 0.0
-		totals[item] += qty
-	return [{"item_code": item, "qty": totals[item]} for item in order]
+		key = (item, dose_uom_of(row))
+		if key not in totals:
+			order.append(key)
+			totals[key] = 0.0
+			if not key[1] and row.get("uom"):
+				units[key] = row.get("uom")
+		totals[key] += qty
+	out = []
+	for item, dose in order:
+		line = {"item_code": item, "qty": totals[(item, dose)]}
+		if dose:
+			line["dose_uom"] = dose
+		elif (item, dose) in units:
+			line["uom"] = units[(item, dose)]
+		out.append(line)
+	return out
+
+
+def row_units(item_code, stock_uom, line, old_row=None):
+	"""(uom, conversion_factor) for a new BOM row written from `line`.
+
+	A dose is written in its own unit with the factor that turns it into stock
+	units (`_doses.conversion_factor`). A kilogram line borrows the unit of the
+	row it replaces, so hay stays written in kilograms and stocked in bales.
+	A line that names its own unit and replaces nothing (a forage swapped in
+	at the mixer, weighed in kilograms but stocked in bales) is converted the
+	same way a dose is. Failing all of that it is in the stock unit at one.
+	"""
+	dose = dose_uom_of(line)
+	if dose:
+		return dose, conversion_factor(item_code, dose)
+	uom = line.get("uom")
+	if old_row is not None and not is_dose(old_row.uom) and (not uom or uom == old_row.uom):
+		return old_row.uom, old_row.conversion_factor
+	if uom and uom != stock_uom:
+		return uom, conversion_factor(item_code, uom)
+	return stock_uom, 1
 
 
 def _existing_match(item, signature, quantity):
@@ -70,9 +124,9 @@ def _existing_match(item, signature, quantity):
 		order_by="creation desc",
 	):
 		lines = frappe.get_all(
-			"BOM Item", filters={"parent": row.name}, fields=["item_code", "qty"]
+			"BOM Item", filters={"parent": row.name}, fields=["item_code", "qty", "uom"]
 		)
-		if _signature([{"item_code": r.item_code, "qty": r.qty} for r in lines]) == signature:
+		if _signature(_rows_of(lines)) == signature:
 			return row.name
 	return None
 
@@ -177,7 +231,7 @@ def tuned_bom(herd, lines, base_bom=None):
 	base = _base_for(herd, base_bom)
 
 	signature = _signature(lines)
-	if _signature([{"item_code": r.item_code, "qty": r.qty} for r in base.items]) == signature:
+	if _signature(_rows_of(base.items)) == signature:
 		return base.name
 
 	# The tuned BOM is a copy of the base, so it inherits the base's batch size;
@@ -208,13 +262,9 @@ def tuned_bom(herd, lines, base_bom=None):
 	doc.set("items", [])
 	for row in lines:
 		item = frappe.get_cached_doc("Item", row["item_code"])
-		base_row = base_row_by_item.get(row["item_code"])
-		if base_row:
-			uom = base_row.uom
-			conversion_factor = base_row.conversion_factor
-		else:
-			uom = item.stock_uom
-			conversion_factor = 1
+		uom, factor = row_units(
+			row["item_code"], item.stock_uom, row, base_row_by_item.get(row["item_code"])
+		)
 		doc.append(
 			"items",
 			{
@@ -223,7 +273,7 @@ def tuned_bom(herd, lines, base_bom=None):
 				"qty": row["qty"],
 				"uom": uom,
 				"stock_uom": item.stock_uom,
-				"conversion_factor": conversion_factor,
+				"conversion_factor": factor,
 			},
 		)
 	# ignore_permissions on both insert and submit: this BOM is machinery, not a

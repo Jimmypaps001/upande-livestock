@@ -33,6 +33,7 @@ import frappe
 from frappe.utils import flt
 
 from upande_livestock.serverscripts.common.envelope import as_dict, guard_read, run
+from upande_livestock.serverscripts.feeding._doses import dose_uom_of, is_dose
 
 #: The figures a feed record must carry for the maths to mean something. DM is
 #: the weight everything else is taken against; the rest are what the page
@@ -69,7 +70,13 @@ class DbSource:
 		return self._feed[item]
 
 	def recipe(self, item):
-		"""(base_qty, [(item_code, qty)]) of the newest active BOM, or None."""
+		"""(base_qty, [(item_code, qty)], bom, [(item_code, qty, uom)]) of the
+		newest active BOM, or None.
+
+		The kilogram rows are the second element, as they always were; a
+		per-head dose (`_doses`) is kept apart in the fourth, because a dose of
+		60 ml read as 60 kg is the kind of number this maths must never see.
+		"""
 		if item not in self._recipe:
 			from upande_livestock.serverscripts.feeding._concentrate import _newest_bom
 
@@ -79,10 +86,13 @@ class DbSource:
 			else:
 				rows = frappe.get_all(
 					"BOM Item", filters={"parent": bom.name, "parenttype": "BOM"},
-					fields=["item_code", "qty"], order_by="idx asc",
+					fields=["item_code", "qty", "uom"], order_by="idx asc",
 				)
 				self._recipe[item] = (
-					flt(bom.quantity), [(r.item_code, flt(r.qty)) for r in rows], bom.name
+					flt(bom.quantity),
+					[(r.item_code, flt(r.qty)) for r in rows if not is_dose(r.uom)],
+					bom.name,
+					[(r.item_code, flt(r.qty), r.uom) for r in rows if is_dose(r.uom)],
 				)
 		return self._recipe[item]
 
@@ -127,16 +137,28 @@ class DbSource:
 		return per_stock_uom * flt(cf) if flt(cf) else None
 
 
-def _clean_lines(lines):
-	"""[(item_code, kg)] from whatever the caller sent: pairs or {item_code, qty}."""
+def _clean_lines(lines, doses=None):
+	"""[(item_code, kg)] from whatever the caller sent: pairs or {item_code, qty}.
+
+	A dose line (`dose_uom` or `uom` Gram/Millilitre, or a third element that
+	is one) is not kilos and is not weighed: it is appended to `doses`, when
+	given, so the page can still show it, and left out of the maths.
+	"""
 	out = []
 	for row in frappe.parse_json(lines) if isinstance(lines, str) else (lines or []):
 		if isinstance(row, dict):
 			code, qty = row.get("item_code"), row.get("qty")
+			dose = dose_uom_of(row)
 		else:
 			code, qty = row[0], row[1]
-		if code and flt(qty) > 0:
-			out.append((code, flt(qty)))
+			dose = row[2] if len(row) > 2 and is_dose(row[2]) else None
+		if not code or flt(qty) <= 0:
+			continue
+		if dose:
+			if doses is not None:
+				doses.append({"item_code": code, "qty": flt(qty), "uom": dose})
+			continue
+		out.append((code, flt(qty)))
 	return out
 
 
@@ -157,7 +179,8 @@ def _expand(item, qty, source, acc, via=(), stack=()):
 def nutrition_of(lines, source=None, with_lines=True):
 	"""Totals for `lines` — `(item_code, kg as fed)` pairs — see the module docstring."""
 	source = source or DbSource()
-	lines = _clean_lines(lines)
+	doses = []
+	lines = _clean_lines(lines, doses)
 
 	leaves = []
 	for item, qty in lines:
@@ -218,6 +241,8 @@ def nutrition_of(lines, source=None, with_lines=True):
 		"priced_kg": round(priced_kg, 4),
 		"missing": missing,
 		"unpriced": unpriced,
+		# Per-head doses, shown as doses and never weighed (`_doses`).
+		"doses": [dict(d, item_name=source.name(d["item_code"])) for d in doses],
 		"lines": [_line_view(item, qty, source) for item, qty in lines] if with_lines else [],
 	}
 	for key, total in mass.items():
@@ -300,9 +325,9 @@ def recipe_nutrition(bom):
 			frappe.throw(frappe._("{0} is not a BOM.").format(bom))
 		rows = frappe.get_all(
 			"BOM Item", filters={"parent": bom, "parenttype": "BOM"},
-			fields=["item_code", "qty"], order_by="idx asc",
+			fields=["item_code", "qty", "uom"], order_by="idx asc",
 		)
-		res = nutrition_of([(r.item_code, flt(r.qty)) for r in rows])
+		res = nutrition_of([(r.item_code, flt(r.qty), r.uom) for r in rows])
 		res["ok"] = True
 		res["bom"] = bom
 		return res
@@ -318,6 +343,7 @@ def livestock_feeds():
 	def go():
 		guard_read("Livestock Feed")
 		from upande_livestock.serverscripts.feeding._concentrate import (
+			any_herd_premanufactures,
 			concentrate_items,
 			premanufacture_concentrate_on,
 		)
@@ -329,7 +355,7 @@ def livestock_feeds():
 			"Livestock Feed",
 			fields=[
 				"name as item_code", "feed_name", "category", "disabled", "nutrient_source",
-				"analysed_on", *CORE_FIELDS, *DM_NUTRIENTS,
+				"analysed_on", "substitute_group", *CORE_FIELDS, *DM_NUTRIENTS,
 			],
 			order_by="feed_name asc",
 		)
@@ -349,6 +375,7 @@ def livestock_feeds():
 				"recorded": True,
 				"has_data": is_complete(r),
 				"nutrient_source": r.nutrient_source,
+				"substitute_group": r.substitute_group or None,
 				"dry_matter_pct": flt(r.dry_matter_pct),
 				"cp_pct": flt(r.crude_protein_pct),
 				"carbohydrate_pct": flt(r.carbohydrate_pct),
@@ -387,7 +414,11 @@ def livestock_feeds():
 			"ok": True,
 			"feeds": feeds,
 			"undescribed": undescribed,
+			# The farm's switch, and whether any herd still eats a made
+			# concentrate (`Herds.concentrate_mode`): the page offers
+			# concentrates, and the concentrate target, on the second.
 			"premanufacture_concentrate": premanufacture_concentrate_on(),
+			"any_premanufacture": any_herd_premanufactures(),
 		}
 
 	return run(go, "livestock livestock_feeds failed")
