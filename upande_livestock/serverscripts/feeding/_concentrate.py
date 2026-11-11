@@ -43,6 +43,7 @@ from frappe.utils import cint, flt
 
 from upande_livestock.serverscripts.feeding._standing_ration import feed_item_for
 from upande_livestock.serverscripts.feeding._doses import kg_total
+from upande_livestock.serverscripts.feeding._units import line_kilos, units_for_lines
 from upande_livestock.serverscripts.feeding._tuned_bom import _clean, _rows_of, row_units
 from upande_livestock.serverscripts.feeding._tuned_bom import _signature as _line_signature
 
@@ -167,9 +168,10 @@ def total_of(lines):
 	always been the sum of its lines; a concentrate's is too.
 
 	Its kilogram lines: a dose in grams or millilitres is outside the weight
-	(`_doses`).
+	(`_doses`); a line in Litre or a bag counts at its kilo equivalent (`_units`).
 	"""
-	return kg_total(lines)
+	units = units_for_lines(lines)
+	return kg_total(lines, lambda row: line_kilos(row, units))
 
 
 def _signature(lines):

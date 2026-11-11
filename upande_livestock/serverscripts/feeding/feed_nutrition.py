@@ -34,6 +34,7 @@ from frappe.utils import flt
 
 from upande_livestock.serverscripts.common.envelope import as_dict, guard_read, run
 from upande_livestock.serverscripts.feeding._doses import dose_uom_of, is_dose
+from upande_livestock.serverscripts.feeding._units import KG_NAMES, is_kg, line_kilos, units_for_lines
 
 #: The figures a feed record must carry for the maths to mean something. DM is
 #: the weight everything else is taken against; the rest are what the page
@@ -128,13 +129,22 @@ class DbSource:
 		per_stock_uom = per_stock_uom or flt(row.valuation_rate) or flt(row.last_purchase_rate)
 		if not per_stock_uom:
 			return None
-		if (row.stock_uom or "").lower() in ("kilogram", "kg"):
+		if is_kg(row.stock_uom):
 			return per_stock_uom
-		cf = frappe.db.get_value(
-			"UOM Conversion Detail", {"parent": item, "parenttype": "Item", "uom": "Kilogram"},
-			"conversion_factor",
+		# The item's kilogram row, whichever name this site gives the kilogram.
+		cf = next(
+			(
+				flt(r.conversion_factor)
+				for r in frappe.get_all(
+					"UOM Conversion Detail",
+					filters={"parent": item, "parenttype": "Item"},
+					fields=["uom", "conversion_factor"],
+				)
+				if (r.uom or "").strip().lower() in KG_NAMES and flt(r.conversion_factor)
+			),
+			0,
 		)
-		return per_stock_uom * flt(cf) if flt(cf) else None
+		return per_stock_uom * cf if cf else None
 
 
 def _clean_lines(lines, doses=None):
@@ -142,10 +152,14 @@ def _clean_lines(lines, doses=None):
 
 	A dose line (`dose_uom` or `uom` Gram/Millilitre, or a third element that
 	is one) is not kilos and is not weighed: it is appended to `doses`, when
-	given, so the page can still show it, and left out of the maths.
+	given, so the page can still show it, and left out of the maths. A line in
+	another unit (`uom` Litre, a bale) is weighed at its kilo equivalent from
+	the item's own conversion table (`_units`).
 	"""
 	out = []
-	for row in frappe.parse_json(lines) if isinstance(lines, str) else (lines or []):
+	rows = frappe.parse_json(lines) if isinstance(lines, str) else (lines or [])
+	units = units_for_lines([r for r in rows if isinstance(r, dict)])
+	for row in rows:
 		if isinstance(row, dict):
 			code, qty = row.get("item_code"), row.get("qty")
 			dose = dose_uom_of(row)
@@ -158,7 +172,7 @@ def _clean_lines(lines, doses=None):
 			if doses is not None:
 				doses.append({"item_code": code, "qty": flt(qty), "uom": dose})
 			continue
-		out.append((code, flt(qty)))
+		out.append((code, line_kilos(row, units) if isinstance(row, dict) else flt(qty)))
 	return out
 
 

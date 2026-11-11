@@ -130,6 +130,12 @@ def dose_uom_of(row):
 	return uom if is_dose(uom) else None
 
 
-def kg_total(lines):
-	"""What a recipe weighs per head: its kilogram lines, doses left out."""
-	return sum(flt(row.get("qty")) for row in lines or [] if not dose_uom_of(row))
+def kg_total(lines, kilos_of=None):
+	"""What a recipe weighs per head: its kilogram lines, doses left out.
+
+	`kilos_of(row)` turns a line written in another unit (molasses in Litre,
+	hay in bales) into its kilos — `_units.line_kilos`. Without it every line
+	counts its quantity as kilos, as all lines did before units.
+	"""
+	weigh = kilos_of or (lambda row: flt(row.get("qty")))
+	return sum(weigh(row) for row in lines or [] if not dose_uom_of(row))

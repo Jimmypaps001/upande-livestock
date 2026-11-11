@@ -32,6 +32,7 @@ from upande_livestock.serverscripts.feeding._concentrate import (
 	premanufacture_concentrate_on,
 )
 from upande_livestock.serverscripts.feeding._head_count import feed_by_head_count_on
+from upande_livestock.serverscripts.feeding._units import item_units, line_kilos
 from upande_livestock.serverscripts.feeding._recipe_lines import _concentrate_items
 
 from upande_livestock.serverscripts.common.calf_separation import head_breakdown
@@ -60,6 +61,8 @@ def herd_rations(payload=None):
 		farm_on = premanufacture_concentrate_on()
 		premade = premanufacture_by_herd(farm_on)
 		modes = _concentrate_modes()
+		# Every feed named in a ration, with the units it may be written in.
+		units = item_units({ln["item_code"] for rs in lines.values() for ln in rs})
 		rows = []
 		for h in herds:
 			bom = boms.get(h.bom or "")
@@ -92,8 +95,8 @@ def herd_rations(payload=None):
 				# rather than left for somebody to notice.
 				# Doses (grams, millilitres a head) sit outside the per-head
 				# weight, exactly as the BOM's quantity leaves them out.
-				"lines_total": round(_kg_total(ration), 3),
-				"balanced": abs(_kg_total(ration) - per_head) < 0.0005,
+				"lines_total": round(_kg_total(ration, units), 3),
+				"balanced": abs(_kg_total(ration, units) - per_head) < 0.0005,
 				# Per herd, not per farm: a herd on Mix from raw is offered raw
 				# feeds only, one on Pre-manufacture its concentrate too.
 				"premanufacture": premade.get(h.name, farm_on),
@@ -104,6 +107,9 @@ def herd_rations(payload=None):
 
 		return {
 			"ok": True, "herds": rows, "feeds": _feeds(),
+			# {item_code: {stock_uom, uoms: [{uom, factor, kg}]}} for every line
+			# above; the pages ask `feed_units` for any other item.
+			"units": units,
 			# Off: the picker offers raw feeds only (the page filters on
 			# `is_concentrate`), and a ration still naming one is warned about.
 			"premanufacture_concentrate": farm_on,
@@ -121,8 +127,9 @@ def _concentrate_modes():
 	return dict(frappe.get_all("Herds", fields=["name", "concentrate_mode"], as_list=True))
 
 
-def _kg_total(ration):
-	return sum(flt(r["qty"]) for r in ration if not r.get("is_dose"))
+def _kg_total(ration, units=None):
+	"""A ration's kilos: doses left out, a line in another unit at its kilos."""
+	return sum(line_kilos(r, units or {}) for r in ration if not r.get("is_dose"))
 
 
 def _feeds():

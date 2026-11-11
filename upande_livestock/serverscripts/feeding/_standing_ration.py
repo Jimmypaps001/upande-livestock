@@ -31,6 +31,7 @@ from frappe import _
 from frappe.utils import flt
 
 from upande_livestock.serverscripts.feeding._doses import kg_total
+from upande_livestock.serverscripts.feeding._units import kilogram_uom, line_kilos, units_for_lines
 from upande_livestock.serverscripts.feeding._tuned_bom import (
 	_carry_forward,
 	_clean,
@@ -45,11 +46,13 @@ STANDING = "Standing"
 def per_head_kg(lines):
 	"""What one animal's ration weighs — the BOM's output quantity.
 
-	Its kilogram lines only. A per-head dose (7 g of yeast, 60 ml of a
+	Its kilogram lines only, a line written in another unit counted at its
+	kilo equivalent (`_units`). A per-head dose (7 g of yeast, 60 ml of a
 	tonic) is outside the ration's weight on the farm's sheet and here, and
 	millilitres cannot be added to kilos anyway — see `_doses`.
 	"""
-	return flt(kg_total(lines))
+	units = units_for_lines(lines)
+	return flt(kg_total(lines, lambda row: line_kilos(row, units)))
 
 
 def _matching(item, signature, quantity):
@@ -168,7 +171,8 @@ def _create_feed_item(name):
 			"item_code": name,
 			"item_name": name,
 			"item_group": feed_item_group(),
-			"stock_uom": "Kilogram",
+			# "Kilogram" here, "Kg" on a site set up from ERPNext's own data.
+			"stock_uom": kilogram_uom(),
 			"is_stock_item": 1,
 		}
 	)
