@@ -27,6 +27,30 @@ def load(path=DATA_PATH):
 		return json.load(f)
 
 
+def remap_items(data, alias):
+	"""The tracker's data with every feed, dose and diesel named by the site's own item code.
+
+	`alias` maps a tracker name to the code the site already uses (seed_mutara_tracker.SITE_ITEM, kept to
+	the codes that exist). Pure: returns a new dict, the loaded data is not changed.
+	"""
+	if not alias:
+		return data
+	import copy
+
+	out = copy.deepcopy(data)
+	name = lambda n: alias.get(n, n)  # noqa: E731
+	for feed in out.get("feeds", []):
+		feed["item"] = name(feed["item"])
+	for ration in out.get("rations", []):
+		for line in ration.get("lines", []):
+			line["item"] = name(line["item"])
+		for dose in ration.get("doses") or []:
+			dose["item"] = name(dose["item"])
+	for line in (out.get("shoat_concentrate") or {}).get("lines", []):
+		line["item"] = name(line["item"])
+	return out
+
+
 def ration_lines(ration):
 	"""One head's day, as standing-ration lines.
 

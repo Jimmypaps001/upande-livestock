@@ -280,3 +280,26 @@ class OldTags(unittest.TestCase):
 
 if __name__ == "__main__":
 	unittest.main()
+
+
+class SiteItemCodes(unittest.TestCase):
+	"""Live already buys most feeds under its own codes; the seeder must use them, not duplicate them."""
+
+	def test_remap_names_every_feed_dose_and_batch_line_by_the_sites_code(self):
+		data = {
+			"feeds": [{"item": "Hay", "rate": 18}, {"item": "Napier", "rate": 1}],
+			"rations": [{"herd": "Finishers", "kg_per_head": 14, "lines": [{"item": "Hay", "pct": 1.0}],
+			             "doses": [{"item": "Diamond V", "per_head": 7, "uom": "Gram"}]}],
+			"shoat_concentrate": {"lines": [{"item": "Maize Grain", "kg": 370}]},
+		}
+		alias = {"Hay": "ANF-00013", "Diamond V": "SLT-00003", "Maize Grain": "ANF-00012"}
+		out = M.remap_items(data, alias)
+		self.assertEqual([f["item"] for f in out["feeds"]], ["ANF-00013", "Napier"])
+		self.assertEqual(out["rations"][0]["lines"][0]["item"], "ANF-00013")
+		self.assertEqual(out["rations"][0]["doses"][0]["item"], "SLT-00003")
+		self.assertEqual(out["shoat_concentrate"]["lines"][0]["item"], "ANF-00012")
+		self.assertEqual(data["feeds"][0]["item"], "Hay")          # the loaded data is left alone
+
+	def test_no_alias_is_no_change(self):
+		data = {"feeds": [{"item": "Hay"}]}
+		self.assertIs(M.remap_items(data, {}), data)

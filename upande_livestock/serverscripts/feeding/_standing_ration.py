@@ -168,7 +168,8 @@ def _create_feed_item(name):
 			"item_code": name,
 			"item_name": name,
 			"item_group": feed_item_group(),
-			"stock_uom": "Kilogram",
+			# "Kilogram" on most sites; live Mutara only has ERPNext's "Kg".
+			"stock_uom": "Kilogram" if frappe.db.exists("UOM", "Kilogram") else "Kg",
 			"is_stock_item": 1,
 		}
 	)

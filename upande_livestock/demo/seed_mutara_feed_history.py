@@ -106,6 +106,13 @@ def execute(force=False):
 	if not frappe.db.table_exists(DOCTYPE):
 		frappe.throw("{} is not installed on {}: migrate first.".format(DOCTYPE, site))
 	data = load()
+	# The farm's own item codes where the site has them (live), like the main seeder.
+	from upande_livestock.demo.seed_mutara_tracker import SITE_ITEM
+
+	alias = {name: code for name, code in SITE_ITEM.items() if frappe.db.exists("Item", code)}
+	for rec in data["records"]:
+		for line in rec["lines"]:
+			line["item"] = alias.get(line["item"], line["item"])
 	print("feed history from {} ({} records, as of {}); no stock is posted".format(
 		data["source"], len(data["records"]), data["as_of"]))
 	counts, missing = seed(data)

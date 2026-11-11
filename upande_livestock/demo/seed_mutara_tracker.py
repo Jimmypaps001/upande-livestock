@@ -8,7 +8,7 @@
 Run by hand. On a `.local` site it does everything below. Any other site (live) needs force=True and
 then, by default, loads RECORDS ONLY — no opening stock receipt, no diesel issues, no demo retirement:
 
-    bench --site <live> execute upande_livestock.demo.seed_mutara_tracker.execute --kwargs "{'force': True, 'operator': 'HR-EMP-00001'}"
+    bench --site <live> execute upande_livestock.demo.seed_mutara_tracker.execute --kwargs "{'force': True, 'operator': 'MO-132'}"
 
 The company, store parent, farm and feed item group are found on the site (`_configure_for_site`);
 `operator` is the Employee the head counts and health events are recorded by (needed only where no
@@ -72,6 +72,24 @@ FEEDLOT_COST_CENTER = "Feedlot"
 FUEL_STORE = "Fuel Store"
 FUEL_GROUP = "Fuel"
 DIESEL = "Diesel"
+
+#: The farm's own item codes on live for feeds the tracker names in words, so the seeder uses the items
+#: the stores already buy instead of making duplicates (read-only check of live, 2026-11-11; Maize Grain
+#: and Mineral Salt confirmed by the farm). Applied only where the code exists on the site, so a test
+#: site without them keeps the tracker's names.
+SITE_ITEM = {
+	"Hay": "ANF-00013", "Wheat Bran": "ANF-00009", "Wheat Pollard": "ANF-00003", "Sunflower Cake": "ANF-00010",
+	"Canola": "ANF-00017", "Soyabean Meal": "ANF-00005", "DCP": "ANF-00004", "Limestone": "ANF-00002",
+	"Maize Grain": "ANF-00012", "Molasses": "SIL-00005", "Meat Boost": "SLT-00002", "Meat Grower": "SLT-00001",
+	"Diamond V": "SLT-00003", "Vital Nyama": "SLT-00007", "Vital Kondoo": "SLT-00006", "Vital Dry": "SLT-00008",
+	"Mineral Salt": "SLT-00005", "Diesel": "WOF-00019",
+}
+#: Kilograms in a litre, for a feed the stores count in litres (molasses) but rations weigh. A cane
+#: molasses figure; the item's own conversion, once the farm sets one, wins.
+KG_PER_LITRE = {"Molasses": 1.4}
+#: Set by _configure_for_site: tracker name -> the code used on this site.
+ALIAS = {}
+KG = "Kilogram"
 
 # Where each feed is kept (stores made by demo/seed_mutara_stores).
 STORE = {
@@ -255,6 +273,21 @@ def _configure_for_site(operator=None):
 			"Item Group", "Animal Feed"):
 		frappe.db.set_single_value("Livestock Settings", "custom_feed_item_group", "Animal Feed")
 		_log("Livestock Settings feed item group Animal Feed")
+	global KG, DIESEL, BOOK, STORE, SUBSTITUTE_GROUPS, FEEDLOT_COST_CENTER, FUEL_STORE
+	KG = "Kilogram" if frappe.db.exists("UOM", "Kilogram") else "Kg"
+	ALIAS.clear()
+	ALIAS.update({name: code for name, code in SITE_ITEM.items() if frappe.db.exists("Item", code)})
+	if ALIAS:
+		BOOK = {ALIAS.get(k, k): v for k, v in BOOK.items()}
+		STORE = {ALIAS.get(k, k): v for k, v in STORE.items()}
+		SUBSTITUTE_GROUPS = {g: [ALIAS.get(i, i) for i in items] for g, items in SUBSTITUTE_GROUPS.items()}
+		DIESEL = ALIAS.get("Diesel", DIESEL)
+		print("using the site's own items for {} of the tracker's feeds".format(len(ALIAS)))
+	# The site's own livestock cost centre and workshop fuel store, where they exist.
+	if frappe.db.exists("Cost Center", {"name": "Livestock - {}".format(abbr), "is_group": 0}):
+		FEEDLOT_COST_CENTER = "Livestock"
+	if frappe.db.exists("Warehouse", {"name": "Workshop Stores - {}".format(abbr), "is_group": 0}):
+		FUEL_STORE = "Workshop Stores"
 	if operator:
 		if not frappe.db.exists("Employee", operator):
 			frappe.throw("Employee {} does not exist.".format(operator))
@@ -288,7 +321,9 @@ def ensure_cost_center():
 def ensure_fuel_store():
 	from upande_livestock.demo.seed_mutara_stores import ensure_warehouse
 
-	store = ensure_warehouse(FUEL_STORE)
+	existing = _full(FUEL_STORE)
+	store = existing if frappe.db.exists("Warehouse", existing) and FUEL_STORE != "Fuel Store" else \
+		ensure_warehouse(FUEL_STORE)
 	if _has("Production Settings", "fuel_warehouse"):
 		if not frappe.db.get_single_value("Production Settings", "fuel_warehouse"):
 			frappe.db.set_single_value("Production Settings", "fuel_warehouse", store)
@@ -323,17 +358,60 @@ def ensure_items(data):
 	group = feed_item_group()
 	doses = data_mod.dose_uoms(data)
 	for feed in data["feeds"]:
-		stock_uom, dose_uom = doses.get(feed["item"], ("Kilogram", None))
+		stock_uom, dose_uom = doses.get(feed["item"], (KG, None))
+		if stock_uom == "Kilogram":
+			stock_uom = KG
 		extra = [(dose_uom, data_mod.DOSE_FACTOR[dose_uom])] if dose_uom else []
 		_ensure_item(feed["item"], group, stock_uom, feed["rate"], extra)
-	if not frappe.db.exists("Item Group", FUEL_GROUP):
-		frappe.get_doc({"doctype": "Item Group", "item_group_name": FUEL_GROUP, "parent_item_group": "All Item Groups",
-		                "is_group": 0}).insert(ignore_permissions=True)
-	_ensure_item(DIESEL, FUEL_GROUP, "Litre", data["diesel_rate"])
+		_ensure_kg_conversion(feed["item"])
+	if not frappe.db.exists("Item", DIESEL):
+		if not frappe.db.exists("Item Group", FUEL_GROUP):
+			frappe.get_doc({"doctype": "Item Group", "item_group_name": FUEL_GROUP,
+			                "parent_item_group": "All Item Groups", "is_group": 0}).insert(ignore_permissions=True)
+		_ensure_item(DIESEL, FUEL_GROUP, "Litre", data["diesel_rate"])
 	for item in RETIRED_FEEDS:
 		if frappe.db.exists("Item", item) and not frappe.db.get_value("Item", item, "disabled"):
 			frappe.db.set_value("Item", item, "disabled", 1)
 			_log("retired feed " + item)
+
+
+def _tracker_name(item):
+	return next((name for name, code in ALIAS.items() if code == item), item)
+
+
+def _is_kg(uom):
+	return (uom or "").lower() in ("kg", "kilogram", "kgs", "kilograms")
+
+
+def _ensure_kg_conversion(item):
+	"""A feed the stores count in another unit (molasses in litres) gets a kilogram conversion, so a ration
+	weighed in kilograms can be written against it and the stock still moves in the store's unit."""
+	stock_uom = frappe.db.get_value("Item", item, "stock_uom")
+	if not stock_uom or _is_kg(stock_uom):
+		return
+	density = KG_PER_LITRE.get(_tracker_name(item))
+	if not density or stock_uom.lower() not in ("litre", "liter", "ltr", "l"):
+		return
+	doc = frappe.get_doc("Item", item)
+	if any(_is_kg(r.uom) for r in doc.uoms):
+		return
+	doc.append("uoms", {"uom": KG, "conversion_factor": round(1 / density, 6)})
+	doc.save(ignore_permissions=True)
+	_log("item {}: 1 {} = {} {}".format(item, KG, round(1 / density, 6), stock_uom))
+
+
+def _with_units(lines):
+	"""Name kilograms on a ration line whose item is stocked in another unit, so it is converted, not
+	read as that unit (0.28 kg of molasses is not 0.28 litres). Doses keep their g / ml."""
+	out = []
+	for line in lines:
+		line = dict(line)
+		if not line.get("dose_uom") and not line.get("uom"):
+			stock_uom = frappe.db.get_value("Item", line["item_code"], "stock_uom")
+			if stock_uom and not _is_kg(stock_uom):
+				line["uom"] = KG
+		out.append(line)
+	return out
 
 
 def ensure_feed_records(data):
@@ -347,7 +425,7 @@ def ensure_feed_records(data):
 		category, values = BOOK[item]
 		if frappe.db.get_value("Livestock Feed", item, "nutrient_source") in ("Lab analysis", "Supplier label"):
 			continue          # the farm's own figures win over the book
-		want = {"feed_name": item, "category": category, "nutrient_source": "Book value", "notes": BOOK_NOTE,
+		want = {"feed_name": frappe.db.get_value("Item", item, "item_name") or item, "category": category, "nutrient_source": "Book value", "notes": BOOK_NOTE,
 		        "disabled": 0, **{f: values.get(f, 0) for f in NUTRIENT_FIELDS}}
 		if sub_ok and group_of.get(item) and _select_ok("Livestock Feed", "substitute_group", group_of[item]):
 			want["substitute_group"] = group_of[item]
@@ -523,12 +601,12 @@ def ensure_rations(data):
 	from upande_livestock.serverscripts.feeding._standing_ration import set_standing_ration
 
 	for ration in data["rations"]:
-		got = set_standing_ration(ration["herd"], data_mod.ration_lines(ration),
+		got = set_standing_ration(ration["herd"], _with_units(data_mod.ration_lines(ration)),
 		                          ration_item=_ration_item(ration["herd"]), farm=FARM)
 		if got["changed"]:
 			_log("ration {}: {} kg a head -> {}".format(ration["herd"], got["per_head_kg"], got["bom"]))
 	conc = data["shoat_concentrate"]
-	made = set_concentrate(conc["name"], [{"item_code": line["item"], "qty": line["kg"]} for line in conc["lines"]],
+	made = set_concentrate(conc["name"], _with_units([{"item_code": line["item"], "qty": line["kg"]} for line in conc["lines"]]),
 	                       farm=FARM)
 	if made["changed"]:
 		_log("concentrate {}: {} kg batch -> {}".format(conc["name"], made["base_qty"], made["bom"]))
@@ -910,7 +988,7 @@ def execute(force=False, post_stock=None, retire=None, operator=None):
 
 
 def _execute(post_stock=True, retire=True):
-	data = data_mod.load()
+	data = data_mod.remap_items(data_mod.load(), ALIAS)
 	print("seeding Mutara from its tracker ({}, as of {})".format(data["source"], data["as_of"]))
 	ensure_cost_center()
 	ensure_fuel_store()
