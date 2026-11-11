@@ -1,0 +1,11106 @@
+{
+ "source": "Updated Animal_Production_Tracker .xlsx",
+ "as_of": "2026-11-11",
+ "feeds": [
+  {
+   "item": "Lucerne",
+   "sheet_name": "Lucerne",
+   "rate": 7.0
+  },
+  {
+   "item": "Vines",
+   "sheet_name": "Vines",
+   "rate": 0.0
+  },
+  {
+   "item": "Napier",
+   "sheet_name": "Napier",
+   "rate": 1.0
+  },
+  {
+   "item": "Maize Silage",
+   "sheet_name": "Maize Silage",
+   "rate": 7.0
+  },
+  {
+   "item": "Hay",
+   "sheet_name": "Hay",
+   "rate": 18.0
+  },
+  {
+   "item": "Maize Grain",
+   "sheet_name": "Maize Grain",
+   "rate": 38.0
+  },
+  {
+   "item": "Wheat Bran",
+   "sheet_name": "Wheat Bran",
+   "rate": 25.0
+  },
+  {
+   "item": "Wheat Pollard",
+   "sheet_name": "Wheat Polland",
+   "rate": 36.0
+  },
+  {
+   "item": "Sunflower Cake",
+   "sheet_name": "Sunflower",
+   "rate": 48.0
+  },
+  {
+   "item": "Canola",
+   "sheet_name": "Canola",
+   "rate": 80.0
+  },
+  {
+   "item": "Feed Potatoes",
+   "sheet_name": "Potatoes",
+   "rate": 16.0
+  },
+  {
+   "item": "Mineral Salt",
+   "sheet_name": "Mineral Salt",
+   "rate": 114.0
+  },
+  {
+   "item": "Limestone",
+   "sheet_name": "Limestone",
+   "rate": 13.0
+  },
+  {
+   "item": "DCP",
+   "sheet_name": "DCP",
+   "rate": 221.0
+  },
+  {
+   "item": "Molasses",
+   "sheet_name": "Mollasses",
+   "rate": 43.0
+  },
+  {
+   "item": "Sorghum Silage",
+   "sheet_name": "Sorghum Silage",
+   "rate": 7.0
+  },
+  {
+   "item": "Chopped Maize",
+   "sheet_name": "Chopped Maize",
+   "rate": 7.0
+  },
+  {
+   "item": "Meat Boost",
+   "sheet_name": "Meat Boost",
+   "rate": 2350.0
+  },
+  {
+   "item": "Meat Grower",
+   "sheet_name": "Meat Grower",
+   "rate": 2350.0
+  },
+  {
+   "item": "Vital Nyama",
+   "sheet_name": "Vital Nyama",
+   "rate": 114.0
+  },
+  {
+   "item": "Diamond V",
+   "sheet_name": "Diamond V",
+   "rate": 882.0
+  },
+  {
+   "item": "Vital Dry",
+   "sheet_name": "Vital Dry",
+   "rate": 249.0
+  },
+  {
+   "item": "Zincur",
+   "sheet_name": "Zincur",
+   "rate": 1000.0
+  },
+  {
+   "item": "Soyabean Meal",
+   "sheet_name": "Soyabean Meal",
+   "rate": 92.0
+  },
+  {
+   "item": "Vital Kondoo",
+   "sheet_name": "Vital Kondoo",
+   "rate": 114.0
+  }
+ ],
+ "rations": [
+  {
+   "herd": "Finishers",
+   "sheet_group": "FINISHERS (above 280kgs)",
+   "date": "2026-10-16",
+   "animals": 215,
+   "kg_per_head": 14.0,
+   "lines": [
+    {
+     "item": "Hay",
+     "pct": 0.08,
+     "sheet_name": "Hay"
+    },
+    {
+     "item": "Maize Grain",
+     "pct": 0.35,
+     "sheet_name": "Maize grain"
+    },
+    {
+     "item": "Molasses",
+     "pct": 0.02,
+     "sheet_name": "Molasses"
+    },
+    {
+     "item": "Lucerne",
+     "pct": 0.1,
+     "sheet_name": "Lucern"
+    },
+    {
+     "item": "Maize Silage",
+     "pct": 0.39,
+     "sheet_name": "Silage maize"
+    },
+    {
+     "item": "Vital Nyama",
+     "pct": 0.01,
+     "sheet_name": "Stocklick"
+    },
+    {
+     "item": "Sunflower Cake",
+     "pct": 0.04,
+     "sheet_name": "sunflower"
+    },
+    {
+     "item": "Limestone",
+     "pct": 0.01,
+     "sheet_name": "limestone"
+    }
+   ],
+   "doses": [
+    {
+     "item": "Meat Boost",
+     "per_head": 50,
+     "uom": "Gram",
+     "sheet_name": "Meat boost"
+    },
+    {
+     "item": "Diamond V",
+     "per_head": 7,
+     "uom": "Gram",
+     "sheet_name": "Diamond v (Yeast)"
+    }
+   ]
+  },
+  {
+   "herd": "Growers",
+   "sheet_group": "GROWERS(150-279KGS)",
+   "date": "2026-10-16",
+   "animals": 173,
+   "kg_per_head": 13.0,
+   "lines": [
+    {
+     "item": "Hay",
+     "pct": 0.15,
+     "sheet_name": "Hay"
+    },
+    {
+     "item": "Maize Grain",
+     "pct": 0.1,
+     "sheet_name": "Maize grain"
+    },
+    {
+     "item": "Maize Silage",
+     "pct": 0.25,
+     "sheet_name": "Silage"
+    },
+    {
+     "item": "Wheat Bran",
+     "pct": 0.05,
+     "sheet_name": "Wheat bran"
+    },
+    {
+     "item": "Molasses",
+     "pct": 0.02,
+     "sheet_name": "Molasses"
+    },
+    {
+     "item": "Napier",
+     "pct": 0.3,
+     "sheet_name": "Nappier"
+    },
+    {
+     "item": "Vital Nyama",
+     "pct": 0.01,
+     "sheet_name": "Stocklick"
+    },
+    {
+     "item": "Sunflower Cake",
+     "pct": 0.11,
+     "sheet_name": "Sunflower"
+    },
+    {
+     "item": "Limestone",
+     "pct": 0.01,
+     "sheet_name": "Limestone"
+    }
+   ],
+   "doses": [
+    {
+     "item": "Meat Grower",
+     "per_head": 60,
+     "uom": "Millilitre",
+     "sheet_name": "Meat grow"
+    },
+    {
+     "item": "Diamond V",
+     "per_head": 7,
+     "uom": "Gram",
+     "sheet_name": "Diamond V (Yeast)"
+    }
+   ]
+  },
+  {
+   "herd": "Starters/Breeders",
+   "sheet_group": "Starters/breeders",
+   "date": "2026-10-16",
+   "animals": 94,
+   "kg_per_head": 11.0,
+   "lines": [
+    {
+     "item": "Hay",
+     "pct": 0.15,
+     "sheet_name": "Hay"
+    },
+    {
+     "item": "Maize Silage",
+     "pct": 0.15,
+     "sheet_name": "Maize silage"
+    },
+    {
+     "item": "Wheat Bran",
+     "pct": 0.15,
+     "sheet_name": "Wheat bran"
+    },
+    {
+     "item": "Molasses",
+     "pct": 0.02,
+     "sheet_name": "Molasses"
+    },
+    {
+     "item": "Napier",
+     "pct": 0.45,
+     "sheet_name": "Nappier"
+    },
+    {
+     "item": "Vital Nyama",
+     "pct": 0.01,
+     "sheet_name": "Stocklick"
+    },
+    {
+     "item": "Sunflower Cake",
+     "pct": 0.07,
+     "sheet_name": "Sunflower"
+    }
+   ],
+   "doses": [
+    {
+     "item": "Diamond V",
+     "per_head": 7,
+     "uom": "Gram",
+     "sheet_name": "Diamond V (Yeast)"
+    }
+   ]
+  },
+  {
+   "herd": "Quarantine",
+   "sheet_group": "Quarantine",
+   "date": "2026-10-16",
+   "animals": 22,
+   "kg_per_head": 11.0,
+   "lines": [
+    {
+     "item": "Hay",
+     "pct": 0.15,
+     "sheet_name": "Hay"
+    },
+    {
+     "item": "Maize Silage",
+     "pct": 0.15,
+     "sheet_name": "Maize silage"
+    },
+    {
+     "item": "Wheat Bran",
+     "pct": 0.15,
+     "sheet_name": "Wheat bran"
+    },
+    {
+     "item": "Molasses",
+     "pct": 0.02,
+     "sheet_name": "Molasses"
+    },
+    {
+     "item": "Napier",
+     "pct": 0.45,
+     "sheet_name": "Nappier"
+    },
+    {
+     "item": "Vital Nyama",
+     "pct": 0.01,
+     "sheet_name": "Stocklick"
+    },
+    {
+     "item": "Sunflower Cake",
+     "pct": 0.07,
+     "sheet_name": "Sunflower"
+    }
+   ],
+   "doses": [
+    {
+     "item": "Diamond V",
+     "per_head": 7,
+     "uom": "Gram",
+     "sheet_name": "Diamond V (Yeast)"
+    }
+   ]
+  },
+  {
+   "herd": "In-calf",
+   "sheet_group": "Incalf",
+   "date": "2026-10-16",
+   "animals": 25,
+   "kg_per_head": 10.0,
+   "lines": [
+    {
+     "item": "Hay",
+     "pct": 0.15,
+     "sheet_name": "Hay"
+    },
+    {
+     "item": "Maize Silage",
+     "pct": 0.15,
+     "sheet_name": "Maize silage"
+    },
+    {
+     "item": "Wheat Bran",
+     "pct": 0.15,
+     "sheet_name": "Wheat bran"
+    },
+    {
+     "item": "Molasses",
+     "pct": 0.02,
+     "sheet_name": "Molasses"
+    },
+    {
+     "item": "Napier",
+     "pct": 0.45,
+     "sheet_name": "Nappier"
+    },
+    {
+     "item": "Vital Nyama",
+     "pct": 0.01,
+     "sheet_name": "Stocklick"
+    },
+    {
+     "item": "Sunflower Cake",
+     "pct": 0.07,
+     "sheet_name": "Sunflower"
+    }
+   ],
+   "doses": [
+    {
+     "item": "Diamond V",
+     "per_head": 7,
+     "uom": "Gram",
+     "sheet_name": "Diamond V (Yeast)"
+    }
+   ]
+  },
+  {
+   "herd": "Heifers",
+   "sheet_group": "Heifers",
+   "date": "2026-10-16",
+   "animals": 40,
+   "kg_per_head": 10.0,
+   "lines": [
+    {
+     "item": "Hay",
+     "pct": 0.15,
+     "sheet_name": "Hay"
+    },
+    {
+     "item": "Maize Silage",
+     "pct": 0.15,
+     "sheet_name": "Maize silage"
+    },
+    {
+     "item": "Wheat Bran",
+     "pct": 0.15,
+     "sheet_name": "Wheat bran"
+    },
+    {
+     "item": "Molasses",
+     "pct": 0.02,
+     "sheet_name": "Molasses"
+    },
+    {
+     "item": "Napier",
+     "pct": 0.45,
+     "sheet_name": "Nappier"
+    },
+    {
+     "item": "Vital Nyama",
+     "pct": 0.01,
+     "sheet_name": "Stocklick"
+    },
+    {
+     "item": "Sunflower Cake",
+     "pct": 0.07,
+     "sheet_name": "Sunflower"
+    }
+   ],
+   "doses": [
+    {
+     "item": "Diamond V",
+     "per_head": 7,
+     "uom": "Gram",
+     "sheet_name": "Diamond V (Yeast)"
+    }
+   ]
+  },
+  {
+   "herd": "Lactating",
+   "sheet_group": "Milking",
+   "date": "2026-10-16",
+   "animals": 22,
+   "kg_per_head": 10.0,
+   "lines": [
+    {
+     "item": "Hay",
+     "pct": 0.15,
+     "sheet_name": "Hay"
+    },
+    {
+     "item": "Maize Silage",
+     "pct": 0.15,
+     "sheet_name": "Maize silage"
+    },
+    {
+     "item": "Wheat Bran",
+     "pct": 0.15,
+     "sheet_name": "Wheat bran"
+    },
+    {
+     "item": "Molasses",
+     "pct": 0.02,
+     "sheet_name": "Molasses"
+    },
+    {
+     "item": "Napier",
+     "pct": 0.45,
+     "sheet_name": "Nappier"
+    },
+    {
+     "item": "Vital Nyama",
+     "pct": 0.01,
+     "sheet_name": "Stocklick"
+    },
+    {
+     "item": "Sunflower Cake",
+     "pct": 0.07,
+     "sheet_name": "Sunflower"
+    }
+   ],
+   "doses": [
+    {
+     "item": "Diamond V",
+     "per_head": 7,
+     "uom": "Gram",
+     "sheet_name": "Diamond V (Yeast)"
+    }
+   ]
+  }
+ ],
+ "shoat_concentrate": {
+  "name": "Shoat Concentrate",
+  "date": "2026-06-07",
+  "batch_kg": 1000.0,
+  "lines": [
+   {
+    "item": "Maize Grain",
+    "kg": 370.0,
+    "rate": 38.0,
+    "sheet_name": "Maize"
+   },
+   {
+    "item": "Wheat Bran",
+    "kg": 200.0,
+    "rate": 25.0,
+    "sheet_name": "Wheat bran"
+   },
+   {
+    "item": "Canola",
+    "kg": 120.0,
+    "rate": 80.0,
+    "sheet_name": "Canola"
+   },
+   {
+    "item": "Soyabean Meal",
+    "kg": 70.0,
+    "rate": 92.0,
+    "sheet_name": "Soyabean Meal"
+   },
+   {
+    "item": "Sunflower Cake",
+    "kg": 110.0,
+    "rate": 48.0,
+    "sheet_name": "Sunflower Meal"
+   },
+   {
+    "item": "Limestone",
+    "kg": 25.0,
+    "rate": 13.0,
+    "sheet_name": "Lime"
+   },
+   {
+    "item": "DCP",
+    "kg": 5.0,
+    "rate": 221.0,
+    "sheet_name": "DCP"
+   },
+   {
+    "item": "Vital Kondoo",
+    "kg": 100.0,
+    "rate": 114.0,
+    "sheet_name": "Vital Kondoo"
+   }
+  ]
+ },
+ "shoat_groups": [
+  {
+   "herd": "Shoat Group 1",
+   "animals": 70,
+   "kg_per_day": 10.0
+  },
+  {
+   "herd": "Shoat Group 2",
+   "animals": 89,
+   "kg_per_day": 12.0
+  },
+  {
+   "herd": "Shoat Group 3",
+   "animals": 60,
+   "kg_per_day": 10.0
+  },
+  {
+   "herd": "Shoat Group 4",
+   "animals": 101,
+   "kg_per_day": 7.0
+  },
+  {
+   "herd": "Shoat Group 5",
+   "animals": 79,
+   "kg_per_day": 12.0
+  },
+  {
+   "herd": "Shoat Group 6",
+   "animals": 90,
+   "kg_per_day": 7.0
+  },
+  {
+   "herd": "Shoat Group 7",
+   "animals": 132,
+   "kg_per_day": 16.0
+  }
+ ],
+ "tracker_latest": {
+  "date": "2026-11-09",
+  "groups": {
+   "Starters": {
+    "herd": "Starters/Breeders",
+    "date": "2026-08-23",
+    "animals": 54,
+    "kg_day": 877.8
+   },
+   "Growers": {
+    "herd": "Growers",
+    "date": "2026-11-09",
+    "animals": 173,
+    "kg_day": 2366.4
+   },
+   "Finishers": {
+    "herd": "Finishers",
+    "date": "2026-11-09",
+    "animals": 217,
+    "kg_day": 2786.0
+   },
+   "Breeder": {
+    "herd": "Starters/Breeders",
+    "date": "2026-08-23",
+    "animals": 22,
+    "kg_day": 296.3
+   },
+   "Quaritine": {
+    "herd": "Quarantine",
+    "date": "2026-09-24",
+    "animals": 55,
+    "kg_day": 561.2
+   },
+   "Incalf": {
+    "herd": "In-calf",
+    "date": "2026-11-09",
+    "animals": 25,
+    "kg_day": 284.5
+   },
+   "Lactating": {
+    "herd": "Lactating",
+    "date": "2026-11-09",
+    "animals": 22,
+    "kg_day": 235.5
+   },
+   "Heifers": {
+    "herd": "Heifers",
+    "date": "2026-11-09",
+    "animals": 40,
+    "kg_day": 376.5
+   }
+  }
+ },
+ "herd_counts": {
+  "Finishers": {
+   "count": 203,
+   "source": "tagged animals",
+   "tracker": 217
+  },
+  "Growers": {
+   "count": 182,
+   "source": "tagged animals",
+   "tracker": 173
+  },
+  "Starters/Breeders": {
+   "count": 0,
+   "source": "not on the tracker since 2026-08-23"
+  },
+  "Quarantine": {
+   "count": 22,
+   "source": "tagged animals",
+   "tracker": null
+  },
+  "In-calf": {
+   "count": 25,
+   "source": "Daily Feed Tracker 2026-11-09"
+  },
+  "Heifers": {
+   "count": 40,
+   "source": "Daily Feed Tracker 2026-11-09"
+  },
+  "Lactating": {
+   "count": 22,
+   "source": "Daily Feed Tracker 2026-11-09"
+  }
+ },
+ "animals": [
+  {
+   "tag": "982 091086130875",
+   "old_tag": "IMANI018",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 250.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 281.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086130882",
+   "old_tag": "LE146",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 255.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 282.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086130883",
+   "old_tag": "IMANI002",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 266.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 293.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086130887",
+   "old_tag": "LE160",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 323.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 351.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086130894",
+   "old_tag": "LE091",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 298.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 320.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086130896",
+   "old_tag": "IMANI015",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 278.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 304.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086130897",
+   "old_tag": "KIFARU040",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 321.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086130907",
+   "old_tag": "FRANCIS",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 318.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086130908",
+   "old_tag": "KIFARU039",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 284.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 331.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086130915",
+   "old_tag": "LE142",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 304.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 333.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086130922",
+   "old_tag": "LE127",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 273.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 303.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086130976",
+   "old_tag": "MOL869",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 343.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 367.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086130982",
+   "old_tag": "MOL696",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 341.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 346.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086130983",
+   "old_tag": "MOL901",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 291.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 307.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086130992",
+   "old_tag": "MOL32C",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 312.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 323.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086130999",
+   "old_tag": "08C",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 356.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 352.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086131016",
+   "old_tag": "MOL979",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 278.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 299.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086131018",
+   "old_tag": "MOL239",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 341.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 339.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086131023",
+   "old_tag": "47C",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 343.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 350.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086131175",
+   "old_tag": "",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 265.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 285.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086131180",
+   "old_tag": "MOLOO73",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 300.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 323.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086131187",
+   "old_tag": "MOL1000",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 275.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 305.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086131194",
+   "old_tag": "MOL927",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 284.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086131206",
+   "old_tag": "MOL902",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 310.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 341.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086131238",
+   "old_tag": "MOL539",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 299.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 321.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086131260",
+   "old_tag": "MOL911",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 268.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 289.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086131273",
+   "old_tag": "MOL0068",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 287.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 304.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086131376",
+   "old_tag": "MOL565",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 264.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 286.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086131380",
+   "old_tag": "MOL992",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 299.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 332.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086131383",
+   "old_tag": "MOL974",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 262.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 285.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086131388",
+   "old_tag": "MOL930",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 280.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 290.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086131393",
+   "old_tag": "MOL261",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 287.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 298.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086131394",
+   "old_tag": "MOL586",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 281.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 304.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086131400",
+   "old_tag": "MOL588",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 260.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 285.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086131407",
+   "old_tag": "MOL569",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 274.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 298.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086131409",
+   "old_tag": "MOL098",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 248.0
+    },
+    {
+     "date": "2026-11-06",
+     "kg": 282.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086131417",
+   "old_tag": "MOL536",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 261.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 284.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086131422",
+   "old_tag": "MOL891",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 265.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 286.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086131832",
+   "old_tag": "MOL550",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 282.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 308.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086131833",
+   "old_tag": "MOL913",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 353.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 365.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086131842",
+   "old_tag": "MOL890",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 329.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 387.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086131845",
+   "old_tag": "",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 357.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 365.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086131847",
+   "old_tag": "MOL523",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 281.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086131860",
+   "old_tag": "165",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 341.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 359.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086131862",
+   "old_tag": "MOL984",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 340.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 353.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086131863",
+   "old_tag": "MOL535",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 259.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 296.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086131867",
+   "old_tag": "MOL876",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 334.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 363.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086131872",
+   "old_tag": "MOL982",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 288.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 322.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086131873",
+   "old_tag": "MOL950",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 302.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 330.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086132030",
+   "old_tag": "MOL968",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 262.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 288.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086132037",
+   "old_tag": "MOL253",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 286.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086132045",
+   "old_tag": "MOL949",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 328.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 352.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086132047",
+   "old_tag": "MOL26",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 302.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086132048",
+   "old_tag": "MOL560",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 256.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 285.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086132054",
+   "old_tag": "MOL851",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 294.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 306.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086132056",
+   "old_tag": "MOL737",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 251.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 288.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086132058",
+   "old_tag": "MOL849",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 264.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 285.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086132059",
+   "old_tag": "MOL897",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 308.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086132071",
+   "old_tag": "MOL959",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 284.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 300.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086132072",
+   "old_tag": "MOL784",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 262.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 296.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086132074",
+   "old_tag": "MOL012",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 273.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 294.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086139975",
+   "old_tag": "MOL0409",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 326.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 353.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086139976",
+   "old_tag": "MOL731",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 307.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 342.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086139977",
+   "old_tag": "MOL214",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 318.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 333.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086139978",
+   "old_tag": "MOL934",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 267.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 283.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086139982",
+   "old_tag": "MOL085",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 261.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 285.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086139983",
+   "old_tag": "114",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 307.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086139984",
+   "old_tag": "30",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 286.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 321.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086139985",
+   "old_tag": "MOL867",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 275.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 290.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086139986",
+   "old_tag": "93",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 273.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 286.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086139987",
+   "old_tag": "MOL717",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 257.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 283.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086139989",
+   "old_tag": "MOL396",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 319.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 350.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086139990",
+   "old_tag": "MOL180",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 258.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 284.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086139993",
+   "old_tag": "",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 302.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 333.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086139994",
+   "old_tag": "MOL156",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 271.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 287.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086139997",
+   "old_tag": "",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 270.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 295.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086139998",
+   "old_tag": "62",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 274.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 289.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086139999",
+   "old_tag": "MOL917",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 267.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 309.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140000",
+   "old_tag": "",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 300.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 317.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140001",
+   "old_tag": "MOL092",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 286.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 308.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140003",
+   "old_tag": "MOL260",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 317.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 344.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140006",
+   "old_tag": "MOL769",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 299.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 316.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140009",
+   "old_tag": "MOL985",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 298.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 346.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140010",
+   "old_tag": "102",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 274.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 291.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140012",
+   "old_tag": "10",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 271.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 305.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140013",
+   "old_tag": "MOL676",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 278.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 294.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140014",
+   "old_tag": "72",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 312.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 323.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140016",
+   "old_tag": "MOL991",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 313.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 345.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140017",
+   "old_tag": "",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 296.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 313.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140019",
+   "old_tag": "MOL401",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 271.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 288.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140020",
+   "old_tag": "50",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 265.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 281.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140024",
+   "old_tag": "408",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 311.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 339.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140079",
+   "old_tag": "LE081",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 315.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 352.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140085",
+   "old_tag": "IMANI007",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 258.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 283.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140089",
+   "old_tag": "IMANI020",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 261.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 283.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140095",
+   "old_tag": "IMANI008",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 267.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 287.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140098",
+   "old_tag": "IMANI024",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 293.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 332.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140101",
+   "old_tag": "KIFARU033",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 275.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 307.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140110",
+   "old_tag": "LE122",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 255.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 286.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140114",
+   "old_tag": "EDU",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 314.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140115",
+   "old_tag": "LE166",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 293.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 316.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140121",
+   "old_tag": "KIFARU043",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 298.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140125",
+   "old_tag": "MOL786",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 291.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140127",
+   "old_tag": "MOL953",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 255.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 281.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140128",
+   "old_tag": "MOL971",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 293.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140129",
+   "old_tag": "53",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 284.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 312.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140131",
+   "old_tag": "",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 270.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 289.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140134",
+   "old_tag": "",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 268.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 291.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140136",
+   "old_tag": "MOL771",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 346.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 353.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140138",
+   "old_tag": "MOL623",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 274.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 296.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140139",
+   "old_tag": "MOL847",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 308.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 346.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140140",
+   "old_tag": "MOL074",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 268.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 291.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140141",
+   "old_tag": "MOL947",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 263.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 290.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140143",
+   "old_tag": "MOL924",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 271.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 300.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140144",
+   "old_tag": "MOL966",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 272.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 310.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140146",
+   "old_tag": "113",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 278.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 299.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140147",
+   "old_tag": "MOL888",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 356.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 367.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140148",
+   "old_tag": "MOL900",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 277.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 306.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140151",
+   "old_tag": "",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 275.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 305.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140152",
+   "old_tag": "26",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 272.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 293.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140153",
+   "old_tag": "MOL997",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 326.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 370.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140154",
+   "old_tag": "MOL976",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 265.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 299.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140155",
+   "old_tag": "MOL889",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 276.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 296.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140156",
+   "old_tag": "MOL931",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 276.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 306.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140157",
+   "old_tag": "MOL885",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 251.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 280.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140158",
+   "old_tag": "MOL964",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 329.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 356.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140160",
+   "old_tag": "",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 301.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 331.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140161",
+   "old_tag": "MOL073",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 309.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 329.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140163",
+   "old_tag": "74",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 273.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 287.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140164",
+   "old_tag": "MOL878",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 291.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 314.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140165",
+   "old_tag": "MOL034",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 343.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 343.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140166",
+   "old_tag": "MOL819",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 354.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 360.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140167",
+   "old_tag": "4",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 281.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 303.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140169",
+   "old_tag": "",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 311.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 319.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140172",
+   "old_tag": "MOL568",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 269.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 288.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140173",
+   "old_tag": "MOL957",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 289.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 307.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140175",
+   "old_tag": "MOL1024",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 292.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 312.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140176",
+   "old_tag": "112",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 301.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 335.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140177",
+   "old_tag": "MOL512",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 263.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 292.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140178",
+   "old_tag": "MOL918",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 271.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 289.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140180",
+   "old_tag": "MOL782",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 274.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 288.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140181",
+   "old_tag": "MOL921",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 273.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 298.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140184",
+   "old_tag": "MOL363",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 332.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 356.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140186",
+   "old_tag": "MOL916",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 264.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 295.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140189",
+   "old_tag": "MOL903",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 322.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 342.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140190",
+   "old_tag": "MOL809",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 348.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 376.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140192",
+   "old_tag": "MOL827",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 302.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 327.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140193",
+   "old_tag": "MOL386",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 295.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 324.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140194",
+   "old_tag": "MOL963",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 307.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 342.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140195",
+   "old_tag": "",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 275.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 289.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140198",
+   "old_tag": "MOL857",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 350.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 367.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140199",
+   "old_tag": "MOL926",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 304.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 333.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140201",
+   "old_tag": "MOL808",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 344.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 369.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140203",
+   "old_tag": "MOL815",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 337.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 360.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140204",
+   "old_tag": "MOL932",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 305.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 348.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140205",
+   "old_tag": "",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 294.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 316.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140206",
+   "old_tag": "40",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 273.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 300.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140208",
+   "old_tag": "",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 285.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 301.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140209",
+   "old_tag": "MOL244",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 298.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 324.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140210",
+   "old_tag": "MOL229",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 268.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 280.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140212",
+   "old_tag": "MOL912",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 256.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 286.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140213",
+   "old_tag": "MOL925",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 267.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 304.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140214",
+   "old_tag": "25",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 279.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 300.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140218",
+   "old_tag": "1",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 278.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 302.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140221",
+   "old_tag": "MOL242",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 308.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 339.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140223",
+   "old_tag": "MOL831",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 290.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 309.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140224",
+   "old_tag": "MOL937",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 271.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 284.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140225",
+   "old_tag": "MOL360",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 297.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 325.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140227",
+   "old_tag": "MOL638",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 309.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 321.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140228",
+   "old_tag": "42",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 273.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 298.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140229",
+   "old_tag": "MOL745",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 303.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 325.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140231",
+   "old_tag": "MOL510",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 260.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 292.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140232",
+   "old_tag": "MOL026",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 277.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 303.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140233",
+   "old_tag": "",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 348.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 366.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140234",
+   "old_tag": "MOL813",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 327.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 353.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140235",
+   "old_tag": "MOL894",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 289.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140236",
+   "old_tag": "MOL970",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 268.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 288.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140237",
+   "old_tag": "77",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 301.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 314.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140238",
+   "old_tag": "MOL723",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 271.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 293.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140241",
+   "old_tag": "94",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 265.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 286.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140242",
+   "old_tag": "97",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 269.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 298.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140243",
+   "old_tag": "MOL0092",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 293.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 321.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140245",
+   "old_tag": "MOL750",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 297.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 333.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140248",
+   "old_tag": "M0L936",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 274.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 298.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140250",
+   "old_tag": "17",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 358.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 369.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140251",
+   "old_tag": "MOL065",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 269.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 290.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140254",
+   "old_tag": "MOL920",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 317.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 337.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140255",
+   "old_tag": "",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 311.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 336.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140256",
+   "old_tag": "",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 283.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140257",
+   "old_tag": "MOL919",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 303.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 342.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140258",
+   "old_tag": "MOL929",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 289.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 311.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140259",
+   "old_tag": "MOL904",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 274.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 293.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140261",
+   "old_tag": "29C",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 329.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 332.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140262",
+   "old_tag": "MOL990",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 278.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 302.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140264",
+   "old_tag": "MOL517",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 264.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 289.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140265",
+   "old_tag": "104",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 303.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 326.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140266",
+   "old_tag": "MOL081",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 333.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 360.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140267",
+   "old_tag": "MOL858",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 344.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 365.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140268",
+   "old_tag": "",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 269.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 287.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140271",
+   "old_tag": "MOL0078",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 307.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 336.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140272",
+   "old_tag": "MOL051",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 272.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 293.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140274",
+   "old_tag": "MOL973",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 303.0
+    },
+    {
+     "date": "2026-11-02",
+     "kg": 328.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086140471",
+   "old_tag": "MOL567",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 277.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 286.0
+    }
+   ],
+   "herd": "Finishers"
+  },
+  {
+   "tag": "982 091086130879",
+   "old_tag": "LE151",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 223.0
+    },
+    {
+     "date": "2026-11-06",
+     "kg": 246.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086130881",
+   "old_tag": "LE158",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 227.0
+    },
+    {
+     "date": "2026-11-06",
+     "kg": 249.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086130888",
+   "old_tag": "KIFARU035",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 220.0
+    },
+    {
+     "date": "2026-11-06",
+     "kg": 241.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086130889",
+   "old_tag": "LE123",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 240.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 260.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086130893",
+   "old_tag": "IMANI006",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 255.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 279.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086130900",
+   "old_tag": "LE128",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 214.0
+    },
+    {
+     "date": "2026-11-06",
+     "kg": 231.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086130901",
+   "old_tag": "LE148",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 224.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086130902",
+   "old_tag": "LE159",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 222.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086130903",
+   "old_tag": "IMANI013",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 225.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086130904",
+   "old_tag": "IMANI017",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 217.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086130905",
+   "old_tag": "IMANI019",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 225.0
+    },
+    {
+     "date": "2026-11-06",
+     "kg": 249.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086130909",
+   "old_tag": "MOLF1-3",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 177.5
+    },
+    {
+     "date": "2026-11-06",
+     "kg": 202.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086130912",
+   "old_tag": "LE144",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 247.0
+    },
+    {
+     "date": "2026-11-06",
+     "kg": 266.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086130916",
+   "old_tag": "LE121",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 240.0
+    },
+    {
+     "date": "2026-11-06",
+     "kg": 270.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086130917",
+   "old_tag": "LE130",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 214.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086130918",
+   "old_tag": "IMANI022",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 243.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 264.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086130919",
+   "old_tag": "LE153",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 224.0
+    },
+    {
+     "date": "2026-11-06",
+     "kg": 242.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086130924",
+   "old_tag": "IMANI001",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 274.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086130977",
+   "old_tag": "MOL978",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 240.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 263.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086130988",
+   "old_tag": "",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 226.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086131006",
+   "old_tag": "MOL910",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 245.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086131020",
+   "old_tag": "MOL961",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 219.0
+    },
+    {
+     "date": "2026-11-06",
+     "kg": 243.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086131021",
+   "old_tag": "MOL907",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 230.0
+    },
+    {
+     "date": "2026-11-06",
+     "kg": 256.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086131188",
+   "old_tag": "MOL556",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 250.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 269.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086131193",
+   "old_tag": "MOL981",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 243.0
+    },
+    {
+     "date": "2026-11-06",
+     "kg": 261.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086131202",
+   "old_tag": "MOL880",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 230.0
+    },
+    {
+     "date": "2026-11-06",
+     "kg": 253.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086131203",
+   "old_tag": "",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 247.0
+    },
+    {
+     "date": "2026-11-06",
+     "kg": 272.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086131208",
+   "old_tag": "MOL948",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 246.0
+    },
+    {
+     "date": "2026-11-06",
+     "kg": 270.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086131215",
+   "old_tag": "MOL599",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 251.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 272.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086131246",
+   "old_tag": "MOL050",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 213.0
+    },
+    {
+     "date": "2026-11-06",
+     "kg": 236.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086131261",
+   "old_tag": "MOL906",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 247.0
+    },
+    {
+     "date": "2026-11-06",
+     "kg": 277.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086131264",
+   "old_tag": "MOL781",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 234.0
+    },
+    {
+     "date": "2026-11-06",
+     "kg": 256.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086131375",
+   "old_tag": "MOL7",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 258.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 279.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086131377",
+   "old_tag": "MOL14",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 233.0
+    },
+    {
+     "date": "2026-11-06",
+     "kg": 253.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086131378",
+   "old_tag": "MOL151",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 234.0
+    },
+    {
+     "date": "2026-11-06",
+     "kg": 257.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086131379",
+   "old_tag": "MOL542",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 237.0
+    },
+    {
+     "date": "2026-11-06",
+     "kg": 255.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086131381",
+   "old_tag": "MOLF1-1",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 219.0
+    },
+    {
+     "date": "2026-11-06",
+     "kg": 247.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086131382",
+   "old_tag": "MOL995",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 213.0
+    },
+    {
+     "date": "2026-11-06",
+     "kg": 239.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086131384",
+   "old_tag": "MOL884",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 243.0
+    },
+    {
+     "date": "2026-11-06",
+     "kg": 263.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086131385",
+   "old_tag": "MOL0056",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 242.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086131386",
+   "old_tag": "MOL045",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 229.0
+    },
+    {
+     "date": "2026-11-06",
+     "kg": 244.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086131387",
+   "old_tag": "MOL377",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 257.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 272.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086131389",
+   "old_tag": "MOL4",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 250.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 266.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086131390",
+   "old_tag": "MOL520",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 254.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 275.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086131391",
+   "old_tag": "MOL0040",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 240.0
+    },
+    {
+     "date": "2026-11-06",
+     "kg": 262.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086131392",
+   "old_tag": "MOL922",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 243.0
+    },
+    {
+     "date": "2026-11-06",
+     "kg": 273.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086131395",
+   "old_tag": "MOL956",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 259.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 270.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086131396",
+   "old_tag": "MOL887",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 234.0
+    },
+    {
+     "date": "2026-11-06",
+     "kg": 255.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086131397",
+   "old_tag": "MOL955",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 236.0
+    },
+    {
+     "date": "2026-11-06",
+     "kg": 261.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086131398",
+   "old_tag": "",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 279.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086131399",
+   "old_tag": "MOL511",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 229.0
+    },
+    {
+     "date": "2026-11-06",
+     "kg": 254.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086131401",
+   "old_tag": "MOL928",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 254.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 257.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086131402",
+   "old_tag": "MOL574",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 252.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086131403",
+   "old_tag": "MOL946",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 260.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 278.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086131404",
+   "old_tag": "MOL518",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 239.0
+    },
+    {
+     "date": "2026-11-06",
+     "kg": 272.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086131405",
+   "old_tag": "06D",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 241.0
+    },
+    {
+     "date": "2026-11-06",
+     "kg": 268.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086131406",
+   "old_tag": "MOL909",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 276.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086131408",
+   "old_tag": "MOL299",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 245.0
+    },
+    {
+     "date": "2026-11-06",
+     "kg": 265.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086131410",
+   "old_tag": "MOL988",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 223.0
+    },
+    {
+     "date": "2026-11-06",
+     "kg": 241.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086131411",
+   "old_tag": "MOL088",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 251.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 277.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086131412",
+   "old_tag": "MOL824",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 225.0
+    },
+    {
+     "date": "2026-11-06",
+     "kg": 246.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086131413",
+   "old_tag": "08B",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 250.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 269.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086131414",
+   "old_tag": "MOL547",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 244.0
+    },
+    {
+     "date": "2026-11-06",
+     "kg": 252.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086131415",
+   "old_tag": "MOL388",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 241.0
+    },
+    {
+     "date": "2026-11-06",
+     "kg": 265.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086131416",
+   "old_tag": "MOL072",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 232.0
+    },
+    {
+     "date": "2026-11-06",
+     "kg": 251.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086131418",
+   "old_tag": "MOL557",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 261.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 269.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086131419",
+   "old_tag": "MOL075",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 246.0
+    },
+    {
+     "date": "2026-11-06",
+     "kg": 271.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086131420",
+   "old_tag": "MOL330",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 270.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086131421",
+   "old_tag": "MOL962",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 251.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 275.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086131423",
+   "old_tag": "MOL598",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 242.0
+    },
+    {
+     "date": "2026-11-06",
+     "kg": 265.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086131424",
+   "old_tag": "MOL594",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 195.5
+    },
+    {
+     "date": "2026-11-06",
+     "kg": 202.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086131830",
+   "old_tag": "MOL905",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 240.0
+    },
+    {
+     "date": "2026-11-06",
+     "kg": 259.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086131837",
+   "old_tag": "MOL939",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 211.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086131859",
+   "old_tag": "MOL570",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 252.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 271.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086131868",
+   "old_tag": "MOL529",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 233.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086132025",
+   "old_tag": "MOL549",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 254.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 269.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086132026",
+   "old_tag": "MOL334",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 234.0
+    },
+    {
+     "date": "2026-11-06",
+     "kg": 247.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086132027",
+   "old_tag": "MOL896",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 257.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 272.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086132028",
+   "old_tag": "MOLF1-2",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 218.0
+    },
+    {
+     "date": "2026-11-06",
+     "kg": 239.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086132029",
+   "old_tag": "MOL0071",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 251.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 273.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086132031",
+   "old_tag": "MOL0082",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 260.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 265.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086132032",
+   "old_tag": "MOL994",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 217.0
+    },
+    {
+     "date": "2026-11-06",
+     "kg": 231.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086132033",
+   "old_tag": "MOL882",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 234.0
+    },
+    {
+     "date": "2026-11-06",
+     "kg": 257.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086132034",
+   "old_tag": "MOL689",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 235.0
+    },
+    {
+     "date": "2026-11-06",
+     "kg": 259.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086132035",
+   "old_tag": "MOL090",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 239.0
+    },
+    {
+     "date": "2026-11-06",
+     "kg": 258.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086132036",
+   "old_tag": "MOL272",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 261.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086132038",
+   "old_tag": "MOL158",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 242.0
+    },
+    {
+     "date": "2026-11-06",
+     "kg": 269.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086132039",
+   "old_tag": "MOL886",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 238.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086132040",
+   "old_tag": "MOL533",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 241.0
+    },
+    {
+     "date": "2026-11-06",
+     "kg": 269.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086132041",
+   "old_tag": "MOL983",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 248.0
+    },
+    {
+     "date": "2026-11-06",
+     "kg": 262.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086132042",
+   "old_tag": "MOL522",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 240.0
+    },
+    {
+     "date": "2026-11-06",
+     "kg": 257.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086132043",
+   "old_tag": "MOL626",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 233.0
+    },
+    {
+     "date": "2026-11-06",
+     "kg": 256.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086132046",
+   "old_tag": "MOL021",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 241.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086132049",
+   "old_tag": "MOL0060",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 235.0
+    },
+    {
+     "date": "2026-11-06",
+     "kg": 262.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086132050",
+   "old_tag": "MOL838",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 225.0
+    },
+    {
+     "date": "2026-11-06",
+     "kg": 241.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086132051",
+   "old_tag": "MOL0028",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 243.0
+    },
+    {
+     "date": "2026-11-06",
+     "kg": 265.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086132052",
+   "old_tag": "MOL186",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 250.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 272.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086132053",
+   "old_tag": "MOL596",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 224.0
+    },
+    {
+     "date": "2026-11-06",
+     "kg": 244.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086132055",
+   "old_tag": "MOL162",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 237.0
+    },
+    {
+     "date": "2026-11-06",
+     "kg": 265.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086132057",
+   "old_tag": "017D",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 240.0
+    },
+    {
+     "date": "2026-11-06",
+     "kg": 268.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086132060",
+   "old_tag": "MOL281",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 243.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086132061",
+   "old_tag": "MOL645",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 260.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 271.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086132062",
+   "old_tag": "",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 263.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 269.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086132063",
+   "old_tag": "MOL600",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 254.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 271.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086132064",
+   "old_tag": "MOL007",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 234.0
+    },
+    {
+     "date": "2026-11-06",
+     "kg": 260.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086132065",
+   "old_tag": "",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 225.0
+    },
+    {
+     "date": "2026-11-06",
+     "kg": 249.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086132066",
+   "old_tag": "",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 210.0
+    },
+    {
+     "date": "2026-11-06",
+     "kg": 229.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086132067",
+   "old_tag": "MOL0095",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 221.0
+    },
+    {
+     "date": "2026-11-06",
+     "kg": 239.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086132069",
+   "old_tag": "MOL252",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 251.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 265.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086132070",
+   "old_tag": "",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 243.0
+    },
+    {
+     "date": "2026-11-06",
+     "kg": 275.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086132073",
+   "old_tag": "MOL873",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 242.0
+    },
+    {
+     "date": "2026-11-06",
+     "kg": 262.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086139979",
+   "old_tag": "",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 255.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 275.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086139980",
+   "old_tag": "",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 279.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086139981",
+   "old_tag": "MOL531",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 246.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086139991",
+   "old_tag": "MOL17",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 259.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 279.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086139996",
+   "old_tag": "34",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 254.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 271.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086140002",
+   "old_tag": "84",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 241.0
+    },
+    {
+     "date": "2026-11-06",
+     "kg": 251.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086140004",
+   "old_tag": "MOL986",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 248.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086140005",
+   "old_tag": "108",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 231.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086140007",
+   "old_tag": "MOL779",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 250.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 260.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086140008",
+   "old_tag": "MOL895",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 245.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086140015",
+   "old_tag": "MOL421",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 256.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 276.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086140018",
+   "old_tag": "MOL969",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 245.0
+    },
+    {
+     "date": "2026-11-06",
+     "kg": 268.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086140021",
+   "old_tag": "MOL833",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 259.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 277.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086140022",
+   "old_tag": "",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 256.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 271.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086140023",
+   "old_tag": "MOL980",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 216.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086140075",
+   "old_tag": "IMANI014",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 250.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 275.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086140078",
+   "old_tag": "IMANI010",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 218.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086140082",
+   "old_tag": "LE139",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 219.0
+    },
+    {
+     "date": "2026-11-06",
+     "kg": 240.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086140083",
+   "old_tag": "LE154",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 231.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086140087",
+   "old_tag": "LE143",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 255.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 276.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086140088",
+   "old_tag": "LE124",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 250.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086140090",
+   "old_tag": "LE131",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 222.0
+    },
+    {
+     "date": "2026-11-06",
+     "kg": 238.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086140096",
+   "old_tag": "LE125",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 218.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086140097",
+   "old_tag": "LE134",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 223.0
+    },
+    {
+     "date": "2026-11-06",
+     "kg": 247.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086140099",
+   "old_tag": "IMANI023",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 211.0
+    },
+    {
+     "date": "2026-11-06",
+     "kg": 221.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086140103",
+   "old_tag": "KIFARU038",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 249.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086140105",
+   "old_tag": "IMANI009",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 267.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 276.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086140107",
+   "old_tag": "LE141",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 219.0
+    },
+    {
+     "date": "2026-11-06",
+     "kg": 249.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086140109",
+   "old_tag": "LE132",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 279.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086140111",
+   "old_tag": "LE147",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 210.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086140116",
+   "old_tag": "LE152",
+   "sheet": "280-up Finishers RFID",
+   "weights": [
+    {
+     "date": "2026-10-01",
+     "kg": 275.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086140123",
+   "old_tag": "LE133",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 207.0
+    },
+    {
+     "date": "2026-11-06",
+     "kg": 231.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086140124",
+   "old_tag": "KIFARU034",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 219.0
+    },
+    {
+     "date": "2026-11-06",
+     "kg": 254.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086140130",
+   "old_tag": "MOL958",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 254.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 268.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086140132",
+   "old_tag": "MOL915",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 245.0
+    },
+    {
+     "date": "2026-11-06",
+     "kg": 271.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086140133",
+   "old_tag": "MOL250",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 250.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 267.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086140135",
+   "old_tag": "44",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 254.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 267.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086140149",
+   "old_tag": "MOL503",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 237.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086140159",
+   "old_tag": "MOL879",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 226.0
+    },
+    {
+     "date": "2026-11-06",
+     "kg": 245.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086140162",
+   "old_tag": "MOL975",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 253.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086140168",
+   "old_tag": "407",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 258.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 271.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086140170",
+   "old_tag": "85",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 257.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 278.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086140174",
+   "old_tag": "MOLF1-11",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 254.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086140179",
+   "old_tag": "397",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 259.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 273.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086140182",
+   "old_tag": "87",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 257.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086140183",
+   "old_tag": "MOL863",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 243.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 255.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086140185",
+   "old_tag": "MOL370",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 254.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 260.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086140187",
+   "old_tag": "MOL942",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 249.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 271.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086140188",
+   "old_tag": "MOL020",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 241.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086140191",
+   "old_tag": "MOL079",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 259.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 274.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086140196",
+   "old_tag": "MOL898",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 209.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086140197",
+   "old_tag": "MOL398",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 252.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086140200",
+   "old_tag": "",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 239.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086140202",
+   "old_tag": "MOL800",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 226.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086140207",
+   "old_tag": "MOL764",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 263.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 274.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086140211",
+   "old_tag": "MOL967",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 265.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 278.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086140215",
+   "old_tag": "",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 262.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 272.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086140217",
+   "old_tag": "MOL304",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 265.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 278.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086140220",
+   "old_tag": "MOL843",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 249.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 271.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086140222",
+   "old_tag": "19D",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 249.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 269.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086140226",
+   "old_tag": "",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 248.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086140230",
+   "old_tag": "MOL618",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 249.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 279.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086140239",
+   "old_tag": "",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 244.0
+    },
+    {
+     "date": "2026-11-06",
+     "kg": 268.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086140240",
+   "old_tag": "76",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 237.0
+    },
+    {
+     "date": "2026-11-06",
+     "kg": 254.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086140247",
+   "old_tag": "MOL743",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 261.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 274.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086140249",
+   "old_tag": "MOL646",
+   "sheet": "250-up growers 1 RFID",
+   "weights": [
+    {
+     "date": "2026-10-06",
+     "kg": 252.0
+    },
+    {
+     "date": "2026-11-03",
+     "kg": 269.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086140252",
+   "old_tag": "",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 233.0
+    },
+    {
+     "date": "2026-11-06",
+     "kg": 245.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086140253",
+   "old_tag": "49",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 246.0
+    },
+    {
+     "date": "2026-11-06",
+     "kg": 267.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086140260",
+   "old_tag": "MOL914",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 232.0
+    },
+    {
+     "date": "2026-11-06",
+     "kg": 257.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086140263",
+   "old_tag": "MOL840",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 241.0
+    },
+    {
+     "date": "2026-11-06",
+     "kg": 257.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086140269",
+   "old_tag": "MOL387",
+   "sheet": "250-down growers 2 RFID",
+   "weights": [
+    {
+     "date": "2026-10-02",
+     "kg": 229.0
+    },
+    {
+     "date": "2026-11-06",
+     "kg": 259.0
+    }
+   ],
+   "herd": "Growers"
+  },
+  {
+   "tag": "982 091086131177",
+   "old_tag": "",
+   "sheet": "New stock RFID",
+   "weights": [
+    {
+     "date": "2026-10-17",
+     "kg": 243.0
+    }
+   ],
+   "acquired": "2026-10-17",
+   "cost": 66000.0,
+   "source": "Rumuruti",
+   "herd": "Quarantine"
+  },
+  {
+   "tag": "982 091086131182",
+   "old_tag": "",
+   "sheet": "New stock RFID",
+   "weights": [
+    {
+     "date": "2026-10-17",
+     "kg": 217.0
+    }
+   ],
+   "acquired": "2026-10-17",
+   "cost": 58000.0,
+   "source": "Rumuruti",
+   "herd": "Quarantine"
+  },
+  {
+   "tag": "982 091086131189",
+   "old_tag": "",
+   "sheet": "New stock RFID",
+   "weights": [
+    {
+     "date": "2026-10-17",
+     "kg": 246.0
+    }
+   ],
+   "acquired": "2026-10-17",
+   "cost": 67000.0,
+   "source": "Rumuruti",
+   "herd": "Quarantine"
+  },
+  {
+   "tag": "982 091086131191",
+   "old_tag": "",
+   "sheet": "New stock RFID",
+   "weights": [
+    {
+     "date": "2026-10-17",
+     "kg": 205.0
+    }
+   ],
+   "acquired": "2026-10-17",
+   "cost": 58000.0,
+   "source": "Rumuruti",
+   "herd": "Quarantine"
+  },
+  {
+   "tag": "982 091086131192",
+   "old_tag": "",
+   "sheet": "New stock RFID",
+   "weights": [
+    {
+     "date": "2026-10-17",
+     "kg": 245.0
+    }
+   ],
+   "acquired": "2026-10-17",
+   "cost": 62000.0,
+   "source": "Rumuruti",
+   "herd": "Quarantine"
+  },
+  {
+   "tag": "982 091086131195",
+   "old_tag": "",
+   "sheet": "New stock RFID",
+   "weights": [
+    {
+     "date": "2026-10-17",
+     "kg": 272.0
+    }
+   ],
+   "acquired": "2026-10-17",
+   "cost": 66000.0,
+   "source": "Rumuruti",
+   "herd": "Quarantine"
+  },
+  {
+   "tag": "982 091086131200",
+   "old_tag": "",
+   "sheet": "New stock RFID",
+   "weights": [
+    {
+     "date": "2026-10-17",
+     "kg": 180.0
+    }
+   ],
+   "acquired": "2026-10-17",
+   "cost": 54000.0,
+   "source": "Rumuruti",
+   "herd": "Quarantine"
+  },
+  {
+   "tag": "982 091086131205",
+   "old_tag": "",
+   "sheet": "New stock RFID",
+   "weights": [
+    {
+     "date": "2026-10-17",
+     "kg": 190.5
+    }
+   ],
+   "acquired": "2026-10-17",
+   "cost": 55000.0,
+   "source": "Rumuruti",
+   "herd": "Quarantine"
+  },
+  {
+   "tag": "982 091086131221",
+   "old_tag": "",
+   "sheet": "New stock RFID",
+   "weights": [
+    {
+     "date": "2026-10-17",
+     "kg": 268.0
+    }
+   ],
+   "acquired": "2026-10-17",
+   "cost": 67000.0,
+   "source": "Rumuruti",
+   "herd": "Quarantine"
+  },
+  {
+   "tag": "982 091086131235",
+   "old_tag": "",
+   "sheet": "New stock RFID",
+   "weights": [
+    {
+     "date": "2026-10-17",
+     "kg": 256.0
+    }
+   ],
+   "acquired": "2026-10-17",
+   "cost": 66000.0,
+   "source": "Rumuruti",
+   "herd": "Quarantine"
+  },
+  {
+   "tag": "982 091086131243",
+   "old_tag": "",
+   "sheet": "New stock RFID",
+   "weights": [
+    {
+     "date": "2026-10-17",
+     "kg": 230.0
+    }
+   ],
+   "acquired": "2026-10-17",
+   "cost": 66000.0,
+   "source": "Rumuruti",
+   "herd": "Quarantine"
+  },
+  {
+   "tag": "982 091086131244",
+   "old_tag": "",
+   "sheet": "New stock RFID",
+   "weights": [
+    {
+     "date": "2026-10-17",
+     "kg": 194.5
+    }
+   ],
+   "acquired": "2026-10-17",
+   "cost": 55000.0,
+   "source": "Rumuruti",
+   "herd": "Quarantine"
+  },
+  {
+   "tag": "982 091086131249",
+   "old_tag": "",
+   "sheet": "New stock RFID",
+   "weights": [
+    {
+     "date": "2026-10-17",
+     "kg": 216.0
+    }
+   ],
+   "acquired": "2026-10-17",
+   "cost": 61000.0,
+   "source": "Rumuruti",
+   "herd": "Quarantine"
+  },
+  {
+   "tag": "982 091086131250",
+   "old_tag": "",
+   "sheet": "New stock RFID",
+   "weights": [
+    {
+     "date": "2026-10-17",
+     "kg": 219.0
+    }
+   ],
+   "acquired": "2026-10-17",
+   "cost": 62000.0,
+   "source": "Rumuruti",
+   "herd": "Quarantine"
+  },
+  {
+   "tag": "982 091086131251",
+   "old_tag": "",
+   "sheet": "New stock RFID",
+   "weights": [
+    {
+     "date": "2026-10-17",
+     "kg": 212.0
+    }
+   ],
+   "acquired": "2026-10-17",
+   "cost": 61000.0,
+   "source": "Rumuruti",
+   "herd": "Quarantine"
+  },
+  {
+   "tag": "982 091086131255",
+   "old_tag": "",
+   "sheet": "New stock RFID",
+   "weights": [
+    {
+     "date": "2026-10-17",
+     "kg": 210.0
+    }
+   ],
+   "acquired": "2026-10-17",
+   "cost": 61000.0,
+   "source": "Rumuruti",
+   "herd": "Quarantine"
+  },
+  {
+   "tag": "982 091086131256",
+   "old_tag": "",
+   "sheet": "New stock RFID",
+   "weights": [
+    {
+     "date": "2026-10-17",
+     "kg": 205.0
+    }
+   ],
+   "acquired": "2026-10-17",
+   "cost": 58000.0,
+   "source": "Rumuruti",
+   "herd": "Quarantine"
+  },
+  {
+   "tag": "982 091086131257",
+   "old_tag": "",
+   "sheet": "New stock RFID",
+   "weights": [
+    {
+     "date": "2026-10-17",
+     "kg": 218.0
+    }
+   ],
+   "acquired": "2026-10-17",
+   "cost": 58000.0,
+   "source": "Rumuruti",
+   "herd": "Quarantine"
+  },
+  {
+   "tag": "982 091086131259",
+   "old_tag": "",
+   "sheet": "New stock RFID",
+   "weights": [
+    {
+     "date": "2026-10-17",
+     "kg": 218.0
+    }
+   ],
+   "acquired": "2026-10-17",
+   "cost": 62000.0,
+   "source": "Rumuruti",
+   "herd": "Quarantine"
+  },
+  {
+   "tag": "982 091086131263",
+   "old_tag": "",
+   "sheet": "New stock RFID",
+   "weights": [
+    {
+     "date": "2026-10-17",
+     "kg": 179.5
+    }
+   ],
+   "acquired": "2026-10-17",
+   "cost": 54000.0,
+   "source": "Rumuruti",
+   "herd": "Quarantine"
+  },
+  {
+   "tag": "982 091086131265",
+   "old_tag": "",
+   "sheet": "New stock RFID",
+   "weights": [
+    {
+     "date": "2026-10-17",
+     "kg": 223.0
+    }
+   ],
+   "acquired": "2026-10-17",
+   "cost": 61000.0,
+   "source": "Rumuruti",
+   "herd": "Quarantine"
+  },
+  {
+   "tag": "982 091086131267",
+   "old_tag": "",
+   "sheet": "New stock RFID",
+   "weights": [
+    {
+     "date": "2026-10-17",
+     "kg": 178.0
+    }
+   ],
+   "acquired": "2026-10-17",
+   "cost": 51000.0,
+   "source": "Rumuruti",
+   "herd": "Quarantine"
+  }
+ ],
+ "labour": [
+  {
+   "date": "2025-11-06",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 14,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2025-11-07",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 14,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2025-11-08",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 11,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2025-11-09",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 11,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2025-11-10",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 13,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2025-11-11",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 14,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2025-11-12",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 14,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2025-11-13",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 14,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2025-11-14",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 14,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2025-11-15",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 13,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2025-11-16",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 12,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2025-11-17",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 14,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2025-11-18",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 12,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2025-11-19",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 12,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2025-11-20",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 11,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2025-11-21",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 11,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2025-11-22",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 11,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2025-11-23",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 13,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2025-11-24",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 13,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2025-11-25",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 14,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2025-11-26",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 14,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2025-11-27",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 13,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2025-11-28",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 12,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2025-11-29",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 13,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2025-11-30",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 13,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2025-12-01",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 14,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2025-12-02",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 16,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2025-12-03",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 14,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2025-12-04",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 16,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2025-12-05",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 16,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2025-12-06",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 18,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2025-12-07",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 16,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2025-12-08",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 14,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2025-12-09",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 16,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2025-12-10",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 17,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2025-12-11",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 17,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2025-12-12",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 17,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2025-12-13",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 15,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2025-12-14",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 13,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2025-12-15",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 21,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2025-12-16",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 20,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2025-12-17",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 21,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2025-12-18",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 16,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2025-12-19",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 17,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2025-12-20",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 15,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2025-12-21",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 16,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2025-12-22",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 16,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2025-12-23",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 18,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2025-12-24",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 20,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2025-12-25",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 20,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2025-12-26",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 26,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2025-12-27",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 28,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2025-12-28",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 23,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2025-12-29",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 19,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2025-12-30",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 15,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2025-12-31",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 16,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-01-01",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 14,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-01-02",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 13,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-01-03",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 16,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-01-04",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 14,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-01-05",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 12,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-01-06",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 14,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-01-07",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 14,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-01-08",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 15,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-01-09",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 16,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-01-10",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 17,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-01-11",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 28,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-01-12",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 18,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-01-13",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 21,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-01-14",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 22,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-01-15",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 23,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-01-16",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 22,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-01-17",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 21,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-01-18",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 20,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-01-19",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 22,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-01-20",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 21,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-01-21",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 20,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-01-22",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 21,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-01-23",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 20,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-01-24",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 20,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-01-25",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 17,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-01-26",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 20,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-01-27",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 19,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-01-28",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 22,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-01-29",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 22,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-01-30",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 22,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-01-31",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 22,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-02-01",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 19,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-02-02",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 22,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-02-03",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 21,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-02-04",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 22,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-02-05",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 21,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-02-06",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 19,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-02-07",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 15,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-02-08",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 16,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-02-09",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 19,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-02-10",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 19,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-02-11",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 20,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-02-12",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 19,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-02-13",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 19,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-02-14",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 19,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-02-15",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 17,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-02-16",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 17,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-02-17",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 19,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-02-18",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 21,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-02-19",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 21,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-02-20",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 22,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-02-21",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 24,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-02-22",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 23,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-02-23",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 24,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-02-24",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 17,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-02-25",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 17,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-02-26",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 19,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-02-27",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 19,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-02-28",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 19,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-03-01",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 17,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-03-02",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 18,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-03-03",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 18,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-03-04",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 18,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-03-05",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 17,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-03-06",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 19,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-03-07",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 18,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-03-08",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 18,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-03-09",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 19,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-03-10",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 19,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-03-11",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 18,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-03-12",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 18,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-03-13",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 18,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-03-14",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 18,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-03-15",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 24,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-03-16",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 18,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-03-17",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 18,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-03-18",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 18,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-03-19",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 18,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-03-20",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 15,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-03-21",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 12,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-03-22",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 13,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-03-23",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 16,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-03-24",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 16,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-03-25",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 16,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-03-26",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 14,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-03-27",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 14,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-03-28",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 11,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-03-29",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 11,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-03-30",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 18,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-03-31",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 15,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-04-01",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 17,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-04-02",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 17,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-04-03",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 20,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-04-04",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 18,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-04-05",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 23,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-04-06",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 15,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-04-07",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 16,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-04-08",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 16,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-04-09",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 16,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-04-10",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 16,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-04-11",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 16,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-04-12",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 20,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-04-13",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 15,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-04-14",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 17,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-04-15",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 17,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-04-16",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 16,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-04-17",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 14,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-04-18",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 12,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-04-19",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 21,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-04-20",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 20,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-04-21",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 16,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-04-22",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 21,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-04-23",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 23,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-04-24",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 22,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-04-25",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 14,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-04-26",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 12,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-04-27",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 16,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-04-28",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 16,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-04-29",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 16,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-04-30",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 16,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-05-01",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 15,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-05-02",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 15,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-05-03",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 12,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-05-04",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 10,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-05-05",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 15,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-05-06",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 15,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-05-07",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 14,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-05-08",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 16,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-05-09",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 15,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-05-10",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 10,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-05-11",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 15,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-05-12",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 17,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-05-13",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 18,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-05-14",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 14,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-05-15",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 14,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-05-16",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 11,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-05-17",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 11,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-05-18",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 14,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-05-19",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 14,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-05-20",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 12,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-05-21",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 12,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-05-22",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 14,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-05-23",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 11,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-05-24",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 9,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-05-25",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 13,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-05-26",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 13,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-05-27",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 13,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-05-28",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 12,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-05-29",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 13,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-05-30",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 10,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-05-31",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 14,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-06-01",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 14,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-06-02",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 14,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-06-03",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 14,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-06-04",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 12,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-06-05",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 18,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-06-06",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 11,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-06-07",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 8,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-06-08",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 14,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-06-09",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 14,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-06-10",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 15,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-06-11",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 13,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-06-12",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 14,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-06-13",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 12,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-06-14",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 8,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-06-15",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 14,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-06-16",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 13,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-06-17",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 15,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-06-18",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 13,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-06-19",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 14,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-06-20",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 10,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-06-21",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 11,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-06-22",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 14,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-06-23",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 13,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-06-24",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 15,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-06-25",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 12,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-06-26",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 14,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-06-27",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 11,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-06-28",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 11,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-06-29",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 13,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-06-30",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 14,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-07-01",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 14,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-07-02",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 13,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-07-03",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 12,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-07-04",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 10,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-07-05",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 6,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-07-06",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 10,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-07-07",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 12,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-07-08",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 13,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-07-09",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 10,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-07-10",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 12,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-07-11",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 8,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-07-12",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 8,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-07-13",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 11,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-07-14",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 12,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-07-15",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 12,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-07-16",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 11,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-07-17",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 13,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-07-18",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 10,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-07-19",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 9,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-07-20",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 11,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-07-21",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 12,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-07-22",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 13,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-07-23",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 10,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-07-24",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 13,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-07-25",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 11,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-07-26",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 9,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-07-27",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 11,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-07-28",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 11,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-07-29",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 13,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-07-30",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 11,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-07-31",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 13,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-08-01",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 9,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-08-02",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 7,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-08-03",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 8,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-08-04",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 10,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-08-05",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 11,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-08-06",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 7,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-08-07",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 12,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-08-08",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 10,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-08-09",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 8,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-08-10",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 6,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-08-11",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 7,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-08-12",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 10,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-08-13",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 9,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-08-14",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 8,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-08-15",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 9,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-08-16",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 4,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-08-17",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 9,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-08-18",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 11,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-08-19",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 12,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-08-20",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 11,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-08-21",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 12,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-08-22",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 9,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-08-23",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 6,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-08-24",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 9,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-08-25",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 11,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-08-26",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 10,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-08-27",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 10,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-08-28",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 13,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-08-29",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 12,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-08-30",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 8,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-08-31",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 11,
+     "day_rate": 400.0
+    }
+   ]
+  },
+  {
+   "date": "2026-09-01",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 12,
+     "day_rate": 400.0
+    },
+    {
+     "category": "Herders",
+     "workers": 9,
+     "day_rate": 500.0
+    }
+   ]
+  },
+  {
+   "date": "2026-09-02",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 12,
+     "day_rate": 400.0
+    },
+    {
+     "category": "Herders",
+     "workers": 8,
+     "day_rate": 500.0
+    }
+   ]
+  },
+  {
+   "date": "2026-09-03",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 10,
+     "day_rate": 400.0
+    },
+    {
+     "category": "Herders",
+     "workers": 7,
+     "day_rate": 500.0
+    }
+   ]
+  },
+  {
+   "date": "2026-09-04",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 12,
+     "day_rate": 400.0
+    },
+    {
+     "category": "Herders",
+     "workers": 9,
+     "day_rate": 500.0
+    }
+   ]
+  },
+  {
+   "date": "2026-09-05",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 11,
+     "day_rate": 400.0
+    },
+    {
+     "category": "Herders",
+     "workers": 9,
+     "day_rate": 500.0
+    }
+   ]
+  },
+  {
+   "date": "2026-09-06",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 8,
+     "day_rate": 400.0
+    },
+    {
+     "category": "Herders",
+     "workers": 7,
+     "day_rate": 500.0
+    }
+   ]
+  },
+  {
+   "date": "2026-09-07",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 12,
+     "day_rate": 400.0
+    },
+    {
+     "category": "Herders",
+     "workers": 9,
+     "day_rate": 500.0
+    }
+   ]
+  },
+  {
+   "date": "2026-09-08",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 12,
+     "day_rate": 400.0
+    },
+    {
+     "category": "Herders",
+     "workers": 10,
+     "day_rate": 500.0
+    }
+   ]
+  },
+  {
+   "date": "2026-09-09",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 12,
+     "day_rate": 400.0
+    },
+    {
+     "category": "Herders",
+     "workers": 8,
+     "day_rate": 500.0
+    }
+   ]
+  },
+  {
+   "date": "2026-09-10",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 11,
+     "day_rate": 400.0
+    },
+    {
+     "category": "Herders",
+     "workers": 8,
+     "day_rate": 500.0
+    }
+   ]
+  },
+  {
+   "date": "2026-09-11",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 14,
+     "day_rate": 400.0
+    },
+    {
+     "category": "Herders",
+     "workers": 10,
+     "day_rate": 500.0
+    }
+   ]
+  },
+  {
+   "date": "2026-09-12",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 11,
+     "day_rate": 400.0
+    },
+    {
+     "category": "Herders",
+     "workers": 7,
+     "day_rate": 500.0
+    }
+   ]
+  },
+  {
+   "date": "2026-09-13",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 11,
+     "day_rate": 400.0
+    },
+    {
+     "category": "Herders",
+     "workers": 7,
+     "day_rate": 500.0
+    }
+   ]
+  },
+  {
+   "date": "2026-09-14",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 13,
+     "day_rate": 400.0
+    },
+    {
+     "category": "Herders",
+     "workers": 9,
+     "day_rate": 500.0
+    }
+   ]
+  },
+  {
+   "date": "2026-09-15",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 12,
+     "day_rate": 400.0
+    },
+    {
+     "category": "Herders",
+     "workers": 10,
+     "day_rate": 500.0
+    }
+   ]
+  },
+  {
+   "date": "2026-09-16",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 15,
+     "day_rate": 400.0
+    },
+    {
+     "category": "Herders",
+     "workers": 10,
+     "day_rate": 500.0
+    }
+   ]
+  },
+  {
+   "date": "2026-09-17",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 12,
+     "day_rate": 400.0
+    },
+    {
+     "category": "Herders",
+     "workers": 9,
+     "day_rate": 500.0
+    }
+   ]
+  },
+  {
+   "date": "2026-09-18",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 14,
+     "day_rate": 400.0
+    },
+    {
+     "category": "Herders",
+     "workers": 10,
+     "day_rate": 500.0
+    }
+   ]
+  },
+  {
+   "date": "2026-09-19",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 13,
+     "day_rate": 400.0
+    },
+    {
+     "category": "Herders",
+     "workers": 10,
+     "day_rate": 500.0
+    }
+   ]
+  },
+  {
+   "date": "2026-09-20",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 7,
+     "day_rate": 400.0
+    },
+    {
+     "category": "Herders",
+     "workers": 10,
+     "day_rate": 500.0
+    }
+   ]
+  },
+  {
+   "date": "2026-09-21",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 13,
+     "day_rate": 400.0
+    },
+    {
+     "category": "Herders",
+     "workers": 9,
+     "day_rate": 500.0
+    }
+   ]
+  },
+  {
+   "date": "2026-09-22",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 11,
+     "day_rate": 400.0
+    },
+    {
+     "category": "Herders",
+     "workers": 8,
+     "day_rate": 500.0
+    }
+   ]
+  },
+  {
+   "date": "2026-09-23",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 13,
+     "day_rate": 400.0
+    },
+    {
+     "category": "Herders",
+     "workers": 12,
+     "day_rate": 500.0
+    }
+   ]
+  },
+  {
+   "date": "2026-09-24",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 11,
+     "day_rate": 400.0
+    },
+    {
+     "category": "Herders",
+     "workers": 10,
+     "day_rate": 500.0
+    }
+   ]
+  },
+  {
+   "date": "2026-09-25",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 13,
+     "day_rate": 400.0
+    },
+    {
+     "category": "Herders",
+     "workers": 11,
+     "day_rate": 500.0
+    }
+   ]
+  },
+  {
+   "date": "2026-09-26",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 13,
+     "day_rate": 400.0
+    },
+    {
+     "category": "Herders",
+     "workers": 10,
+     "day_rate": 500.0
+    }
+   ]
+  },
+  {
+   "date": "2026-09-27",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 11,
+     "day_rate": 400.0
+    },
+    {
+     "category": "Herders",
+     "workers": 10,
+     "day_rate": 500.0
+    }
+   ]
+  },
+  {
+   "date": "2026-09-28",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 14,
+     "day_rate": 400.0
+    },
+    {
+     "category": "Herders",
+     "workers": 10,
+     "day_rate": 500.0
+    }
+   ]
+  },
+  {
+   "date": "2026-09-29",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 13,
+     "day_rate": 400.0
+    },
+    {
+     "category": "Herders",
+     "workers": 10,
+     "day_rate": 500.0
+    }
+   ]
+  },
+  {
+   "date": "2026-09-30",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 13,
+     "day_rate": 400.0
+    },
+    {
+     "category": "Herders",
+     "workers": 10,
+     "day_rate": 500.0
+    }
+   ]
+  },
+  {
+   "date": "2026-10-01",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 14,
+     "day_rate": 400.0
+    },
+    {
+     "category": "Herders",
+     "workers": 10,
+     "day_rate": 500.0
+    }
+   ]
+  },
+  {
+   "date": "2026-10-02",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 13,
+     "day_rate": 400.0
+    },
+    {
+     "category": "Herders",
+     "workers": 10,
+     "day_rate": 500.0
+    }
+   ]
+  },
+  {
+   "date": "2026-10-03",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 11,
+     "day_rate": 400.0
+    },
+    {
+     "category": "Herders",
+     "workers": 9,
+     "day_rate": 500.0
+    }
+   ]
+  },
+  {
+   "date": "2026-10-04",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 11,
+     "day_rate": 400.0
+    },
+    {
+     "category": "Herders",
+     "workers": 7,
+     "day_rate": 500.0
+    }
+   ]
+  },
+  {
+   "date": "2026-10-05",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 10,
+     "day_rate": 400.0
+    },
+    {
+     "category": "Herders",
+     "workers": 10,
+     "day_rate": 500.0
+    }
+   ]
+  },
+  {
+   "date": "2026-10-06",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 9,
+     "day_rate": 400.0
+    },
+    {
+     "category": "Herders",
+     "workers": 9,
+     "day_rate": 500.0
+    }
+   ]
+  },
+  {
+   "date": "2026-10-07",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 14,
+     "day_rate": 400.0
+    },
+    {
+     "category": "Herders",
+     "workers": 10,
+     "day_rate": 500.0
+    }
+   ]
+  },
+  {
+   "date": "2026-10-08",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 13,
+     "day_rate": 400.0
+    },
+    {
+     "category": "Herders",
+     "workers": 10,
+     "day_rate": 500.0
+    }
+   ]
+  },
+  {
+   "date": "2026-10-09",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 14,
+     "day_rate": 400.0
+    },
+    {
+     "category": "Herders",
+     "workers": 11,
+     "day_rate": 500.0
+    }
+   ]
+  },
+  {
+   "date": "2026-10-10",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 12,
+     "day_rate": 400.0
+    },
+    {
+     "category": "Herders",
+     "workers": 10,
+     "day_rate": 500.0
+    }
+   ]
+  },
+  {
+   "date": "2026-10-11",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 7,
+     "day_rate": 400.0
+    },
+    {
+     "category": "Herders",
+     "workers": 9,
+     "day_rate": 500.0
+    }
+   ]
+  },
+  {
+   "date": "2026-10-12",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 13,
+     "day_rate": 400.0
+    },
+    {
+     "category": "Herders",
+     "workers": 8,
+     "day_rate": 500.0
+    }
+   ]
+  },
+  {
+   "date": "2026-10-13",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 12,
+     "day_rate": 400.0
+    },
+    {
+     "category": "Herders",
+     "workers": 10,
+     "day_rate": 500.0
+    }
+   ]
+  },
+  {
+   "date": "2026-10-14",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 14,
+     "day_rate": 400.0
+    },
+    {
+     "category": "Herders",
+     "workers": 10,
+     "day_rate": 500.0
+    }
+   ]
+  },
+  {
+   "date": "2026-10-15",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 12,
+     "day_rate": 400.0
+    },
+    {
+     "category": "Herders",
+     "workers": 10,
+     "day_rate": 500.0
+    }
+   ]
+  },
+  {
+   "date": "2026-10-16",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 14,
+     "day_rate": 400.0
+    },
+    {
+     "category": "Herders",
+     "workers": 10,
+     "day_rate": 500.0
+    }
+   ]
+  },
+  {
+   "date": "2026-10-17",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 10,
+     "day_rate": 400.0
+    },
+    {
+     "category": "Herders",
+     "workers": 11,
+     "day_rate": 500.0
+    }
+   ]
+  },
+  {
+   "date": "2026-10-18",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 9,
+     "day_rate": 400.0
+    },
+    {
+     "category": "Herders",
+     "workers": 9,
+     "day_rate": 500.0
+    }
+   ]
+  },
+  {
+   "date": "2026-10-19",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 13,
+     "day_rate": 400.0
+    },
+    {
+     "category": "Herders",
+     "workers": 8,
+     "day_rate": 500.0
+    }
+   ]
+  },
+  {
+   "date": "2026-10-20",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 12,
+     "day_rate": 400.0
+    },
+    {
+     "category": "Herders",
+     "workers": 8,
+     "day_rate": 500.0
+    }
+   ]
+  },
+  {
+   "date": "2026-10-21",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 13,
+     "day_rate": 400.0
+    },
+    {
+     "category": "Herders",
+     "workers": 11,
+     "day_rate": 500.0
+    }
+   ]
+  },
+  {
+   "date": "2026-10-22",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 12,
+     "day_rate": 400.0
+    },
+    {
+     "category": "Herders",
+     "workers": 8,
+     "day_rate": 500.0
+    }
+   ]
+  },
+  {
+   "date": "2026-10-23",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 12,
+     "day_rate": 400.0
+    },
+    {
+     "category": "Herders",
+     "workers": 10,
+     "day_rate": 500.0
+    }
+   ]
+  },
+  {
+   "date": "2026-10-24",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 11,
+     "day_rate": 400.0
+    },
+    {
+     "category": "Herders",
+     "workers": 8,
+     "day_rate": 500.0
+    }
+   ]
+  },
+  {
+   "date": "2026-10-25",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 6,
+     "day_rate": 400.0
+    },
+    {
+     "category": "Herders",
+     "workers": 10,
+     "day_rate": 500.0
+    }
+   ]
+  },
+  {
+   "date": "2026-10-26",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 11,
+     "day_rate": 400.0
+    },
+    {
+     "category": "Herders",
+     "workers": 10,
+     "day_rate": 500.0
+    }
+   ]
+  },
+  {
+   "date": "2026-10-27",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 10,
+     "day_rate": 400.0
+    },
+    {
+     "category": "Herders",
+     "workers": 9,
+     "day_rate": 500.0
+    }
+   ]
+  },
+  {
+   "date": "2026-10-28",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 13,
+     "day_rate": 400.0
+    },
+    {
+     "category": "Herders",
+     "workers": 10,
+     "day_rate": 500.0
+    }
+   ]
+  },
+  {
+   "date": "2026-10-29",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 13,
+     "day_rate": 400.0
+    },
+    {
+     "category": "Herders",
+     "workers": 10,
+     "day_rate": 500.0
+    }
+   ]
+  },
+  {
+   "date": "2026-10-30",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 14,
+     "day_rate": 400.0
+    },
+    {
+     "category": "Herders",
+     "workers": 10,
+     "day_rate": 500.0
+    }
+   ]
+  },
+  {
+   "date": "2026-10-31",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 13,
+     "day_rate": 400.0
+    },
+    {
+     "category": "Herders",
+     "workers": 9,
+     "day_rate": 500.0
+    }
+   ]
+  },
+  {
+   "date": "2026-11-01",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 8,
+     "day_rate": 400.0
+    },
+    {
+     "category": "Herders",
+     "workers": 8,
+     "day_rate": 500.0
+    }
+   ]
+  },
+  {
+   "date": "2026-11-02",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 11,
+     "day_rate": 400.0
+    },
+    {
+     "category": "Herders",
+     "workers": 10,
+     "day_rate": 500.0
+    }
+   ]
+  },
+  {
+   "date": "2026-11-03",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 11,
+     "day_rate": 400.0
+    },
+    {
+     "category": "Herders",
+     "workers": 8,
+     "day_rate": 500.0
+    }
+   ]
+  },
+  {
+   "date": "2026-11-04",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 13,
+     "day_rate": 400.0
+    },
+    {
+     "category": "Herders",
+     "workers": 10,
+     "day_rate": 500.0
+    }
+   ]
+  },
+  {
+   "date": "2026-11-05",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 11,
+     "day_rate": 400.0
+    },
+    {
+     "category": "Herders",
+     "workers": 9,
+     "day_rate": 500.0
+    }
+   ]
+  },
+  {
+   "date": "2026-11-06",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 11,
+     "day_rate": 400.0
+    },
+    {
+     "category": "Herders",
+     "workers": 8,
+     "day_rate": 500.0
+    }
+   ]
+  },
+  {
+   "date": "2026-11-07",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 10,
+     "day_rate": 400.0
+    },
+    {
+     "category": "Herders",
+     "workers": 9,
+     "day_rate": 500.0
+    }
+   ]
+  },
+  {
+   "date": "2026-11-08",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 6,
+     "day_rate": 400.0
+    },
+    {
+     "category": "Herders",
+     "workers": 10,
+     "day_rate": 500.0
+    }
+   ]
+  },
+  {
+   "date": "2026-11-09",
+   "rows": [
+    {
+     "category": "Feedlot workers",
+     "workers": 8,
+     "day_rate": 400.0
+    },
+    {
+     "category": "Herders",
+     "workers": 9,
+     "day_rate": 500.0
+    }
+   ]
+  }
+ ],
+ "fuel": [
+  {
+   "date": "2026-01-04",
+   "machine": "Mixer Wagon",
+   "litres": 275.0
+  },
+  {
+   "date": "2026-01-11",
+   "machine": "Mixer Wagon",
+   "litres": 270.79
+  },
+  {
+   "date": "2026-01-20",
+   "machine": "Mixer Wagon",
+   "litres": 282.0
+  },
+  {
+   "date": "2026-01-24",
+   "machine": "Mixer Wagon",
+   "litres": 190.15
+  },
+  {
+   "date": "2026-02-02",
+   "machine": "Mixer Wagon",
+   "litres": 322.0
+  },
+  {
+   "date": "2026-02-13",
+   "machine": "Mixer Wagon",
+   "litres": 290.0
+  },
+  {
+   "date": "2026-02-24",
+   "machine": "Mixer Wagon",
+   "litres": 318.0
+  },
+  {
+   "date": "2026-03-06",
+   "machine": "Mixer Wagon",
+   "litres": 268.13
+  },
+  {
+   "date": "2026-03-16",
+   "machine": "Mixer Wagon",
+   "litres": 270.72
+  },
+  {
+   "date": "2026-03-25",
+   "machine": "Mixer Wagon",
+   "litres": 302.7
+  },
+  {
+   "date": "2026-04-07",
+   "machine": "Mixer Wagon",
+   "litres": 295.0
+  },
+  {
+   "date": "2026-04-18",
+   "machine": "Mixer Wagon",
+   "litres": 275.17
+  },
+  {
+   "date": "2026-04-27",
+   "machine": "Mixer Wagon",
+   "litres": 265.45
+  },
+  {
+   "date": "2026-05-05",
+   "machine": "Mixer Wagon",
+   "litres": 279.55
+  },
+  {
+   "date": "2026-05-14",
+   "machine": "Mixer Wagon",
+   "litres": 255.68
+  },
+  {
+   "date": "2026-05-22",
+   "machine": "Mixer Wagon",
+   "litres": 224.11
+  }
+ ],
+ "diesel_rate": 166.0,
+ "notes": [
+  "Feed Rates: 'Mollasses' and 'Wheat Polland' are named Molasses and Wheat Pollard; 'Sunflower' is Sunflower Cake; 'Potatoes' is Feed Potatoes because Potatoes is already a crop Item.",
+  "Feed lot rations: 'Stocklick' (1 %) is Vital Nyama, the mineral the Daily Feed Tracker feeds at about 1 % of the ration; Feed Rates has no stock lick of its own.",
+  "Feed lot rations: doses follow the NB box (Diamond V 7 g, Meat grow 60 ml a head); Meat boost is 50 g, the top of its 25-50 g range and what the sheet's own total (10.75 kg / 215) works out to. A dose is given to a group only where the sheet feeds that additive to it.",
+  "Shoats ration: the groups mix sheep and goats (Medicine Cost names ewes, rams and he goats in one dosing) but a herd has one species; they are seeded as Sheep.",
+  "Daily Feed Tracker: 1 rows have a date that fits nowhere in the sequence and were skipped.",
+  "RFID tabs: 982 091086140099 appear twice in one tab; the row with more weighings is kept.",
+  "RFID tabs: the farm's groups and the tab names disagree. Feed lot rations say Growers are 150-279 kg and Finishers above 280; the tabs split the growers at 250 (250-up / 250-down) and hold 385 animals against 217 Finishers and 173 Growers on the tracker. The bands are taken from the tab names (Finishers from 280 kg) and the ration sheet (Growers from 150 kg); each tagged animal goes to the band of its latest weight, which gives Finishers 203 and Growers 182. The 250 split is two weighing lists inside Growers, not a herd boundary.",
+  "New stock RFID: 22 animals bought at Rumuruti on 2026-10-17 go to Quarantine, at the cost the tab gives each; the tab does not say their sex, and feedlot stock is seeded Male.",
+  "Breeders and Calves data are not seeded as animals: neither has RFID tags or weights for the cows, calf rows carry their dam's tag number, and together they list 63 of the 87 head the tracker feeds in In-calf, Lactating and Heifers. Those three herds keep the tracker's head count.",
+  "Fuel Cost: only the Mixer Wagon has litres; its cost per litre (166.0 KES) is given once.",
+  "Daily Feed Tracker: on its latest day (2026-11-09) only Finishers, Growers, Incalf, Lactating and Heifers are fed; Starters/Breeders (ration sheet: 94) have not been fed since August/September and are seeded with no head beyond tagged animals.",
+  "Labour Cost: rows dated 2026-11-19 skipped (after the extract date or out of sequence).",
+  "Labour Cost: 2 rows repeat the date before them; the first is kept."
+ ]
+}
