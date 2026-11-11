@@ -73,6 +73,10 @@ export function concentratesInUse(on: boolean = bootstrap().premanufacture_conce
  * type of their own and are never hidden for one.
  */
 export const VIEW_EVENTS: Partial<Record<View, readonly string[]>> = {
+  // Feeding issues feed (a herd's mix, Manufacture all, a manual mix), and
+  // every issue is a Feeding event. The Ration Editor, the rations and the
+  // Concentrate window design and mix but feed no herd, so they stay.
+  feeding: ["Feeding"],
   movement: ["Movement"],
   calving: ["Calving"],
   heat: ["Heat Detection"],
@@ -118,7 +122,13 @@ export function viewOpen(
 }
 
 /** Where to send someone who opened a screen they may not: the nutritionist
- *  to the Ration Editor, everyone else to Feeding. */
-export function landingView(roles: string[] = bootstrap().roles): View {
-  return nutritionistOnly(roles) ? NUTRITIONIST_VIEWS[0] : "feeding";
+ *  to the Ration Editor, everyone else to Feeding — or, on a farm that
+ *  switched Feeding off, to the Dashboard (Feeding would only send them on
+ *  again, round and round). */
+export function landingView(
+  roles: string[] = bootstrap().roles,
+  disabled: readonly string[] = bootstrap().disabled_events,
+): View {
+  if (nutritionistOnly(roles)) return NUTRITIONIST_VIEWS[0];
+  return viewEventsOn("feeding", disabled) ? "feeding" : "dashboard";
 }

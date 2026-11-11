@@ -83,9 +83,26 @@ describe("an event the farm switched off", () => {
   it("never closes a page that records no event type of its own", async () => {
     const { viewOpen: open } = await import("@/lib/roles");
     const everything = ["Movement", "Calving", "Feeding", "Weight Recording", "Pregnancy Diagnosis"];
-    for (const view of ["feeding", "animals", "settings", "dashboard"] as const) {
+    for (const view of ["ration-editor", "rations", "concentrate", "animals", "settings", "dashboard"] as const) {
       expect(open(view, manager, true, everything)).toBe(true);
     }
+  });
+
+  it("closes Feeding, which issues feed, but keeps the Ration Editor that only designs it", async () => {
+    const { viewOpen: open } = await import("@/lib/roles");
+    expect(open("feeding", manager, true, ["Feeding"])).toBe(false);
+    expect(open("ration-editor", manager, true, ["Feeding"])).toBe(true);
+    expect(open("rations", manager, true, ["Feeding"])).toBe(true);
+    expect(open("feeding", manager, true, [])).toBe(true);
+  });
+
+  it("lands on the Dashboard, not on a switched-off Feeding that would send you on again", async () => {
+    const { landingView, viewOpen: open } = await import("@/lib/roles");
+    expect(landingView(manager, [])).toBe("feeding");
+    expect(landingView(manager, ["Feeding"])).toBe("dashboard");
+    expect(open(landingView(manager, ["Feeding"]), manager, true, ["Feeding"])).toBe(true);
+    // The nutritionist still lands on the Ration Editor.
+    expect(landingView(["Livestock Nutritionist"], ["Feeding"])).toBe("ration-editor");
   });
 
   it("reads the switched-off list from the page's bootstrap", async () => {
