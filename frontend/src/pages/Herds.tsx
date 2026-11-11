@@ -23,6 +23,7 @@ import { useToast } from "@/components/Toast";
 import { isError } from "@/lib/frappe";
 import { asSummaries, getCullBoard, type FarmAnimal } from "@/lib/culling";
 import { BandLadderEditor } from "@/components/herds/BandLadderEditor";
+import { ConcentrateByHerd, type HerdConcentrateRow } from "@/components/herds/ConcentrateByHerd";
 import { HerdBandFields } from "@/components/herds/HerdBandFields";
 import {
   bandPayload,
@@ -57,6 +58,8 @@ export function Herds() {
   const [roster, setRoster] = useState<FarmAnimal[]>([]);
   const [herds, setHerds] = useState<string[]>([]);
   const [bands, setBands] = useState<HerdBand[]>([]);
+  const [modes, setModes] = useState<HerdConcentrateRow[]>([]);
+  const [farmOn, setFarmOn] = useState(true);
   const [loading, setLoading] = useState(true);
   const [failure, setFailure] = useState<string | null>(null);
   const toast = useToast();
@@ -76,6 +79,8 @@ export function Herds() {
     // failure here costs the editor, not the page, so it is not surfaced.
     const h = await getHerdRations();
     if (!isError(h)) {
+      setModes(h.herds.map((x) => ({ herd: x.herd, concentrate_mode: x.concentrate_mode })));
+      setFarmOn(h.premanufacture_concentrate !== false);
       setBands(
         ((h as { herds?: Array<Partial<HerdBand> & { herd: string }> }).herds || []).map(
           (x) => ({ ...detailsOfSource(x), herd: x.herd }) as HerdBand,
@@ -126,6 +131,16 @@ export function Herds() {
 
       <EditHerd
         bands={bands}
+        loading={loading}
+        onDone={(m) => {
+          toast(m);
+          void load();
+        }}
+      />
+
+      <ConcentrateByHerd
+        herds={modes}
+        farmOn={farmOn}
         loading={loading}
         onDone={(m) => {
           toast(m);

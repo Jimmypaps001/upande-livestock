@@ -134,6 +134,28 @@ export function updateHerd(herd: string, d: HerdDetails) {
   return call<HerdBand>(UPDATE, { herd, ...bandPayload(d) });
 }
 
+/** `Herds.concentrate_mode`: does this herd eat a concentrate mixed ahead for
+ *  the store? "Farm default" follows Livestock Settings > Pre-manufacture
+ *  Concentrate. Mirrors CONCENTRATE_MODES in feeding/_concentrate.py. */
+export const CONCENTRATE_MODES = ["Farm default", "Pre-manufacture", "Mix from raw"] as const;
+export type ConcentrateMode = (typeof CONCENTRATE_MODES)[number];
+
+/** What a herd with `mode` does on a farm whose switch is `farmOn`. Pure; the
+ *  same rule as `_concentrate.resolve_premanufacture` on the server. */
+export function resolvePremanufacture(mode: string | null | undefined, farmOn: boolean): boolean {
+  if (mode === "Pre-manufacture") return true;
+  if (mode === "Mix from raw") return false;
+  return farmOn;
+}
+
+/** Change only a herd's Concentrate setting. Posts nothing. */
+export function setHerdConcentrateMode(herd: string, mode: ConcentrateMode) {
+  return call<{ ok: boolean; herd: string; concentrate_mode: ConcentrateMode }>(UPDATE, {
+    herd,
+    concentrate_mode: mode,
+  });
+}
+
 /** One rung of the fattening ladder as the ladder editor holds it. */
 export type LadderRow = { herd: string; min: string; max: string; target: string };
 
@@ -270,6 +292,8 @@ export interface HerdRation {
   /** This herd eats a pre-made concentrate (Herds > Concentrate, the farm's
    *  switch by default). False: its ration is offered raw feeds only. */
   premanufacture?: boolean;
+  /** What the herd itself says; "Farm default" follows the farm's switch. */
+  concentrate_mode?: ConcentrateMode;
 }
 
 export interface FeedChoice {

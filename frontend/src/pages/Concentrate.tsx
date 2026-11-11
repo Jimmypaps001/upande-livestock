@@ -2,29 +2,38 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { Figure, FigureRow } from "@/components/Figure";
 import { Notice } from "@/components/feeding/Notice";
-import { NutritionPanel } from "@/components/feeding/NutritionPanel";
 import { Page, PageHeading } from "@/components/PageShell";
 import { Picker } from "@/components/ui/picker";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { bootstrap, isError } from "@/lib/frappe";
-import { canMix } from "@/lib/roles";
+import { isError } from "@/lib/frappe";
+import { canMix, concentratesInUse } from "@/lib/roles";
+import { routeHash } from "@/lib/router";
 import {
   concentrates,
   feedBatches,
   manufactureConcentrate,
-  setConcentrate,
   type BatchPlan,
   batchNote,
   type Concentrate,
 } from "@/lib/feeding";
-import { getHerdRations, type FeedChoice } from "@/lib/herds";
 import { fmt, num } from "@/lib/utils";
 
+/** The Ration Editor, opened on one concentrate's recipe (or a new one). */
+export function concentrateRecipeHref(item: string | null): string {
+  return `${routeHash("ration-editor")}?concentrate=${encodeURIComponent(item ?? "new")}`;
+}
+
 /**
- * Concentrate: a recipe for the store, mixed by the kilo.
+ * Concentrate: where a batch for the store is MIXED, by the kilo.
+ *
+ * The recipe is not written here. A concentrate's recipe is written in the
+ * Ration Editor, the one place any recipe is; "Recipe" and "New concentrate"
+ * open it there. This window exists only on a farm that has a concentrate
+ * stage at all (lib/roles: concentratesInUse) — the sidebar does not offer it
+ * and the route does not open it anywhere else.
  *
  * WHAT COUNTS AS ONE is the rule the Ration Editor highlights on — a BOM line
  * that is itself manufactured, or one named bought-in on Livestock Settings.
@@ -41,15 +50,8 @@ import { fmt, num } from "@/lib/utils";
 
 const DEFAULT_BATCH = 1000;
 
-/** What the rule proposes for a line, said in one line. Blank plan means the
- *  page has not asked yet; an empty proposal means the store cannot cover it
- *  and the run will refuse rather than pick a batch the ledger does not back. */
-type Row = { key: number; item_code: string; qty: string };
-let nextKey = 1;
-
 export function Concentrate() {
   const [list, setList] = useState<Concentrate[] | null>(null);
-  const [feeds, setFeeds] = useState<FeedChoice[]>([]);
   const [stores, setStores] = useState<string[]>([]);
   const [open, setOpen] = useState<string | null>(null);
   const [mixQty, setMixQty] = useState<Record<string, string>>({});
@@ -60,12 +62,6 @@ export function Concentrate() {
   const [mixing, setMixing] = useState<string | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
   const [said, setSaid] = useState<string | null>(null);
-
-  // Editing / creating
-  const [editing, setEditing] = useState(false);
-  const [name, setName] = useState("");
-  const [rows, setRows] = useState<Row[]>([]);
-  const [busy, setBusy] = useState(false);
 
   const load = useCallback(
     async (qtyByItem?: Record<string, number>) => {
@@ -84,10 +80,6 @@ export function Concentrate() {
 
   useEffect(() => {
     void load();
-    void (async () => {
-      const r = await getHerdRations();
-      if (!isError(r)) setFeeds(r.feeds);
-    })();
   }, [load]);
 
   const chosen = useMemo(
@@ -130,48 +122,6 @@ export function Concentrate() {
     if (chosen) void loadPlan(chosen);
   }, [chosen, loadPlan]);
 
-  function edit(c: Concentrate) {
-    setEditing(true);
-    setName(c.item_name);
-    setRows(c.lines.map((l) => ({ key: nextKey++, item_code: l.item_code, qty: String(l.recipe_qty) })));
-  }
-
-  function startNew() {
-    setEditing(true);
-    setOpen(null);
-    setName("");
-    setRows([{ key: nextKey++, item_code: "", qty: "" }]);
-    setSaid(null);
-    setProblem(null);
-  }
-
-  const total = rows.reduce((s, r) => s + (Number(r.qty) || 0), 0);
-  const ready = !!name.trim() && rows.some((r) => r.item_code && num(r.qty) > 0);
-
-  async function save() {
-    setBusy(true);
-    setProblem(null);
-    const r = await setConcentrate({
-      name: name.trim(),
-      lines: rows
-        .filter((x) => x.item_code && Number(x.qty) > 0)
-        .map((x) => ({ item_code: x.item_code, qty: Number(x.qty) })),
-    });
-    setBusy(false);
-    if (isError(r)) {
-      setProblem(r.error);
-      return;
-    }
-    setSaid(
-      r.changed
-        ? `${r.item} makes ${fmt(r.base_qty)} kg from these ingredients — recipe ${r.bom}.`
-        : `Nothing changed — ${r.item} already says exactly this.`,
-    );
-    setEditing(false);
-    setOpen(r.item);
-    void load();
-  }
-
   async function mix(c: Concentrate) {
     const qty = num(qtyFor(c));
     if (qty <= 0) {
@@ -211,17 +161,18 @@ export function Concentrate() {
   }
 
   // A farm that mixes straight from raw ingredients has no concentrate stage.
-  // The recipes it already holds stay readable elsewhere; this page is simply
-  // not part of its flow, and the server refuses to set or mix one.
-  if (!bootstrap().premanufacture_concentrate) {
+  // The route does not open this page there (App); this is what a stale tab
+  // shows rather than a mixer the server would refuse.
+  if (!concentratesInUse()) {
     return (
       <Page>
         <PageHeading eyebrow="Feeding" title="Concentrate">
           Not used on this farm.
         </PageHeading>
         <Notice tone="info">
-          This farm does not pre-manufacture concentrate (Livestock Settings &gt; Pre-manufacture
-          Concentrate is off). Design and mix feed from raw ingredients on the Feed Design page.
+          No herd on this farm eats a pre-made concentrate: Livestock Settings &gt; Pre-manufacture
+          Concentrate is off and no herd is set to Pre-manufacture on Herds. Every ration is mixed
+          from raw ingredients — write it in the Ration Editor and mix it on Feeding.
         </Notice>
       </Page>
     );
@@ -229,8 +180,17 @@ export function Concentrate() {
 
   return (
     <Page>
-      <PageHeading eyebrow="Feeding" title="Concentrate">
-        A mix made for the store. Not for a herd, and not for a number of days.
+      <PageHeading
+        eyebrow="Feeding"
+        title="Concentrate"
+        actions={
+          <Button asChild variant="secondary">
+            <a href={concentrateRecipeHref(null)}>New concentrate</a>
+          </Button>
+        }
+      >
+        A mix made for the store, by the batch. Not for a herd, and not for a number of days.
+        Its recipe is written in the Ration Editor; it is mixed here.
       </PageHeading>
 
       {problem && <Notice tone="error">{problem}</Notice>}
@@ -272,7 +232,7 @@ export function Concentrate() {
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : list.length === 0 ? (
             <p className="text-[13px] text-[var(--sd-muted)]">
-              No concentrates yet. Make one below.
+              No concentrates yet. Write one with New concentrate.
             </p>
           ) : (
             list.map((c) => {
@@ -312,8 +272,13 @@ export function Concentrate() {
                           onBlur={() => void reprice(c)}
                         />
                       </div>
-                      <Button variant="secondary" onClick={() => edit(c)}>
-                        Recipe
+                      <Button asChild variant="secondary">
+                        <a
+                          href={concentrateRecipeHref(c.item_code)}
+                          title="Open this recipe in the Ration Editor"
+                        >
+                          Recipe
+                        </a>
                       </Button>
                       {canMix() && (
                         <Button disabled={mixing === c.item_code} onClick={() => void mix(c)}>
@@ -427,102 +392,6 @@ export function Concentrate() {
           )}
         </CardContent>
       </Card>
-
-      {editing && (
-        <Card>
-          <CardHeader>
-            <CardTitle>{name || "New concentrate"}</CardTitle>
-            <CardDescription>
-              Name it and list what goes in. What the ingredients weigh is what the recipe
-              makes — mixing more than that scales every line.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-4">
-            <div className="flex min-w-[240px] max-w-[460px] flex-col gap-1.5">
-              <Label htmlFor="c-name">Name</Label>
-              <Input
-                id="c-name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="e.g. Finisher Pellets 14"
-              />
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <Label>What goes in</Label>
-              {rows.map((r, i) => (
-                <div
-                  key={r.key}
-                  className="flex flex-wrap items-end gap-3 rounded-[var(--sd-radius-lg)] bg-[var(--sd-bg-soft)] px-3.5 py-3 shadow-[var(--sd-shadow-inset)]"
-                >
-                  <div className="flex min-w-[220px] flex-1 flex-col gap-1.5">
-                    <Label htmlFor={`c-item-${r.key}`}>Ingredient</Label>
-                    <Picker
-                      id={`c-item-${r.key}`}
-                      value={r.item_code}
-                      onChange={(next) =>
-                        setRows((s) => s.map((x, j) => (j === i ? { ...x, item_code: next } : x)))
-                      }
-                      options={feeds.map((f) => ({ value: f.value, label: f.label }))}
-                      label="Ingredient"
-                      placeholder="Choose an ingredient…"
-                    />
-                  </div>
-                  <div className="flex flex-col gap-1.5">
-                    <Label htmlFor={`c-qty-${r.key}`}>Amount (kg)</Label>
-                    <Input
-                      id={`c-qty-${r.key}`}
-                      type="number"
-                      min="0"
-                      className="w-32"
-                      value={r.qty}
-                      onChange={(e) =>
-                        setRows((s) => s.map((x, j) => (j === i ? { ...x, qty: e.target.value } : x)))
-                      }
-                    />
-                  </div>
-                  <Button variant="ghost" onClick={() => setRows((s) => s.filter((_, j) => j !== i))}>
-                    Remove
-                  </Button>
-                </div>
-              ))}
-              <div className="flex items-center gap-3">
-                <Button
-                  variant="secondary"
-                  onClick={() => setRows((s) => [...s, { key: nextKey++, item_code: "", qty: "" }])}
-                >
-                  Add an ingredient
-                </Button>
-                <span className="text-[12px] text-[var(--sd-muted)]">
-                  makes {fmt(total)} kg
-                </span>
-              </div>
-            </div>
-
-            <NutritionPanel
-              perUnit="batch"
-              lines={rows
-                .filter((x) => x.item_code && Number(x.qty) > 0)
-                .map((x) => ({ item_code: x.item_code, qty: Number(x.qty) }))}
-            />
-
-            <div className="flex gap-3">
-              <Button disabled={!ready || busy} onClick={() => void save()}>
-                {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save recipe"}
-              </Button>
-              <Button variant="secondary" onClick={() => setEditing(false)}>
-                Close
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {!editing && (
-        <Button variant="secondary" className="self-start" onClick={startNew}>
-          New concentrate
-        </Button>
-      )}
     </Page>
   );
 }
