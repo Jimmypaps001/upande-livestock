@@ -28,20 +28,28 @@ def load(path=DATA_PATH):
 
 
 def ration_lines(ration):
-	"""One head's day, as BOM lines in each item's stock UOM.
+	"""One head's day, as standing-ration lines.
 
 	The sheet gives kilograms a head a day and each ingredient as a share of
-	it; a dose (Diamond V 7 g, Meat Grower 60 ml) is per head and outside the
-	100 %. 14 kg at 8 % hay is 1.12 kg of hay; 7 g of Diamond V is 0.007 kg.
+	it: 14 kg at 8 % hay is 1.12 kg of hay. A dose (Diamond V 7 g, Meat Grower
+	60 ml) is per head and outside the 100 %, so it goes in as a DOSE line, in
+	its own unit (`dose_uom`), the way the Ration Editor writes one: it is
+	shown as a dose and kept out of the per-head kilos.
 	"""
 	kg = float(ration["kg_per_head"])
 	out = []
 	for line in ration["lines"]:
 		out.append({"item_code": line["item"], "qty": round(kg * float(line["pct"]), QTY_PLACES)})
 	for dose in ration.get("doses") or []:
-		out.append({"item_code": dose["item"],
-		            "qty": round(float(dose["per_head"]) * DOSE_FACTOR[dose["uom"]], QTY_PLACES)})
+		out.append({"item_code": dose["item"], "qty": float(dose["per_head"]), "dose_uom": dose["uom"]})
 	return [line for line in out if line["qty"] > 0]
+
+
+def stock_qty(line):
+	"""A ration line's quantity in its item's stock unit (a 7 g dose is 0.007 kg)."""
+	if line.get("dose_uom"):
+		return line["qty"] * DOSE_FACTOR[line["dose_uom"]]
+	return line["qty"]
 
 
 def shoat_per_head(group):
@@ -75,7 +83,7 @@ def daily_need(data):
 	for ration in data["rations"]:
 		head = head_of(data, ration["herd"])
 		for line in ration_lines(ration):
-			need[line["item_code"]] = need.get(line["item_code"], 0.0) + line["qty"] * head
+			need[line["item_code"]] = need.get(line["item_code"], 0.0) + stock_qty(line) * head
 	conc = data["shoat_concentrate"]
 	batch = float(conc["batch_kg"])
 	made = sum(float(g["kg_per_day"]) for g in data["shoat_groups"])

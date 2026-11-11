@@ -28,8 +28,11 @@ class RationLines(unittest.TestCase):
 		ration = {"kg_per_head": 10, "lines": [{"item": "Hay", "pct": 1.0}],
 		          "doses": [{"item": "Diamond V", "per_head": 7, "uom": "Gram"},
 		                    {"item": "Meat Grower", "per_head": 60, "uom": "Millilitre"}]}
-		by_item = {line["item_code"]: line["qty"] for line in M.ration_lines(ration)}
-		self.assertEqual(by_item, {"Hay": 10.0, "Diamond V": 0.007, "Meat Grower": 0.06})
+		lines = M.ration_lines(ration)
+		by_item = {line["item_code"]: (line["qty"], line.get("dose_uom")) for line in lines}
+		self.assertEqual(by_item, {"Hay": (10.0, None), "Diamond V": (7.0, "Gram"), "Meat Grower": (60.0, "Millilitre")})
+		self.assertEqual({line["item_code"]: M.stock_qty(line) for line in lines},
+		                 {"Hay": 10.0, "Diamond V": 0.007, "Meat Grower": 0.06})
 
 	def test_zero_lines_dropped(self):
 		ration = {"kg_per_head": 10, "lines": [{"item": "Hay", "pct": 1.0}, {"item": "Vines", "pct": 0.0}]}
@@ -79,8 +82,8 @@ class TheExtract(unittest.TestCase):
 		by_item = {line["item_code"]: line["qty"] for line in M.ration_lines(fin)}
 		self.assertEqual(by_item["Maize Grain"], 4.9)
 		self.assertEqual(by_item["Maize Silage"], 5.46)
-		self.assertEqual(by_item["Diamond V"], 0.007)
-		self.assertEqual(by_item["Meat Boost"], 0.05)
+		self.assertEqual(by_item["Diamond V"], 7)
+		self.assertEqual(by_item["Meat Boost"], 50)
 
 	def test_shoat_batch_is_a_tonne(self):
 		c = self.data["shoat_concentrate"]

@@ -195,15 +195,21 @@ def individuals(days):
 	left. Its herd on each day comes from its Movement events
 	(`common.herd_history`), cut short at the day it left.
 	"""
+	filters = {"docstatus": ["<", 2]}
+	# A disabled animal is not on the farm: it is how retired records (the
+	# demo herd a farm's real data replaced) are put away without deleting them.
+	if frappe.get_meta("Animal").has_field("disabled"):
+		filters["disabled"] = 0
 	rows = {
 		r.name: r
 		for r in frappe.get_all(
-			"Animal", filters={"docstatus": ["<", 2]},
+			"Animal", filters=filters,
 			fields=["name", "current_herd", "acquisition_date", "date_of_birth", "status", "modified"], limit=0,
 		)
 	}
 	if not rows:
-		return {d: 0 for d in days}, {}
+		farm, heads = {d: 0 for d in days}, {}
+		return _add_unrecorded(days, farm, heads)
 	exits = _exit_days(rows)
 	moves = herd_history._moves(rows.keys())
 	farm, by_herd = [], {}
@@ -214,7 +220,29 @@ def individuals(days):
 			if herd:
 				by_herd.setdefault(herd, []).append(_maths.clip_stay(start, end, left))
 	heads = {herd: _maths.count_present(days, stays) for herd, stays in by_herd.items()}
-	return _maths.count_present(days, farm), heads
+	return _add_unrecorded(days, _maths.count_present(days, farm), heads)
+
+
+def _add_unrecorded(days, farm, heads):
+	"""Count a one-by-one herd whose animals are not recorded yet by its stored head count.
+
+	Mutara's In-calf, Heifers and Lactating groups are fed and paid for every
+	day, but their cows are not in the app as animals yet; the herd record
+	carries the count the farm feeds against. Leaving them out would spread the
+	day's labour over too few animals. A herd with any recorded animal is
+	counted from its animals alone, and so is one whose animals were all
+	retired (disabled): its stored count is theirs. The stored count has no
+	history, so it is applied to every day asked about.
+	"""
+	for herd, number in frappe.get_all(
+		"Herds", filters={"counting": ["!=", "By number"], "number_of_animals": [">", 0]},
+		fields=["name", "number_of_animals"], as_list=True, limit=0,
+	):
+		if (herd in heads and any(heads[herd].values())) or frappe.db.exists("Animal", {"current_herd": herd}):
+			continue
+		heads[herd] = {d: int(number) for d in days}
+		farm = {d: farm.get(d, 0) + int(number) for d in days}
+	return farm, heads
 
 
 def by_number(days):
