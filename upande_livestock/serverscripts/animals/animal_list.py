@@ -30,7 +30,7 @@ def animal_list():
 		rows = frappe.get_all(
 			"Animal",
 			fields=["name", "burn_name", "sex", "current_herd", "breed",
-			        "date_of_birth", "status", "disabled", "image", "repro_status"],
+			        "date_of_birth", "status", "disabled", "image", "repro_status", "species"],
 			order_by="name asc",
 			limit_page_length=0,
 		)
@@ -51,6 +51,8 @@ def animal_list():
 					"stage": "retired" if (r.disabled or r.status in RETIRED) else "open",
 					"photo": r.image,
 					"thumb": thumbs.existing_thumb(r.image) if r.image else None,
+					# picks the stand-in picture when there is no photo
+					"species": r.species,
 				}
 				for r in rows
 			],

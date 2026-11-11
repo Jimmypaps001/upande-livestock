@@ -2,6 +2,7 @@
 // correctly — vitest/config re-exports vite's defineConfig with the extra
 // `test` field on UserConfig.
 import { defineConfig } from "vitest/config";
+import { searchForWorkspaceRoot } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import path from "node:path";
@@ -37,6 +38,14 @@ export default defineConfig({
   },
   server: {
     port: 5174,
+    // The animal silhouettes are inlined from the app's public folder (one copy,
+    // also served to the desk), which sits outside this project.
+    fs: {
+      allow: [
+        searchForWorkspaceRoot(process.cwd()),
+        path.resolve(__dirname, "../upande_livestock/public/images/silhouettes"),
+      ],
+    },
     proxy: {
       "/api": { target: FRAPPE_URL, changeOrigin: true },
       "/method": { target: FRAPPE_URL, changeOrigin: true },
