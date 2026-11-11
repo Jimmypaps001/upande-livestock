@@ -1,0 +1,112 @@
+{
+ "actions": [],
+ "autoname": "hash",
+ "creation": "2026-11-11 15:00:00.000000",
+ "description": "Read-only history: what a herd ate on a day before the farm fed through this app, loaded from its own tracker. The feed was never received into stock, so nothing here posts a Stock Entry, a Work Order or accounting. Cost per animal uses it only for a herd and day with no feed issued from the stores. One record per herd and day.",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "date",
+  "herd",
+  "head_count",
+  "cb_totals",
+  "total_kg",
+  "total_cost",
+  "source",
+  "sb_items",
+  "items"
+ ],
+ "fields": [
+  {
+   "fieldname": "date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Date",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "herd",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Herd",
+   "options": "Herds",
+   "reqd": 1
+  },
+  {
+   "description": "The head the herd was fed for that day, as the tracker counted them.",
+   "fieldname": "head_count",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Head",
+   "non_negative": 1
+  },
+  {
+   "fieldname": "cb_totals",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "total_kg",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Total Kg",
+   "precision": "3",
+   "read_only": 1
+  },
+  {
+   "description": "The tracker's own feed cost for the day. Left blank, the lines' amounts added up.",
+   "fieldname": "total_cost",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Feed Cost",
+   "non_negative": 1
+  },
+  {
+   "description": "Where the record came from, e.g. Tracker.",
+   "fieldname": "source",
+   "fieldtype": "Data",
+   "in_standard_filter": 1,
+   "label": "Source"
+  },
+  {
+   "fieldname": "sb_items",
+   "fieldtype": "Section Break",
+   "label": "Feeds"
+  },
+  {
+   "fieldname": "items",
+   "fieldtype": "Table",
+   "label": "Feeds",
+   "options": "Livestock Feed History Item"
+  }
+ ],
+ "links": [],
+ "modified": "2026-11-11 15:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Upande Livestock",
+ "name": "Livestock Feed History",
+ "naming_rule": "Random",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1, "delete": 1, "email": 1, "export": 1, "print": 1, "read": 1,
+   "report": 1, "role": "Livestock Manager", "share": 1, "write": 1
+  },
+  {
+   "create": 1, "delete": 1, "email": 1, "export": 1, "print": 1, "read": 1,
+   "report": 1, "role": "System Manager", "share": 1, "write": 1
+  },
+  {"read": 1, "report": 1, "role": "Livestock Attendant"},
+  {"read": 1, "report": 1, "role": "Livestock Breeder"},
+  {"read": 1, "report": 1, "role": "Livestock Vet"},
+  {"read": 1, "report": 1, "role": "Livestock Stores"},
+  {"read": 1, "report": 1, "role": "Livestock Nutritionist"}
+ ],
+ "sort_field": "date",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "herd",
+ "track_changes": 1
+}
