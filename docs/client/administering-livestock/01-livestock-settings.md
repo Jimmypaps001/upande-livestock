@@ -97,6 +97,33 @@ This is the tab that stops flows working when it is wrong.
 |---|---|---|
 | Feed WIP warehouse | Where the TMR is produced and held. Used as **both** WIP and finished-goods store | Livestock Feed Store - KR |
 
+### Pre-manufacture concentrate (farm default)
+
+Whether the farm mixes a concentrate ahead, as a batch for the store, that the
+herds' rations then consume — or mixes every ration straight from its raw
+ingredients.
+
+It is the **default**. Each herd has its own **Concentrate** setting (Herds page,
+"Concentrate, herd by herd"): *Farm default* follows this box, *Pre-manufacture*
+and *Mix from raw* override it for that herd. Mutara leaves this box off, so
+the cattle are mixed from raw, and sets the shoat groups to *Pre-manufacture*
+for their one-tonne shoat concentrate batch.
+
+The rule for what the app shows is one sentence: **the Concentrate window is
+there while at least one herd eats a pre-made concentrate.** Then the sidebar
+lists Concentrate (once, under Feeding) and the Ration Editor offers concentrate
+recipes. When no herd does — the box off and no herd on *Pre-manufacture*, or
+every herd on *Mix from raw* — the Concentrate window is hidden and cannot be
+opened, the Ration Editor offers raw feeds only, and the server refuses to set
+or mix a concentrate. Existing concentrate recipes are kept, just not offered.
+Reload the app after changing it.
+
+### Feed by head count
+
+On, a herd's day of feed is its head count times the ration per head. Off, the
+Feeding page and Manufacture all show that only as a suggestion and the
+operator types the kilos the group was actually given.
+
 ### Feed source warehouses
 
 An **ordered** child table of warehouses feed inputs may be drawn from — raw

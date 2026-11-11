@@ -59,16 +59,31 @@ what this run produced goes out. An earlier balance sitting in the store is
 left alone rather than swept up, so each batch reconciles against its own
 issue.
 
-### 2. Concentrate
+### Every herd at once — Manufacture all
 
-Underneath, one card per concentrate the ration draws on. There are two kinds,
-and they behave differently:
+The **Manufacture all** button at the top of the Feeding page mixes the day's
+feed for every herd still owed some. It opens a preview first: each herd, its
+head count and the kilos to mix, whether the stores cover it, and any
+concentrate that has to be mixed first. Nothing posts until **Mix them all**.
 
-- **Mixed on the farm.** The card tells you how short the TMR run is, what one
-  batch is, and how many batches cover it — then offers a **Manufacture
-  Concentrate** button. Do this first, then run the main programme.
-- **Bought in ready-packed.** There is nothing to manufacture. A shortfall here
-  is answered by a purchase, not by this screen.
+On a farm that does not feed by head count, the preview offers head count ×
+ration per head as a suggestion beside a box for each herd; what you type is
+what is mixed, and a herd left blank is not fed.
+
+## Where everything else lives
+
+The feeding screens each do one job:
+
+| Screen | What it is for |
+|---|---|
+| **Feeding** | Mixing and issuing feed: one herd, or Manufacture all. Manual configuration tunes today's mix (swap a forage, trim a line) without changing the herd's ration |
+| **Ration Editor** | Writing recipes: what a herd eats per head per day, with the feed library and live nutrition beside it — and, where the farm uses concentrate, a concentrate's recipe. Saving makes a new revision |
+| **Concentrate** | Mixing a concentrate batch for the store. Shown only while at least one herd eats a pre-made concentrate (see Livestock Settings → Pre-manufacture concentrate and each herd's Concentrate setting on Herds). Its **Recipe** button opens the Ration Editor |
+| **Feed in Store** | What the feed stores hold |
+| **Ration History** | Which recipe each herd was actually fed, day by day |
+
+The old **Feed Design** page is now the Ration Editor; links to it still open
+the Ration Editor.
 
 ## If something is short
 

@@ -57,8 +57,8 @@ Doctypes (module Production):
 ## Part D — Feeding the way Mutara feeds (upande_livestock)
 
 1. **Feed by head count** (Livestock Settings Check, default on). Off: Feeding and Manufacture all show head count × per-head as a **suggestion**; the operator types the day's total kg for the group and that total is what is mixed (scaled from the ration). On: unchanged.
-2. **Per-herd concentrate switch**: Herds field `concentrate_mode` (Select: Farm default · Pre-manufacture · Mix from raw). The farm-wide setting stays the default. Cattle mix from raw; shoats use a made batch.
-3. **Percentage mode** in Feed Design and the Ration Editor: enter **kg per head per day** and each ingredient as **% of it**; the app stores kg lines as today. Changing the kg per head rescales every line.
+2. **Per-herd concentrate switch**: Herds field `concentrate_mode` (Select: Farm default · Pre-manufacture · Mix from raw). The farm-wide setting stays the default. Cattle mix from raw; shoats use a made batch. Shown and changed on the Herds page ("Concentrate, herd by herd"). The Concentrate window exists while at least one herd resolves to Pre-manufacture (`any_herd_premanufactures`); that is the only rule.
+3. **Percentage mode** in the Ration Editor (which has since absorbed Feed Design — see the 2026-11-09 spec's amendment): enter **kg per head per day** and each ingredient as **% of it**; the app stores kg lines as today. Changing the kg per head rescales every line.
 4. **Per-head additive doses**: a line can be a dose per head in grams or ml (Diamond V 7 g, Meat Boost 25–50 g, Meat Grow 60 ml) outside the 100%; it is converted to the item's stock UOM for the BOM and shown as a dose.
 5. **Interchangeable forage**: `Livestock Feed.substitute_group` (e.g. "Wet forage": maize silage, chopped maize, Napier, sorghum silage). At mixing the operator can swap one for another in the same group; kg adjusted by dry matter so the herd gets the same DM. Posted through the existing manual/tuned path, without minting a new standing ration.
 
