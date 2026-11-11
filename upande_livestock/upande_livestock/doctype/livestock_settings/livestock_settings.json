@@ -447,10 +447,10 @@
   },
   {
    "default": "1",
-   "description": "On: concentrate is mixed ahead for the store and the TMR run consumes it (two stages). Off: this farm mixes every ration straight from raw ingredients, so the Concentrate page is hidden, concentrates cannot be set or manufactured, and feed pickers offer raw feeds only. Existing concentrate recipes are kept, just not offered.",
+   "description": "The farm-wide default for whether herds eat a concentrate mixed ahead as a batch for the store. On: every herd left on Concentrate = Farm default (Herds page) eats a pre-made concentrate, and its ration may name one. Off: those herds have their rations mixed straight from raw ingredients and are offered raw feeds only. A herd set to Pre-manufacture or Mix from raw on the Herds page overrides this. The Concentrate window (sidebar and page) and the concentrate choices in the Ration Editor are shown while at least one herd eats a pre-made concentrate, and hidden when none does; existing concentrate recipes are kept, just not offered. Reload the app after changing it.",
    "fieldname": "premanufacture_concentrate",
    "fieldtype": "Check",
-   "label": "Pre-manufacture Concentrate"
+   "label": "Pre-manufacture Concentrate (farm default)"
   },
   {
    "default": "1",
@@ -1074,7 +1074,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-11-11 12:00:00.000000",
+ "modified": "2026-11-11 15:00:00.000000",
  "modified_by": "Administrator",
  "module": "Upande Livestock",
  "name": "Livestock Settings",

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { DayStatus } from "@/components/feeding/DayStatus";
 import { ManualConfig } from "@/components/feeding/ManualConfig";
+import { ManufactureAll } from "@/components/feeding/ManufactureAll";
 import { Mark, Notice, Pill } from "@/components/feeding/Notice";
 import { PortionSwitch } from "@/components/feeding/PortionSwitch";
 import { PostingDate } from "@/components/feeding/PostingDate";
@@ -31,6 +32,8 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { bootstrap, isError } from "@/lib/frappe";
+import { canMix } from "@/lib/roles";
+import { routeHash } from "@/lib/router";
 import {
   feedDayStatus,
   feedOptions,
@@ -63,6 +66,15 @@ function waitingSentence(r: { produced_qty: number; uom: string; work_order: str
   return `Fed ${fmt(r.produced_qty)} ${r.uom || ""} to ${herd} and recorded on Work Order ${r.work_order}.`;
 }
 
+/**
+ * Feeding: where feed is MIXED and ISSUED — one herd at a time below, or every
+ * herd still owed feed at once with Manufacture all in the header.
+ *
+ * Recipes are not designed here. What a herd normally eats is the Ration
+ * Editor's; this page mixes that recipe, or a previously used one, and its
+ * Manual configuration tunes today's mix only (a forage swapped, a line
+ * trimmed) without touching the herd's standing ration.
+ */
 export function Feeding() {
   const [herds, setHerds] = useState<HerdOption[]>([]);
   const [herd, setHerd] = useState("");
@@ -409,9 +421,23 @@ export function Feeding() {
 
   return (
     <Page>
-      <PageHeading eyebrow="Upande Livestock · Feeding" title="Feeding">
+      <PageHeading
+        eyebrow="Upande Livestock · Feeding"
+        title="Feeding"
+        actions={
+          // Mixing moves stock; a nutritionist-only user never reaches this
+          // page, but the button stays behind the same rule as everywhere.
+          canMix() ? <ManufactureAll onDone={() => herd && load(herd, false)} /> : undefined
+        }
+      >
         Pick a herd. The ration scales with head count, every line is checked against the
-        feed stores first, and the whole batch is issued to that herd in the same action.
+        feed stores first, and the whole batch is issued to that herd in the same action — or
+        mix every herd&rsquo;s feed for the day with Manufacture all. To change what a herd
+        normally eats, use the{" "}
+        <a href={routeHash("ration-editor")} className="underline underline-offset-2">
+          Ration Editor
+        </a>
+        .
       </PageHeading>
 
       {/* The day this page posts against, decided before anything is filled in. */}

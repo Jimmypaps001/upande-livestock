@@ -191,7 +191,7 @@ export function Rations() {
 
   return (
     <Page>
-      <PageHeading eyebrow="Upande Livestock · Feeding" title="Rations">
+      <PageHeading eyebrow="Upande Livestock · Feeding" title="Ration History">
         Every recipe a herd was actually fed, the day it went out and how much was mixed —
         read from the mix run itself, so a recipe changed today does not rewrite what was
         fed in April. Days fed before the app are shown from the farm's tracker, marked

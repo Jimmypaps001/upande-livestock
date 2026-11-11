@@ -13,8 +13,14 @@
 export const DOSE_UOMS = ["Gram", "Millilitre"] as const;
 export type DoseUom = (typeof DOSE_UOMS)[number];
 
-/** A recipe line's unit as the editors carry it: kilos, or a per-head dose. */
-export type LineUnit = "kg" | DoseUom;
+/**
+ * A recipe line's unit as the editors carry it: kilos, a per-head dose, or a
+ * unit the store counts the feed in (molasses in "Litre", hay in "BALE").
+ * A store unit carries `kgPer` on its row — kilos in one of it — so every sum
+ * below is in kilos; a row without it counts its quantity as kilos, as the
+ * server does for a unit nothing converts.
+ */
+export type LineUnit = "kg" | DoseUom | (string & {});
 
 export function isDoseUom(uom: string | null | undefined): uom is DoseUom {
   return uom === "Gram" || uom === "Millilitre";
@@ -22,7 +28,28 @@ export function isDoseUom(uom: string | null | undefined): uom is DoseUom {
 
 /** The short form a person reads beside a number. */
 export function unitLabel(unit: LineUnit): string {
-  return unit === "Gram" ? "g" : unit === "Millilitre" ? "ml" : "kg";
+  return unit === "Gram" ? "g" : unit === "Millilitre" ? "ml" : unit === "kg" || !unit ? "kg" : unit;
+}
+
+/** A row the sums below read. */
+type Weighed = { qty: string | number; unit?: LineUnit; kgPer?: number | null };
+
+/** Is this row weighed (kilos or a store unit) rather than a per-head dose? */
+export function isWeighed(r: { unit?: LineUnit }): boolean {
+  return !isDoseUom(r.unit);
+}
+
+/** A weighed row's kilos: its quantity through `kgPer`. A dose weighs nothing here. */
+export function rowKilos(r: Weighed): number {
+  if (!isWeighed(r)) return 0;
+  const per = r.unit && r.unit !== "kg" && r.kgPer && r.kgPer > 0 ? r.kgPer : 1;
+  return n(r.qty) * per;
+}
+
+/** The quantity in `r`'s unit that weighs `kilos`, to four places. */
+export function qtyForKilos(r: { unit?: LineUnit; kgPer?: number | null }, kilos: number): number {
+  const per = r.unit && r.unit !== "kg" && r.kgPer && r.kgPer > 0 ? r.kgPer : 1;
+  return round(kilos / per, 4);
 }
 
 const round = (n: number, places: number) => {
@@ -35,21 +62,22 @@ const n = (v: string | number | null | undefined) => {
   return Number.isFinite(x) ? x : 0;
 };
 
-/** What the ration weighs per head: its kilogram lines, doses left out. */
-export function kgTotal(rows: Array<{ qty: string | number; unit?: LineUnit }>): number {
+/** What the ration weighs per head: its weighed lines in kilos, doses left out. */
+export function kgTotal(rows: Weighed[]): number {
   return round(
-    rows.reduce((s, r) => (r.unit && r.unit !== "kg" ? s : s + n(r.qty)), 0),
+    rows.reduce((s, r) => s + rowKilos(r), 0),
     4,
   );
 }
 
-/** Each kilogram line as a percentage of the kilos, to two places. Doses get "". */
-export function percentagesOf(rows: Array<{ qty: string | number; unit?: LineUnit }>): string[] {
+/** Each weighed line's kilos as a percentage of the total, to two places. Doses get "". */
+export function percentagesOf(rows: Weighed[]): string[] {
   const total = kgTotal(rows);
   return rows.map((r) => {
-    if (r.unit && r.unit !== "kg") return "";
-    if (!total || !n(r.qty)) return "";
-    return String(round((n(r.qty) / total) * 100, 2));
+    if (!isWeighed(r)) return "";
+    const kg = rowKilos(r);
+    if (!total || !kg) return "";
+    return String(round((kg / total) * 100, 2));
   });
 }
 
@@ -61,7 +89,7 @@ export function kgFromPercent(kgPerHead: string | number, pct: string | number):
 /** The percentages added up — what the screen checks against 100. */
 export function percentTotal(rows: Array<{ pct?: string; unit?: LineUnit }>): number {
   return round(
-    rows.reduce((s, r) => (r.unit && r.unit !== "kg" ? s : s + n(r.pct)), 0),
+    rows.reduce((s, r) => (isWeighed(r) ? s + n(r.pct) : s), 0),
     2,
   );
 }
@@ -73,35 +101,65 @@ export function percentTotal(rows: Array<{ pct?: string; unit?: LineUnit }>): nu
  * farm means by it: the shares stay, the amounts follow. A dose is per head
  * already and does not move.
  */
-export function applyPercentages<T extends { qty: string; pct?: string; unit?: LineUnit }>(
+export function applyPercentages<T extends { qty: string; pct?: string; unit?: LineUnit; kgPer?: number | null }>(
   rows: T[],
   kgPerHead: string | number,
 ): T[] {
   return rows.map((r) =>
-    r.unit && r.unit !== "kg"
+    !isWeighed(r)
       ? r
-      : { ...r, qty: r.pct === undefined || r.pct === "" ? "" : String(kgFromPercent(kgPerHead, r.pct)) },
+      : {
+          ...r,
+          qty:
+            r.pct === undefined || r.pct === ""
+              ? ""
+              : String(qtyForKilos(r, kgFromPercent(kgPerHead, r.pct))),
+        },
   );
 }
 
 /** Rows with their percentages filled in from their kilos, for switching modes on. */
-export function withPercentages<T extends { qty: string; pct?: string; unit?: LineUnit }>(rows: T[]): T[] {
+export function withPercentages<T extends { qty: string; pct?: string; unit?: LineUnit; kgPer?: number | null }>(rows: T[]): T[] {
   const pcts = percentagesOf(rows);
   return rows.map((r, i) => ({ ...r, pct: pcts[i] }));
 }
 
-/** A recipe line as the server takes it: kilos, or a dose with its unit. */
+/** A recipe line as the server takes it: kilos (no unit, so the row keeps
+ *  the unit it is written in), a dose with its unit, or a store unit as `uom`
+ *  — which the server converts with the item's own table (`_tuned_bom.row_units`). */
 export function toLine(r: { item_code: string; qty: string | number; unit?: LineUnit }): {
   item_code: string;
   qty: number;
   dose_uom?: DoseUom;
+  uom?: string;
 } {
-  const line: { item_code: string; qty: number; dose_uom?: DoseUom } = {
+  const line: { item_code: string; qty: number; dose_uom?: DoseUom; uom?: string } = {
     item_code: r.item_code,
     qty: n(r.qty),
   };
-  if (r.unit && r.unit !== "kg") line.dose_uom = r.unit;
+  if (isDoseUom(r.unit)) line.dose_uom = r.unit;
+  else if (r.unit && r.unit !== "kg") line.uom = r.unit;
   return line;
+}
+
+/** A line for the nutrition panel: always kilos (a store unit at its kilo
+ *  equivalent), or a dose with its unit. */
+export function toNutrientLine(r: { item_code: string; qty: string | number; unit?: LineUnit; kgPer?: number | null }): {
+  item_code: string;
+  qty: number;
+  dose_uom?: DoseUom;
+} {
+  if (isDoseUom(r.unit)) return { item_code: r.item_code, qty: n(r.qty), dose_uom: r.unit };
+  return { item_code: r.item_code, qty: round(rowKilos(r), 4) };
+}
+
+/** The unit a saved line is carried in on screen: a dose stays a dose, either
+ *  name of the kilogram is "kg", and any other unit is the store unit. */
+export function unitFromUom(uom: string | null | undefined, isDose?: boolean): LineUnit {
+  if (isDoseUom(uom) && isDose !== false) return uom;
+  const u = (uom || "").trim().toLowerCase();
+  if (!u || u === "kg" || u === "kilogram" || u === "kgs" || u === "kilograms") return "kg";
+  return uom as string;
 }
 
 /**

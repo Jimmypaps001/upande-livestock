@@ -5,7 +5,7 @@
 
 Ported from Kaitet's Livestock Quality role; Mutara uses it for the person who
 balances feed: they keep the nutrient figures on Livestock Feed and design the
-herds' rations and concentrates on the Feed Design page.
+herds' rations and concentrates in the Ration Editor.
 
 The app's own doctypes grant it through their schema (Livestock Feed: write;
 Herds and Livestock Settings: read). The ERPNext doctypes it needs are core, so

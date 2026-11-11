@@ -7,13 +7,22 @@ import {
   kgFromPercent,
   kgTotal,
   percentTotal,
+  qtyForKilos,
   withPercentages,
   type LineUnit,
 } from "@/lib/ration-maths";
 import { cn, fmt } from "@/lib/utils";
 
-/** A recipe row the two editors share the shape of. */
-export type ModeRow = { key: number; item_code: string; qty: string; pct?: string; unit?: LineUnit };
+/** A recipe row the editors share the shape of. `kgPer` is kilos in one of
+ *  `unit` when it is a store unit (Litre, BALE), so the sums run on kilos. */
+export type ModeRow = {
+  key: number;
+  item_code: string;
+  qty: string;
+  pct?: string;
+  unit?: LineUnit;
+  kgPer?: number | null;
+};
 
 /**
  * Kilos per line, or kilos per head and a percentage per line.
@@ -24,7 +33,8 @@ export type ModeRow = { key: number; item_code: string; qty: string; pct?: strin
  * percentages are a way of typing, not something stored. Changing the kilos
  * per head rescales every line, so a group moved up to 20 kg keeps its mix.
  *
- * Doses (grams, millilitres a head) sit outside the 100% and never move.
+ * Doses (grams, millilitres a head) sit outside the 100% and never move. A
+ * line in a store unit (3 Litre of molasses) takes its share by its kilos.
  */
 export function usePercentMode<T extends ModeRow>(rows: T[], setRows: Dispatch<SetStateAction<T[]>>) {
   const [on, setOn] = useState(false);
@@ -52,7 +62,9 @@ export function usePercentMode<T extends ModeRow>(rows: T[], setRows: Dispatch<S
 
   function changePct(key: number, value: string) {
     setRows((s) =>
-      s.map((r) => (r.key === key ? { ...r, pct: value, qty: String(kgFromPercent(kgPerHead, value)) } : r)),
+      s.map((r) =>
+        r.key === key ? { ...r, pct: value, qty: String(qtyForKilos(r, kgFromPercent(kgPerHead, value))) } : r,
+      ),
     );
   }
 
@@ -122,28 +134,40 @@ export function RecipeModeBar({
   );
 }
 
-const UNIT_OPTIONS = [
-  { value: "kg", label: "kg" },
-  { value: "Gram", label: "g a head" },
-  { value: "Millilitre", label: "ml a head" },
-];
-
-/** Kilos, or a per-head dose in grams or millilitres outside the 100%. */
+/**
+ * Kilos, a unit the store counts the item in (its stock unit and its UOM
+ * conversions: Litre, BALE…), or a per-head dose in grams or millilitres
+ * outside the 100%.
+ */
 export function UnitPicker({
   id,
   value,
   onChange,
+  storeUnits = [],
 }: {
   id: string;
   value: LineUnit | undefined;
   onChange: (next: LineUnit) => void;
+  /** The item's units other than kilos and doses. */
+  storeUnits?: string[];
 }) {
+  const current = value || "kg";
+  const extra = [...storeUnits];
+  // A line already written in a unit the item no longer lists keeps it.
+  if (current !== "kg" && current !== "Gram" && current !== "Millilitre" && !extra.includes(current)) {
+    extra.push(current);
+  }
   return (
     <Picker
       id={id}
-      value={value || "kg"}
+      value={current}
       onChange={(v) => onChange((v || "kg") as LineUnit)}
-      options={UNIT_OPTIONS}
+      options={[
+        { value: "kg", label: "kg" },
+        ...extra.map((u) => ({ value: u, label: u })),
+        { value: "Gram", label: "g a head" },
+        { value: "Millilitre", label: "ml a head" },
+      ]}
       label="Unit"
       className="w-28"
     />

@@ -71,21 +71,25 @@ function footer(container: HTMLElement): HTMLElement {
   return el;
 }
 
-describe("the Concentrate entry follows Pre-manufacture Concentrate", () => {
-  it("is offered by default, beside Feed Design", () => {
+describe("the Concentrate entry follows whether concentrate is in use", () => {
+  const concentrateLinks = () =>
+    screen.queryAllByRole("link").filter((l) => l.getAttribute("href") === "#/concentrate");
+
+  it("is offered exactly once where concentrate is in use, beside the Ration Editor", () => {
     const { container } = mount();
-    expect(container.textContent).toContain("Concentrate");
-    expect(container.textContent).toContain("Feed Design");
+    expect(concentrateLinks()).toHaveLength(1);
+    expect(container.textContent).toContain("Ration Editor");
+    expect(container.textContent).not.toContain("Feed Design");
   });
 
-  it("is hidden when the farm does not pre-manufacture concentrate", () => {
+  it("is hidden when no herd eats a pre-made concentrate", () => {
     window.LIVESTOCK = {
       bootstrap: { user: "dairy@upande.com", full_name: "Jane Kamau", premanufacture_concentrate: false },
     };
     try {
       const { container } = mount();
-      expect(container.textContent).not.toContain("Concentrate");
-      expect(container.textContent).toContain("Feed Design");
+      expect(concentrateLinks()).toHaveLength(0);
+      expect(container.textContent).toContain("Ration Editor");
     } finally {
       window.LIVESTOCK = {
         bootstrap: { user: "dairy@upande.com", full_name: "Jane Kamau", user_image: "", site_name: "kaitet", roles: [] },

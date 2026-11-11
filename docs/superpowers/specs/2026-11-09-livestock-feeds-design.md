@@ -95,3 +95,40 @@ A patch sets the field to 1 on every site, so nothing changes until a manager tu
 ## Left to the builder
 
 Exact component layout, debounce timing, naming of internal helpers, the category list's final wording, and which existing pricing helper to reuse for cost.
+
+## Amendment (2026-11-11): one recipe screen
+
+The farm found Feed Design, the Ration Editor, Feeding and Concentrate repeating
+each other. They now each do one job:
+
+- **Ration Editor** (`#/ration-editor`, `frontend/src/pages/RationEditor.tsx`) is the only
+  recipe screen. It has everything Feed Design had — library with nutrient badges, Kilos /
+  % of intake, per-head g/ml doses, live nutrition with targets, load a herd, save as its
+  standing ration — and, only where concentrate is in use, edits and creates concentrates.
+  It keeps the old editor's rules: saving is offered only once something changed, and an
+  unbalanced recipe is called out. `FeedDesign.tsx` is gone; `#/feed-design` is an alias
+  that is rewritten to `#/ration-editor` (`lib/router.ts: ALIASES`). A nutritionist-only
+  user lands on the Ration Editor.
+- **Feeding** mixes and issues: one herd, or every herd with **Manufacture all** (moved here
+  from Feed Design, `components/feeding/ManufactureAll.tsx`, same preview and typed totals).
+  Its Manual configuration still tunes a day's mix; it does not write recipes.
+- **Concentrate** mixes batches only. Its "Recipe" and "New concentrate" open the Ration
+  Editor (`#/ration-editor?concentrate=<item>|new`).
+- **Rule for the Concentrate window:** shown in the sidebar (once) and reachable by route
+  only while at least one herd eats a pre-made concentrate — a herd on *Farm default*
+  follows `premanufacture_concentrate`, *Pre-manufacture* / *Mix from raw* override it.
+  That is `_concentrate.any_herd_premanufactures`, sent in the bootstrap as
+  `premanufacture_concentrate`; the server's refusal uses the same rule. The setting is
+  labelled "Pre-manufacture Concentrate (farm default)" and the Herds page shows and
+  changes each herd's mode (`herd_rations` returns `concentrate_mode`, `update_herd`
+  accepts it).
+- **Units on every line.** A recipe line (Ration Editor) or manual feeding line
+  (Feeding) may be written in kilos, the item's stock unit or any UOM in its
+  conversion table, or a g/ml dose. The kilo equivalent is shown beside it and the
+  nutrition, % of intake and `BOM.quantity` use kilos (`feeding/_units.py`: `item_units`,
+  `line_kilos`; `kg_total(lines, kilos_of)`). The page sends the unit as `uom`;
+  `_tuned_bom.row_units` converts with the item's own table, so how stock posts is
+  unchanged. Units come from `herd_rations.units` and a new `feed_units(items)`.
+  "Kg" and "Kilogram" are both kilos everywhere (`_units.is_kg`, `units.ts: isKg`), and a
+  new feed item is stocked in whichever this site has (`_units.kilogram_uom`).
+

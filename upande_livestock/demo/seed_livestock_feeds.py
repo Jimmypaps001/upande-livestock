@@ -1,7 +1,7 @@
 # Copyright (c) 2026, Upande and contributors
 # For license information, please see license.txt
 
-"""Describe the feed items with book values, so Feed Design has numbers to show.
+"""Describe the feed items with book values, so the Ration Editor has numbers to show.
 
 Creates a Livestock Feed record for each Item in the Feed Item Group whose name
 matches a common East African ingredient, with `nutrient_source = "Book value"`.

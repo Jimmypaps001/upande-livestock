@@ -238,7 +238,7 @@
   },
   {
    "default": "Farm default",
-   "description": "Whether this herd's concentrate is mixed ahead as a batch for the store (Pre-manufacture) or its ration is mixed straight from raw ingredients (Mix from raw). Farm default follows Livestock Settings > Pre-manufacture Concentrate.",
+   "description": "Whether this herd eats a concentrate mixed ahead as a batch for the store (Pre-manufacture) or has its ration mixed straight from raw ingredients (Mix from raw). Farm default follows Livestock Settings > Pre-manufacture Concentrate. The Concentrate window is shown while at least one herd eats a pre-made concentrate.",
    "fieldname": "concentrate_mode",
    "fieldtype": "Select",
    "label": "Concentrate",
@@ -248,7 +248,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-11-11 12:00:00.000000",
+ "modified": "2026-11-11 15:00:00.000000",
  "modified_by": "Administrator",
  "module": "Upande Livestock",
  "name": "Herds",
