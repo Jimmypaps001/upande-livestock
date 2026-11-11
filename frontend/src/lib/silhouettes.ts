@@ -4,37 +4,40 @@ import type { CycleStage } from "@/lib/animals";
  * Which drawing stands in for an animal with no photograph.
  *
  * Two steps. First the CLASS, from what the farm knows about the animal:
- * species, then age, then sex and stage — a bull carries the zebu hump, a cow
- * an udder, a steer is deep and dehorned, a calf is small with a big head.
- * Then the POSE within that class (standing, grazing, walking), chosen from
+ * species, then age, then sex and stage.
+ * Then the POSE within that class (standing, turned, grazing), chosen from
  * the animal's own number, so a list of photo-less animals is not one picture
  * repeated, and the same animal always gets the same picture on every screen
  * and every visit.
  *
  * The drawings themselves are in upande_livestock/public/images/silhouettes/
- * (written by scripts/build_silhouettes.py); this file only names them.
+ * (the supplied artwork, traced by scripts/trace_silhouettes.py); this file
+ * only names them.
  */
 
 export type SilhouetteClass = "cow" | "heifer" | "bull" | "steer" | "calf" | "sheep" | "goat";
 
 export type Silhouette =
-  | "cow" | "cow-grazing" | "cow-walking"
-  | "heifer" | "heifer-grazing"
+  | "cow" | "cow-udder" | "cow-grazing" | "cow-grazing-2"
+  | "heifer"
   | "bull"
-  | "steer" | "steer-grazing" | "steer-walking"
-  | "calf" | "calf-grazing"
-  | "sheep"
-  | "goat";
+  | "steer" | "steer-turned" | "steer-grazing"
+  | "calf" | "calf-grazing";
 
-/** The poses each class is drawn in. The first is the plain standing one. */
+/**
+ * The poses each class is drawn in, from the traced artwork (the first is the
+ * plain standing one). A heifer shares the grazing cow that shows no udder.
+ * There is no sheep or goat artwork, so for now they fall back to the calf —
+ * the smallest animal of the set — until drawings of their own are supplied.
+ */
 export const POSES: Record<SilhouetteClass, readonly Silhouette[]> = {
-  cow: ["cow", "cow-grazing", "cow-walking"],
-  heifer: ["heifer", "heifer-grazing"],
+  cow: ["cow", "cow-udder", "cow-grazing-2", "cow-grazing"],
+  heifer: ["heifer", "cow-grazing"],
   bull: ["bull"],
-  steer: ["steer", "steer-grazing", "steer-walking"],
+  steer: ["steer", "steer-turned", "steer-grazing"],
   calf: ["calf", "calf-grazing"],
-  sheep: ["sheep"],
-  goat: ["goat"],
+  sheep: ["calf", "calf-grazing"],
+  goat: ["calf", "calf-grazing"],
 };
 
 /** What the pick reads. Every field but the number may be missing. */
