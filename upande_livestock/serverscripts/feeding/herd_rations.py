@@ -27,6 +27,7 @@ import frappe
 from frappe.utils import flt
 
 from upande_livestock.serverscripts.feeding._concentrate import (
+	FARM_DEFAULT,
 	premanufacture_by_herd,
 	premanufacture_concentrate_on,
 )
@@ -58,6 +59,7 @@ def herd_rations(payload=None):
 
 		farm_on = premanufacture_concentrate_on()
 		premade = premanufacture_by_herd(farm_on)
+		modes = _concentrate_modes()
 		rows = []
 		for h in herds:
 			bom = boms.get(h.bom or "")
@@ -95,6 +97,9 @@ def herd_rations(payload=None):
 				# Per herd, not per farm: a herd on Mix from raw is offered raw
 				# feeds only, one on Pre-manufacture its concentrate too.
 				"premanufacture": premade.get(h.name, farm_on),
+				# What the herd itself says (Farm default, Pre-manufacture, Mix
+				# from raw), so the Herds page can show and change it.
+				"concentrate_mode": modes.get(h.name) or FARM_DEFAULT,
 			})
 
 		return {
@@ -107,6 +112,13 @@ def herd_rations(payload=None):
 		}
 
 	return run(go, "livestock herd_rations failed")
+
+
+def _concentrate_modes():
+	"""{herd: Herds.concentrate_mode}, empty on a site not yet migrated."""
+	if not frappe.db.has_column("Herds", "concentrate_mode"):
+		return {}
+	return dict(frappe.get_all("Herds", fields=["name", "concentrate_mode"], as_list=True))
 
 
 def _kg_total(ration):

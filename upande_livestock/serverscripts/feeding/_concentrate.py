@@ -131,7 +131,7 @@ def refuse_without_concentrate_stage():
 			_(
 				"This farm does not pre-manufacture concentrate (Livestock Settings > "
 				"Pre-manufacture Concentrate is off and no herd is set to Pre-manufacture). "
-				"Mix the ration straight from its ingredients on the Feed Design page."
+				"Write the ration from its raw ingredients in the Ration Editor and mix it on Feeding."
 			)
 		)
 

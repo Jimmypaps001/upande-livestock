@@ -337,7 +337,7 @@ def recipe_nutrition(bom):
 
 @frappe.whitelist()
 def livestock_feeds():
-	"""The feed library for the Feed Design page: raw feeds with their figures,
+	"""The feed library for the Ration Editor: raw feeds with their figures,
 	feed items nobody has described yet, and the made feeds with COMPUTED ones."""
 
 	def go():
