@@ -23,6 +23,7 @@ from upande_livestock.serverscripts.costing import _maths
 
 LABOUR_DOCTYPE = "Livestock Daily Labour"
 LABOUR_ROW_DOCTYPE = "Livestock Daily Labour Entry"
+HISTORY_DOCTYPE = "Livestock Feed History"
 
 #: Livestock stock entry types that are not medicine: the feed (counted per
 #: herd) and the two mixes (whose value reaches a herd through the feed issue
@@ -85,6 +86,25 @@ def feed_by_herd(lo, hi):
 			continue
 		by_day = out.setdefault(herd, {})
 		by_day[day] = by_day.get(day, 0.0) + flt(r.value)
+	return out
+
+
+def feed_history_by_herd(lo, hi):
+	"""{herd: {day: {"cost", "heads"}}} — the tracker's feed history in the window.
+
+	Read here and combined in `_maths.merge_feed`, which keeps a herd-day's
+	history only where the ledger has no feed issue. The history's own
+	`total_cost` is the sheet's figure for the day, not a valuation: the feed
+	never passed through the stores. Empty before the doctype is installed.
+	"""
+	if not frappe.db.table_exists(HISTORY_DOCTYPE):
+		return {}
+	out = {}
+	for r in frappe.get_all(
+		HISTORY_DOCTYPE, filters={"date": ["between", [lo, hi]]},
+		fields=["herd", "date", "total_cost", "head_count"], limit=0,
+	):
+		out.setdefault(r.herd, {})[_maths.as_date(r.date)] = {"cost": flt(r.total_cost), "heads": int(r.head_count or 0)}
 	return out
 
 

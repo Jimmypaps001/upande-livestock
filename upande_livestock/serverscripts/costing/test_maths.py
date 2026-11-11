@@ -105,5 +105,61 @@ class TestReport(unittest.TestCase):
 		self.assertEqual([x["month"] for x in out["months"]], ["2026-10", "2026-11"])
 
 
+class TestHistory(unittest.TestCase):
+	STOCK = {"Finishers": {D1: 900.0, D2: 0.0}}
+	HISTORY = {
+		"Finishers": {D1: {"cost": 5000, "heads": 100}, D2: {"cost": 4000, "heads": 100},
+		              D3: {"cost": 3000, "heads": 60}},
+		"Growers": {"2026-11-02": {"cost": 1000, "heads": 50}},
+	}
+
+	def test_history_only_where_the_ledger_has_nothing(self):
+		feed, hist = m.merge_feed(self.STOCK, self.HISTORY)
+		# D1 and D2 have a ledger issue (D2's valued at nothing): the ledger's, never both.
+		self.assertEqual(feed["Finishers"], {D1: 900.0, D2: 0.0, D3: 3000.0})
+		self.assertEqual(hist["Finishers"], {D3: 60})
+		# A herd with no ledger feed at all, keyed by an ISO string, still lands on its day.
+		self.assertEqual(feed["Growers"], {D2: 1000.0})
+		self.assertEqual(hist["Growers"], {D2: 50})
+
+	def test_inputs_are_not_changed(self):
+		stock = {"Finishers": {D1: 1.0}}
+		m.merge_feed(stock, {"Finishers": {D2: {"cost": 2, "heads": 1}}})
+		self.assertEqual(stock, {"Finishers": {D1: 1.0}})
+
+	def test_history_heads_replace_the_herds_on_those_days(self):
+		heads = m.with_history_heads({"Finishers": {D1: 200, D3: 200}}, {"Finishers": {D3: 60}, "Growers": {D2: 0}})
+		self.assertEqual(heads["Finishers"], {D1: 200, D3: 60})
+		# No head on the history row: nothing to put in, not a zero over the app's count.
+		self.assertEqual(heads["Growers"], {})
+
+	def test_report_marks_history_days(self):
+		days = [D2, D3]
+		feed, hist = m.merge_feed(self.STOCK, self.HISTORY)
+		heads = m.with_history_heads({"Finishers": {D2: 200, D3: 200}}, hist)
+		out = m.build_report(
+			days,
+			feed={d: sum(h.get(d, 0) for h in feed.values()) for d in days},
+			medicine={}, labour={}, fuel={}, animals={D2: 250, D3: 250},
+			herd_feed=feed, herd_heads=heads, from_history=hist,
+		)
+		d2, d3 = out["days"]
+		self.assertEqual((d2["feed_cost"], d2["history_feed_cost"], d2["feed_from_history"]), (1000, 1000, True))
+		self.assertEqual((d3["feed_cost"], d3["history_feed_cost"], d3["feed_from_history"]), (3000, 3000, True))
+		self.assertEqual(out["total"]["history_feed_cost"], 4000)
+		self.assertEqual(out["months"][0]["history_feed_cost"], 4000)
+		fin = next(h for h in out["herds"] if h["herd"] == "Finishers")
+		self.assertEqual((fin["history_days"], fin["history_feed_cost"]), (1, 3000))
+		# D3 is costed over the tracker's 60 head, not the 200 the app holds today.
+		self.assertEqual([(x["date"], x["heads"], x["from_history"]) for x in fin["days"]],
+		                 [("2026-11-02", 200, False), ("2026-11-03", 60, True)])
+		self.assertEqual(fin["days"][1]["feed_cost_per_head"], 50)
+
+	def test_no_history_marks_nothing(self):
+		out = m.build_report([D1], {D1: 10}, {}, {}, {}, {D1: 1}, {"A": {D1: 10}}, {"A": {D1: 1}})
+		self.assertFalse(out["days"][0]["feed_from_history"])
+		self.assertEqual(out["herds"][0]["history_days"], 0)
+
+
 if __name__ == "__main__":
 	unittest.main()

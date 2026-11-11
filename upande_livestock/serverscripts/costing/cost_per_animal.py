@@ -3,7 +3,8 @@
 
 """Cost per animal per day — the figure the farm runs on.
 
-For each day: feed issued to the herds, medicine issued, labour entered,
+For each day: feed issued to the herds (or, for a herd-day the stores never
+issued, the tracker's Livestock Feed History, marked as such), medicine issued, labour entered,
 diesel the machines burned for the feedlot, and every animal on the farm; the
 day's cost per animal is the four costs over the animals. Then the month
 totals, and per herd the feed cost per head per day. The rules and the
@@ -50,7 +51,8 @@ def report(from_date=None, to_date=None):
 	herd_heads = {**individual_heads, **counted_heads}
 
 	fuel = _production.fuel(lo, hi, _data.livestock_cost_centers())
-	feed = _data.feed_by_herd(lo, hi)
+	# The ledger's feed issues, and the tracker's history only for herd-days the ledger has none of.
+	feed, from_history = _maths.merge_feed(_data.feed_by_herd(lo, hi), _data.feed_history_by_herd(lo, hi))
 	out = _maths.build_report(
 		days,
 		feed={d: sum(h.get(d, 0) for h in feed.values()) for d in days},
@@ -59,7 +61,8 @@ def report(from_date=None, to_date=None):
 		fuel=fuel["by_day"],
 		animals=animals,
 		herd_feed=feed,
-		herd_heads=herd_heads,
+		herd_heads=_maths.with_history_heads(herd_heads, from_history),
+		from_history=from_history,
 	)
 	for row in out["days"]:
 		row["diesel_litres"] = round(fuel["litres_by_day"].get(_maths.as_date(row["date"]), 0.0), 2)
