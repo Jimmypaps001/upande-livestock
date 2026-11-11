@@ -34,6 +34,7 @@ change what a head-count farm mixes. See `_head_count`."""
 
 import frappe
 
+from upande_livestock.serverscripts.common import event_types
 from upande_livestock.serverscripts.common.envelope import guard_stock, run
 from upande_livestock.serverscripts.feeding import _engine as feeding
 from upande_livestock.serverscripts.feeding._head_count import feed_by_head_count_on
@@ -46,6 +47,10 @@ def manufacture_feed(
 	source_warehouse=None, source_by_item=None, batch_by_item=None, total_qty=None,
 ):
 	def go():
+		# A farm that switched Feeding off (Settings → Events) is refused in
+		# words before any stock moves — not left to the Feeding event failing
+		# after the feed has already left the store.
+		event_types.assert_enabled("Feeding")
 		guard_stock("Work Order", "Stock Entry")
 		resolved_bom_no = _base_for(herd, bom_no).name if bom_no else None
 		res = feeding.manufacture_herd_feed(

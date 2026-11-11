@@ -6,7 +6,7 @@
 import frappe
 from frappe import _
 
-from upande_livestock.serverscripts.common import backdate, shoats
+from upande_livestock.serverscripts.common import backdate, event_types, shoats
 from upande_livestock.serverscripts.common.employee import current_employee
 from upande_livestock.serverscripts.common.envelope import as_dict, guard, run
 
@@ -15,6 +15,8 @@ from upande_livestock.serverscripts.common.envelope import as_dict, guard, run
 def record_weight_sample(payload=None):
 	def go():
 		guard("Herd Weight Sample")
+		# Weighing switched off for the farm (Settings → Events) is off for shoats too.
+		event_types.assert_enabled("Weight Recording")
 		d = as_dict(payload)
 		herd = (d.get("herd") or "").strip()
 		if not herd or not shoats.is_by_number(herd):

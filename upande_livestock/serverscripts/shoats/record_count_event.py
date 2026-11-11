@@ -6,7 +6,7 @@
 import frappe
 from frappe import _
 
-from upande_livestock.serverscripts.common import backdate, shoats
+from upande_livestock.serverscripts.common import backdate, event_types, shoats
 from upande_livestock.serverscripts.common.employee import current_employee
 from upande_livestock.serverscripts.common.envelope import as_dict, guard, run
 
@@ -14,11 +14,19 @@ FIELDS = ("females", "males", "young", "others", "born_dead", "cause", "other_he
           "mating_start", "mating_end", "mating", "remarks")
 
 
+#: Herd count entries that stand for a Livestock Event Type a farm can switch off.
+SWITCHED_BY = {"Mating": "Service", "Birth": "Calving"}
+
+
 @frappe.whitelist()
 def record_count_event(payload=None):
 	def go():
 		guard("Herd Count Event")
 		d = as_dict(payload)
+		# A mating is a Service and a lambing/kidding a Calving: switched off for
+		# the farm (Settings → Events), they are off for shoats too. The ledger's
+		# own entries (head count, death, sale, transfer, weaning) are no event type.
+		event_types.assert_enabled(SWITCHED_BY.get(d.get("event_type")))
 		herd = (d.get("herd") or "").strip()
 		if not herd or not shoats.is_by_number(herd):
 			frappe.throw(_("{0} is not a shoat herd.").format(herd))

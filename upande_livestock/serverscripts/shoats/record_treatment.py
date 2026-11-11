@@ -6,7 +6,7 @@
 import frappe
 from frappe import _
 
-from upande_livestock.serverscripts.common import backdate, shoats
+from upande_livestock.serverscripts.common import backdate, event_types, shoats
 from upande_livestock.serverscripts.common.employee import current_employee
 from upande_livestock.serverscripts.common.envelope import as_dict, guard, run
 
@@ -16,6 +16,9 @@ def record_treatment(payload=None):
 	def go():
 		guard("Herd Treatment")
 		d = as_dict(payload)
+		# A treatment type that is also an event type the farm switched off
+		# (Treatment, Deworming, Vaccination) is refused; Dipping is no event type.
+		event_types.assert_enabled(d.get("treatment_type") or "Treatment")
 		herd = (d.get("herd") or "").strip()
 		if not herd or not shoats.is_by_number(herd):
 			frappe.throw(_("{0} is not a shoat herd.").format(herd))

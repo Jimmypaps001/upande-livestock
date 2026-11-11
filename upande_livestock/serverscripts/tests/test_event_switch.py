@@ -217,3 +217,89 @@ class TestThePatchSwitchesEveryTypeOn(EventSwitchCase):
 		event_types.forget()
 		self.assertEqual(frappe.db.get_value(EVENT_TYPE, PD, "is_active"), 1)
 		self.assertEqual(frappe.db.count(EVENT_TYPE, {"is_active": 0}), 0)
+
+
+class TestFeedIsNotIssuedWithFeedingOff(EventSwitchCase):
+	"""Every way of giving a herd feed is a Feeding event. With Feeding off the
+	endpoint refuses in the switch's own words before any stock moves — not, as
+	before, issuing the feed and then failing to put the Feeding on the timeline."""
+
+	def _refused(self, reply):
+		self.assertIsInstance(reply, dict)
+		self.assertIn("switched off", reply.get("error") or "")
+		self.assertIn("Settings → Events", reply["error"])
+
+	def test_each_feed_issuing_endpoint_refuses(self):
+		from upande_livestock.serverscripts.feeding.issue_feed import issue_feed
+		from upande_livestock.serverscripts.feeding.manual_feed import manual_feed
+		from upande_livestock.serverscripts.feeding.manufacture_all_feeds import manufacture_all_feeds
+		from upande_livestock.serverscripts.feeding.manufacture_feed import manufacture_feed
+		from upande_livestock.serverscripts.mobile.record_feeding import record_feeding
+
+		switch("Feeding", False)
+		self._refused(manufacture_feed("No Such Herd"))
+		self._refused(manual_feed({"herd": "No Such Herd"}))
+		self._refused(manufacture_all_feeds())
+		self._refused(issue_feed("No Such Herd", 10))
+		for action in ("manufacture", "issue", "manual"):
+				self._refused(record_feeding({"action": action, "herd": "No Such Herd"}))
+
+	def test_feeding_on_is_not_refused_for_it(self):
+		from upande_livestock.serverscripts.feeding.issue_feed import issue_feed
+
+		switch("Feeding", True)
+		reply = issue_feed("No Such Herd", 10)
+		self.assertNotIn("switched off", (reply or {}).get("error") or "")
+
+
+class TestShoatsFollowTheSwitch(EventSwitchCase):
+	"""Shoats are recorded by number on their own doctypes, but an event a farm
+	switched off is off for its shoats too: the phone hides the entry, and the
+	server refuses a stale one.
+
+	A refusal's error envelope rolls the request back, switch and all; the
+	switched-off list read at the first call stays cached for the request, as it
+	would in a real one, so the calls below still see it."""
+
+	def _refused(self, reply, event_type):
+		self.assertIn("switched off", (reply or {}).get("error") or "")
+		self.assertIn(event_type, reply["error"])
+
+	def test_weighing_treatment_mating_and_birth_are_refused(self):
+		from upande_livestock.serverscripts.shoats.record_count_event import record_count_event
+		from upande_livestock.serverscripts.shoats.record_treatment import record_treatment
+		from upande_livestock.serverscripts.shoats.record_weight_sample import record_weight_sample
+
+		for name in ("Weight Recording", "Vaccination", "Service", "Calving"):
+			switch(name, False)
+		self._refused(record_weight_sample({"herd": "No Such Herd"}), "Weight Recording")
+		self._refused(record_treatment({"herd": "No Such Herd", "treatment_type": "Vaccination"}), "Vaccination")
+		self._refused(record_count_event({"herd": "No Such Herd", "event_type": "Mating"}), "Service")
+		self._refused(record_count_event({"herd": "No Such Herd", "event_type": "Birth"}), "Calving")
+
+	def test_entries_that_are_no_event_type_are_not_refused_for_it(self):
+		from upande_livestock.serverscripts.shoats.record_count_event import record_count_event
+		from upande_livestock.serverscripts.shoats.record_treatment import record_treatment
+
+		for name in ("Service", "Calving", "Treatment", "Vaccination", "Deworming"):
+			switch(name, False)
+		for kind in ("Head Count", "Death", "Weaning"):
+			reply = record_count_event({"herd": "No Such Herd", "event_type": kind})
+			self.assertNotIn("switched off", (reply or {}).get("error") or "")
+		reply = record_treatment({"herd": "No Such Herd", "treatment_type": "Dipping"})
+		self.assertNotIn("switched off", (reply or {}).get("error") or "")
+
+
+class TestCalfSeparationIsAMovement(EventSwitchCase):
+	"""The phone's calf separation saves a Movement event (to_herd = the calf's
+	new herd), so it goes with Movement — and the server refuses it with it."""
+
+	def test_a_separation_move_is_refused_with_movement_off(self):
+		switch("Movement", False)
+		doc = frappe.new_doc("Livestock Event")
+		doc.event_type = "Movement"
+		doc.event_date = frappe.utils.today()
+		doc.remarks = "Calf separation: to Feedlot"
+		with self.assertRaises(frappe.ValidationError) as caught:
+			doc.insert(ignore_permissions=True)
+		self.assertIn("Movement is switched off", str(caught.exception))

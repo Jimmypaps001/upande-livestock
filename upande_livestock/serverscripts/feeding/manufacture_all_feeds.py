@@ -38,6 +38,7 @@ import frappe
 from frappe import _
 from frappe.utils import cint, flt, getdate, today
 
+from upande_livestock.serverscripts.common import event_types
 from upande_livestock.serverscripts.common.envelope import guard_stock, run
 from upande_livestock.serverscripts.feeding import _engine as feeding
 from upande_livestock.serverscripts.feeding._concentrate import (
@@ -158,6 +159,10 @@ def _plan_concentrates(runs):
 @frappe.whitelist()
 def manufacture_all_feeds(date=None, portion=1.0, preview=0, totals=None):
 	def go():
+		# A farm that switched Feeding off (Settings → Events) is refused in
+		# words before any stock moves — not left to the Feeding event failing
+		# after the feed has already left the store.
+		event_types.assert_enabled("Feeding")
 		guard_stock("Work Order", "Stock Entry")
 		day = getdate(date) if date else getdate(today())
 		by_head = feed_by_head_count_on()

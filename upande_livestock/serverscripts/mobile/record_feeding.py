@@ -28,6 +28,7 @@ endpoints instead; that hole is why the engine is no longer whitelisted.
 
 import frappe
 
+from upande_livestock.serverscripts.common import event_types
 from upande_livestock.serverscripts.common.envelope import as_dict, run
 from upande_livestock.serverscripts.feeding.feed_day_status import feed_day_status
 from upande_livestock.serverscripts.feeding.feeding_program import feeding_program
@@ -49,6 +50,10 @@ def record_feeding(payload=None):
 			return feeding_program(herd)
 		if action == "day":
 			return feed_day_status(herd)
+		# Reading the programme stays open; giving feed out does not while the
+		# farm has Feeding switched off (each endpoint below refuses it too).
+		if action in ("manufacture", "issue", "manual"):
+			event_types.assert_enabled("Feeding")
 		if action == "manufacture":
 			return manufacture_feed(
 				herd,

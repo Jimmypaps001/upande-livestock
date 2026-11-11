@@ -28,6 +28,7 @@ grant (create a BOM anywhere in manufacturing) for a strictly narrower need
 import frappe
 from frappe import _
 
+from upande_livestock.serverscripts.common import event_types
 from upande_livestock.serverscripts.common.envelope import as_dict, guard_stock, run
 from upande_livestock.serverscripts.feeding._engine import manufacture_herd_feed
 from upande_livestock.serverscripts.feeding._head_count import feed_by_head_count_on
@@ -39,6 +40,10 @@ def manual_feed(payload):
 	"""Mix and issue a tuned ration. See the module docstring."""
 
 	def go():
+		# A farm that switched Feeding off (Settings → Events) is refused in
+		# words before any stock moves — not left to the Feeding event failing
+		# after the feed has already left the store.
+		event_types.assert_enabled("Feeding")
 		guard_stock("Work Order", "Stock Entry")
 		d = as_dict(payload)
 
