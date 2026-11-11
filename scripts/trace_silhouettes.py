@@ -1,14 +1,15 @@
-"""Trace the supplied cattle silhouettes into the app's SVG set.
+"""Trace the supplied cattle, sheep and goat silhouettes into the app's SVG set.
 
     python3 -m venv /tmp/trace && /tmp/trace/bin/pip install potracer pillow numpy scipy
     /tmp/trace/bin/python scripts/trace_silhouettes.py [SOURCE_DIR]
 
 The drawings are the user's supplied images (SOURCE_DIR, by default the folder
 they were handed over in), vectorised as they are: each image is scaled up,
-thresholded and traced with potrace; the only changes are a cleaned, smoothed
-outline, the grass cropped from the grazing cow (both versions are written),
+thresholded and traced with potrace; the only changes are a cleaned outline,
+softened a little and alike for every drawing (SOFTEN, ALPHAMAX below), the grass cropped from the grazing cow (both versions are written),
 and stray specks dropped. ``illuistraton 2.png`` holds nine animals, each cut
-out to its own file.
+out to its own file; the sheep (``sheep .png``) and the two goats
+(``goat.jpeg``, ``goat2.png``) are one animal each.
 
 Every file gets a tight viewBox and a single ``currentColor`` path, written to
 ``upande_livestock/public/images/silhouettes/`` (the web app inlines them) and
@@ -32,13 +33,22 @@ REPO = Path(__file__).resolve().parents[1]
 SRC = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("/mnt/data/code/mona/apps/upande_scp/apps/Trash")
 OUT = [REPO / "upande_livestock" / "public" / "images" / "silhouettes", REPO / "design" / "silhouettes"]
 UP = 4  # trace at 4x the source's pixels, for smooth curves
+# A gentle softening of every outline, the same for all drawings: the scaled-up
+# image is blurred by half a source pixel before the threshold (rounding off
+# pixel steps and hairline notches, never moving an edge by more than a pixel),
+# and potrace is asked for slightly rounder, longer curves. Shapes and
+# proportions stay the source's.
+SOFTEN = 0.5      # Gaussian sigma, in source pixels
+ALPHAMAX = 1.2    # potrace corner threshold (was 1.1): fewer, rounder corners
+OPTTOLERANCE = 0.5  # potrace curve joining (was 0.4): a touch smoother runs
 
 
 def ink(path: Path) -> np.ndarray:
     """The image's dark pixels, as a boolean mask at UP x the source size."""
     im = Image.open(path).convert("L")
     im = im.resize((im.width * UP, im.height * UP), Image.BICUBIC)
-    return np.asarray(im) < 128
+    a = ndimage.gaussian_filter(np.asarray(im, dtype=np.float32), SOFTEN * UP)
+    return a < 128
 
 
 def tidy(mask: np.ndarray, min_area: int = 40 * UP * UP) -> np.ndarray:
@@ -60,7 +70,8 @@ def tidy(mask: np.ndarray, min_area: int = 40 * UP * UP) -> np.ndarray:
 def path_data(mask: np.ndarray, ox: float = 0, oy: float = 0) -> str:
     """potrace the mask; coordinates in source pixels, offset by (ox, oy)."""
     # potracer reads its array as an image: true is white, so hand it the ink inverted
-    plist = potrace.Bitmap(~mask).trace(turdsize=8 * UP * UP, alphamax=1.1, opticurve=True, opttolerance=0.4)
+    plist = potrace.Bitmap(~mask).trace(turdsize=8 * UP * UP, alphamax=ALPHAMAX, opticurve=True,
+                                         opttolerance=OPTTOLERANCE)
 
     def f(p):
         x, y = p.x / UP - ox, p.y / UP - oy
@@ -107,6 +118,14 @@ SHEET = [
     "calf-grazing",   # small, grazing
     "steer-turned",   # standing, facing left, head turned to us
 ]
+
+
+# single-animal drawings of the sheep and goats, file -> source
+SHOATS = {
+    "sheep": "sheep .png",   # standing, side view, head turned to us
+    "goat": "goat.jpeg",     # adult, horned and bearded, facing right
+    "goat-kid": "goat2.png", # young goat, facing right
+}
 
 
 def sheet_animals(mask: np.ndarray) -> list[np.ndarray]:
@@ -185,6 +204,11 @@ def main():
     grazing = tidy(ink(SRC / "illustration 6.png"))
     files["cow-grazing-grass"] = grazing
     files["cow-grazing-2"] = tidy(grazing_without_grass(grazing))
+    # the shoats: one drawing each, traced whole (the goat's faint watermark
+    # lies inside the black body, so the threshold already hides it, and tidy
+    # fills any pin-hole it might leave)
+    for name, source in SHOATS.items():
+        files[name] = tidy(ink(SRC / source))
 
     for out in OUT:
         out.mkdir(parents=True, exist_ok=True)

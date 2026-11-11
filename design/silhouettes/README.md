@@ -1,9 +1,10 @@
 # Animal silhouettes
 
 Stand-ins for an animal with no photograph, shared by the web app and the
-mobile app. They are the supplied cattle artwork, traced as it is by
-`scripts/trace_silhouettes.py` (potrace; the only changes are a cleaned,
-smoothed outline, the grass cropped from one grazing cow, and stray specks
+mobile app. They are the supplied cattle, sheep and goat artwork, traced as it is by
+`scripts/trace_silhouettes.py` (potrace; the only changes are a cleaned outline, gently softened
+the same way for every drawing (a half-pixel blur before the threshold and
+slightly rounder potrace curves: `SOFTEN`, `ALPHAMAX`, `OPTTOLERANCE`), the grass cropped from one grazing cow, and stray specks
 dropped). Re-run the script to regenerate this folder and
 `upande_livestock/public/images/silhouettes/`, which the web app inlines.
 
@@ -23,12 +24,16 @@ React Native, render them with `react-native-svg` and pass `color`.
 | `steer.svg`             | `illuistraton 2.png`, row 2, 1 | steer             |
 | `steer-turned.svg`      | `illuistraton 2.png`, row 3, 3 | steer             |
 | `steer-grazing.svg`     | `illuistraton 2.png`, row 2, 3 | steer             |
-| `calf.svg`              | `illuistraton 2.png`, row 1, 2 | calf (and sheep, goat) |
-| `calf-grazing.svg`      | `illuistraton 2.png`, row 3, 2 | calf (and sheep, goat) |
+| `calf.svg`              | `illuistraton 2.png`, row 1, 2 | calf              |
+| `calf-grazing.svg`      | `illuistraton 2.png`, row 3, 2 | calf              |
+| `sheep.svg`             | `sheep .png`                   | sheep             |
+| `goat.svg`              | `goat.jpeg`                    | goat (adult)      |
+| `goat-kid.svg`          | `goat2.png`                    | goat (young: kid) |
 
 `illustration .png` is the same grazing cow as `illustration 6.png` at another
-crop, so it is not traced twice. There is no sheep or goat artwork: sheep and
-goats wear the calf's two pictures until drawings of their own are supplied.
+crop, so it is not traced twice. `goat.jpeg` carries a faint watermark inside
+the body; the threshold leaves it in the black fill, so the traced goat is one
+clean path with no specks.
 
 ## Which one an animal gets
 
@@ -36,7 +41,9 @@ The web app's rule is `frontend/src/lib/silhouettes.ts` (with tests); the
 phone should do the same so an animal wears the same picture on both:
 
 1. **Class**, first match wins:
-   - species Sheep → `sheep`; Goat → `goat`;
+   - species Sheep → `sheep`;
+   - species Goat → `goat-kid` if its stage is `calf` or it is younger than
+     210 days (the calf rule), else `goat`;
    - stage `calf`, or younger than 210 days → `calf`;
    - male → `bull` if his stage is `bull` (breeding bull), else `steer`;
    - sex not recorded → `steer`;
@@ -45,8 +52,8 @@ phone should do the same so an animal wears the same picture on both:
 2. **Pose**: FNV-1a 32-bit hash of the animal's number (trimmed, upper-cased),
    modulo the number of poses of the class, indexing its list in order:
    cow `cow, cow-udder, cow-grazing-2, cow-grazing`; heifer `heifer,
-   cow-grazing`; bull `bull`; steer `steer, steer-turned, steer-grazing`; calf,
-   sheep and goat `calf, calf-grazing`.
+   cow-grazing`; bull `bull`; steer `steer, steer-turned, steer-grazing`; calf
+   `calf, calf-grazing`; sheep `sheep`; goat `goat`; goat-kid `goat-kid`.
 
 The web app shows them on a soft card tinted with the stage colour
 (`color-mix(tone 15%, bg-soft)`) with the drawing in a deeper shade

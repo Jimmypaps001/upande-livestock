@@ -15,20 +15,23 @@ import type { CycleStage } from "@/lib/animals";
  * only names them.
  */
 
-export type SilhouetteClass = "cow" | "heifer" | "bull" | "steer" | "calf" | "sheep" | "goat";
+export type SilhouetteClass =
+  "cow" | "heifer" | "bull" | "steer" | "calf" | "sheep" | "goat" | "goat-kid";
 
 export type Silhouette =
   | "cow" | "cow-udder" | "cow-grazing" | "cow-grazing-2"
   | "heifer"
   | "bull"
   | "steer" | "steer-turned" | "steer-grazing"
-  | "calf" | "calf-grazing";
+  | "calf" | "calf-grazing"
+  | "sheep"
+  | "goat" | "goat-kid";
 
 /**
  * The poses each class is drawn in, from the traced artwork (the first is the
  * plain standing one). A heifer shares the grazing cow that shows no udder.
- * There is no sheep or goat artwork, so for now they fall back to the calf —
- * the smallest animal of the set — until drawings of their own are supplied.
+ * Sheep and goats have one drawing each: the sheep, the horned adult goat and
+ * the kid.
  */
 export const POSES: Record<SilhouetteClass, readonly Silhouette[]> = {
   cow: ["cow", "cow-udder", "cow-grazing-2", "cow-grazing"],
@@ -36,8 +39,9 @@ export const POSES: Record<SilhouetteClass, readonly Silhouette[]> = {
   bull: ["bull"],
   steer: ["steer", "steer-turned", "steer-grazing"],
   calf: ["calf", "calf-grazing"],
-  sheep: ["calf", "calf-grazing"],
-  goat: ["calf", "calf-grazing"],
+  sheep: ["sheep"],
+  goat: ["goat"],
+  "goat-kid": ["goat-kid"],
 };
 
 /** What the pick reads. Every field but the number may be missing. */
@@ -49,7 +53,7 @@ export interface SilhouetteSubject {
   bornOn?: string | null;
 }
 
-/** Younger than this and it is drawn as a calf, whatever its stage says. */
+/** Younger than this and it is drawn as a calf (a goat as a kid), whatever its stage says. */
 export const CALF_DAYS = 210;
 /** A female younger than this, whose stage does not say she has calved, is a heifer. */
 export const HEIFER_DAYS = 730;
@@ -66,11 +70,12 @@ function ageDays(bornOn: string | null | undefined, now: Date): number | null {
 
 export function silhouetteClass(a: Omit<SilhouetteSubject, "id">, now = new Date()): SilhouetteClass {
   const species = (a.species || "").toLowerCase();
-  if (species === "sheep") return "sheep";
-  if (species === "goat") return "goat";
-
   const age = ageDays(a.bornOn, now);
-  if (a.stage === "calf" || (age !== null && age < CALF_DAYS)) return "calf";
+  const young = a.stage === "calf" || (age !== null && age < CALF_DAYS);
+  if (species === "sheep") return "sheep";
+  if (species === "goat" || species === "goats") return young ? "goat-kid" : "goat";
+
+  if (young) return "calf";
 
   if (a.sex === "Male") return a.stage === "bull" ? "bull" : "steer";
   if (a.sex !== "Female") return "steer"; // sex not recorded: the feedlot's usual animal

@@ -18,7 +18,15 @@ const born = (days: number) => new Date(NOW.getTime() - days * 86400000).toISOSt
 describe("silhouetteClass", () => {
   it("sheep and goats by species, whatever else is known", () => {
     expect(silhouetteClass({ species: "Sheep", sex: "Male", stage: "bull" }, NOW)).toBe("sheep");
-    expect(silhouetteClass({ species: "Goat", sex: "Female", bornOn: born(30) }, NOW)).toBe("goat");
+    expect(silhouetteClass({ species: "Sheep", stage: "calf", bornOn: born(30) }, NOW)).toBe("sheep");
+    expect(silhouetteClass({ species: "Goat", sex: "Female", bornOn: born(CALF_DAYS) }, NOW)).toBe("goat");
+    expect(silhouetteClass({ species: "Goat", sex: "Male" }, NOW)).toBe("goat");
+  });
+
+  it("a young goat is a kid, by stage or by age, like a calf", () => {
+    expect(silhouetteClass({ species: "Goat", sex: "Female", bornOn: born(30) }, NOW)).toBe("goat-kid");
+    expect(silhouetteClass({ species: "Goat", stage: "calf" }, NOW)).toBe("goat-kid");
+    expect(silhouetteClass({ species: "Goat", bornOn: born(CALF_DAYS - 1) }, NOW)).toBe("goat-kid");
   });
 
   it("a calf by stage, or by age under seven months", () => {
@@ -93,9 +101,13 @@ describe("the drawings", () => {
     }
   });
 
-  it("sheep and goats, with no artwork of their own yet, wear the calf's", () => {
-    expect(POSES.sheep).toEqual(POSES.calf);
-    expect(POSES.goat).toEqual(POSES.calf);
+  it("sheep and goats wear their own drawings, never the calf's", () => {
+    expect(POSES.sheep).toEqual(["sheep"]);
+    expect(POSES.goat).toEqual(["goat"]);
+    expect(POSES["goat-kid"]).toEqual(["goat-kid"]);
+    expect(pickSilhouette({ id: "S1", species: "Sheep" }, NOW)).toBe("sheep");
+    expect(pickSilhouette({ id: "G1", species: "Goat", bornOn: born(900) }, NOW)).toBe("goat");
+    expect(pickSilhouette({ id: "G2", species: "Goat", bornOn: born(20) }, NOW)).toBe("goat-kid");
   });
   it("a photo-less row in the animal search wears its silhouette", () => {
     const a: AnimalSummary = {
@@ -111,7 +123,13 @@ describe("the drawings", () => {
 
 /** An animal whose pick is `name`, found by trying numbers in its class. */
 function findIdFor(name: string) {
-  const base = name.startsWith("calf")
+  const base = name === "sheep"
+    ? { species: "Sheep" }
+    : name === "goat-kid"
+      ? { species: "Goat", stage: "calf" as const }
+      : name === "goat"
+        ? { species: "Goat", stage: "open" as const }
+        : name.startsWith("calf")
         ? { sex: "Male", stage: "calf" as const }
         : name.startsWith("bull")
           ? { sex: "Male", stage: "bull" as const }
