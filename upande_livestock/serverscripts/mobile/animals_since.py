@@ -22,6 +22,10 @@ at 300 animals that is the difference between one round-trip and a minute.
 
 The fields are the ones the Animals page's portrait shows (see
 `animals/animal_profile`): her picture, age, breed, herd, sex, dam and sire. The
+weighing carries its date (`last_weight_date`, the latest submitted Livestock
+Weight Record) so the phone can warn that an animal was weighed a few days ago.
+A weighing writes Animal.last_weight_kg without touching `modified`, so the
+delta also takes every animal with a weight record changed since `since`. The
 stage ("Fresh", "In calf") is worked out from her event history and stays with
 `animal_profile`; the phone asks for it when it is online.
 
@@ -49,6 +53,7 @@ def animals_since(since=None):
 		if since_ts:
 			moved = sorted(animal_stage.moved_since(since_ts))
 			or_filters = [["modified", ">", since_ts]]
+			moved = sorted(set(moved) | set(_weighed_since(since_ts)))
 			if moved:
 				or_filters.append(["name", "in", moved])
 		rows = frappe.get_all(
@@ -63,6 +68,7 @@ def animals_since(since=None):
 		)
 
 		stages = animal_stage.stages_for(rows)
+		weighed_on = _last_weight_dates()
 
 		removed = []
 		if since_ts:
@@ -103,6 +109,7 @@ def animals_since(since=None):
 					"sire": r.sire_name,
 					"parity": r.parity,
 					"last_weight_kg": r.last_weight_kg,
+					"last_weight_date": weighed_on.get(r.name),
 					"modified": r.modified,
 				}
 				for r in rows
@@ -111,3 +118,24 @@ def animals_since(since=None):
 		}
 
 	return run(go, "livestock mobile animals_since failed")
+
+
+def _weighed_since(since_ts):
+	"""Animals with a weight record saved, submitted or cancelled after `since_ts`."""
+	return frappe.db.sql_list(
+		"""select distinct animal from `tabLivestock Weight Record`
+		where modified > %s and animal is not null""",
+		(since_ts,),
+	)
+
+
+def _last_weight_dates():
+	"""{animal: date of her latest submitted weighing}, in one grouped query."""
+	return {
+		animal: str(day)
+		for animal, day in frappe.db.sql(
+			"""select animal, max(weight_date) from `tabLivestock Weight Record`
+			where docstatus = 1 and animal is not null group by animal"""
+		)
+		if day
+	}
