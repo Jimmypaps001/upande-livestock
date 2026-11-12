@@ -2,15 +2,17 @@
 
     python3 scripts/build_livestock_logo.py
 
-* ``public/images/livestock_logo.svg`` — the desk tile. Drawn at rest it IS the
-  original ``upande_logo.png`` (white disc, the Upande arrow at the same place
-  and size on a 689 canvas), so the tile is the same size as every other app's.
-  The scene is in the file but hidden; ``public/js/livestock_logo_motion.js``
-  inlines the file and plays it on hover, reading the keyframes from the
-  ``<metadata>`` below.
+* ``public/images/livestock_logo.svg`` — the desk tile, as production's: pure
+  CSS that plays the scene ONCE (arrow in, the round, arrow back out) and comes
+  to rest as the plain Upande mark — the original ``upande_logo.png`` (white
+  disc, the Upande arrow at the same place and size on a 689 canvas), so the
+  tile is the same size as every other app's. The desk shows it through
+  ``<img>`` (a vector, crisp at any zoom); ``public/js/upande_tile_logo.js``
+  replays it on hover by handing the same ``<img>`` a fresh Blob URL. With
+  reduced motion only the resting mark is shown.
 * ``public/images/livestock_logo_loader.svg`` — the splash loader: the same
-  scene as a pure-CSS loop (the splash shows it through ``<img>``, where
-  scripts never run).
+  scene and the same keyframes, looping (the splash shows it through ``<img>``,
+  where scripts never run).
 
 THE SCENE (Livestock's own): the arrow shrinks into the centre of the disc, a
 band of green grass draws across, and a cow walks in onto it — one solid
@@ -24,14 +26,19 @@ quiet: she stands, her tail swings a little, and the grass sways with it. On the
 the pointer stays, and on leave it all eases back out to the plain mark. The
 loader runs in → round → out.
 
-Keyframes are written once (``ENTER`` and ``LOOP``) and emitted both as CSS for
-the loader and as JSON for the desk script.
+Keyframes are written once (``ENTER`` and ``LOOP``) and emitted as CSS for the
+tile and the loader, and as JSON (``design/logo/livestock_motion.json``) for the
+mobile app's login logo, so the phone and the desk move alike.
 
 It also writes the cow mark on its own into ``design/logo/`` for the mobile app:
 ``livestock_cow_mark.svg`` (the disc with the cow in her grass, still),
 ``livestock_cow_mark_small.svg`` (the same with the grass softened into tufts,
 for 64 px and below: favicon) and ``livestock_cow.svg`` (the cow alone in her
-grass, the cow in ``currentColor``; paths: grass, tail, body, front blades).
+grass, the cow in ``currentColor``; paths: grass, tail, body, front blades),
+and the tile's resting mark for the phone's app icon and splash:
+``upande_mark_disc.svg`` (the white disc and the arrow, exactly the tile at
+rest) and ``upande_arrow.svg`` (the arrow alone, for Android's adaptive and
+monochrome layers).
 """
 
 from __future__ import annotations
@@ -218,8 +225,10 @@ def _origin_rules(tracks) -> list[str]:
     return rules
 
 
-def loader_css() -> str:
-    """One cycle: enter (0–18%), the round (18–82%), back out (82–100%)."""
+def loader_css(iterations: str = "infinite") -> str:
+    """One cycle: enter (0–18%), the round (18–82%), back out (82–100%).
+    ``iterations`` "infinite" for the splash loader, "1" for the desk tile (it
+    plays once and rests on the 100% frame, which is the plain mark)."""
     a, b = ENTER_PCT, EXIT_PCT
     # One full pass (arrow in, the scene, arrow back out) in the 4 s the splash is held for.
     cycle_ms = CYCLE_MS
@@ -240,7 +249,7 @@ def loader_css() -> str:
         steps[100.0] = first
         keyframes.append((sel, f"lv-round-{i}", sorted(steps.items())))
     for sel, name, _ in keyframes:
-        lines.append(f"    {sel} {{ animation: {name} {cycle_ms}ms {EASE} infinite both; }}")
+        lines.append(f"    {sel} {{ animation: {name} {cycle_ms}ms {EASE} {iterations} both; }}")
     for _sel, name, steps in keyframes:
         lines.append(f"    @keyframes {name} {{")
         for pct, props in steps:
@@ -254,7 +263,9 @@ def loader_css() -> str:
     return "\n".join(lines)
 
 
-def motion_json() -> str:
+def motion() -> dict:
+    """The keyframes and timings, for the mobile app (design/logo/livestock_motion.json)."""
+
     def tracks(t):
         return [
             {
@@ -266,27 +277,33 @@ def motion_json() -> str:
             for sel, origin, frames in t
         ]
 
-    return json.dumps(
-        {"enterMs": ENTER_MS, "loopMs": LOOP_MS, "ease": EASE, "enter": tracks(ENTER), "loop": tracks(LOOP)},
-        separators=(",", ":"),
-    )
+    return {
+        "cycleMs": CYCLE_MS, "enterPct": ENTER_PCT, "exitPct": EXIT_PCT,
+        "enterMs": ENTER_MS, "loopMs": LOOP_MS, "ease": EASE,
+        "enter": tracks(ENTER), "loop": tracks(LOOP),
+    }
 
 
 SVG_HEAD = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 689 689" width="689" height="689" role="img" aria-label="{label}">'
 
 
-def main():
-    desk = "\n".join([
+def tile_svg() -> str:
+    """The desk tile: the scene once, then the plain Upande mark."""
+    return "\n".join([
         SVG_HEAD.format(label="Livestock"),
-        "  <!-- Generated by scripts/build_livestock_logo.py — edit there. At rest this is",
-        "       upande_logo.png; livestock_logo_motion.js plays the scene on hover. -->",
-        f'  <metadata id="livestock-motion">{motion_json()}</metadata>',
-        body(rest_hidden=True) + "</svg>",
+        "  <!-- Generated by scripts/build_livestock_logo.py — edit there. Plays once on load and",
+        "       rests as the plain Upande mark (upande_logo.png). Pure CSS, no script;",
+        "       upande_tile_logo.js replays it on hover. With reduced motion only the resting",
+        "       mark is shown. -->",
+        loader_css("1"),
+        body(rest_hidden=False) + "</svg>",
         "",
     ])
-    (ROOT / "livestock_logo.svg").write_text(desk)
 
-    loader = "\n".join([
+
+def loader_svg() -> str:
+    """The splash loader: the same scene, looping."""
+    return "\n".join([
         SVG_HEAD.format(label="Upande Livestock"),
         "  <!-- Generated by scripts/build_livestock_logo.py — edit there. The splash loader:",
         "       the Livestock scene on a loop (in, the herd's round, out). Pure CSS. -->",
@@ -294,7 +311,11 @@ def main():
         body(rest_hidden=False) + "</svg>",
         "",
     ])
-    (ROOT / "livestock_logo_loader.svg").write_text(loader)
+
+
+def main():
+    (ROOT / "livestock_logo.svg").write_text(tile_svg())
+    (ROOT / "livestock_logo_loader.svg").write_text(loader_svg())
     print("wrote", ROOT / "livestock_logo.svg", "and", ROOT / "livestock_logo_loader.svg")
     write_design()
 
@@ -346,8 +367,20 @@ def write_design():
         "",
     ])
     (DESIGN / "livestock_cow.svg").write_text(cow)
+
+    # The tile at rest — the Upande mark — for the phone's app icon and splash.
+    disc = '  <circle cx="344.5" cy="344.5" r="340" fill="#ffffff" stroke="#1c1b19" stroke-opacity=".3" stroke-width="7"/>'
+    (DESIGN / "upande_mark_disc.svg").write_text("\n".join([
+        SVG_HEAD.format(label="Upande"), note, disc, "  " + ARROW, "</svg>", "",
+    ]))
+    # The arrow alone, on the same 689 canvas, where the disc has it.
+    (DESIGN / "upande_arrow.svg").write_text("\n".join([
+        SVG_HEAD.format(label="Upande"), note, "  " + ARROW, "</svg>", "",
+    ]))
+    (DESIGN / "livestock_motion.json").write_text(json.dumps(motion(), indent=1) + "\n")
     print("wrote", DESIGN / "livestock_cow_mark.svg", DESIGN / "livestock_cow_mark_small.svg",
-          "and", DESIGN / "livestock_cow.svg")
+          DESIGN / "livestock_cow.svg", DESIGN / "upande_mark_disc.svg", DESIGN / "upande_arrow.svg",
+          "and", DESIGN / "livestock_motion.json")
 
 
 if __name__ == "__main__":

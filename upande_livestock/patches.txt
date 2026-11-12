@@ -210,3 +210,7 @@ upande_livestock.patches.seed_birth_window
 # Every Livestock Event Type switched on: its Enabled switch (the old Is Active box) now
 # hides the event everywhere and refuses new ones, so nothing starts off by accident.
 upande_livestock.patches.enable_every_event_type
+
+# The Livestock tile as Production's: the vector SVG (logo_url), no PNG icon_image, a same-tab
+# Workspace Sidebar link.
+upande_livestock.patches.ensure_livestock_desktop_icon

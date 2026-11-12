@@ -20,10 +20,14 @@ in it, a few short blades drawn again in front of them. For 64 px and below
 | `livestock_cow_mark_1024.png`| the same, 1024 px (store icon / splash)                     |
 | `livestock_cow.svg`          | the cow alone in her grass, cow in `currentColor` (paths: grass, tail, body, front blades) |
 | `livestock_cow_1024.png`     | the cow alone, in the mark's grey `#45433f`                 |
+| `upande_mark_disc.svg`       | the desk tile at rest: the white disc and the Upande arrow (the phone's app icon and splash) |
+| `upande_arrow.svg`           | the arrow alone, where the disc has it (Android adaptive and monochrome layers) |
+| `livestock_motion.json`      | the tile's keyframes and timings (`ENTER`, `LOOP`, `CYCLE_MS`) for the phone's login logo |
 
 Colours: cow `#45433f` (the Upande arrow's grey), grass `#6a9a4c`.
 
-On the web the mark moves: at rest it is the Upande disc and arrow; the arrow
+On the web the mark moves (the desk tile plays once, then on each hover, and
+rests as the Upande mark; the splash loops it): at rest it is the Upande disc and arrow; the arrow
 shrinks away, the grass draws across, the cow walks in, and her tail swings a
 little (pivot: the top of the tail), the grass leaning with it by 2/7 of her
 tail's turn (at most 2°, about the middle of its ground). Timings are in the script (`CYCLE_MS`,
