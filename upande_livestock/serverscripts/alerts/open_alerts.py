@@ -8,6 +8,7 @@ would have hidden the scheduler behind an endpoint's name.
 import frappe
 
 from upande_livestock.serverscripts.alerts._shared import KINDS
+from upande_livestock.serverscripts.common import event_types
 from upande_livestock.serverscripts.common.envelope import guard_read
 
 
@@ -25,6 +26,9 @@ def open_alerts(kind=None, limit=200):
 		order_by="severity asc, alert_date asc",
 		limit=int(limit),
 	)
+	# One still open from before its event was switched off is not shown; the
+	# next sweep settles it.
+	rows = [r for r in rows if event_types.alert_wanted(r.alert_kind)]
 	return {
 		"ok": True,
 		"alerts": rows,

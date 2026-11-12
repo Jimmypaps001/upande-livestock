@@ -113,6 +113,7 @@ def run(apply=False, dump=None):
 		move.current_herd = a.current_herd or ""
 		move.operator = operator
 		move.remarks = "Not listed in the 9 September 2026 herd inventory"
+		move.flags.ignore_event_enabled = True
 		move.insert(ignore_permissions=True)
 		move.submit()
 		done += 1

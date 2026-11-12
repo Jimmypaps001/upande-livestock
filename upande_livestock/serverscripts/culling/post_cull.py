@@ -86,6 +86,8 @@ def _move_to_cull_herd(doc, herd_before, operator):
 	)
 	move.new_herd = herd
 	move.current_herd = herd_before or ""
+	# Part of posting the cull, not a Movement the operator chose to record.
+	move.flags.ignore_event_enabled = True
 	move.insert()
 	move.submit()
 	return move.name

@@ -185,3 +185,7 @@ upande_livestock.patches.ensure_livestock_quality_role
 # The Livestock desk tile shows the cow-in-grass SVG and no PNG: logo_url on the SVG, this app's own
 # icon_image cleared (a PNG on the tile goes soft and hides the animation).
 upande_livestock.patches.ensure_livestock_desktop_icon
+
+# Every Livestock Event Type switched on: its Enabled switch (the old Is Active box) now
+# hides the event everywhere and refuses new ones, so nothing starts off by accident.
+upande_livestock.patches.enable_every_event_type

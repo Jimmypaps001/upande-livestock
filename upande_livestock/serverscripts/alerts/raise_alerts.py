@@ -12,7 +12,7 @@ import frappe
 from frappe.utils import today
 
 from upande_livestock.serverscripts.alerts._concentrate import concentrate_alerts
-from upande_livestock.serverscripts.common import herd_movement, notifications
+from upande_livestock.serverscripts.common import event_types, herd_movement, notifications
 
 #: How far either side of the expected date a calving is worth mentioning, when
 #: Livestock Settings has no `calving_alert_lead_days`. Seven days is the value
@@ -170,7 +170,9 @@ def collect():
 	# `animal` — see alerts/_concentrate.py for why they are here at all.
 	out += concentrate_alerts()
 
-	return out
+	# Nothing that only prompts for an event the farm switched off. Leaving it
+	# out of the sweep is also what settles one already open (record()).
+	return [a for a in out if event_types.alert_wanted(a["kind"])]
 
 
 def already_open(kind, animal, item=None):

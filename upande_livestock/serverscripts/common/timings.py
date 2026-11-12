@@ -118,6 +118,35 @@ TIMING_DEFAULTS = {
 	"health_case_stale_days": 7,
 }
 
+#: How often each event comes round, or when it falls due: the Livestock
+#: Settings timings that govern it, shown and edited beside the event's Enabled
+#: switch on Settings → Events. These are the same fields the guards, alerts
+#: and due dates read — the Events screen is a second door onto them, not a
+#: second copy. An event with none (Feeding, Movement, Treatment...) is
+#: recorded when it happens and has no "how often".
+EVENT_TIMINGS = {
+	"Pregnancy Diagnosis": (
+		"pregnancy_check_days_after_service", "diagnosis_earliest_days", "diagnosis_latest_days",
+	),
+	"Heat Detection": ("heat_cycle_days",),
+	"Service": (
+		"post_calving_min_service_days", "post_calving_optimal_service_days",
+		"post_abortion_min_service_days", "min_service_age_months",
+	),
+	"Calving": (
+		"gestation_period_days", "calving_alert_lead_days",
+		"min_calving_interval_days", "min_calving_age_months",
+	),
+	"Birth": ("gestation_window_min_days", "gestation_window_max_days"),
+	"Vaccination": ("min_vaccination_interval_days",),
+	"Deworming": ("min_deworming_interval_days",),
+	"Hoof Trimming": ("min_hoof_trimming_interval_days",),
+	"Dehorning": ("min_dehorning_age_months", "max_dehorning_age_months"),
+	"Weight Recording": (
+		"weighing_interval_days", "weighing_grace_days", "min_weight_recording_interval_days",
+	),
+}
+
 # Float counterparts of TIMING_DEFAULTS: seeded the same way (see
 # ensure_livestock_timing_defaults), but deliberately excluded from
 # TIMING_DEFAULTS itself — see the module docstring for why forcing them

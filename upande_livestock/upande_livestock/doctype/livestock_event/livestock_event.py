@@ -20,7 +20,7 @@ from frappe.model.naming import make_autoname
 from frappe.utils import getdate, nowdate
 
 from upande_livestock.serverscripts.common import backdate
-from upande_livestock.serverscripts.common import event_items
+from upande_livestock.serverscripts.common import event_items, event_types
 from upande_livestock.serverscripts.common import stock as livestock_stock
 
 from upande_livestock.serverscripts.common.animal import create_calf
@@ -138,7 +138,7 @@ def open_pregnancy_as_of(animal, as_of):
 
 	Open on a date means: its Service is dated on or before it, it had been
 	confirmed by then, and no Calving linked to it (nor an Abortion, nor an
-	Aborted diagnosis) is dated on or before it. Looking only at the animal's
+	Aborted diagnosis on its Service) is dated on or before it. Looking only at the animal's
 	state today made history impossible to enter out of order: a Service from
 	last January was refused because the animal calved last October.
 	"""
@@ -175,6 +175,8 @@ def open_pregnancy_as_of(animal, as_of):
 			AND (
 				(closer.event_type = 'Calving' AND closer.custom_related_pregnancy = ae.name)
 				OR (closer.event_type = 'Abortion' AND closer.custom_related_pregnancy = ae.name)
+				OR (closer.event_type = 'Pregnancy Diagnosis' AND closer.related_service = ae.name
+					AND closer.diagnosis_result = 'Aborted')
 			)
 		)
 		ORDER BY ae.service_date DESC
@@ -314,6 +316,10 @@ class LivestockEvent(Document):
 			frappe.utils.formatdate(self.event_date), self.name)
 		if self.meta.has_field("custom_is_backdated"):
 			move.custom_is_backdated = self.get("custom_is_backdated") or 0
+		# The calving's own plumbing, not a Movement the operator chose to record:
+		# it follows the Calving switch, so a farm with Movement off still moves
+		# the dam.
+		move.flags.ignore_event_enabled = True
 		move.insert(ignore_permissions=True)
 		move.submit()
 
@@ -386,7 +392,8 @@ class LivestockEvent(Document):
 					}
 				)
 
-				if not existing_todo:
+				# No "check due" reminder on a farm that does not diagnose.
+				if not existing_todo and event_types.is_enabled("Pregnancy Diagnosis"):
 					todo = frappe.get_doc(
 						{
 							"doctype": "ToDo",
@@ -440,7 +447,7 @@ class LivestockEvent(Document):
 					}
 				)
 
-				if not existing_rebreeding_todo:
+				if not existing_rebreeding_todo and event_types.is_enabled("Service"):
 					todo = frappe.get_doc(
 						{
 							"doctype": "ToDo",
@@ -484,6 +491,17 @@ class LivestockEvent(Document):
 		self.set(twin, self.event_date)
 
 	def validate(self):
+		# ============================================================
+		# AN EVENT THE FARM SWITCHED OFF
+		# ============================================================
+		# The menus hide it, but a stale phone or a hand-made request does not
+		# read menus. Only a NEW record is refused: one already on file can still
+		# be corrected, submitted or cancelled after the switch. Internal
+		# history-only writes (the retro birth path's movement) set the flag:
+		# they are plumbing for another event, not a record of this one.
+		if self.is_new() and not self.flags.ignore_event_enabled:
+			event_types.assert_enabled(self.event_type)
+
 		# ============================================================
 		# THE DATE, BEFORE ANYTHING TRUSTS IT
 		# ============================================================
@@ -1192,7 +1210,7 @@ class LivestockEvent(Document):
 					}
 				)
 
-				if not existing_calving_todo:
+				if not existing_calving_todo and event_types.is_enabled("Calving"):
 					todo = frappe.get_doc(
 						{
 							"doctype": "ToDo",
@@ -1269,13 +1287,14 @@ class LivestockEvent(Document):
 					"name": ["!=", self.name],
 					"diagnosis_date": ["<=", self.diagnosis_date],
 				},
-				fields=["name", "diagnosis_date"],
+				fields=["name", "diagnosis_date", "related_service"],
 				order_by="diagnosis_date desc",
 				limit=1,
 			)
 
 			if last_pregnancy:
 				last_pregnancy_date = last_pregnancy[0].diagnosis_date
+				last_pregnancy_service = last_pregnancy[0].related_service
 
 				# 2. Check if a Calving OR an Abortion closed out that pregnancy.
 				# An Abortion ends a pregnancy exactly as a Calving does — it
@@ -1284,11 +1303,20 @@ class LivestockEvent(Document):
 				# (per close_pregnancy_after_abortion / Service Rule 2) but her
 				# next pregnancy could never be confirmed.
 				# As of this diagnosis's date: one dated after it has not happened yet.
+				# So does a Pregnancy Diagnosis of "Aborted" on the same service: the
+				# loss is recorded as a check, not always as an Abortion event.
 				closed = frappe.db.sql(
 					"""SELECT name FROM `tabLivestock Event`
-					   WHERE animal = %s AND event_type IN ('Calving', 'Abortion') AND docstatus = 1
-					   AND event_date > %s AND event_date <= %s LIMIT 1""",
-					(self.animal, last_pregnancy_date, self.diagnosis_date),
+					   WHERE animal = %(animal)s AND docstatus = 1
+					   AND event_date > %(after)s AND event_date <= %(upto)s
+					   AND (
+					       event_type IN ('Calving', 'Abortion')
+					       OR (event_type = 'Pregnancy Diagnosis' AND diagnosis_result = 'Aborted'
+					           AND related_service = %(service)s)
+					   )
+					   LIMIT 1""",
+					{"animal": self.animal, "after": last_pregnancy_date,
+					 "upto": self.diagnosis_date, "service": last_pregnancy_service},
 				)
 
 				if not closed:

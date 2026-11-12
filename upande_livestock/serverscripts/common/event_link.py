@@ -56,6 +56,9 @@ def sync_event_for(doc, event_type):
 		event.current_herd = doc.current_herd
 	event.remarks = f"Auto-created from {doc.doctype} {doc.name}"
 	event.flags.ignore_permissions = True
+	# A timeline mirror of a Health Case or Check Up that was just recorded, not
+	# a second thing for the farm to switch: its source record has its own rules.
+	event.flags.ignore_event_enabled = True
 	event.insert(ignore_permissions=True)
 	event.submit()
 	return event.name

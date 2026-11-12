@@ -137,6 +137,45 @@ class TestBreedingAsOf(IntegrationTestCase):
 			b.submit()
 			self._diagnose(b, "2025-06-01")
 
+	# -- an Aborted diagnosis closes the pregnancy it answers -----------------
+
+	def test_a_new_pregnancy_can_be_confirmed_after_an_aborted_diagnosis(self):
+		a = self._service("2025-01-01")
+		self._diagnose(a, "2025-02-01")
+		self._diagnose(a, "2025-03-15", result="Aborted")
+		b = self._service("2025-04-20")
+		self.assertEqual(self._diagnose(b, "2025-06-01").docstatus, 1)
+
+	def test_an_aborted_diagnosis_dated_after_the_new_confirmation_does_not_close_it(self):
+		a = self._service("2025-01-01")
+		self._diagnose(a, "2025-02-01")
+		self._diagnose(a, "2025-08-15", result="Aborted")
+		with self.assertRaises(frappe.ValidationError):
+			b = make_event("Service", self.cow, "2025-04-20", service_type="A.I.", service_date="2025-04-20")
+			b.submit()
+			self._diagnose(b, "2025-06-01")
+
+	def test_the_pregnancy_is_open_until_the_aborted_diagnosis_and_closed_from_it(self):
+		from upande_livestock.upande_livestock.doctype.livestock_event.livestock_event import (
+			open_pregnancy_as_of,
+		)
+
+		a = self._service("2025-01-01")
+		# The Aborted check is entered first, the Confirmed one after, as history
+		# is loaded: the service ends up marked Confirmed with an Aborted check on file.
+		self._diagnose(a, "2025-03-15", result="Aborted")
+		self._diagnose(a, "2025-02-01")
+		self.assertEqual(frappe.db.get_value("Livestock Event", a.name, "pregnancy_confirmation_status"), "Confirmed")
+		self.assertEqual(open_pregnancy_as_of(self.cow, "2025-03-01").name, a.name)
+		self.assertIsNone(open_pregnancy_as_of(self.cow, "2025-03-15"))
+		self.assertIsNone(open_pregnancy_as_of(self.cow, "2025-04-20"))
+
+	def test_a_service_after_an_aborted_diagnosis_is_allowed_even_when_the_service_reads_confirmed(self):
+		a = self._service("2025-01-01")
+		self._diagnose(a, "2025-03-15", result="Aborted")
+		self._diagnose(a, "2025-02-01")
+		self.assertEqual(self._service("2025-04-20").docstatus, 1)
+
 	# -- the Animal shows the newest event ---------------------------------
 
 	def test_a_backdated_service_does_not_overwrite_a_newer_pregnancy(self):

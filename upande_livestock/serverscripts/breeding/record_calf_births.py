@@ -67,6 +67,9 @@ def record_calf_births(payload):
 				birth.related_calving = calving.name
 				birth.sire = calving.sire
 				birth.is_stillborn = 1 if stillborn else 0
+				# A calving's births follow the Calving switch, which was checked
+				# when the calving was recorded: a calf is not refused for Birth.
+				birth.flags.ignore_event_enabled = True
 
 				if stillborn:
 					birth.remarks = f"Stillborn. Dam: {dam.tag_number or dam.burn_name}"

@@ -15,7 +15,7 @@ operator.
 import frappe
 
 from upande_livestock.serverscripts.alerts import raise_alerts as herd_alerts
-from upande_livestock.serverscripts.common import herd_movement, notifications
+from upande_livestock.serverscripts.common import event_types, herd_movement, notifications
 from upande_livestock.serverscripts.common.notice import heading
 
 # The headings these alerts carry. Built once here rather than inline, so the
@@ -44,6 +44,10 @@ PREGNANCY_CHECK = "Pregnancy Check Overdue"
 def pregnancy_checks_due():
 	"""alert_key -> the Pregnancy Check Overdue alert each overdue service is owed."""
 	kind = PREGNANCY_CHECK
+	if not event_types.is_enabled("Pregnancy Diagnosis"):
+		# Nothing is owed on a farm that does not diagnose; the caller then
+		# settles any check alert still open from before the switch.
+		return {}
 	due_after = pregnancy_check_days()
 	overdue = frappe.db.sql(
 		"""
@@ -150,6 +154,9 @@ def check_overdue_pregnancy_diagnoses():
 		as_dict=True,
 	)
 
+	# No reminder to record an event the farm switched off (Settings → Events).
+	if not event_types.is_enabled("Pregnancy Diagnosis"):
+		overdue_services = []
 	for service in overdue_services:
 		todo = frappe.get_doc(
 			{
@@ -218,6 +225,9 @@ def check_overdue_pregnancy_diagnoses():
 		as_dict=True,
 	)
 
+	# No reminder to record an event the farm switched off (Settings → Events).
+	if not event_types.is_enabled("Calving"):
+		upcoming_calvings = []
 	for calving in upcoming_calvings:
 		urgency = "High" if calving.days_until <= 3 else "Medium"
 
@@ -277,6 +287,9 @@ def check_overdue_pregnancy_diagnoses():
 		as_dict=True,
 	)
 
+	# No reminder to record an event the farm switched off (Settings → Events).
+	if not event_types.is_enabled("Service"):
+		ready_animals = []
 	for animal in ready_animals:
 		todo = frappe.get_doc(
 			{
@@ -330,6 +343,9 @@ def check_overdue_pregnancy_diagnoses():
 		as_dict=True,
 	)
 
+	# No reminder to record an event the farm switched off (Settings → Events).
+	if not event_types.is_enabled("Heat Detection"):
+		expected_heats = []
 	for heat in expected_heats:
 		todo = frappe.get_doc(
 			{

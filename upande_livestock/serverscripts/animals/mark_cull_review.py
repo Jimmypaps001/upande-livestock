@@ -123,6 +123,9 @@ def _write_event(animal, marked, reason, operator=None):
 			if marked
 			else "Cull review mark removed"
 		)
+		# A history note for a mark that is already set: switching Cull Review
+		# events off must not stop the mark itself.
+		event.flags.ignore_event_enabled = True
 		event.insert(ignore_permissions=True)
 		event.submit()
 		return True

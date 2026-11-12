@@ -4,6 +4,8 @@ Read-guarded on Livestock Event."""
 
 import frappe
 
+from upande_livestock.serverscripts.common import event_types
+
 from upande_livestock.serverscripts.common.choices import (
 	active_animals,
 	animal_choices,
@@ -28,7 +30,8 @@ def husbandry_options():
 		return {
 			"ok": True,
 			"animals": animal_choices(active_animals(), labels),
-			"event_types": list(HUSBANDRY_TYPES),
+			# Only the ones the farm records (Settings → Events).
+			"event_types": [t for t in HUSBANDRY_TYPES if event_types.is_enabled(t)],
 			"drug_consuming_types": [t for t in HUSBANDRY_TYPES if _type_consumes_drugs(t)],
 			# The groups the farm mapped to these events, searched across every
 			# warehouse of its company. The old two-kind lookup asked one group

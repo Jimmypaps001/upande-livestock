@@ -42,6 +42,7 @@ import frappe
 from frappe.utils import escape_html, formatdate
 
 from upande_livestock.serverscripts.alerts._shared import KINDS
+from upande_livestock.serverscripts.common import event_types
 
 #: Realtime event the desk subscribes to. The SPA at /livestock_app is served by
 #: a plain www page that never loads Frappe's socketio bundle, so it polls
@@ -265,6 +266,8 @@ def deliver_open_alerts(limit=1000):
 		order_by="alert_date asc",
 		limit_page_length=int(limit),
 	)
+	# An alert still open from before its event was switched off is not news.
+	alerts = [a for a in alerts if event_types.alert_wanted(a.alert_kind)]
 	if not alerts:
 		return {"alerts": 0, "delivered": 0, "skipped": 0}
 

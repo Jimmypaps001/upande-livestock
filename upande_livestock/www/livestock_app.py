@@ -27,6 +27,8 @@ import os
 
 import frappe
 
+from upande_livestock.serverscripts.common.event_types import disabled_events
+
 no_cache = 1
 
 
@@ -84,6 +86,9 @@ def get_context(context):
 			"user_image": user_doc.get("user_image") or "",
 			"site_name": frappe.local.site,
 			"roles": roles,
+			# Event types the farm switched off (Settings -> Events): their
+			# pages leave the menu and their routes send you elsewhere.
+			"disabled_events": disabled_events(),
 			"csrf_token": csrf_token,
 		}
 	)

@@ -1,7 +1,11 @@
 # Copyright (c) 2026, Upande and contributors
 # For license information, please see license.txt
 
-"""Save the Settings screen's Stock tab back onto the event types (see stock_rules)."""
+"""Save the Settings screen's Events section back onto the event types (see stock_rules).
+
+The timings shown beside each event are Livestock Settings fields and are saved
+through save_livestock_settings, not here.
+"""
 
 import frappe
 from frappe import _
@@ -45,10 +49,16 @@ def save_stock_rules(payload=None):
 				frappe.throw(_("{0} posts stock but names no item group to draw on.").format(name))
 
 			doc = frappe.get_doc(EVENT_TYPE, name)
-			before = (bool(doc.posts_stock_entry), [r.item_group for r in doc.stock_item_groups],
+			# Absent means "leave it": a caller that only edits stock (an older
+			# page) must not switch an event off by omission. Switching off keeps
+			# the stock rule, so switching back on restores the event as it was.
+			enabled = bool(rule["enabled"]) if "enabled" in rule else bool(doc.is_active)
+			before = (bool(doc.is_active), bool(doc.posts_stock_entry),
+			          [r.item_group for r in doc.stock_item_groups],
 			          doc.default_store or None, bool(doc.must_name_item))
-			if before == (posts, groups if posts else [], store if posts else None, must):
+			if before == (enabled, posts, groups if posts else [], store if posts else None, must):
 				continue
+			doc.is_active = int(enabled)
 			doc.posts_stock_entry = int(posts)
 			doc.set("stock_item_groups", [{"item_group": g} for g in groups] if posts else [])
 			doc.default_store = store if posts else None

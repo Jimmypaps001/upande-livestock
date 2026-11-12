@@ -87,6 +87,8 @@ def buy_in_animal(payload):
 		)
 		move.new_herd = herd
 		move.current_herd = ""
+		# Placing a bought-in animal in her herd is part of the buy-in.
+		move.flags.ignore_event_enabled = True
 		move.insert()
 		move.submit()
 

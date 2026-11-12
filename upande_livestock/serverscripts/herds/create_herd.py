@@ -62,6 +62,8 @@ def create_herd(payload):
 			)
 			move.new_herd = name
 			move.current_herd = was or ""
+			# Filling a new herd is not a separate Movement the operator chose.
+			move.flags.ignore_event_enabled = True
 			move.insert()
 			move.submit()
 			moved.append({"animal": animal, "from_herd": was})
