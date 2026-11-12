@@ -3,15 +3,15 @@
 
 """The livestock stock entries, and what each draft is waiting for.
 
-An event recorded today when the store could not cover it saves its issue as a
-draft (common/stock). The Transactions page shows those drafts, a calendar of
-which days have drafts and which only posted entries, and any one day's
-entries: what was used, by which record, and — for a draft — whether the store
-can cover it now.
+An event recorded when the store could not cover it, today or on a past day,
+saves its issue as a draft (common/stock); a past day's is flagged `backdated`.
+The Transactions page shows those drafts, a calendar of which days have drafts
+and which only posted entries, and any one day's entries: what was used, by
+which record, and, for a draft, whether the store can cover it now.
 """
 
 import frappe
-from frappe.utils import get_fullname
+from frappe.utils import get_fullname, getdate
 
 from upande_livestock.serverscripts.common import stock as livestock_stock
 
@@ -160,6 +160,18 @@ def entry_rows(where="", args=None):
 					for r in rows
 				],
 				"can_post": draft and not short,
+				# A draft for a day before it was made (common/stock): shown badged,
+				# so nobody reads it as today's issue. Its remarks start with the
+				# BACKDATED prefix, or its posting date is simply earlier than the
+				# day it was created (a feed issue, whose remark is matched from
+				# its start by the feed day screen and so carries no prefix).
+				"backdated": bool(
+					draft
+					and (
+						(e.remarks or "").startswith(livestock_stock.BACKDATED_PREFIX)
+						or getdate(e.posting_date) < getdate(e.creation)
+					)
+				),
 				"short": livestock_stock.shortage_message(short) if short else None,
 			}
 		)

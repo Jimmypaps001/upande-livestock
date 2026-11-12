@@ -27,6 +27,7 @@ not 20 anywhere, and an issue drawn on 20 fails at the shelf.
 """
 
 import frappe
+from frappe import _
 from frappe.utils import flt
 
 
@@ -177,18 +178,57 @@ def _balances(groups, warehouses):
 	)
 
 
+def _group_items(groups):
+	"""Every enabled stock item in `groups`, held or not: name, item_name, stock_uom."""
+	if not groups:
+		return []
+	return frappe.db.sql(
+		"""SELECT i.name, i.item_name, i.stock_uom
+		   FROM `tabItem` i
+		   WHERE i.item_group IN %(groups)s
+		     AND IFNULL(i.disabled, 0) = 0
+		     AND IFNULL(i.is_stock_item, 1) = 1
+		   ORDER BY i.item_name ASC
+		   LIMIT 2000""",
+		{"groups": groups},
+		as_dict=True,
+	)
+
+
+def _item_default_store(item_code, company):
+	"""The item's own default warehouse for `company`, if it has one."""
+	if not company:
+		return None
+	try:
+		return frappe.db.get_value(
+			"Item Default", {"parent": item_code, "company": company}, "default_warehouse"
+		)
+	except Exception:
+		return None
+
+
 def items_for_event(event_type, company=None):
-	"""Items this event may consume, restricted to what is actually in stock.
+	"""Items this event may consume: every item of the event type's groups.
 
 	One choice per ITEM, not per shelf: the form picks an item and the store
 	rides along, on `warehouse` (where most of it is) and `locations` (every
 	store holding any, most first). Shaped exactly as `stock_items` returned,
 	so a caller switching over changes one line.
+
+	OUT-OF-STOCK ITEMS ARE LISTED TOO, after the held ones, with `qty` 0,
+	`in_stock` False and no locations. They were left off, which meant the
+	straw a cow was served with could not even be named once the store had
+	run out, and an event short of stock is recorded with its issue saved as
+	a draft (common/stock), which needs the item named. Their `warehouse` is
+	the event type's Default Store, else the item's own default for the
+	company, else None (the server then needs a Default Store set, see
+	`store_for`).
 	"""
 	groups = groups_for_event(event_type)
 	if not groups:
 		return []
-	warehouses = _company_warehouses(company or _default_company())
+	company = company or _default_company()
+	warehouses = _company_warehouses(company)
 	if not warehouses:
 		return []
 
@@ -221,22 +261,62 @@ def items_for_event(event_type, company=None):
 				"uom": entry["uom"],
 				"warehouse": best["warehouse"],
 				"locations": entry["locations"],
+				"in_stock": True,
 			}
 		)
-	out.sort(key=lambda i: (i["item_name"] or "").lower())
+	for r in _group_items(groups):
+		if r["name"] in held:
+			continue
+		name = r.get("item_name") or r["name"]
+		out.append(
+			{
+				"value": r["name"],
+				"label": "{0} · out of stock".format(name),
+				"item_name": name,
+				"qty": 0.0,
+				"uom": r.get("stock_uom"),
+				"warehouse": preferred or _item_default_store(r["name"], company),
+				"locations": [],
+				"in_stock": False,
+			}
+		)
+	# Held first, then out of stock; each by name.
+	out.sort(key=lambda i: (not i["in_stock"], (i["item_name"] or "").lower()))
 	return out
 
 
 def items_by_event(company=None):
-	"""{event type: its in-stock items} for every event type that posts stock.
+	"""{event type: its items} for every event type that posts stock.
 
 	Sent with each screen's options, so a page has the picker list for whatever
-	event it records the moment it loads — filtered by the type's item groups,
+	event it records the moment it loads, filtered by the type's item groups,
 	searched in the browser, no call per keystroke. A type that posts no stock
-	has no key: absent means "not set to post stock", [] means "set, nothing
-	in stock".
+	has no key: absent means "not set to post stock", [] means "set, but its
+	groups hold no items". Out-of-stock items are listed (`in_stock` False).
 	"""
 	return {t: items_for_event(t, company) for t in _rules() if consumes_items(t)}
+
+
+def store_for(event_type, warehouse, item_code=None):
+	"""The store a line is issued from: the one it names, else the event type's
+	Default Store, else a refusal that says which setting to fill.
+
+	An item the stores hold none of has no store to name, so a picker sends the
+	line with none and the event type's Default Store carries it. A farm that has
+	set neither gets told so, in words, rather than an issue that fails deep in
+	the Stock Entry."""
+	named = (warehouse or "").strip()
+	if named:
+		return named
+	fallback = default_store(event_type) if event_type else None
+	if fallback:
+		return fallback
+	frappe.throw(
+		_(
+			"No store to issue {0} from. {1} has no Default Store: set one on its Livestock Event "
+			"Type (Settings \u2192 Events, Default Store), or choose a store on the line."
+		).format(item_code or _("this item"), _(event_type or "This event"))
+	)
 
 
 def stock_overview(company=None):

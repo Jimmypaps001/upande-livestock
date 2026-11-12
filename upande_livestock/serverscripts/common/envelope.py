@@ -151,9 +151,23 @@ def as_dict(value):
 
 
 def run(fn, log_title: str) -> dict:
-	"""Execute `fn`, returning its dict on success or {"error": msg} on failure."""
+	"""Execute `fn`, returning its dict on success or {"error": msg} on failure.
+
+	Only the OUTERMOST `run` of a request collects the drafts and warnings the
+	request made. An endpoint calling another (record_birth calls
+	record_calf_births; the phone's record_animal_event calls them all) used to
+	have the inner call take them onto an answer the outer one throws away, so
+	a straw saved as a draft went unmentioned.
+	"""
+	depth = frappe.flags.get("livestock_run_depth") or 0
 	try:
-		out = fn()
+		frappe.flags.livestock_run_depth = depth + 1
+		try:
+			out = fn()
+		finally:
+			frappe.flags.livestock_run_depth = depth
+		if depth:
+			return out
 		# Stock issues saved as drafts for want of stock (common/stock): the
 		# record stood, and the page must say what is still to post.
 		from upande_livestock.serverscripts.common.stock import drafts_made

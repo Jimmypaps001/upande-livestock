@@ -122,8 +122,7 @@ class TestAvailabilityCheck(IntegrationTestCase):
 		with self.assertRaises(frappe.ValidationError):
 			livestock_stock.issue_items(rows, remarks="test", employee="_none_")
 
-	def test_a_backdated_issue_blocks_even_when_drafts_are_allowed(self):
-		"""A draft dated last month, posted today, would be a different transaction."""
+	def test_a_backdated_issue_without_drafts_allowed_still_blocks(self):
 		drug = _stocked_drug()
 		if not drug:
 			raise unittest.SkipTest("no drug stock on this site")
@@ -132,7 +131,7 @@ class TestAvailabilityCheck(IntegrationTestCase):
 		]
 		with self.assertRaises(frappe.ValidationError):
 			livestock_stock.issue_items(
-				rows, remarks="test", employee="_none_", posting_date=add_days(today(), -3), draft_if_short=True
+				rows, remarks="test", employee="_none_", posting_date=add_days(today(), -3)
 			)
 
 
@@ -143,7 +142,7 @@ class TestStoreScopedPicker(IntegrationTestCase):
 		offered = event_items.items_for_event(DOSING_TYPE)
 		if not offered:
 			raise unittest.SkipTest("no drug stock on this site")
-		for row in offered[:25]:
+		for row in [r for r in offered if r["in_stock"]][:25]:
 			for loc in row["locations"]:
 				self.assertAlmostEqual(
 					loc["qty"],

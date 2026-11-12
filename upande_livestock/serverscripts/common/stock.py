@@ -20,20 +20,48 @@ TWO THINGS THIS MODULE DELIBERATELY DOES:
    operation — api/operations._run() relies on that rollback. Committing is the
    caller's business, or the request's.
 
-SHORT STOCK, TODAY: THE RECORD STANDS, THE ISSUE WAITS. This module once
-downgraded a failed issue to a warning, which produced 93 vaccinations and 25
-health cases with not one gram of stock moved, and nobody noticed. It then
-blocked the event instead — so a cow treated this morning could not be
-recorded until the store caught up. Now an issue the store cannot cover TODAY
-is saved as a draft Stock Entry: the event is recorded, nothing leaves the
-store that is not there, and the draft sits on the Transactions page, named
-and dated, until somebody posts it. Never silent: the caller's answer carries
-`stock_drafts` (see envelope.run), and the page says so.
+SHORT STOCK: THE RECORD STANDS, THE ISSUE WAITS, WHATEVER THE DAY. This module
+once downgraded a failed issue to a warning, which produced 93 vaccinations and
+25 health cases with not one gram of stock moved, and nobody noticed. It then
+blocked the event instead, so a cow treated this morning could not be recorded
+until the store caught up. Now an issue the store cannot cover is saved as a
+draft Stock Entry: the event is recorded, nothing leaves the store that is not
+there, and the draft sits on the Transactions page, named and dated, until
+somebody posts it. Never silent: the caller's answer carries `stock_drafts`
+(see envelope.run), and the page says so. An item the stores hold none of can
+be recorded too: it is the extreme case of short.
 
-A BACKDATED issue the store could not cover on the day still blocks: a draft
-dated last month posted today would be a different transaction.
-`check_availability` reports the gap before anything is written, so the
-message names the drug and the shortfall rather than surfacing a raw ERPNext
+A BACKDATED issue short on its day is a draft as well, dated the event's own day
+(posting date and time set, `set_posting_time`), its remarks starting
+BACKDATED_PREFIX and the Transactions page badging it. It used to block, on the
+reasoning that a draft dated last month posted today would be a different
+transaction; but the Transactions page posts a draft TODAY whatever day it
+names (transactions.post_stock_draft), and in the desk ERPNext's own
+negative-stock check on the draft's date applies when someone submits it, which
+is the right gate. Backdated events do not move stock at all unless the store
+was short that day (`backdate.suppresses_stock`): `placeholder_if_short` is the
+draft for those, and issues nothing otherwise.
+
+Every draft's remarks name the event and say "draft: store short on <date>; post
+when stock is in", so someone reading the Stock Entry in the desk knows what it
+is waiting for.
+
+FEEDING follows the same rule where it issues stock for a herd, with the shortage
+rules the feed engine already had for mixing:
+  * `issue_feed` (and the engine's `feed_herd`) saves a short issue as a draft on the
+    day fed, any day, and records the Feeding as waiting for stock.
+  * `manual_feed` and `manufacture_feed` mix through `manufacture_herd_feed`: short
+    TODAY the Work Order is made and its transfer is a draft (a "Feed run" on
+    Transactions, posted by `complete_feed_run`); short on a PAST day the run is
+    refused, naming the shortfall and the earliest date it works
+    (`_availability.assert_can_cover_on`), unless `allow_shortage` is passed.
+  * `manufacture_concentrate` stocks the store rather than feeding a herd, and
+    refuses a run the stores cannot cover unless `allow_shortage` is passed.
+Those two refusals are not events recorded after the fact (a mix is not
+backdated history), so they were left as they are.
+
+`check_availability` reports the gap before anything is written, so the answer
+names the drug and the shortfall rather than surfacing a raw ERPNext
 negative-stock error.
 """
 
@@ -139,6 +167,25 @@ def livestock_stock_entry_types():
 # module, and that is circular.
 EVENT_POSTING_TIME = "06:00:00"
 
+#: How a draft placeholder for a backdated issue starts its remarks. The Stock
+#: Entry has no backdated field of its own; the Transactions page reads this
+#: (and a posting date before the day the draft was made) to badge it.
+BACKDATED_PREFIX = "BACKDATED placeholder: "
+
+#: How every draft's remarks end (after the event it names).
+DRAFT_SUFFIX = "draft: store short on {0}; post when stock is in"
+
+
+def draft_remarks(remarks, posting_date=None, mark_backdated=True):
+	"""The remarks a draft issue carries: the event it is for, and what it waits on.
+
+	`mark_backdated=False` leaves the BACKDATED_PREFIX off, for a remark other
+	screens match from its start (a feed issue); the Transactions page still
+	badges such a draft by its posting date."""
+	day = getdate(posting_date) if posting_date else getdate(today())
+	text = "{0} - {1}".format(remarks, DRAFT_SUFFIX.format(frappe.utils.formatdate(day)))
+	return BACKDATED_PREFIX + text if mark_backdated and day < getdate(today()) else text
+
 
 def stock_entry_type_for(what):
 	"""The named type for this kind of issue, or the generic one if unknown.
@@ -223,9 +270,13 @@ def issue_items(
 	leaves a drug line blank should not fail, it should issue nothing for it. If
 	nothing usable survives, no Stock Entry is created and None is returned.
 
-	Raises when the store cannot cover the rows, naming the drug and the gap —
-	unless `draft_if_short` and the issue is for today, when the entry is saved
-	as a draft instead and noted for the answer (see the module docstring).
+	Raises when the store cannot cover the rows, naming the drug and the gap,
+	unless `draft_if_short`, when the entry is saved as a draft instead and noted
+	for the answer (see the module docstring). A draft for a past day is a
+	backdated placeholder: dated that day, its remarks marked.
+
+	A row with no warehouse takes the event type's Default Store (`what`); if
+	that is not set either the issue is refused naming the setting to fill.
 
 	`herd` is which herd the round was for, and only decides the cost centre —
 	see common/cost_center. Optional, because not every caller is about one
@@ -236,17 +287,17 @@ def issue_items(
 	if not usable:
 		return None
 
-	missing_wh = [r["item_code"] for r in usable if not r.get("warehouse")]
-	if missing_wh:
-		frappe.throw(
-			_(
-				"No source warehouse for {0}. Set one on the row, or set the Drug Store in Livestock Settings."
-			).format(", ".join(missing_wh))
-		)
+	if any(not r.get("warehouse") for r in usable):
+		from upande_livestock.serverscripts.common import event_items
+
+		usable = [
+			r if r.get("warehouse")
+			else dict(r, warehouse=event_items.store_for(what, None, r["item_code"]))
+			for r in usable
+		]
 
 	short = check_availability(usable, posting_date=posting_date)
-	today_issue = not posting_date or getdate(posting_date) >= getdate(today())
-	draft = bool(short) and draft_if_short and today_issue
+	draft = bool(short) and draft_if_short
 	if short and not draft:
 		frappe.throw(
 			_("The store cannot cover this issue on {0} — {1}.").format(
@@ -301,7 +352,7 @@ def issue_items(
 		if r.get("uom"):
 			item.uom = r["uom"]
 
-	se.remarks = remarks
+	se.remarks = draft_remarks(remarks, posting_date) if draft else remarks
 	# Drugs hit the same wall as feed: 219 Dairy Drugs carry no buying cost
 	# centre and the company has no default, so ERPNext refuses the issue
 	# outright. See common/cost_center for why this is a setting and not a
@@ -317,6 +368,30 @@ def issue_items(
 		return se.name
 	se.submit()
 	return se.name
+
+
+def placeholder_if_short(rows, remarks, posting_date, **kwargs):
+	"""For a backdated record that moves no stock: a draft placeholder when the
+	store could not have covered `rows` on `posting_date`, else None.
+
+	Backdated events record what they used without posting it (see
+	backdate.suppresses_stock) and that stays so when the store had it. When it
+	did not, the issue is put down as a draft dated the event's day, waiting on
+	the Transactions page to be completed. Returns the draft's name.
+	"""
+	what = kwargs.get("what")
+	usable = []
+	for r in rows or []:
+		if not (r.get("item_code") and flt(r.get("qty")) > 0):
+			continue
+		if not r.get("warehouse"):
+			from upande_livestock.serverscripts.common import event_items
+
+			r = dict(r, warehouse=event_items.store_for(what, None, r["item_code"]))
+		usable.append(r)
+	if not usable or not check_availability(usable, posting_date=posting_date):
+		return None
+	return issue_items(usable, remarks=remarks, posting_date=posting_date, draft_if_short=True, **kwargs)
 
 
 def hold_valuation(se):

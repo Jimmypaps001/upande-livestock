@@ -69,7 +69,7 @@ def create_husbandry_event(payload):
 			)
 		consumes = _type_consumes_drugs(event_type)
 		default_wh = d.get("source_warehouse") or event_items.default_store(event_type)
-		drugs = _clean_drug_rows(d.get("drugs"), default_wh) if consumes else []
+		drugs = _clean_drug_rows(d.get("drugs"), default_wh, event_type) if consumes else []
 		_refuse_foreign_items(event_type, drugs)
 
 		# One Material Issue for the whole round, not one per animal. Dosing is
@@ -84,17 +84,30 @@ def create_husbandry_event(payload):
 		# pass, but the store's balance is not rewritten months after the fact.
 		unposted = backdate.suppresses_stock(event_type, is_backdated)
 		stock_entry = None
-		if drugs and not unposted:
-			rows = [
-				{
-					"item_code": drug["item_code"],
-					"qty": drug["qty"] * len(animals),
-					"warehouse": drug["source_warehouse"],
-					"batch_no": drug.get("batch_no"),
-					"uom": drug.get("uom"),
-				}
-				for drug in drugs
-			]
+		rows = [
+			{
+				"item_code": drug["item_code"],
+				"qty": drug["qty"] * len(animals),
+				"warehouse": drug["source_warehouse"],
+				"batch_no": drug.get("batch_no"),
+				"uom": drug.get("uom"),
+			}
+			for drug in drugs
+		]
+		if drugs and unposted:
+			# ...unless the store was short on the day: then the round's issue is a
+			# draft placeholder dated that day (stock.placeholder_if_short), and
+			# the events point at it rather than being flagged unposted.
+			stock_entry = livestock_stock.placeholder_if_short(
+				rows,
+				remarks="Livestock {0} - {1} animal(s)".format(event_type, len(animals)),
+				posting_date=_date,
+				employee=d.get("operator"),
+				what=event_type,
+				herd=livestock_cost_center.herd_of(animals),
+			)
+			unposted = not stock_entry
+		if drugs and not unposted and not stock_entry:
 			stock_entry = livestock_stock.issue_items(
 				rows,
 				remarks="Livestock {0} - {1} animal(s)".format(event_type, len(animals)),

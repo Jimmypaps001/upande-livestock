@@ -993,6 +993,10 @@ def feed_herd(herd, qty, employee=None, posting_date=None, source_warehouse=None
 
 	Not the normal path any more — manufacturing issues its own batch. This
 	stays for corrections and for clearing a balance left by an earlier run.
+
+	Short of the batch, the herd was still fed: the Feeding is recorded and the
+	issue is saved as a draft on the day fed, to be posted from Transactions
+	once the feed is in (see common/stock). That holds for a past day too.
 	"""
 	qty = flt(qty)
 	if qty <= 0:
@@ -1003,15 +1007,18 @@ def feed_herd(herd, qty, employee=None, posting_date=None, source_warehouse=None
 	herd_doc, bom, heads = _herd_bom(herd)
 	return _issue_feed(
 		herd, bom, qty, _operator_or_throw(employee), posting_date=posting_date,
-		source_warehouse=source_warehouse,
+		source_warehouse=source_warehouse, draft_if_short=True,
 	)
 
 
 def _issue_feed(
 	herd, bom, qty, employee, posting_date=None, feed_mode="System",
-	posting_time=FEED_RUN_TIME, source_warehouse=None, work_order=None,
+	posting_time=FEED_RUN_TIME, source_warehouse=None, work_order=None, draft_if_short=False,
 ):
 	"""Post the Material Issue and put the feeding on the herd's timeline.
+
+	`draft_if_short`: a store that cannot cover `qty` leaves the issue as a draft
+	and the Feeding as "fed, waiting for stock", instead of failing in ERPNext.
 
 	`source_warehouse` is the store the mix is taken out of. Unnamed, it is the
 	WIP/FG store the manufacture put it in, which is where it has always come
@@ -1021,17 +1028,19 @@ def _issue_feed(
 	store = (source_warehouse or "").strip() or _feed_store()
 	item = bom.item
 	se = _post_feed_issue(herd, item, qty, bom.uom, employee, store, posting_date=posting_date,
-	                      posting_time=posting_time)
+	                      posting_time=posting_time, draft_if_short=draft_if_short)
+	waiting = se.docstatus == 0
 	# No frappe.db.commit() here: it stranded the Stock Entry when the Livestock
 	# Event below failed, and defeats the rollback envelope.run() relies on.
 	# The request (or the caller) owns the commit.
 
 	event = _record_feeding_event(
 		herd, item, qty, bom.uom, employee, se.name, event_date=posting_date, feed_mode=feed_mode,
-		work_order=work_order,
+		work_order=work_order, waiting=waiting,
 	)
 
 	return {
+		"pending": waiting,
 		"stock_entry": se.name,
 		"livestock_event": event,
 		"herd": herd,
@@ -1044,12 +1053,16 @@ def _issue_feed(
 
 
 def _post_feed_issue(herd, item, qty, uom, employee, store, posting_date=None, posting_time=FEED_RUN_TIME,
-                     fed_on=None):
+                     fed_on=None, draft_if_short=False):
 	"""The Material Issue of a mixed batch to a herd; returns the submitted entry.
 
 	`fed_on` is the day the herd ate it, when that is not the day it posts — a
 	run that waited for stock. The remark carries it, so the feed day screen
 	(`feed_day_status._issues_on`) counts the feed on the day it was eaten.
+
+	`draft_if_short`: when the store cannot cover it on the day, the entry is
+	saved as a DRAFT (valuation held, remarks saying what it waits on) and noted
+	for the answer; the caller gets a draft back, not a submitted entry.
 	"""
 	company = _company()
 	emp_name = frappe.db.get_value("Employee", employee, "employee_name")
@@ -1088,6 +1101,22 @@ def _post_feed_issue(herd, item, qty, uom, employee, store, posting_date=None, p
 	# cost centre of its own and rode on whatever the item default happened to
 	# be — which for a new feed item is nothing, and ERPNext then refuses it.
 	livestock_cost_center.stamp(se, company, herd=herd)
+	short = (
+		livestock_stock.check_availability(
+			[{"item_code": item, "warehouse": store, "qty": qty}], posting_date=posting_date
+		)
+		if draft_if_short
+		else []
+	)
+	if short:
+		day = posting_date or today()
+		if not fed_on and _is_backdated(day):
+			se.remarks += f" - fed {getdate(day)}"
+		se.remarks = livestock_stock.draft_remarks(se.remarks, day, mark_backdated=False)
+		livestock_stock.hold_valuation(se)
+		se.insert(ignore_permissions=True)
+		livestock_stock.note_draft(se, short)
+		return se
 	se.insert(ignore_permissions=True)
 	se.submit()
 	return se

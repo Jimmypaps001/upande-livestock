@@ -164,9 +164,14 @@ class TestEachRoundPostsOnItsOwnDay(unittest.TestCase):
 			calls.append(kw)
 			return None
 
+		def fake_placeholder(rows, **kw):
+			calls.append(dict(kw, placeholder=True))
+			return None
+
 		case = Case(treatments)
 		case.custom_is_backdated = backdated
 		with patch.object(LHC.livestock_stock, "issue_items", side_effect=fake_issue), \
+		     patch.object(LHC.livestock_stock, "placeholder_if_short", side_effect=fake_placeholder), \
 		     patch.object(LHC.event_items, "consumes_items", return_value=True), \
 		     patch.object(LHC.event_items, "default_store", return_value="STORE"), \
 		     patch.object(LHC.livestock_cost_center, "herd_of", return_value=None):
@@ -189,7 +194,15 @@ class TestEachRoundPostsOnItsOwnDay(unittest.TestCase):
 		from frappe.utils import today
 
 		calls = self._calls([self._row("2026-01-10"), self._row(today())], backdated=1)
-		self.assertEqual([str(c["posting_date"]) for c in calls], [today()])
+		self.assertEqual([str(c["posting_date"]) for c in calls if not c.get("placeholder")], [today()])
+
+	def test_a_backdated_case_asks_for_a_placeholder_for_its_old_rounds(self):
+		"""The old round posts nothing when the store had it, and is a draft dated
+		its day when the store did not (stock.placeholder_if_short)."""
+		from frappe.utils import today
+
+		calls = self._calls([self._row("2026-01-10"), self._row(today())], backdated=1)
+		self.assertEqual([str(c["posting_date"]) for c in calls if c.get("placeholder")], ["2026-01-10"])
 
 
 class TestTheMilkSafeDate(unittest.TestCase):

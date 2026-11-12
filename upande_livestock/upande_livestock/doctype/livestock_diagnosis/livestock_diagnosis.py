@@ -57,9 +57,10 @@ class LivestockDiagnosis(Document):
 			return
 
 		# A backdated check-up records what was given without moving stock — see
-		# LivestockHealthCase.post_drug_issue for the same reasoning.
-		if self.get("custom_is_backdated"):
-			return
+		# LivestockHealthCase.post_drug_issue for the same reasoning — unless the
+		# store was short on the day, when the issue is a draft placeholder
+		# dated that day (stock.placeholder_if_short).
+		backdated = bool(self.get("custom_is_backdated"))
 
 		if not event_items.consumes_items(CHECK_UP):
 			return
@@ -78,7 +79,8 @@ class LivestockDiagnosis(Document):
 		if not rows:
 			return
 
-		name = livestock_stock.issue_items(
+		issue = livestock_stock.placeholder_if_short if backdated else livestock_stock.issue_items
+		name = issue(
 			rows,
 			remarks=f"Livestock Check Up - {self.animal} - {self.name}",
 			what="Check Up",
@@ -88,7 +90,7 @@ class LivestockDiagnosis(Document):
 			# not Livestock Settings' default company and the fallback centre.
 			company=self.company,
 			herd=livestock_cost_center.herd_of(self.animal),
-			draft_if_short=True,
+			**({} if backdated else {"draft_if_short": True}),
 		)
 		if name:
 			self.db_set("stock_entry", name, update_modified=False)

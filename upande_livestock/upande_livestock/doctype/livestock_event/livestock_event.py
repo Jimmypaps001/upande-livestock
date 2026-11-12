@@ -1460,9 +1460,9 @@ class LivestockEvent(Document):
 		"""Issue whatever this event consumed out of stock.
 
 		An event whose type posts stock (Settings → Stock) issues its
-		`drug_issues` rows — the straw of a ticked Service among them. It blocks
-		when the store cannot cover them — see livestock_stock for why that
-		reversed.
+		`drug_issues` rows — the straw of a ticked Service among them. When the
+		store cannot cover them the event stands and the issue is a draft — see
+		livestock_stock.
 
 		Guarded by `self.stock_entry` so an amend or a re-submit cannot post a
 		second issue for the same event. That guard is also how a batch issue
@@ -1487,7 +1487,14 @@ class LivestockEvent(Document):
 		# shelf and the ledger disagree in the present to make them agree in the
 		# past. The rows stay on the document and the flag marks them, so a
 		# reconciliation can post them deliberately later.
+		#
+		# Unless the store could not have covered them on the day: then there is
+		# nothing on the shelf for a reconciliation to find, and the issue is put
+		# down as a draft placeholder dated the event's day, waiting on the
+		# Transactions page (stock.placeholder_if_short).
 		if backdate.suppresses_stock(self, self.get("custom_is_backdated")):
+			if self.backdated_placeholder():
+				return
 			if self.get("drug_issues") or self.get("semen_item"):
 				self.db_set("custom_unposted_drugs", 1, update_modified=False)
 			return
@@ -1532,7 +1539,7 @@ class LivestockEvent(Document):
 			what=what,
 			posting_date=self.event_date,
 			employee=self.operator,
-			# Short today: the event stands and the issue waits as a draft.
+			# Short: the event stands and the issue waits as a draft.
 			draft_if_short=True,
 		)
 		if name:
@@ -1542,6 +1549,35 @@ class LivestockEvent(Document):
 			for row in self.drug_issues or []:
 				if row.item_code:
 					row.db_set("stock_entry_ref", name, update_modified=False)
+
+	def backdated_placeholder(self):
+		"""A draft issue for a backdated event the store was short for on the day.
+
+		Returns its name, or None when the store had it (or nothing is issued).
+		The placeholder IS the posting, so the event is not also flagged
+		unposted for a reconciliation to post a second time."""
+		if not event_items.consumes_items(self.event_type):
+			return None
+		default_wh = event_items.default_store(self.event_type)
+		rows = [
+			{"item_code": row.item_code, "qty": row.qty, "warehouse": row.source_warehouse or default_wh,
+			 "batch_no": row.batch_no, "uom": row.uom}
+			for row in self.drug_issues or [] if row.item_code
+		]
+		name = livestock_stock.placeholder_if_short(
+			rows,
+			remarks=f"Livestock {self.event_type} - {self.animal} - {self.name}",
+			posting_date=self.event_date,
+			what=self.event_type,
+			employee=self.operator,
+		)
+		if not name:
+			return None
+		self.db_set("stock_entry", name, update_modified=False)
+		for row in self.drug_issues or []:
+			if row.item_code:
+				row.db_set("stock_entry_ref", name, update_modified=False)
+		return name
 
 	def refresh_calving_birth_count(self):
 		"""Recount the Birth events linked to this event's related calving, and

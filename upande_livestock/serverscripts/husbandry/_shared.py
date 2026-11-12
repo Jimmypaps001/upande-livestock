@@ -95,21 +95,31 @@ def _husbandry_targets(d):
 	return animals
 
 
-def _clean_drug_rows(drugs, default_wh):
+def _clean_drug_rows(drugs, default_wh, event_type=None):
 	"""Drop half-filled drug lines; quantities here are PER ANIMAL.
 
 	A blank line should not cost the user the whole event, so an incomplete row is
 	dropped rather than rejected.
+
+	A line with no store (an item the stores hold none of has none to name) takes
+	`default_wh`, then the event type's Default Store; with none of those set it
+	is refused naming the setting (`event_items.store_for`), not left to fail as
+	a missing field.
 	"""
+	from upande_livestock.serverscripts.common.event_items import store_for
+
 	rows = []
 	for drug in drugs or []:
 		if not drug.get("item_code") or flt(drug.get("qty")) <= 0:
 			continue
+		store = drug.get("source_warehouse") or default_wh
+		if not store and event_type:
+			store = store_for(event_type, None, drug["item_code"])
 		rows.append(
 			{
 				"item_code": drug["item_code"],
 				"qty": flt(drug["qty"]),
-				"source_warehouse": drug.get("source_warehouse") or default_wh,
+				"source_warehouse": store,
 				"batch_no": drug.get("batch_no"),
 				"dosage": drug.get("dosage"),
 				"uom": drug.get("uom"),
@@ -150,11 +160,15 @@ def append_items(doc, d):
 	Shared by every creator that is not the husbandry endpoint, so that an event
 	type the farm mapped items to can record them without each endpoint growing
 	its own copy. Rows are cleaned (half-filled ones dropped), then checked
-	against the mapping for THIS type, then appended. The default warehouse is
-	None on purpose: a row whose store the picker could not place falls back
-	inside `post_stock_issue`, not here.
+	against the mapping for THIS type, then appended. A row that names no store
+	takes the event type's Default Store here, the same fallback
+	`post_stock_issue` applies, because the row's store is mandatory and a row
+	left without one could not even be saved (an out-of-stock item has no store
+	to name); with no Default Store set the event is refused naming the setting.
 	"""
-	rows = _clean_drug_rows(d.get("items"), None)
+	from upande_livestock.serverscripts.common.event_items import default_store
+
+	rows = _clean_drug_rows(d.get("items"), default_store(doc.event_type), doc.event_type)
 	_refuse_foreign_items(doc.event_type, rows)
 	for row in rows:
 		doc.append("drug_issues", row)
