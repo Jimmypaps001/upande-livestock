@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { ToastProvider } from "@/components/Toast";
 import { PageSkeleton } from "@/components/Loading";
 import { Stub } from "@/pages/Stub";
+import { landingView, viewAllowed } from "@/lib/roles";
 import { useRoute, type View } from "@/lib/router";
 
 /**
@@ -200,6 +201,12 @@ const PAGES: Partial<Record<View, React.ComponentType>> = {
 export function App() {
   const [view, navigate] = useRoute();
   const Built = PAGES[view];
+  // A user limited to some screens (the lab: Livestock Quality only) lands on,
+  // and stays within, their own; a direct URL to any other redirects there.
+  const allowed = viewAllowed(view);
+  useEffect(() => {
+    if (!allowed) navigate(landingView());
+  }, [allowed, navigate]);
 
   // Once the first screen is on the page, quietly pull the rest of the code so
   // the next click waits for data and nothing else.
@@ -221,7 +228,7 @@ export function App() {
               a slow line) it is the same silhouette the page settles into,
               rather than a blank that reflows the moment it arrives. */}
           <Suspense fallback={<PageSkeleton />}>
-            {Built ? <Built /> : <Stub title={TITLES[view]} />}
+            {!allowed ? null : Built ? <Built /> : <Stub title={TITLES[view]} />}
           </Suspense>
         </SidebarInset>
       </SidebarProvider>

@@ -48,6 +48,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { SidebarUser } from "@/components/SidebarUser";
 import { useUnreadNotifications } from "@/hooks/use-notifications";
+import { viewAllowed } from "@/lib/roles";
 import { routeHash, type View } from "@/lib/router";
 import { cn } from "@/lib/utils";
 import upandeLogo from "@/assets/upande_logo.png";
@@ -323,7 +324,14 @@ export function AppSidebar({
               "group-data-[collapsible=icon]:p-[0.8rem]",
             )}
           >
-            {NAV.map((section) => (
+            {/* A user limited to some screens (Livestock Quality only) is shown
+                them alone; a section left with nothing is not shown at all. */}
+            {NAV.map((section) => ({
+              ...section,
+              items: section.items.filter((item) => viewAllowed(item.view)),
+            }))
+              .filter((section) => section.items.length > 0)
+              .map((section) => (
               <SidebarGroup key={section.label}>
                 <SidebarGroupLabel>{section.label}</SidebarGroupLabel>
                 <SidebarGroupContent>
@@ -374,6 +382,7 @@ export function AppSidebar({
         {/* Notifications — a normal sidebar item, pinned to the footer rather
             than listed under Herd: it is not a part of the herd, it is how the
             herd reaches you, and it must stay reachable without scrolling. */}
+        {viewAllowed("notifications") && (
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton
@@ -410,7 +419,8 @@ export function AppSidebar({
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
-        <SidebarSeparator />
+        )}
+        {viewAllowed("notifications") && <SidebarSeparator />}
 
         {/* Collapse / Expand — a normal sidebar item, pinned here. The label
             follows the state so the rail's one visible word is never a lie. */}

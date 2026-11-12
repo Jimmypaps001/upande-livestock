@@ -146,3 +146,44 @@ describe("sidebar nav", () => {
     expect(link.querySelector("span")?.className).not.toContain("sd-quiet");
   });
 });
+
+describe("sidebar for a user limited to the quality screens", () => {
+  const as = (roles: string[]) => {
+    window.LIVESTOCK = {
+      bootstrap: { user: "lab@upande.com", full_name: "Lab", user_image: "", site_name: "kaitet", roles },
+    };
+  };
+  const hrefs = () =>
+    screen.queryAllByRole("link").map((l) => l.getAttribute("href"));
+
+  afterEach(() => as([]));
+
+  it("lists Quality and Feed vs quality and no other screen, notifications included", () => {
+    as(["Livestock Quality", "All"]);
+    const { container } = mount();
+    const nav = hrefs().filter((h) => h?.startsWith("#/"));
+    expect(nav).toEqual(["#/quality", "#/feed-quality"]);
+    // The sections left empty are not shown as bare headings.
+    expect(container.textContent).not.toContain("Milking");
+    expect(container.textContent).not.toContain("Animals");
+    expect(container.textContent).not.toContain("Feeding");
+    expect(container.textContent).not.toContain("Notifications");
+    // The shell still carries collapse and back to desk.
+    expect(container.textContent).toContain("Back to Desk");
+  });
+
+  it("lists everything for a manager who also holds the quality role", () => {
+    as(["Livestock Quality", "Livestock Manager"]);
+    mount();
+    const nav = hrefs();
+    for (const h of ["#/feeding", "#/quality", "#/animals", "#/notifications", "#/settings"]) {
+      expect(nav).toContain(h);
+    }
+  });
+
+  it("lists everything when no livestock role is in the bootstrap", () => {
+    as([]);
+    mount();
+    expect(hrefs()).toContain("#/feeding");
+  });
+});
