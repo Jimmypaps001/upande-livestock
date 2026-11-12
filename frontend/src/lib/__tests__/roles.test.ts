@@ -69,3 +69,71 @@ describe("limitedViews", () => {
     expect(limitedViews([QUALITY_ROLE])).toEqual(["quality", "feed-quality"]);
   });
 });
+
+describe("an event the farm switched off", () => {
+  const manager = ["Livestock Manager"];
+
+  it("closes the page that records it, and only that page", async () => {
+    const { viewOpen: open } = await import("@/lib/roles");
+    const off = ["Pregnancy Diagnosis"];
+    expect(open("diagnosis", manager, off)).toBe(false);
+    expect(open("service", manager, off)).toBe(true);
+    expect(open("calving", manager, off)).toBe(true);
+    expect(open("diagnosis", manager, [])).toBe(true);
+    expect(open("drying-off", manager, ["Drying Off"])).toBe(false);
+  });
+
+  it("keeps a page of several events while any of them is on", async () => {
+    const { viewOpen: open } = await import("@/lib/roles");
+    expect(open("husbandry", manager, ["Vaccination", "Deworming"])).toBe(true);
+    expect(open("husbandry", manager, ["Vaccination", "Deworming", "Dehorning", "Hoof Trimming"])).toBe(false);
+  });
+
+  it("never closes a page that records no event type of its own", async () => {
+    const { viewOpen: open } = await import("@/lib/roles");
+    const everything = ["Movement", "Calving", "Feeding", "Weight Recording", "Pregnancy Diagnosis"];
+    for (const view of ["ration-editor", "rations", "concentrate", "animals", "settings", "dashboard", "transactions"] as const) {
+      expect(open(view, manager, everything)).toBe(true);
+    }
+  });
+
+  it("closes Feeding, which issues feed, but keeps the Ration Editor that only designs it", async () => {
+    const { viewOpen: open } = await import("@/lib/roles");
+    expect(open("feeding", manager, ["Feeding"])).toBe(false);
+    expect(open("ration-editor", manager, ["Feeding"])).toBe(true);
+    expect(open("rations", manager, ["Feeding"])).toBe(true);
+    expect(open("feeding", manager, [])).toBe(true);
+  });
+
+  it("lands on the Dashboard, not on a switched-off Feeding that would send you on again", async () => {
+    const { landingView: landing, viewOpen: open } = await import("@/lib/roles");
+    expect(landing(manager, [])).toBe("feeding");
+    expect(landing(manager, ["Feeding"])).toBe("dashboard");
+    expect(open(landing(manager, ["Feeding"]), manager, ["Feeding"])).toBe(true);
+  });
+
+  it("combines with the role limit instead of replacing it", async () => {
+    const { landingView: landing, viewOpen: open } = await import("@/lib/roles");
+    const lab = [QUALITY_ROLE];
+    // The lab still lands on Quality, switched-off Feeding or not.
+    expect(landing(lab, ["Feeding"])).toBe("quality");
+    // Its own screens open; everything else stays shut for a role reason.
+    expect(open("quality", lab, ["Feeding"])).toBe(true);
+    expect(open("animals", lab, [])).toBe(false);
+    // A switched-off event shuts its page even for a role that could open it.
+    expect(open("diagnosis", manager, ["Pregnancy Diagnosis"])).toBe(false);
+  });
+
+  it("reads the switched-off list from the page's bootstrap", async () => {
+    const { eventEnabled, viewEventsOn, viewOpen: open } = await import("@/lib/roles");
+    window.LIVESTOCK = { bootstrap: { disabled_events: ["Heat Detection"] } };
+    try {
+      expect(eventEnabled("Heat Detection")).toBe(false);
+      expect(viewEventsOn("heat")).toBe(false);
+      expect(viewEventsOn("service")).toBe(true);
+      expect(open("heat", manager)).toBe(false);
+    } finally {
+      delete window.LIVESTOCK;
+    }
+  });
+});

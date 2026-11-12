@@ -82,8 +82,8 @@ describe("treatment details follow the drug", () => {
     state.fail = false;
     draw();
     await waitFor(() => expect(screen.getByText(/not set to post stock/)).toBeTruthy());
-    expect(screen.getByText(/Settings → Stock/)).toBeTruthy();
-    expect(screen.queryByText(/in stock right now/)).toBeNull();
+    expect(screen.getByText(/Settings → Events/)).toBeTruthy();
+    expect(screen.queryByText(/hold no items/)).toBeNull();
     state.mapped = true;
   });
 
@@ -94,7 +94,7 @@ describe("treatment details follow the drug", () => {
     state.fail = false;
     draw();
     await waitFor(() =>
-      expect(screen.getByText(/Nothing mapped to this event is in stock right now/)).toBeTruthy(),
+      expect(screen.getByText(/groups this event uses hold no items/)).toBeTruthy(),
     );
     expect(screen.queryByText(/not set to post stock/)).toBeNull();
     expect(screen.queryByText(/Settings/)).toBeNull();
@@ -107,12 +107,12 @@ describe("treatment details follow the drug", () => {
     state.drugs = [];
     draw();
     // Before the call resolves, and after the options have.
-    expect(screen.queryByText(/Nothing mapped to this event is in stock right now/)).toBeNull();
+    expect(screen.queryByText(/groups this event uses hold no items/)).toBeNull();
     await waitFor(() => expect(call).toHaveBeenCalled());
     await new Promise((r) => setTimeout(r, 50));
-    expect(screen.queryByText(/Nothing mapped to this event is in stock right now/)).toBeNull();
+    expect(screen.queryByText(/groups this event uses hold no items/)).toBeNull();
     open();
-    await waitFor(() => expect(screen.getByText(/Nothing mapped to this event is in stock right now/)).toBeTruthy());
+    await waitFor(() => expect(screen.getByText(/groups this event uses hold no items/)).toBeTruthy());
     state.gate = null;
   });
 
@@ -122,7 +122,7 @@ describe("treatment details follow the drug", () => {
     state.drugs = [];
     draw();
     await waitFor(() => expect(screen.getByText(/could not be loaded/)).toBeTruthy());
-    expect(screen.queryByText(/Nothing mapped to this event is in stock right now/)).toBeNull();
+    expect(screen.queryByText(/groups this event uses hold no items/)).toBeNull();
     state.fail = false;
   });
 });

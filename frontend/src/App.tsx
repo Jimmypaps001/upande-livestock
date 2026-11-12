@@ -5,7 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { ToastProvider } from "@/components/Toast";
 import { PageSkeleton } from "@/components/Loading";
 import { Stub } from "@/pages/Stub";
-import { landingView, viewAllowed } from "@/lib/roles";
+import { landingView, viewOpen } from "@/lib/roles";
 import { useRoute, type View } from "@/lib/router";
 
 /**
@@ -202,8 +202,9 @@ export function App() {
   const [view, navigate] = useRoute();
   const Built = PAGES[view];
   // A user limited to some screens (the lab: Livestock Quality only) lands on,
-  // and stays within, their own; a direct URL to any other redirects there.
-  const allowed = viewAllowed(view);
+  // and stays within, their own; a direct URL to any other redirects there. So
+  // does a direct URL to the page of an event the farm switched off.
+  const allowed = viewOpen(view);
   useEffect(() => {
     if (!allowed) navigate(landingView());
   }, [allowed, navigate]);

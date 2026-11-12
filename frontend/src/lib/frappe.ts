@@ -21,6 +21,9 @@ export interface LivestockBootstrap {
   user_image: string;
   site_name: string;
   roles: string[];
+  /** Livestock Event Types the farm switched off (Settings → Events). Their
+   *  record pages leave the menu (lib/roles: viewOpen). Unset means none. */
+  disabled_events: string[];
 }
 
 declare global {
@@ -45,6 +48,7 @@ export function bootstrap(): LivestockBootstrap {
     user_image: typeof raw.user_image === "string" ? raw.user_image : "",
     site_name: typeof raw.site_name === "string" ? raw.site_name : "",
     roles: Array.isArray(raw.roles) ? (raw.roles as string[]) : [],
+    disabled_events: Array.isArray(raw.disabled_events) ? (raw.disabled_events as string[]) : [],
   };
 }
 

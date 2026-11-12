@@ -36,6 +36,25 @@ export interface StockChoice {
   warehouse?: string;
   /** Every store holding any, most first, so a short line has somewhere to try. */
   locations?: { warehouse: string; qty: number }[];
+  /** False for an item of the event's groups the stores hold none of. Still
+   *  offered: the record stands and its issue is saved as a draft (common/stock).
+   *  Absent on an older server, where every choice was in stock. */
+  in_stock?: boolean;
+}
+
+/** "out of stock — saved as a draft": what an out-of-stock choice is marked with. */
+export const OUT_OF_STOCK_NOTE = "out of stock — saved as a draft";
+
+/** Is this choice one the stores hold none of? */
+export function outOfStock(c: StockChoice | undefined): boolean {
+  return !!c && (c.in_stock === false || (c.in_stock === undefined && c.qty !== undefined && c.qty <= 0));
+}
+
+/** The label a picker shows: an out-of-stock choice says so, and what happens. */
+export function choiceLabel(c: StockChoice): string {
+  if (!outOfStock(c)) return c.label;
+  const name = c.item_name || c.label.replace(/\s*·\s*out of stock\s*$/i, "");
+  return `${name} · ${OUT_OF_STOCK_NOTE}`;
 }
 
 export interface AnimalChoice {

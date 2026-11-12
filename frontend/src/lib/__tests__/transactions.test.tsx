@@ -156,3 +156,25 @@ describe("a record whose stock waits as a draft", () => {
     expect(await screen.findByText(/STE-9 \(Livestock Drying Off\) is saved as a draft/)).toBeTruthy();
   });
 });
+
+describe("a draft for a past day", () => {
+  it("is badged Backdated, says what posting it does, and can still be posted", async () => {
+    state.drafts = [
+      entry("SE-OLD", {
+        backdated: true,
+        posting_date: "2026-01-10",
+        remarks: "BACKDATED placeholder: Livestock Vaccination - A001/20 - draft: store short on 10-01-2026; post when stock is in",
+        can_post: true,
+        short: null,
+      }),
+      entry("SE-NEW"),
+    ];
+    draw();
+    await screen.findByText(/VACC-SE-OLD/);
+    expect(screen.getAllByTestId("backdated-badge")).toHaveLength(1);
+    expect(screen.getByText(/A placeholder for a record dated/)).toBeTruthy();
+    const post = within(screen.getByText(/VACC-SE-OLD/).closest("li") as HTMLElement).getByRole("button", { name: /Post/ });
+    fireEvent.click(post);
+    await waitFor(() => expect(state.posted).toEqual(["SE-OLD"]));
+  });
+});

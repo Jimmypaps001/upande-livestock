@@ -109,12 +109,12 @@ describe("RecordEvent with itemsOf", () => {
     fireEvent.click(await screen.findByText("Daisy"));
     await screen.findByRole("button", { name: "Record heat" });
     expect(screen.queryByLabelText("Item")).toBeNull();
-    expect(screen.queryByText(/Nothing mapped to this event is in stock right now/)).toBeNull();
+    expect(screen.queryByText(/groups this event uses hold no items/)).toBeNull();
     unmount();
 
     screenWith(() => []);
     fireEvent.click(await screen.findByText("Daisy"));
-    expect(await screen.findByText(/Nothing mapped to this event is in stock right now/)).toBeTruthy();
+    expect(await screen.findByText(/groups this event uses hold no items/)).toBeTruthy();
   });
 
   it("is absent altogether on a screen that passed no itemsOf", async () => {

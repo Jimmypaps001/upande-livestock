@@ -59,8 +59,69 @@ export function viewAllowed(view: View, roles: string[] = bootstrap().roles): bo
   return limited === null || limited.includes(view);
 }
 
+/**
+ * The event types each record page records. A farm can switch an event off
+ * (Settings → Events; the server's `common/event_types`), and then the page
+ * that records it leaves the menu and its route sends you elsewhere. A page
+ * recording several types (Husbandry) stays while any of them is on; the page
+ * itself only offers the ones that are. Pages not listed record no event type
+ * of their own and are never hidden for one.
+ */
+export const VIEW_EVENTS: Partial<Record<View, readonly string[]>> = {
+  // Feeding issues feed (a herd's mix, a manual mix), and every issue is a
+  // Feeding event. The Ration Editor, the rations and the Concentrate window
+  // design and mix but feed no herd, so they stay.
+  feeding: ["Feeding"],
+  movement: ["Movement"],
+  calving: ["Calving"],
+  heat: ["Heat Detection"],
+  service: ["Service"],
+  diagnosis: ["Pregnancy Diagnosis"],
+  abortion: ["Abortion"],
+  "drying-off": ["Drying Off"],
+  weight: ["Weight Recording"],
+  "check-up": ["Check Up"],
+  treatment: ["Treatment"],
+  "health-case": ["Health Case"],
+  husbandry: ["Vaccination", "Deworming", "Dehorning", "Hoof Trimming"],
+};
+
+/** Does the farm record `eventType`? Everything is on unless switched off. */
+export function eventEnabled(
+  eventType: string,
+  disabled: readonly string[] = bootstrap().disabled_events,
+): boolean {
+  return !disabled.includes(eventType);
+}
+
+/** Is the event behind `view` switched on (any of them, for a page of several)? */
+export function viewEventsOn(
+  view: View,
+  disabled: readonly string[] = bootstrap().disabled_events,
+): boolean {
+  const events = VIEW_EVENTS[view];
+  return !events || events.some((e) => eventEnabled(e, disabled));
+}
+
+/** May `view` be opened on this farm by this user? The role rule, and a record
+ *  page only while its event is switched on. */
+export function viewOpen(
+  view: View,
+  roles: string[] = bootstrap().roles,
+  disabled: readonly string[] = bootstrap().disabled_events,
+): boolean {
+  return viewEventsOn(view, disabled) && viewAllowed(view, roles);
+}
+
 /** Where a user starts, and where one who opened a screen they may not is sent:
- *  a limited user's first screen, everyone else Feeding. */
-export function landingView(roles: string[] = bootstrap().roles): View {
-  return limitedViews(roles)?.[0] ?? "feeding";
+ *  a limited user's first screen, everyone else Feeding, or the Dashboard on a
+ *  farm that switched Feeding off (Feeding would only send them on again, round
+ *  and round). */
+export function landingView(
+  roles: string[] = bootstrap().roles,
+  disabled: readonly string[] = bootstrap().disabled_events,
+): View {
+  const limited = limitedViews(roles)?.[0];
+  if (limited) return limited;
+  return viewEventsOn("feeding", disabled) ? "feeding" : "dashboard";
 }

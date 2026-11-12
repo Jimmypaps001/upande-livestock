@@ -48,7 +48,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { SidebarUser } from "@/components/SidebarUser";
 import { useUnreadNotifications } from "@/hooks/use-notifications";
-import { viewAllowed } from "@/lib/roles";
+import { viewAllowed, viewOpen } from "@/lib/roles";
 import { routeHash, type View } from "@/lib/router";
 import { cn } from "@/lib/utils";
 import upandeLogo from "@/assets/upande_logo.png";
@@ -328,7 +328,7 @@ export function AppSidebar({
                 them alone; a section left with nothing is not shown at all. */}
             {NAV.map((section) => ({
               ...section,
-              items: section.items.filter((item) => viewAllowed(item.view)),
+              items: section.items.filter((item) => viewOpen(item.view)),
             }))
               .filter((section) => section.items.length > 0)
               .map((section) => (

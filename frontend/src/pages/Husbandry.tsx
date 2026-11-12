@@ -169,7 +169,7 @@ export function Husbandry() {
       vet_fee: external && Number(fee) > 0 ? Number(fee) : undefined,
       remarks: remarks.trim() || undefined,
       // A line the picker could not place falls back, on the server, to the
-      // event type's Default Store (Settings → Stock).
+      // event type's Default Store (Settings → Events).
       // Each line is drawn from the store the operator saw it in (the one
       // holding the most unless they moved it). One warehouse for the whole
       // round meant issuing off a shelf the picker never claimed it was on.
@@ -199,6 +199,7 @@ export function Husbandry() {
       animals?: number;
       skipped?: SkippedAnimal[];
       stock_warnings?: string[];
+      stock_drafts?: unknown[];
     };
     const recorded = done.animals ?? roundAnimals.length;
     const skipped = [
@@ -209,7 +210,9 @@ export function Husbandry() {
     toast(
       `${kind} recorded for ${recorded} animal${recorded === 1 ? "" : "s"}.` +
         (skipped.length ? ` ${skipped.length} skipped.` : "") +
-        (basket.length
+        // Said only when the store really gave it out: a short round is a draft,
+        // and the drafts toast says so.
+        (basket.length && !done.stock_drafts?.length
           ? ` ${basket.map((b) => `${fmt(b.all)} ${b.uom} ${b.name}`.trim()).join(", ")} issued.`
           : ""),
     );
