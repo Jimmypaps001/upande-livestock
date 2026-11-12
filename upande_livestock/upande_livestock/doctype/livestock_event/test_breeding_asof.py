@@ -29,6 +29,13 @@ class TestBreedingAsOf(IntegrationTestCase):
 		ensure_livestock_event_types()
 		self.cow = make_animal("TEST-ASOF-COW").name
 		self.addCleanup(_delete_and_commit, "Animal", self.cow)
+		self.addCleanup(self._purge_spawned_movements)
+
+	def _purge_spawned_movements(self):
+		# A Calving moves the dam into the milking herd as a Movement event of its own.
+		for name in frappe.get_all("Livestock Event", {"animal": self.cow, "event_type": "Movement"}, pluck="name"):
+			frappe.db.delete("Livestock Event", {"name": name})
+		frappe.db.commit()
 
 	def _service(self, date):
 		doc = make_event("Service", self.cow, date, service_type="A.I.", service_date=date)
