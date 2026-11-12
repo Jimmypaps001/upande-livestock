@@ -1,0 +1,185 @@
+{
+ "cycleMs": 4000,
+ "enterPct": 18.0,
+ "exitPct": 82.0,
+ "enterMs": 720,
+ "loopMs": 2560,
+ "ease": "cubic-bezier(.3,.7,.2,1)",
+ "enter": [
+  {
+   "sel": ".arrow",
+   "box": "view-box",
+   "origin": "348.5px 347px",
+   "frames": [
+    {
+     "offset": 0,
+     "transform": "translate(0px, 0px) scale(1)",
+     "opacity": 1
+    },
+    {
+     "offset": 0.45,
+     "transform": "translate(0px, 0px) scale(0)",
+     "opacity": 0
+    },
+    {
+     "offset": 1,
+     "transform": "translate(0px, 0px) scale(0)",
+     "opacity": 0
+    }
+   ]
+  },
+  {
+   "sel": ".scene",
+   "box": null,
+   "origin": null,
+   "frames": [
+    {
+     "offset": 0,
+     "opacity": 0
+    },
+    {
+     "offset": 0.12,
+     "opacity": 1
+    },
+    {
+     "offset": 1,
+     "opacity": 1
+    }
+   ]
+  },
+  {
+   "sel": ".ground",
+   "box": null,
+   "origin": null,
+   "frames": [
+    {
+     "offset": 0,
+     "clipPath": "inset(-50% 100% -50% -10%)"
+    },
+    {
+     "offset": 0.1,
+     "clipPath": "inset(-50% 100% -50% -10%)"
+    },
+    {
+     "offset": 0.5,
+     "clipPath": "inset(-50% -10% -50% -10%)"
+    },
+    {
+     "offset": 1,
+     "clipPath": "inset(-50% -10% -50% -10%)"
+    }
+   ]
+  },
+  {
+   "sel": ".cow",
+   "box": null,
+   "origin": null,
+   "frames": [
+    {
+     "offset": 0,
+     "transform": "translate(-120px, 0px)",
+     "opacity": 0
+    },
+    {
+     "offset": 0.25,
+     "transform": "translate(-120px, 0px)",
+     "opacity": 0
+    },
+    {
+     "offset": 0.45,
+     "opacity": 1
+    },
+    {
+     "offset": 0.92,
+     "transform": "translate(0px, 0px)",
+     "opacity": 1
+    },
+    {
+     "offset": 1,
+     "transform": "translate(0px, 0px)",
+     "opacity": 1
+    }
+   ]
+  }
+ ],
+ "loop": [
+  {
+   "sel": ".tail",
+   "box": "fill-box",
+   "origin": "100% 0%",
+   "frames": [
+    {
+     "offset": 0,
+     "transform": "rotate(0deg)"
+    },
+    {
+     "offset": 0.1,
+     "transform": "rotate(0deg)"
+    },
+    {
+     "offset": 0.26,
+     "transform": "rotate(7deg)"
+    },
+    {
+     "offset": 0.42,
+     "transform": "rotate(-2deg)"
+    },
+    {
+     "offset": 0.58,
+     "transform": "rotate(5deg)"
+    },
+    {
+     "offset": 0.74,
+     "transform": "rotate(-1deg)"
+    },
+    {
+     "offset": 0.88,
+     "transform": "rotate(0deg)"
+    },
+    {
+     "offset": 1,
+     "transform": "rotate(0deg)"
+    }
+   ]
+  },
+  {
+   "sel": ".sway",
+   "box": "fill-box",
+   "origin": "50% 100%",
+   "frames": [
+    {
+     "offset": 0,
+     "transform": "skewX(0deg)"
+    },
+    {
+     "offset": 0.1,
+     "transform": "skewX(0deg)"
+    },
+    {
+     "offset": 0.26,
+     "transform": "skewX(2deg)"
+    },
+    {
+     "offset": 0.42,
+     "transform": "skewX(-0.57deg)"
+    },
+    {
+     "offset": 0.58,
+     "transform": "skewX(1.43deg)"
+    },
+    {
+     "offset": 0.74,
+     "transform": "skewX(-0.29deg)"
+    },
+    {
+     "offset": 0.88,
+     "transform": "skewX(0deg)"
+    },
+    {
+     "offset": 1,
+     "transform": "skewX(0deg)"
+    }
+   ]
+  }
+ ]
+}

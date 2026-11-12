@@ -8,7 +8,7 @@
 // survives re-renders/navigation.
 (function () {
 	var LABEL = "Livestock";
-	var LOGO = "/assets/upande_livestock/images/upande_logo.png";
+	var LOGO = "/assets/upande_livestock/images/livestock_logo.svg"; // the vector tile, as the real card
 	var ROUTE = "/desk/livestock?sidebar=Livestock";
 
 	function permitted() {

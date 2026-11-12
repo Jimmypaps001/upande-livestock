@@ -181,3 +181,7 @@ upande_livestock.patches.thumbnail_animal_photos
 
 # The lab role that files bulk tank quality against milkings.
 upande_livestock.patches.ensure_livestock_quality_role
+
+# The Livestock desk tile shows the cow-in-grass SVG and no PNG: logo_url on the SVG, this app's own
+# icon_image cleared (a PNG on the tile goes soft and hides the animation).
+upande_livestock.patches.ensure_livestock_desktop_icon
