@@ -133,6 +133,117 @@ def _validate_pregnancy_link(doc):
 		)
 
 
+def open_pregnancy_as_of(animal, as_of):
+	"""The confirmed pregnancy that is still open on `as_of`, or None.
+
+	Open on a date means: its Service is dated on or before it, it had been
+	confirmed by then, and no Calving linked to it (nor an Abortion, nor an
+	Aborted diagnosis) is dated on or before it. Looking only at the animal's
+	state today made history impossible to enter out of order: a Service from
+	last January was refused because the animal calved last October.
+	"""
+	rows = frappe.db.sql(
+		"""
+		SELECT ae.name, ae.service_date, ae.expected_calving_date
+		FROM `tabLivestock Event` ae
+		WHERE ae.animal = %(animal)s
+		AND ae.event_type = 'Service'
+		AND ae.docstatus = 1
+		AND ae.service_date <= %(d)s
+		AND (ae.pregnancy_confirmation_date IS NULL OR ae.pregnancy_confirmation_date <= %(d)s)
+		AND (
+			ae.pregnancy_confirmation_status = 'Confirmed'
+			OR (
+				ae.pregnancy_confirmation_status = 'Aborted'
+				AND EXISTS (
+					SELECT 1 FROM `tabLivestock Event` x
+					WHERE x.docstatus = 1 AND x.animal = ae.animal
+					AND (
+						(x.event_type = 'Abortion' AND x.custom_related_pregnancy = ae.name)
+						OR (x.event_type = 'Pregnancy Diagnosis' AND x.related_service = ae.name
+							AND x.diagnosis_result = 'Aborted')
+					)
+					AND x.event_date > %(d)s
+				)
+			)
+		)
+		AND NOT EXISTS (
+			SELECT 1 FROM `tabLivestock Event` closer
+			WHERE closer.animal = ae.animal
+			AND closer.docstatus = 1
+			AND closer.event_date <= %(d)s
+			AND (
+				(closer.event_type = 'Calving' AND closer.custom_related_pregnancy = ae.name)
+				OR (closer.event_type = 'Abortion' AND closer.custom_related_pregnancy = ae.name)
+			)
+		)
+		ORDER BY ae.service_date DESC
+		LIMIT 1
+		""",
+		{"animal": animal, "d": as_of},
+		as_dict=True,
+	)
+	return rows[0] if rows else None
+
+
+_REPRO_EVENT_TYPES = ("Service", "Pregnancy Diagnosis", "Calving", "Abortion", "Heat Detection")
+_REPRO_RANK = {"Calving": 0, "Abortion": 0, "Pregnancy Diagnosis": 1, "Heat Detection": 2, "Service": 3}
+
+
+def recompute_repro_state(animal):
+	"""Set the animal's breeding fields from her submitted history: the newest event wins.
+
+	A backdated event submitted today must not overwrite the animal with the state of
+	a day long past, so no event writes these fields directly any more than it must;
+	each breeding event calls this on submit and on cancel. Events are replayed in
+	date order (on one day: calving/abortion, then the check, then heat, then service).
+
+	An animal with no breeding events is left as she is (a heifer stays a heifer). A
+	cow marked Dry who is still pregnant stays Dry.
+	"""
+	if not animal or not frappe.db.exists("Animal", animal):
+		return None
+	events = frappe.db.sql(
+		"""SELECT event_type, event_date, diagnosis_result, related_service, creation
+		   FROM `tabLivestock Event` WHERE animal = %s AND docstatus = 1 AND event_type IN %s""",
+		(animal, _REPRO_EVENT_TYPES),
+		as_dict=True,
+	)
+	if not events:
+		return None
+	events.sort(key=lambda e: (str(e.event_date), _REPRO_RANK[e.event_type], e.creation))
+
+	state = {"repro_status": "Open", "last_service_date": None, "expected_calving_date": None, "last_calving_date": None}
+	for e in events:
+		if e.event_type == "Service":
+			state.update(repro_status="Served", last_service_date=e.event_date, expected_calving_date=None)
+		elif e.event_type == "Pregnancy Diagnosis":
+			if e.diagnosis_result == "Confirmed":
+				svc = (
+					frappe.db.get_value(
+						"Livestock Event", e.related_service, ["expected_calving_date", "service_date"], as_dict=True
+					)
+					if e.related_service
+					else None
+				)
+				expected = svc.expected_calving_date if svc else None
+				if not expected and svc and svc.service_date:
+					# Older Services were saved without it.
+					expected = frappe.utils.add_days(svc.service_date, get_timing("gestation_period_days"))
+				state.update(repro_status="Pregnant", expected_calving_date=expected)
+			else:
+				state.update(repro_status="Open", expected_calving_date=None)
+		elif e.event_type == "Calving":
+			state.update(repro_status="Open", last_calving_date=e.event_date, expected_calving_date=None)
+		else:  # Abortion, Heat Detection
+			state.update(repro_status="Open", expected_calving_date=None)
+
+	if state["repro_status"] == "Pregnant" and frappe.db.get_value("Animal", animal, "repro_status") == "Dry":
+		state["repro_status"] = "Dry"
+	frappe.db.set_value("Animal", animal, state, update_modified=False)
+	return state
+
+
 class LivestockEvent(Document):
 	def autoname(self):
 		"""Name as TYPE-YEAR-#####, e.g. FEEDING-2026-00001.
@@ -555,7 +666,10 @@ class LivestockEvent(Document):
 		# ============================================================
 
 		if self.event_type == "Service":
-			# Rule 1: No second service without feedback on first service
+			# Rule 1: No second service without feedback on first service.
+			# AS OF THIS SERVICE'S DATE: only a Service dated on or before it can be the
+			# one still waiting for an answer. A Service dated later is history that
+			# happened after this one and has no say.
 			pending_services = frappe.db.sql(
 				"""
                 SELECT name, service_date, pregnancy_confirmation_status
@@ -564,11 +678,12 @@ class LivestockEvent(Document):
                 AND event_type = 'Service'
                 AND docstatus = 1
                 AND pregnancy_confirmation_status = 'Pending'
+                AND service_date <= %s
                 AND name != %s
                 ORDER BY service_date DESC
                 LIMIT 1
             """,
-				(self.animal, self.name or "new"),
+				(self.animal, self.service_date, self.name or "new"),
 				as_dict=True,
 			)
 
@@ -581,31 +696,11 @@ class LivestockEvent(Document):
                     <b>Action Required:</b> Complete pregnancy diagnosis for service <b>{last_service.name}</b> first.<br><br>
                     <i>Tip: Go to Livestock Events → Find service → Record pregnancy diagnosis</i>""")
 
-			# Rule 2: Check if animal is already confirmed pregnant
-			active_pregnancy = frappe.db.sql(
-				"""
-                SELECT ae.name, ae.service_date, ae.expected_calving_date
-                FROM `tabLivestock Event` ae
-                WHERE ae.animal = %s
-                AND ae.event_type = 'Service'
-                AND ae.pregnancy_confirmation_status = 'Confirmed'
-                AND ae.docstatus = 1
-                AND NOT EXISTS (
-                    SELECT 1 FROM `tabLivestock Event` calving
-                    WHERE calving.animal = ae.animal
-                    AND calving.event_type = 'Calving'
-                    AND calving.custom_related_pregnancy = ae.name
-                    AND calving.docstatus = 1
-                )
-                ORDER BY ae.service_date DESC
-                LIMIT 1
-            """,
-				(self.animal,),
-				as_dict=True,
-			)
+			# Rule 2: Check if animal is already confirmed pregnant, as of this date.
+			active_pregnancy = open_pregnancy_as_of(self.animal, self.service_date)
 
 			if active_pregnancy:
-				pregnancy = active_pregnancy[0]
+				pregnancy = active_pregnancy
 				expected_calving = pregnancy.get("expected_calving_date")
 				days_until = (
 					frappe.utils.date_diff(expected_calving, frappe.utils.nowdate())
@@ -627,10 +722,11 @@ class LivestockEvent(Document):
                 WHERE animal = %s
                 AND event_type = 'Calving'
                 AND docstatus = 1
+                AND event_date <= %s
                 ORDER BY event_date DESC
                 LIMIT 1
             """,
-				(self.animal,),
+				(self.animal, self.service_date),
 				as_dict=True,
 			)
 
@@ -663,8 +759,9 @@ class LivestockEvent(Document):
 				last_abortion = frappe.db.sql(
 					"""SELECT name, event_date FROM `tabLivestock Event`
 					   WHERE animal = %s AND event_type = 'Abortion' AND docstatus = 1
+					   AND event_date <= %s
 					   ORDER BY event_date DESC LIMIT 1""",
-					(self.animal,),
+					(self.animal, self.service_date),
 					as_dict=True,
 				)
 				if last_abortion:
@@ -1170,6 +1267,7 @@ class LivestockEvent(Document):
 					"diagnosis_result": "Confirmed",
 					"docstatus": 1,
 					"name": ["!=", self.name],
+					"diagnosis_date": ["<=", self.diagnosis_date],
 				},
 				fields=["name", "diagnosis_date"],
 				order_by="diagnosis_date desc",
@@ -1185,14 +1283,12 @@ class LivestockEvent(Document):
 				# same way, or the cow could be re-served after an Abortion
 				# (per close_pregnancy_after_abortion / Service Rule 2) but her
 				# next pregnancy could never be confirmed.
-				closed = frappe.db.exists(
-					"Livestock Event",
-					{
-						"animal": self.animal,
-						"event_type": ["in", ["Calving", "Abortion"]],
-						"event_date": [">", last_pregnancy_date],
-						"docstatus": 1,
-					},
+				# As of this diagnosis's date: one dated after it has not happened yet.
+				closed = frappe.db.sql(
+					"""SELECT name FROM `tabLivestock Event`
+					   WHERE animal = %s AND event_type IN ('Calving', 'Abortion') AND docstatus = 1
+					   AND event_date > %s AND event_date <= %s LIMIT 1""",
+					(self.animal, last_pregnancy_date, self.diagnosis_date),
 				)
 
 				if not closed:
@@ -1215,9 +1311,20 @@ class LivestockEvent(Document):
 		# have made the move race its own second attempt.
 		if self.event_type == "Calving":
 			self.move_dam_after_calving()
+		self.refresh_repro_state()
+
+	def refresh_repro_state(self):
+		"""The animal shows her newest breeding event, not the one saved last.
+
+		Heat Detection is replayed by recompute_repro_state but does not trigger it:
+		a heat has never changed an animal's status on its own.
+		"""
+		if self.animal and self.event_type in ("Service", "Pregnancy Diagnosis", "Calving", "Abortion"):
+			recompute_repro_state(self.animal)
 
 	def on_cancel(self):
 		self.refresh_calving_birth_count()
+		self.refresh_repro_state()
 		self.undo_movement()
 		self.cancel_own_stock_issue()
 		self.undo_feed_mixing()
