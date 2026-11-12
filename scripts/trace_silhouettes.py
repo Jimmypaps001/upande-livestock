@@ -305,15 +305,19 @@ def logo_grass(standing: np.ndarray, grazing_src: Path) -> dict[str, str]:
             [("grass", grass), ("grassFront", front), ("grassSmall", small), ("grassSmallFront", small_front)]}
 
 
-def split_tail(mask: np.ndarray, cut_x: float = 88, head_y: float = 95, tip_y: float = 248):
+def split_tail(mask: np.ndarray, cut_x: float = 88, head_y: float = 95, tip_y: float = 248,
+               gap_y: float = 134, reach: float = 16):
     """The standing cow cut into body and tail where the tail leaves the rump.
 
     Measured on illustration 5.png (source px): the tail hangs down the buttock
-    from the tail head at about (88, 95), runs left of x = 88 (a white gap
-    parts it from the thigh below y = 134) and ends by y = 248, above the hind
-    hoof. The tail is that strip; the body keeps everything else plus a 2 px
-    overlap under the tail so no seam shows at rest. Returns (body, tail, the
-    tail head in source px).
+    from the tail head at about (88, 95), runs left of x = 88 and ends by
+    y = 248, above the hind hoof. Below y = 134 a white gap parts it from the
+    thigh, and there the tail is everything left of that gap, not only what is
+    left of x = 88: cut on the straight line, a thin strip of tail between the
+    line and the gap stayed on the body and was left behind when the tail
+    swung out. The body keeps everything else, plus a 2 px overlap under the
+    tail above the gap and across its top, so no seam shows at rest. Returns (body, tail, the tail
+    head in source px).
     """
     region = np.zeros_like(mask)
     y0, y1, x1 = int(head_y * UP), int(tip_y * UP), int(cut_x * UP)
@@ -323,8 +327,17 @@ def split_tail(mask: np.ndarray, cut_x: float = 88, head_y: float = 95, tip_y: f
     if n > 1:
         sizes = ndimage.sum(tail, lab, range(1, n + 1))
         tail = lab == (int(np.argmax(sizes)) + 1)
-    body = mask.copy()
-    body[:, : x1 - 2 * UP] &= ~tail[:, : x1 - 2 * UP]
+    # below the gap: the pieces left of it that the straight cut split off
+    g = int(gap_y * UP)
+    band = np.zeros_like(mask)
+    band[g:y1, : int((cut_x + reach) * UP)] = True
+    lab, _ = ndimage.label(mask & band)
+    ids = np.unique(lab[tail & band])
+    tail |= np.isin(lab, ids[ids > 0])
+    taken = tail.copy()
+    taken[:g, x1 - 2 * UP : x1] = False   # the overlap under the tail, above the gap
+    taken[y0 : y0 + 2 * UP, :] = False     # and across its top, so no hairline shows there
+    body = mask & ~taken
     return body, tail, (cut_x, head_y)
 
 
