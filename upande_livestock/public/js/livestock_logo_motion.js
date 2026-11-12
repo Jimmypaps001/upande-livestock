@@ -2,8 +2,8 @@
 //
 // At rest the tile is the plain Upande mark (livestock_logo.svg draws exactly
 // upande_logo.png). On hover Livestock's own scene eases in — the arrow steps
-// aside, a strip of grass draws across and a cow walks in onto it — and her
-// round plays: she stands and her tail swings a little. The round loops while
+// aside, a band of grass draws across and a cow walks in onto it — and her
+// round plays: she stands, her tail swings a little and the grass sways with it. The round loops while
 // the pointer (or keyboard focus) stays;
 // on leave everything eases back out to the plain mark, reversing from
 // wherever it had got to, never snapping.

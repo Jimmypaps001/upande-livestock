@@ -13,12 +13,14 @@
   scripts never run).
 
 THE SCENE (Livestock's own): the arrow shrinks into the centre of the disc, a
-strip of green grass draws across, and a cow walks in onto it — one solid
+band of green grass draws across, and a cow walks in onto it — one solid
 side-on silhouette in the arrow's own grey (the supplied standing cow,
 ``illustration 5.png``, traced by scripts/trace_silhouettes.py into
 ``scripts/traced_cow.json`` with the tail cut free at the rump), the grass the
-one accent. The round is quiet: she stands and her
-tail swings a little. On the desk it eases in on hover, the round loops while
+one accent. The grass is the farm's too: the blades the grazing cow of
+``illustration 6.png`` stands in, traced and joined into a band (same script);
+her hooves stand in it, a few short blades drawn in front of them. The round is
+quiet: she stands, her tail swings a little, and the grass sways with it. On the desk it eases in on hover, the round loops while
 the pointer stays, and on leave it all eases back out to the plain mark. The
 loader runs in → round → out.
 
@@ -26,8 +28,10 @@ Keyframes are written once (``ENTER`` and ``LOOP``) and emitted both as CSS for
 the loader and as JSON for the desk script.
 
 It also writes the cow mark on its own into ``design/logo/`` for the mobile app:
-``livestock_cow_mark.svg`` (the disc with the cow on her grass, still) and
-``livestock_cow.svg`` (the cow alone, in ``currentColor``).
+``livestock_cow_mark.svg`` (the disc with the cow in her grass, still),
+``livestock_cow_mark_small.svg`` (the same with the grass softened into tufts,
+for 64 px and below: favicon) and ``livestock_cow.svg`` (the cow alone in her
+grass, the cow in ``currentColor``; paths: grass, tail, body, front blades).
 """
 
 from __future__ import annotations
@@ -55,10 +59,12 @@ ARROW = """<g class="arrow">
   </g>"""
 
 # The cow: side on, facing right, one solid silhouette in the arrow's own grey,
-# standing on a strip of green grass, the one accent colour. She is the traced
+# standing in a band of green grass, the one accent colour. She is the traced
 # cow of scripts/traced_cow.json (a 473 × 318 canvas, hooves on its bottom
-# edge), scaled into a 560 × 380 box whose grass runs at y 334; COW_AT places
-# the box on the disc. Her tail is its own path, swung about the tail head.
+# edge), scaled into a 560 × 380 box; COW_AT places the box on the disc. Her
+# tail is its own path, swung about the tail head. The grass is traced into her
+# canvas too (x -45 to 515, its ground's bottom at y 322): the band behind her,
+# and the few short blades over her hooves in front.
 COW_INK = "#45433f"
 GRASS = "#6a9a4c"
 COW_AT = "translate(50 158) scale(1.05)"
@@ -72,11 +78,21 @@ def cow_paths(ink: str, indent: str = "      ") -> tuple[str, str]:
     return f'{indent}<path d="{_COW["body"]}"/>', f'{indent}  <path d="{_COW["tail"]}"/>'
 
 
-_BODY, _TAILS = cow_paths(COW_INK, "        ")
+def grass_paths(small: bool = False) -> tuple[str, str]:
+    """(the band behind the cow, the blades in front of her hooves); ``small``:
+    the softened, tufted band for 64 px and below."""
+    k = "grassSmall" if small else "grass"
+    return _COW[k], _COW[k + "Front"]
 
+
+_BODY, _TAILS = cow_paths(COW_INK, "        ")
+_GRASS, _GRASS_FRONT = grass_paths()
+
+# Each grass layer draws across in a .ground and sways in a .sway inside it.
 COW = f"""<g transform="{COW_AT}">
-    <path class="ground" d="M30 334 C120 326 420 326 530 334" fill="none" stroke="{GRASS}"
-          stroke-width="12" stroke-linecap="round" pathLength="1" stroke-dasharray="1"/>
+    <g class="ground" transform="{COW_IN_BOX}" fill="{GRASS}">
+      <g class="sway"><path d="{_GRASS}"/></g>
+    </g>
     <g class="cow">
       <g transform="{COW_IN_BOX}" fill="{COW_INK}">
         <g class="tail">
@@ -84,6 +100,9 @@ COW = f"""<g transform="{COW_AT}">
         </g>
 {_BODY}
       </g>
+    </g>
+    <g class="ground" transform="{COW_IN_BOX}" fill="{GRASS}">
+      <g class="sway"><path d="{_GRASS_FRONT}"/></g>
     </g>
   </g>"""
 
@@ -113,6 +132,9 @@ def body(rest_hidden: bool) -> str:
 ARROW_HOME = "translate(0px, 0px) scale(1)"
 ARROW_GONE = "translate(0px, 0px) scale(0)"
 
+GRASS_HIDDEN = "inset(-50% 100% -50% -10%)"
+GRASS_SHOWN = "inset(-50% -10% -50% -10%)"
+
 ENTER = [
     # The arrow shrinks into the centre of the disc and fades, so the scene has the whole
     # disc; on leave it grows back out of the centre.
@@ -126,11 +148,13 @@ ENTER = [
         (0.12, {"opacity": 1}),
         (1, {"opacity": 1}),
     ]),
+    # the grass draws across from the left, uncovered by its clip (the clip's top,
+    # bottom and left lie well outside it, so swaying blade tips are never cut)
     (".ground", None, [
-        (0, {"strokeDashoffset": 1}),
-        (0.1, {"strokeDashoffset": 1}),
-        (0.5, {"strokeDashoffset": 0}),
-        (1, {"strokeDashoffset": 0}),
+        (0, {"clipPath": GRASS_HIDDEN}),
+        (0.1, {"clipPath": GRASS_HIDDEN}),
+        (0.5, {"clipPath": GRASS_SHOWN}),
+        (1, {"clipPath": GRASS_SHOWN}),
     ]),
     # she walks in from the left onto the grass
     (".cow", None, [
@@ -145,18 +169,19 @@ ENTER = [
 # The round, quiet: she stands, and her tail swings a little, out and back
 # twice, slowing as it settles. The pivot is the tail's own box (fill-box; its
 # top-right corner is where the tail leaves the rump), so it holds however the
-# cow is placed on the disc. Positive turns swing the switch out, away from her.
+# cow is placed on the disc. The grass sways with her tail, its pivot the middle
+# of its ground (each layer's own box), in step and settling with it.
+# Her tail's swing: [offset in the round, degrees]. Positive turns swing the switch
+# out, away from her.
+TAIL_SWING = [(0, 0), (0.1, 0), (0.26, 7), (0.42, -2), (0.58, 5), (0.74, -1), (0.88, 0), (1, 0)]
+# The grass leans with it, very slightly: this much of the tail's turn, as a skew
+# about its ground (at most 2 degrees).
+GRASS_SWAY = 2 / 7
+
 LOOP = [
-    (".tail", "fill-box|100% 0%", [
-        (0, {"transform": "rotate(0deg)"}),
-        (0.1, {"transform": "rotate(0deg)"}),
-        (0.26, {"transform": "rotate(7deg)"}),
-        (0.42, {"transform": "rotate(-2deg)"}),
-        (0.58, {"transform": "rotate(5deg)"}),
-        (0.74, {"transform": "rotate(-1deg)"}),
-        (0.88, {"transform": "rotate(0deg)"}),
-        (1, {"transform": "rotate(0deg)"}),
-    ]),
+    (".tail", "fill-box|100% 0%", [(t, {"transform": f"rotate({d}deg)"}) for t, d in TAIL_SWING]),
+    (".sway", "fill-box|50% 100%",
+     [(t, {"transform": f"skewX({round(d * GRASS_SWAY, 2):g}deg)"}) for t, d in TAIL_SWING]),
 ]
 
 # One splash pass: enter 0-18 %, the scene round 18-82 %, back out 82-100 %. The splash
@@ -279,36 +304,50 @@ def write_design():
     DESIGN.mkdir(parents=True, exist_ok=True)
     note = "  <!-- Generated by scripts/build_livestock_logo.py — edit there. -->"
     body_paths, tail_paths = cow_paths(COW_INK, "      ")
-    mark = "\n".join([
-        SVG_HEAD.format(label="Upande Livestock"),
-        note,
-        '  <circle cx="344.5" cy="344.5" r="340" fill="#ffffff" stroke="#1c1b19" stroke-opacity=".3" stroke-width="7"/>',
-        f'  <g transform="{COW_AT}">',
-        f'    <path d="M30 334 C120 326 420 326 530 334" fill="none" stroke="{GRASS}" stroke-width="12" stroke-linecap="round"/>',
-        f'    <g transform="{COW_IN_BOX}" fill="{COW_INK}">',
-        tail_paths,
-        body_paths,
-        "    </g>",
-        "  </g>",
-        "</svg>",
-        "",
-    ])
-    (DESIGN / "livestock_cow_mark.svg").write_text(mark)
 
+    def mark(small: bool) -> str:
+        grass, front = grass_paths(small)
+        return "\n".join([
+            SVG_HEAD.format(label="Upande Livestock"),
+            note,
+            '  <defs><clipPath id="lv-disc"><circle cx="344.5" cy="344.5" r="336"/></clipPath></defs>',
+            '  <circle cx="344.5" cy="344.5" r="340" fill="#ffffff" stroke="#1c1b19" stroke-opacity=".3" stroke-width="7"/>',
+            f'  <g clip-path="url(#lv-disc)"><g transform="{COW_AT}">',
+            f'    <g transform="{COW_IN_BOX}">',
+            f'      <path fill="{GRASS}" d="{grass}"/>',
+            f'      <g fill="{COW_INK}">',
+            "  " + tail_paths,
+            "  " + body_paths,
+            "      </g>",
+            f'      <path fill="{GRASS}" d="{front}"/>',
+            "    </g>",
+            "  </g></g>",
+            "</svg>",
+            "",
+        ])
+
+    (DESIGN / "livestock_cow_mark.svg").write_text(mark(small=False))
+    (DESIGN / "livestock_cow_mark_small.svg").write_text(mark(small=True))
+
+    # the cow alone in her grass; paths in this order: grass, tail, body, front blades
+    x0, x1, _bottom = _COW["grassFoot"]
     body_paths, tail_paths = cow_paths("currentColor", "    ")
+    grass, front = grass_paths()
     cow = "\n".join([
-        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="-10 0 493 330" role="img" aria-label="Cow">',
+        f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="{x0 - 5} 0 {x1 - x0 + 10} 326" role="img" aria-label="Cow">',
         note,
-        f'  <path d="M-4 318 C80 313 390 313 477 318" fill="none" stroke="{GRASS}" stroke-width="8" stroke-linecap="round"/>',
+        f'  <path fill="{GRASS}" d="{grass}"/>',
         '  <g fill="currentColor">',
         tail_paths,
         body_paths,
         "  </g>",
+        f'  <path fill="{GRASS}" d="{front}"/>',
         "</svg>",
         "",
     ])
     (DESIGN / "livestock_cow.svg").write_text(cow)
-    print("wrote", DESIGN / "livestock_cow_mark.svg", "and", DESIGN / "livestock_cow.svg")
+    print("wrote", DESIGN / "livestock_cow_mark.svg", DESIGN / "livestock_cow_mark_small.svg",
+          "and", DESIGN / "livestock_cow.svg")
 
 
 if __name__ == "__main__":

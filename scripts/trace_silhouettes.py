@@ -16,6 +16,14 @@ Every file gets a tight viewBox and a single ``currentColor`` path, written to
 ``design/silhouettes/`` (the mobile app). The standing cow is also split into
 body and tail (cut where the tail leaves the rump) for the Livestock logo, into
 ``scripts/traced_cow.json``, which scripts/build_livestock_logo.py reads.
+
+The logo's grass is the farm's own too: the band of blades the grazing cow
+stands in (``illustration 6.png``), cut between her legs and muzzle into three
+clean stretches, joined (some mirrored) along the seam where they differ least
+so no join shows, tapered at both ends, and set under the standing cow in her
+canvas, hooves in it. A few of its blades, shortened, are drawn again in front
+of the hooves; a softened, thicker version is the grass for small renders
+(favicon, 32 px), where single blades would be noise. See ``logo_grass``.
 """
 
 from __future__ import annotations
@@ -172,6 +180,131 @@ def grazing_without_grass(mask: np.ndarray, grass_top: int = 426, band_top: int 
     return lab == (int(np.argmax(sizes)) + 1)
 
 
+# ── the logo's grass ────────────────────────────────────────────────────────
+
+GRASS_ROWS = (384, 442)      # illustration 6: the band of grass, source rows (its ground is the last row)
+# its stretches clear of the grazing cow's legs and muzzle (source x), measured on it
+GRASS_STRETCHES = [(168, 231), (287, 401), (480, 529)]
+# the order they are joined in: (stretch, mirrored)
+GRASS_ORDER = [(1, False), (0, False), (1, True), (2, False), (0, True), (1, False), (2, True)]
+GRASS_SEAM = 14              # px of overlap each join's seam is found in
+GRASS_GROUND = 7             # px of solid ground along the bottom, so the joins share one ground
+GRASS_ENDS = 70              # px over which the blades shorten to nothing at each end
+# placement under the standing cow, in her canvas (hooves on y 296-316): from x, width,
+# the ground's bottom row, and how much taller than the source the blades are drawn
+GRASS_X, GRASS_W, GRASS_BOTTOM, GRASS_TALL = -45, 560, 322, 1.3
+GRASS_FRONT = 0.6            # the blades drawn again in front of the hooves, this much of their height
+# the small-render grass: blades this much taller, softened by SMALL_SOFT px into tufts,
+# on a ground SMALL_GROUND px thick
+SMALL_TALL, SMALL_SOFT, SMALL_LEVEL, SMALL_GROUND = 2.2, 4.0, 0.35, 24
+
+
+def soft_ink(path: Path) -> np.ndarray:
+    """The image's ink as 0..1 at UP x (before the threshold), for joining stretches."""
+    im = Image.open(path).convert("L")
+    im = im.resize((im.width * UP, im.height * UP), Image.BICUBIC)
+    return 1 - ndimage.gaussian_filter(np.asarray(im, dtype=np.float32), SOFTEN * UP) / 255
+
+
+def quilt(a: np.ndarray, b: np.ndarray, overlap: int) -> np.ndarray:
+    """a and b joined over ``overlap`` columns along the seam where they differ
+    least (image quilting): the cut runs between blades, never through one."""
+    A, B = a[:, -overlap:], b[:, :overlap]
+    cost = (A - B) ** 2
+    for y in range(cost.shape[0] - 2, -1, -1):
+        nxt = cost[y + 1]
+        cost[y] += np.minimum(nxt, np.minimum(np.r_[nxt[1:], np.inf], np.r_[np.inf, nxt[:-1]]))
+    seam = np.zeros(cost.shape[0], int)
+    seam[0] = int(np.argmin(cost[0]))
+    for y in range(1, cost.shape[0]):
+        lo, hi = max(seam[y - 1] - 1, 0), min(seam[y - 1] + 2, overlap)
+        seam[y] = lo + int(np.argmin(cost[y, lo:hi]))
+    mid = np.where(np.arange(overlap)[None, :] < seam[:, None], A, B)
+    return np.concatenate([a[:, :-overlap], mid, b[:, overlap:]], axis=1)
+
+
+def squash(m: np.ndarray, k, rows: int | None = None) -> np.ndarray:
+    """Each column scaled k times in height about the bottom row (k per column or
+    one k), into ``rows`` rows; tips stay pointed."""
+    h0 = m.shape[0]
+    rows = rows or h0
+    k = np.broadcast_to(np.asarray(k, dtype=np.float32), (m.shape[1],))
+    src = (h0 - 1) - ((rows - 1) - np.arange(rows))[:, None] / k[None, :]
+    ok = src >= 0
+    out = np.zeros((rows, m.shape[1]), bool)
+    cols = np.broadcast_to(np.arange(m.shape[1]), src.shape)
+    out[ok] = m[np.clip(src, 0, h0 - 1).astype(int)[ok], cols[ok]]
+    return out
+
+
+def ends(width: int, span: float) -> np.ndarray:
+    """0 at both ends of a run of ``width`` columns, easing to 1 over ``span`` px."""
+    d = np.minimum(np.arange(width), width - 1 - np.arange(width)) / (span * UP)
+    d = np.minimum(d, 1.0)
+    return 3 * d * d - 2 * d ** 3
+
+
+def grass_strip(src: Path) -> np.ndarray:
+    """The farm's grass band, joined to GRASS_W px and tapered at both ends."""
+    band = soft_ink(src)[GRASS_ROWS[0] * UP:GRASS_ROWS[1] * UP]
+    m, i = None, 0
+    while m is None or m.shape[1] < GRASS_W * UP:
+        k, flip = GRASS_ORDER[i % len(GRASS_ORDER)]
+        a, b = GRASS_STRETCHES[k]
+        part = band[:, a * UP:b * UP]
+        part = part[:, ::-1] if flip else part
+        m = part if m is None else quilt(m, part, GRASS_SEAM * UP)
+        i += 1
+    m = m[:, : GRASS_W * UP] > 0.5
+    m[-GRASS_GROUND * UP:] = True
+    # blades shorten towards the ends (a quarter of their height at the very end)
+    m = squash(m, 0.25 + 0.75 * ends(m.shape[1], GRASS_ENDS))
+    # and the ground's ends are rounded
+    r = GRASS_GROUND * UP
+    for c in range(r):
+        cut = int(r - np.sqrt(max(r * r - (r - c) ** 2, 0)))
+        m[-r:-r + cut or None, c] = False
+        m[-r:-r + cut or None, -1 - c] = False
+    return m
+
+
+def logo_grass(standing: np.ndarray, grazing_src: Path) -> dict[str, str]:
+    """The grass under the logo cow, as paths in the standing cow's canvas:
+    ``grass`` (behind her), ``grassFront`` (the few short blades over her
+    hooves), and ``grassSmall`` / ``grassSmallFront`` for small renders."""
+    x0, y0, w, h = box(standing)
+    strip = grass_strip(grazing_src)
+    tall = squash(strip, GRASS_TALL, int(strip.shape[0] * GRASS_TALL))
+    ox = min(0, GRASS_X)                               # the canvas starts left of hers
+    H, W = int((max(h, GRASS_BOTTOM) + 4) * UP), int((max(w, GRASS_X + GRASS_W) - ox) * UP)
+    gx, gb = int((GRASS_X - ox) * UP), int(GRASS_BOTTOM * UP)
+
+    def at_ground(m):
+        out = np.zeros((H, W), bool)
+        out[gb - m.shape[0]:gb, gx:gx + m.shape[1]] = m
+        return out
+
+    cow = np.zeros((H, W), bool)
+    cut = standing[int(y0 * UP):int((y0 + h) * UP), int(x0 * UP):int((x0 + w) * UP)]
+    cow[: cut.shape[0], -int(ox * UP):-int(ox * UP) + cut.shape[1]] = cut
+    over_cow = ndimage.binary_dilation(cow, iterations=2 * UP)
+
+    grass = at_ground(tall)
+    front = at_ground(squash(tall, GRASS_FRONT)) & over_cow
+
+    # small renders: taller blades on a thick ground, softened into tufts
+    big = squash(strip, SMALL_TALL, int(strip.shape[0] * SMALL_TALL))
+    f = ends(big.shape[1], GRASS_ENDS)
+    rows = np.arange(big.shape[0])[:, None]
+    big |= rows >= big.shape[0] - (SMALL_GROUND * UP * f).astype(int)[None, :]
+    big &= rows >= big.shape[0] - (big.shape[0] * f).astype(int)[None, :]
+    small = ndimage.gaussian_filter(at_ground(big).astype(np.float32), SMALL_SOFT * UP) > SMALL_LEVEL
+    small_front = small & over_cow & (np.arange(H)[:, None] > (GRASS_BOTTOM - 14) * UP)
+
+    return {k: path_data(m, -ox, 0) for k, m in
+            [("grass", grass), ("grassFront", front), ("grassSmall", small), ("grassSmallFront", small_front)]}
+
+
 def split_tail(mask: np.ndarray, cut_x: float = 88, head_y: float = 95, tip_y: float = 248):
     """The standing cow cut into body and tail where the tail leaves the rump.
 
@@ -225,6 +358,10 @@ def main():
         "body": path_data(body, x0, y0),
         "tail": path_data(tail, x0, y0),
         "tailHead": [round(hx - x0, 1), round(hy - y0, 1)],
+        "grassFrom": "illustration 6.png",
+        # the grass's ground: its left and right ends and its bottom row (the sway's pivot)
+        "grassFoot": [GRASS_X, GRASS_X + GRASS_W, GRASS_BOTTOM],
+        **logo_grass(standing, SRC / "illustration 6.png"),
     }, indent=1) + "\n")
     print("traced", len(files), "silhouettes and the logo cow")
 
