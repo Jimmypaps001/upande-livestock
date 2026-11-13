@@ -30,6 +30,14 @@
   "gestation_short_warning_days",
   "gestation_long_warning_days",
   "default_calf_herd",
+  "calf_asset_section",
+  "create_calf_asset",
+  "calf_asset_item",
+  "calf_asset_category",
+  "calf_asset_column",
+  "calf_asset_location",
+  "calf_asset_value",
+  "calf_asset_naming_series",
   "husbandry_tab",
   "vaccination_section",
   "min_vaccination_interval_days",
@@ -318,6 +326,53 @@
    "fieldtype": "Link",
    "label": "Default Calf Herd",
    "options": "Herds"
+  },
+  {
+   "fieldname": "calf_asset_section",
+   "fieldtype": "Section Break",
+   "label": "Calf asset",
+   "description": "Each calf born on the farm is put on the fixed-asset register when its birth is recorded."
+  },
+  {
+   "default": "1",
+   "fieldname": "create_calf_asset",
+   "fieldtype": "Check",
+   "label": "Create an asset for each calf born"
+  },
+  {
+   "fieldname": "calf_asset_item",
+   "fieldtype": "Link",
+   "label": "Calf Asset Item",
+   "options": "Item",
+   "description": "The fixed-asset item the farm's herd is booked under (herd)."
+  },
+  {
+   "fieldname": "calf_asset_category",
+   "fieldtype": "Link",
+   "label": "Calf Asset Category",
+   "options": "Asset Category"
+  },
+  {
+   "fieldname": "calf_asset_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "calf_asset_location",
+   "fieldtype": "Link",
+   "label": "Calf Asset Location",
+   "options": "Location"
+  },
+  {
+   "default": "5000",
+   "fieldname": "calf_asset_value",
+   "fieldtype": "Currency",
+   "label": "Calf Asset Value"
+  },
+  {
+   "default": "ACC-ASS-.YYYY.-",
+   "fieldname": "calf_asset_naming_series",
+   "fieldtype": "Data",
+   "label": "Calf Asset Naming Series"
   },
   {
    "fieldname": "husbandry_tab",

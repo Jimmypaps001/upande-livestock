@@ -199,6 +199,10 @@ def create_calf(dam, tag_number, sex, event_date, birth_weight=None, burn_name=N
 	calf.insert(ignore_permissions=True)
 
 	recompute_herd_count(target_herd)
+	# On the fixed-asset register like the rest of the herd; never fails the birth.
+	from upande_livestock.serverscripts.common.calf_asset import create_calf_asset
+
+	create_calf_asset(calf)
 	return calf.name
 
 

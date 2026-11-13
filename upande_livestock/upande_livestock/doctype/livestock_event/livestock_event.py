@@ -401,6 +401,10 @@ class LivestockEvent(Document):
 		self.create_calf_if_needed()
 		if had_calf:
 			self._fill_linked_calf_sire()
+			if self._type_creates_animal() and not self.is_stillborn:
+				from upande_livestock.serverscripts.common.calf_asset import create_calf_asset
+
+				create_calf_asset(self.animal)
 
 		# A stillborn Birth event has no calf to point at, so there is no Animal to
 		# update. Everything below this line is per-animal status maintenance.

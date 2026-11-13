@@ -44,12 +44,16 @@ def _purge(doctype, name):
 	if not frappe.db.exists(doctype, name):
 		return
 	doc = frappe.get_doc(doctype, name)
+	asset = doc.get("asset_link") if doctype == "Animal" else None
 	if doc.docstatus == 1:
 		try:
 			doc.cancel()
 		except Exception:
 			frappe.db.set_value(doctype, name, "docstatus", 2, update_modified=False)
 	frappe.delete_doc(doctype, name, force=True, ignore_permissions=True)
+	if asset and frappe.db.exists("Asset", asset):
+		# A calf born in a test is put on the asset register; take that back too.
+		_purge("Asset", asset)
 	frappe.db.commit()
 
 
