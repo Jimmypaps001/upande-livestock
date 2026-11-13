@@ -352,3 +352,125 @@ class TestABlankNumberIsNotADeath(IntegrationTestCase):
 	def test_the_photo_is_optional(self):
 		res = self._book([{"sex": "Female"}])
 		self.assertFalse(frappe.db.get_value("Animal", res["calves"][0]["animal"], "image"))
+
+
+class TestACalfCarriesItsSire(IntegrationTestCase):
+	"""The Calving is stamped with the bull behind the Service; the calf Animal
+	must carry the same name in `sire_name`, however the birth is booked."""
+
+	SIRE = "ZZ Sire Bull"
+
+	def setUp(self):
+		_open_backdating_window(self)
+		self.employee = _employee()
+		if not self.employee:
+			raise unittest.SkipTest("no active Employee on this site")
+		self.dam = _make_cow("ZZ SIRE DAM", months_old=48)
+		self.addCleanup(_purge_events_for, self.dam.name)
+		self.addCleanup(_purge, "Animal", self.dam.name)
+		self.addCleanup(_purge_births_for, self.dam.name)
+		self.made = []
+		self.addCleanup(self._clean)
+
+	def _clean(self):
+		for tag in self.made:
+			_purge("Animal", tag)
+
+	def _pregnant(self, sire):
+		served = add_days(today(), -285)
+		r = create_service_event({
+			"animal": self.dam.name, "service_type": "A.I.",
+			"service_date": served, "operator": self.employee, "sire": sire,
+		})
+		if r.get("error"):
+			raise unittest.SkipTest("could not record a service: {}".format(r["error"][:120]))
+		dx = frappe.new_doc("Livestock Event")
+		dx.event_type = "Pregnancy Diagnosis"
+		dx.animal = self.dam.name
+		dx.event_date = add_days(served, 60)
+		dx.operator = self.employee
+		dx.diagnosis_result = "Confirmed"
+		dx.related_service = r["name"]
+		dx.insert(ignore_permissions=True)
+		dx.submit()
+
+	def _book(self, calves, sire=None):
+		payload = {
+			"dam": self.dam.name, "outcome": "Live Birth", "event_date": today(),
+			"operator": self.employee, "calves": calves,
+		}
+		if sire:
+			payload["sire"] = sire
+		res = record_birth(payload)
+		if res.get("error"):
+			raise unittest.SkipTest("birth refused: {}".format(res["error"][:140]))
+		for c in res.get("calves") or []:
+			if c.get("animal"):
+				self.made.append(c["animal"])
+		return res
+
+	def _sires(self, res):
+		return [frappe.db.get_value("Animal", c["animal"], "sire_name") or ""
+		        for c in res["calves"] if c.get("animal")]
+
+	def test_a_calf_born_through_the_app_carries_the_services_sire(self):
+		self._pregnant(self.SIRE)
+		res = self._book([{"sex": "Female"}])
+		self.assertEqual(self._sires(res), [self.SIRE])
+
+	def test_twins_both_carry_it(self):
+		self._pregnant(self.SIRE)
+		res = self._book([{"sex": "Female"}, {"sex": "Male"}])
+		self.assertEqual(self._sires(res), [self.SIRE, self.SIRE])
+
+	def test_a_service_with_no_bull_leaves_the_calf_blank(self):
+		self._pregnant("")
+		res = self._book([{"sex": "Female"}])
+		self.assertEqual(self._sires(res), [""])
+
+	def test_create_calf_takes_a_sire(self):
+		name = create_calf(dam=self.dam.name, tag_number=None, sex="Female",
+		                   event_date=today(), sire="Typed Bull")
+		self.made.append(name)
+		self.assertEqual(frappe.db.get_value("Animal", name, "sire_name"), "Typed Bull")
+
+	def test_create_calf_without_a_sire_stays_blank(self):
+		name = create_calf(dam=self.dam.name, tag_number=None, sex="Female", event_date=today())
+		self.made.append(name)
+		self.assertFalse(frappe.db.get_value("Animal", name, "sire_name"))
+
+	def _linked_birth(self, calf, sire=None):
+		self._pregnant(self.SIRE)
+		calving = frappe.new_doc("Livestock Event")
+		calving.event_type = "Calving"
+		calving.animal = self.dam.name
+		calving.event_date = today()
+		calving.operator = self.employee
+		calving.custom_no_of_calves = 1
+		calving.custom_calving_outcome = "Live Birth"
+		calving.insert(ignore_permissions=True)
+		calving.submit()
+		birth = frappe.new_doc("Livestock Event")
+		birth.event_type = "Birth"
+		birth.event_date = today()
+		birth.operator = self.employee
+		birth.dam = self.dam.name
+		birth.animal = calf
+		birth.calf_sex = "Female"
+		birth.related_calving = calving.name
+		birth.flags.ignore_event_enabled = True
+		birth.insert(ignore_permissions=True)
+		return birth
+
+	def test_an_existing_calf_with_no_sire_is_filled_from_the_calving(self):
+		calf = _make_cow("ZZ SIRE EXISTING CALF", months_old=0)
+		self.made.append(calf.name)
+		self._linked_birth(calf.name)
+		self.assertEqual(frappe.db.get_value("Animal", calf.name, "sire_name"), self.SIRE)
+
+	def test_an_existing_calfs_own_sire_is_never_overwritten(self):
+		calf = _make_cow("ZZ SIRE OWN CALF", months_old=0)
+		frappe.db.set_value("Animal", calf.name, "sire_name", "Own Bull")
+		self.made.append(calf.name)
+		self._linked_birth(calf.name)
+		self.assertEqual(frappe.db.get_value("Animal", calf.name, "sire_name"), "Own Bull")

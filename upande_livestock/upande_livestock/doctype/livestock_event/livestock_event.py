@@ -323,6 +323,43 @@ class LivestockEvent(Document):
 		move.insert(ignore_permissions=True)
 		move.submit()
 
+	def _calf_sire(self):
+		"""The bull behind this birth's calf, or "" when nobody can say.
+
+		A sire typed on the Birth wins; then the Calving's own; then the bull
+		behind the Service the Calving came from. Never invented.
+		"""
+		typed = (self.get("sire") or "").strip()
+		if typed:
+			return typed
+		if not self.get("related_calving"):
+			return ""
+		calving = frappe.db.get_value(
+			"Livestock Event", self.related_calving, ["sire", "custom_related_pregnancy"], as_dict=True
+		)
+		if not calving:
+			return ""
+		if (calving.sire or "").strip():
+			return calving.sire.strip()
+		if calving.custom_related_pregnancy and frappe.db.exists(
+			"Livestock Event", calving.custom_related_pregnancy
+		):
+			return sire_of(frappe.get_doc("Livestock Event", calving.custom_related_pregnancy)) or ""
+		return ""
+
+	def _fill_linked_calf_sire(self):
+		"""A Birth pointed at an existing calf (data import) fills a blank sire_name.
+
+		Never overwrites one that is already there.
+		"""
+		if not self._type_creates_animal() or self.is_stillborn or not self.animal:
+			return
+		if frappe.db.get_value("Animal", self.animal, "sire_name"):
+			return
+		sire = self._calf_sire()
+		if sire:
+			frappe.db.set_value("Animal", self.animal, "sire_name", sire, update_modified=False)
+
 	def create_calf_if_needed(self):
 		"""For a Birth event with no animal yet, create the calf and point at it.
 
@@ -356,10 +393,14 @@ class LivestockEvent(Document):
 			health_status=self.get("calf_health_status") or None,
 			vet_remarks=self.get("calf_vet_remarks") or None,
 			photo=self.get("calf_photo") or None,
+			sire=self._calf_sire() or None,
 		)
 
 	def before_insert(self):
+		had_calf = bool(self.animal)
 		self.create_calf_if_needed()
+		if had_calf:
+			self._fill_linked_calf_sire()
 
 		# A stillborn Birth event has no calf to point at, so there is no Animal to
 		# update. Everything below this line is per-animal status maintenance.

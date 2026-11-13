@@ -137,14 +137,15 @@ def recompute_herd_count(herd):
 
 
 def create_calf(dam, tag_number, sex, event_date, birth_weight=None, burn_name=None, herd=None,
-                breed=None, health_status=None, vet_remarks=None, photo=None):
+                breed=None, health_status=None, vet_remarks=None, photo=None, sire=None):
 	"""Insert a newborn Animal and return its name.
 
 	Throws on a duplicate tag before writing anything, so a mistyped tag cannot
 	half-create a birth.
 
 	`breed` overrides the dam's — a calf by a different sire is not necessarily
-	its mother's breed. The condition at birth is recorded on the animal because
+	its mother's breed. `sire` is the bull's name as the Calving carries it; blank
+	stays blank, nothing is invented. The condition at birth is recorded on the animal because
 	it is a fact about this animal on one day, not a health case to be followed.
 	"""
 	if sex not in ("Female", "Male"):
@@ -193,6 +194,8 @@ def create_calf(dam, tag_number, sex, event_date, birth_weight=None, burn_name=N
 		calf.birth_vet_remarks = vet_remarks
 	if photo:
 		calf.image = photo
+	if (sire or "").strip():
+		calf.sire_name = sire.strip()
 	calf.insert(ignore_permissions=True)
 
 	recompute_herd_count(target_herd)
