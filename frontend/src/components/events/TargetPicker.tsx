@@ -16,11 +16,12 @@ import { cn } from "@/lib/utils";
  * the app could not do — while the endpoint behind them has taken a set or a
  * herd all along.
  *
- * A HERD IS A WAY OF FILLING THE LIST IN, not a different kind of record. The
- * server fans a herd round out into one event per animal, because a withdrawal
- * date and a next-due date are facts about a cow and not about a pen. So this
- * hands back animals either way, and picking a herd simply ticks everyone in
- * it — which also means the two that were away that morning can be unticked.
+ * A HERD IS A WAY OF FINDING THEM, not a different kind of record. The server
+ * fans a herd round out into one event per animal, because a withdrawal date
+ * and a next-due date are facts about a cow and not about a pen. Choosing a
+ * herd shows its animals and ticks none of them: it used to tick the whole herd,
+ * and every herd chosen after it added its animals on top, so a look at another
+ * herd picked that herd too. "Select all N shown" ticks the herd in one go.
  */
 export function TargetPicker({
   animals,
@@ -37,11 +38,6 @@ export function TargetPicker({
 }) {
   const [term, setTerm] = useState("");
   const [herd, setHerd] = useState("");
-
-  const inHerd = useMemo(
-    () => (h: string) => animals.filter((a) => a.herd === h).map((a) => a.name),
-    [animals],
-  );
 
   const results = useMemo(() => {
     const q = term.trim().toLowerCase();
@@ -69,12 +65,8 @@ export function TargetPicker({
       <div className="flex flex-wrap items-center gap-2">
         <Picker
           value={herd}
-          onChange={(next) => {
-            setHerd(next);
-            // Choosing a herd ticks it; the operator then unticks whoever was
-            // not there.
-            if (next) onChange([...new Set([...picked, ...inHerd(next)])]);
-          }}
+          // Shows the herd's animals; ticking stays with the operator.
+          onChange={setHerd}
           options={herds.map((h) => ({
             value: h.name,
             label: h.heads != null ? `${h.label || h.name} (${h.heads})` : h.label || h.name,

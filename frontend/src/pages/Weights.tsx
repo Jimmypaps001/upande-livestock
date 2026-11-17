@@ -329,7 +329,7 @@ export function Weights() {
                               step="0.1"
                               value={e.weight_kg}
                               onChange={(ev) => set(id, "weight_kg", ev.target.value)}
-                              className="w-24 text-right tabular-nums"
+                              className="ml-auto w-24 text-right tabular-nums"
                             />
                           </td>
                           <td className="px-3 py-1.5 text-right">
@@ -340,7 +340,7 @@ export function Weights() {
                               step="0.1"
                               value={e.heart_girth_cm}
                               onChange={(ev) => set(id, "heart_girth_cm", ev.target.value)}
-                              className="w-24 text-right tabular-nums"
+                              className="ml-auto w-24 text-right tabular-nums"
                             />
                           </td>
                           <td className="px-3.5 py-1.5 text-right">
@@ -352,7 +352,7 @@ export function Weights() {
                               step="0.25"
                               value={e.bcs}
                               onChange={(ev) => set(id, "bcs", ev.target.value)}
-                              className="w-20 text-right tabular-nums"
+                              className="ml-auto w-20 text-right tabular-nums"
                             />
                           </td>
                         </tr>
