@@ -219,3 +219,47 @@ class TestPhoneOutcomes(TestShortTodayLeavesADraft):
 	def test_no_fee_means_no_fee_in_the_answer(self):
 		res = self._phone(1)
 		self.assertIsNone(res["vet_fee"])
+
+
+def _farm_user(email, roles):
+	"""A user with only these livestock roles: no ERPNext Stock Entry permission at all."""
+	if not frappe.db.exists("User", email):
+		frappe.get_doc({
+			"doctype": "User", "email": email, "first_name": email.split("@")[0],
+			"send_welcome_email": 0, "user_type": "System User",
+			"roles": [{"role": r} for r in roles],
+		}).insert(ignore_permissions=True)
+	return email
+
+
+class TestTheFarmRolesUseTransactions(IntegrationTestCase):
+	"""Livestock Settings' farm roles open Transactions and the stores roles post its
+	drafts, without ERPNext's Stock Entry permission (the page lists livestock entries only)."""
+
+	ATTENDANT = "zz.transactions.attendant@example.com"
+	STORES = "zz.transactions.stores@example.com"
+
+	def setUp(self):
+		_farm_user(self.ATTENDANT, ["Livestock Attendant"])
+		_farm_user(self.STORES, ["Livestock Stores"])
+		self.addCleanup(frappe.set_user, "Administrator")
+
+	def tearDown(self):
+		frappe.set_user("Administrator")
+		for u in (self.ATTENDANT, self.STORES):
+			frappe.delete_doc("User", u, ignore_permissions=True, force=True)
+
+	def test_a_farm_role_without_stock_permission_sees_the_page(self):
+		frappe.set_user(self.ATTENDANT)
+		self.assertFalse(frappe.has_permission("Stock Entry", "read"))
+		self.assertTrue(stock_drafts().get("ok"))
+		self.assertTrue(stock_calendar({"from_date": today(), "to_date": today()}).get("ok"))
+		self.assertTrue(stock_day({"date": today()}).get("ok"))
+
+	def test_posting_is_for_the_stores_and_manager_roles(self):
+		frappe.set_user(self.ATTENDANT)
+		self.assertIn("not permitted", post_stock_draft({"name": "ZZ-NO-SUCH-ENTRY"}).get("error", ""))
+		frappe.set_user(self.STORES)
+		self.assertFalse(frappe.has_permission("Stock Entry", "submit"))
+		# Past the gate: refused only because there is no such draft.
+		self.assertIn("not a livestock stock entry", post_stock_draft({"name": "ZZ-NO-SUCH-ENTRY"}).get("error", ""))

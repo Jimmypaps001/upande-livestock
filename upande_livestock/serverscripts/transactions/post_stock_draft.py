@@ -17,7 +17,7 @@ from frappe import _
 from frappe.utils import nowtime, today
 
 from upande_livestock.serverscripts.common import stock as livestock_stock
-from upande_livestock.serverscripts.common.envelope import as_dict, run
+from upande_livestock.serverscripts.common.envelope import STOCK_ROLES, as_dict, run
 from upande_livestock.serverscripts.feeding import _engine as feeding
 from upande_livestock.serverscripts.transactions._drafts import is_livestock_draft
 
@@ -25,8 +25,17 @@ from upande_livestock.serverscripts.transactions._drafts import is_livestock_dra
 @frappe.whitelist()
 def post_stock_draft(payload=None):
 	def go():
-		if not frappe.has_permission("Stock Entry", "submit"):
-			frappe.throw(_("You are not permitted to post stock entries."), frappe.PermissionError)
+		# As for booking feed (guard_stock): the farm's stores and manager roles post
+		# livestock drafts without ERPNext's Stock Manager, which would let them
+		# post any stock anywhere; the entry is posted below with ignore_permissions.
+		roles = set(frappe.get_roles())
+		if not (roles & set(STOCK_ROLES) or frappe.has_permission("Stock Entry", "submit")):
+			frappe.throw(
+				_("You are not permitted to post stock entries. This needs the {0} role.").format(
+					" or ".join(STOCK_ROLES)
+				),
+				frappe.PermissionError,
+			)
 		name = as_dict(payload).get("name")
 		if not name or not is_livestock_draft(name):
 			frappe.throw(_("{0} is not a livestock stock entry waiting in draft.").format(name or _("That")))
