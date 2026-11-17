@@ -60,12 +60,16 @@ export type FeedingProgram = {
   per_head_qty: number;
   total_manufacture_qty: number;
   uom: string;
-  store: string;
+  /** Null while Livestock Settings names no feed store (see `setup`). */
+  store: string | null;
   available_in_store: number;
   lines: FeedLine[];
   shortages: FeedLine[];
   concentrates: ConcentratePlanCard[];
   can_manufacture: boolean;
+  /** What must be set before feed can be mixed or issued, in words (the feed
+   *  store). The page still loads; it shows these instead of failing. */
+  setup?: string[];
   /** The feed stores this run may draw from, in the order they are searched.
    *  Already returned by `get_herd_feeding_program`; the picker offers these
    *  so the page cannot name a store the engine would not look in. */
@@ -342,7 +346,7 @@ export function feedBatches(
 
 export function concentrates(
   qtyByItem?: Record<string, number>,
-): Promise<Envelope<{ concentrates: Concentrate[]; warehouses: string[]; default_target: string }>> {
+): Promise<Envelope<{ concentrates: Concentrate[]; warehouses: string[]; default_target: string | null; setup?: string[] }>> {
   return call(CONCENTRATES, qtyByItem ? { qty_by_item: JSON.stringify(qtyByItem) } : {});
 }
 

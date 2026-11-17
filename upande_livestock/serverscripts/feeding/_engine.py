@@ -135,15 +135,34 @@ def _run_posting_time(runs_before):
 	return candidate.strftime("%H:%M:%S")
 
 
+def feed_store_missing_message():
+	return _(
+		"Feeding needs a feed store: the store the feed is mixed in and kept. "
+		"Set Feed Store in Livestock Settings, under Feeding."
+	)
+
+
+def feed_store_or_none():
+	"""Livestock Settings' feed store, or None while it is not set. For reads: a
+	page that shows the rations, the stock and the plan still opens, and says
+	what is missing (setup_gaps) instead of failing to load."""
+	return frappe.db.get_single_value("Livestock Settings", "custom_feed_wip_warehouse") or None
+
+
 def _feed_store():
-	"""Livestock Settings' feed store. It fell back to one site's warehouse
-	("Concentrate Mixing Store - KR"), which on any other site is a store of
-	another company or no store at all; both sites set it, so unset is a
-	configuration gap to name, not to paper over."""
-	store = frappe.db.get_single_value("Livestock Settings", "custom_feed_wip_warehouse")
+	"""Livestock Settings' feed store, for anything that moves feed. It fell back
+	to one site's warehouse ("Concentrate Mixing Store - KR"), which on any
+	other site is a store of another company or no store at all; unset is a
+	configuration gap to name, not to paper over — in words, not the field."""
+	store = feed_store_or_none()
 	if not store:
-		frappe.throw(_("Set the Feed Store (custom_feed_wip_warehouse) in Livestock Settings."))
+		frappe.throw(feed_store_missing_message(), title=_("No feed store"))
 	return store
+
+
+def setup_gaps():
+	"""What the feeding screens need set before they can mix or issue, as sentences."""
+	return [] if feed_store_or_none() else [feed_store_missing_message()]
 
 
 def _company():
@@ -166,7 +185,7 @@ def _feed_source_warehouses():
 		order_by="idx asc",
 	)
 	names = [r.warehouse for r in rows if r.warehouse]
-	store = _feed_store()
+	store = feed_store_or_none()
 	if store and store not in names:
 		names.append(store)
 	return names
@@ -471,7 +490,7 @@ def get_herd_feeding_program(herd):
 	herd_doc, bom, heads = _herd_bom(herd)
 	per_head = flt(bom.quantity) or 1.0
 	total_qty = manufacture_qty(per_head, heads)
-	store = _feed_store()
+	store = feed_store_or_none()
 
 	bom, lines = resolve_requirement(bom.name, total_qty)
 	shortages = [ln for ln in lines if ln["short_qty"] > 0]
@@ -493,7 +512,9 @@ def get_herd_feeding_program(herd):
 		"lines": lines,
 		"shortages": shortages,
 		"concentrates": concentrates,
-		"can_manufacture": not shortages,
+		# Nothing is mixed into a store that is not named.
+		"can_manufacture": not shortages and bool(store),
+		"setup": setup_gaps(),
 	}
 
 

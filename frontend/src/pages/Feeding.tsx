@@ -449,6 +449,11 @@ export function Feeding() {
         idPrefix="feed"
       />
 
+      {/* The feed store unset: the page still shows the herd, its ration and the
+          stock; this says what to set before anything can be mixed or issued. */}
+      {program?.setup?.map((s) => (
+        <Notice key={s} tone="info">{s}</Notice>
+      ))}
       {failure && <Notice tone="error">{failure}</Notice>}
 
       <Card>
