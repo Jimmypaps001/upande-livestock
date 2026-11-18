@@ -58,8 +58,7 @@ export interface GallagherPreview {
   dates: {
     from: string | null;
     to: string | null;
-    per_date: { date: string; rows: number }[];
-    mixed: boolean;
+    per_date: { date: string; rows: number; future: number; already_recorded: number }[];
     unreadable: number;
     future: DateRef[];
     older_than_last: DateRef[];

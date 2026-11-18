@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { FileUp } from "lucide-react";
 import { Notice } from "@/components/feeding/Notice";
 import { STICKY_HEAD, ScrollTable } from "@/components/ScrollTable";
@@ -21,12 +21,35 @@ import {
   type GallagherResult,
 } from "@/lib/gallagher";
 import { cn, fmt } from "@/lib/utils";
+import { WeighingCalendar, weighingSummary } from "./WeighingCalendar";
 
 /**
  * Drop a Gallagher session file here and read what it says before anything is
  * recorded: the days it covers, who it found, who it did not, and which animals
  * on the farm did not go through the race. Import writes the weights.
  */
+/**
+ * The scale's own export layout, with two example rows (one with a visual tag,
+ * one read by its electronic tag only), so a file typed by hand imports the
+ * same way as one from the Gallagher. Dates are month first, as the scale writes.
+ */
+const TEMPLATE = [
+  "VID,EID,NLIS,Date,Time,Draft,Notes,Live Weight,Average Daily Gain,Overall Daily Gain",
+  "MOL876,982 091086131867,,9/15/2026,8:41:17,,,322,,",
+  ",982 091086140174,,9/16/2026,9:09:59,,,240,,",
+].join("\r\n");
+
+function downloadTemplate() {
+  const url = URL.createObjectURL(new Blob([TEMPLATE + "\r\n"], { type: "text/csv" }));
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "gallagher-weighing-template.csv";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 0);
+}
+
 export function GallagherDrop({ onImported }: { onImported?: () => void }) {
   const [over, setOver] = useState(false);
   const [open, setOpen] = useState(false);
@@ -37,6 +60,7 @@ export function GallagherDrop({ onImported }: { onImported?: () => void }) {
   const [busy, setBusy] = useState(false);
   const [herds, setHerds] = useState<string[]>([]);
   const [order, setOrder] = useState<DateOrder>("auto");
+  const [day, setDay] = useState<string | null>(null);
   const input = useRef<HTMLInputElement>(null);
 
   const run = useCallback(async (f: GallagherFile, scope: string[], dateOrder: DateOrder) => {
@@ -49,6 +73,7 @@ export function GallagherDrop({ onImported }: { onImported?: () => void }) {
       return;
     }
     setFailure(null);
+    setDay(null);
     setPreview(r as GallagherPreview);
   }, []);
 
@@ -59,6 +84,7 @@ export function GallagherDrop({ onImported }: { onImported?: () => void }) {
     setPreview(null);
     setHerds([]);
     setOrder("auto");
+    setDay(null);
     setFailure(null);
     let f: GallagherFile;
     try {
@@ -97,6 +123,14 @@ export function GallagherDrop({ onImported }: { onImported?: () => void }) {
   }
 
   const s = preview?.summary;
+  const unmatched = useMemo(
+    () => (preview?.unmatched ?? []).filter((r) => !day || r.date === day),
+    [preview, day],
+  );
+  const dayRows = useMemo(
+    () => (day ? (preview?.rows ?? []).filter((r) => r.date === day) : []),
+    [preview, day],
+  );
   return (
     <>
       <div
@@ -124,6 +158,9 @@ export function GallagherDrop({ onImported }: { onImported?: () => void }) {
             Drop the scale's session file here (CSV or Excel), or choose it.
           </p>
         </div>
+        <Button variant="ghost" size="sm" onClick={downloadTemplate}>
+          Download template
+        </Button>
         <Button variant="outline" size="sm" onClick={() => input.current?.click()}>
           Choose file
         </Button>
@@ -160,7 +197,7 @@ export function GallagherDrop({ onImported }: { onImported?: () => void }) {
             preview &&
             s && (
               <div className="flex flex-col gap-4">
-                <DateCheck p={preview} order={order} onOrder={changeOrder} />
+                <DateCheck p={preview} order={order} onOrder={changeOrder} day={day} onDay={setDay} />
 
                 <div className="grid gap-2 sm:grid-cols-3">
                   <Stat label="Rows in file" value={s.rows} />
@@ -175,10 +212,43 @@ export function GallagherDrop({ onImported }: { onImported?: () => void }) {
                   />
                 </div>
 
-                {preview.unmatched.length > 0 && (
+                {day && (
                   <section className="flex flex-col gap-1.5">
                     <h3 className="text-[13px] font-medium text-[var(--sd-ink)]">
-                      Rows that cannot be recorded ({preview.unmatched.length})
+                      Rows on {day} ({dayRows.length})
+                    </h3>
+                    <ScrollTable className="max-h-64 rounded-[var(--sd-radius-lg)] bg-[var(--sd-bg-soft)] shadow-[var(--sd-shadow-inset)]">
+                      <table className="w-full min-w-[460px] border-collapse text-[13px]">
+                        <thead className={STICKY_HEAD}>
+                          <tr className="text-left text-[11px] uppercase tracking-[0.06em] text-[var(--sd-quiet)]">
+                            <th className="px-3.5 py-2 font-medium">Row</th>
+                            <th className="px-3 py-2 font-medium">Animal</th>
+                            <th className="px-3 py-2 text-right font-medium">Weight (kg)</th>
+                            <th className="px-3.5 py-2 font-medium">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {dayRows.map((r) => (
+                            <tr key={r.row} className="border-t border-[var(--sd-line)]">
+                              <td className="px-3.5 py-1.5 tabular-nums">{r.row}</td>
+                              <td className="px-3 py-1.5">{r.label || r.vid || r.eid || "—"}</td>
+                              <td className="px-3 py-1.5 text-right tabular-nums">{fmt(r.weight_kg)}</td>
+                              <td className="px-3.5 py-1.5 text-[12px] text-[var(--sd-muted)]">
+                                {r.why || r.status.replace("_", " ")}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </ScrollTable>
+                  </section>
+                )}
+
+                {unmatched.length > 0 && (
+                  <section className="flex flex-col gap-1.5">
+                    <h3 className="text-[13px] font-medium text-[var(--sd-ink)]">
+                      Rows that cannot be recorded ({unmatched.length}
+                      {day ? ` on ${day}` : ""})
                     </h3>
                     <ScrollTable className="rounded-[var(--sd-radius-lg)] bg-[var(--sd-bg-soft)] shadow-[var(--sd-shadow-inset)]">
                       <table className="w-full min-w-[560px] border-collapse text-[13px]">
@@ -192,7 +262,7 @@ export function GallagherDrop({ onImported }: { onImported?: () => void }) {
                           </tr>
                         </thead>
                         <tbody>
-                          {preview.unmatched.map((r) => (
+                          {unmatched.map((r) => (
                             <tr key={r.row} className="border-t border-[var(--sd-line)] align-top">
                               <td className="px-3.5 py-1.5 tabular-nums">{r.row}</td>
                               <td className="px-3 py-1.5">{r.vid || "—"}</td>
@@ -304,10 +374,14 @@ function DateCheck({
   p,
   order,
   onOrder,
+  day,
+  onDay,
 }: {
   p: GallagherPreview;
   order: DateOrder;
   onOrder: (o: DateOrder) => void;
+  day: string | null;
+  onDay: (d: string | null) => void;
 }) {
   const d = p.dates;
   const used = p.date_order.used;
@@ -317,13 +391,18 @@ function DateCheck({
     <section className="flex flex-col gap-2">
       <h3 className="text-[13px] font-medium text-[var(--sd-ink)]">Date check</h3>
       <p className="text-[13px] text-[var(--sd-muted)]">
-        {d.from
-          ? d.from === d.to
-            ? `Weighed on ${d.from}.`
-            : `Weighed from ${d.from} to ${d.to}.`
-          : "No readable dates."}{" "}
-        {d.per_date.map((x) => `${x.date}: ${x.rows} rows`).join(" · ")}
+        {weighingSummary(p)}
+        {d.from && " — click a day to show only its rows."}
+        {day && (
+          <>
+            {" "}
+            <button type="button" className="underline underline-offset-2" onClick={() => onDay(null)}>
+              Show all days
+            </button>
+          </>
+        )}
       </p>
+      <WeighingCalendar p={p} picked={day} onPick={onDay} />
       <p className="text-[13px] text-[var(--sd-muted)]">
         Dates read {name(used)}
         {p.date_order.settled ? ", as the file's own dates show." : "; the file does not say, so month first is assumed."}{" "}
@@ -344,7 +423,7 @@ function DateCheck({
         )}
       </p>
       {d.notes.map((n, i) => (
-        <Notice key={i} tone={d.mixed || d.future.length || d.unreadable ? "error" : "info"}>
+        <Notice key={i} tone={d.future.length || d.unreadable ? "error" : "info"}>
           {n}
         </Notice>
       ))}

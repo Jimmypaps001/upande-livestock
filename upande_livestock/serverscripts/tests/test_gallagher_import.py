@@ -172,7 +172,7 @@ class TestGallagherImport(IntegrationTestCase):
 
 	# date check ------------------------------------------------------
 
-	def test_mixed_future_and_older_dates_are_flagged(self):
+	def test_several_days_are_normal_and_future_and_older_dates_are_flagged(self):
 		a, b, c = self._animal(), self._animal(), self._animal()
 		submit_weight(c.name, 250, days_ago=1)
 		future = self._us(add_days(today(), 5))
@@ -182,8 +182,10 @@ class TestGallagherImport(IntegrationTestCase):
 			_row(c.burn_name, "", self.us, 260),
 		))
 		d = res["dates"]
-		self.assertTrue(d["mixed"])
+		self.assertNotIn("mixed", d)
+		self.assertFalse([n for n in d["notes"] if "different days" in n])
 		self.assertEqual({p["date"]: p["rows"] for p in d["per_date"]}, {self.day: 2, str(add_days(today(), 5)): 1})
+		self.assertEqual({p["date"]: p["future"] for p in d["per_date"]}, {self.day: 0, str(add_days(today(), 5)): 1})
 		self.assertEqual(len(d["future"]), 1)
 		self.assertEqual([x["animal"] for x in d["older_than_last"]], [c.name])
 		self.assertEqual(res["summary"]["to_record"], 2)
@@ -198,6 +200,7 @@ class TestGallagherImport(IntegrationTestCase):
 		))
 		self.assertEqual(res["summary"]["repeats"], 1)
 		self.assertEqual(res["summary"]["already_recorded"], 1)
+		self.assertEqual(sum(p["already_recorded"] for p in res["dates"]["per_date"]), 1)
 		self.assertEqual(res["summary"]["to_record"], 1)
 		kept = [r for r in res["rows"] if r["status"] == g.READY][0]
 		self.assertEqual(kept["weight_kg"], 305)

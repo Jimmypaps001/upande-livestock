@@ -639,12 +639,6 @@ def _date_check(rows):
 			per_date[r["date"]] += 1
 	days = sorted(per_date)
 	notes = []
-	if len(days) > 1:
-		notes.append(
-			_("This file holds weighings from {0} different days, {1} to {2}. A session is normally one day: check it is the file you meant.").format(
-				len(days), formatdate(days[0]), formatdate(days[-1])
-			)
-		)
 	unreadable = [r for r in rows if not r["date"]]
 	if unreadable:
 		notes.append(_("{0} rows have a date that could not be read and will not be imported.").format(len(unreadable)))
@@ -671,8 +665,8 @@ def _date_check(rows):
 			"date": str(r["date"]) if r["date"] else r["date_text"], "last_weight_date": r["last_weight_date"],
 		}
 
-	# The same animal on more than one day of one file: legitimate (two
-	# sessions exported together) but worth a look.
+	# The same animal on more than one day of one file: legitimate (a weighing
+	# round runs a week or more) but listed for a look.
 	days_by_animal = defaultdict(set)
 	for r in rows:
 		if r["animal"] and r["date"]:
@@ -680,8 +674,15 @@ def _date_check(rows):
 	return {
 		"from": str(days[0]) if days else None,
 		"to": str(days[-1]) if days else None,
-		"per_date": [{"date": str(d), "rows": per_date[d]} for d in days],
-		"mixed": len(days) > 1,
+		"per_date": [
+			{
+				"date": str(d),
+				"rows": per_date[d],
+				"future": sum(1 for r in future if r["date"] == d),
+				"already_recorded": sum(1 for r in already if r["date"] == d),
+			}
+			for d in days
+		],
 		"unreadable": len(unreadable),
 		"future": [ref(r) for r in future],
 		"older_than_last": [ref(r) for r in older],

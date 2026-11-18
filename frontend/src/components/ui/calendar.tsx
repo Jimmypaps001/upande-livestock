@@ -28,6 +28,7 @@ export function Calendar({
   classNames,
   showOutsideDays = true,
   showWeeks = false,
+  components,
   ...props
 }: CalendarProps) {
   const defaults = getDefaultClassNames();
@@ -82,6 +83,7 @@ export function Calendar({
         ...classNames,
       }}
       components={{
+        ...components,
         Chevron: ({ orientation }) =>
           orientation === "left" ? (
             <ChevronLeft className="h-4 w-4" />
