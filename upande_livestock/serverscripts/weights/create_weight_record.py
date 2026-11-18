@@ -43,7 +43,12 @@ def record_one(d):
 	doc.animal = d.get("animal")
 	doc.company = company_or_throw(d.get("company"))
 	weight_date, is_backdated = backdate.resolve(d, "weight_date")
-	backdate.assert_allowed(is_backdated)
+	# A scale file carries the day it was weighed and is always read in later,
+	# so the Gallagher import (weights/gallagher_import.py) sets this flag for
+	# its own rows. It is a server flag, never a payload key, so a client
+	# cannot claim it. The record is still stamped as backdated.
+	if not frappe.flags.get("livestock_scale_import"):
+		backdate.assert_allowed(is_backdated)
 	doc.weight_date = weight_date
 	backdate.stamp(doc, is_backdated)
 	doc.measured_by = d.get("measured_by") or current_employee()

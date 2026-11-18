@@ -214,3 +214,7 @@ upande_livestock.patches.enable_every_event_type
 # The Livestock tile as Production's: the vector SVG (logo_url), no PNG icon_image, a same-tab
 # Workspace Sidebar link.
 upande_livestock.patches.ensure_livestock_desktop_icon
+
+# Animal.eid, the electronic ear tag the Gallagher scale reads, copied from a tag number
+# that is one (Mutara migrated its RFIDs as tag numbers). Nothing overwritten.
+upande_livestock.patches.backfill_animal_eid

@@ -3,6 +3,7 @@ import { ProjectionBody } from "@/pages/Projection";
 import { CostPanel } from "@/components/costing/CostPanel";
 import { Figure, FigureRow } from "@/components/Figure";
 import { Notice } from "@/components/feeding/Notice";
+import { GallagherDrop } from "@/components/weights/GallagherImport";
 import { Page, PageHeading } from "@/components/PageShell";
 import { RefreshButton } from "@/components/RefreshButton";
 import {
@@ -31,6 +32,8 @@ export function Dashboard() {
       <PageHeading eyebrow="Upande Livestock · Dashboard" title="Dashboard">
         How the herds stand, and what it will take to keep them fed.
       </PageHeading>
+
+      <GallagherDrop />
 
       <BeefTiles />
 

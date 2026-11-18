@@ -14,6 +14,7 @@
   "tag_number",
   "burn_name",
   "book_number",
+  "eid",
   "cb_identity",
   "sex",
   "breed",
@@ -105,6 +106,13 @@
    "label": "Book Number",
    "read_only": 1,
    "unique": 0
+  },
+  {
+   "description": "The electronic ear tag (RFID) the scale reads, e.g. 982 091086140137. Filled in when a Gallagher weighing file is imported.",
+   "fieldname": "eid",
+   "fieldtype": "Data",
+   "label": "Electronic ID (EID)",
+   "search_index": 1
   },
   {
    "fieldname": "cb_identity",
@@ -458,7 +466,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-10-05 17:00:00.000000",
+ "modified": "2026-11-18 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "Upande Livestock",
  "name": "Animal",

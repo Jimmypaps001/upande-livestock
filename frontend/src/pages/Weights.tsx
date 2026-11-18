@@ -3,6 +3,7 @@ import { Scale } from "lucide-react";
 import { DatePicker } from "@/components/DatePicker";
 import { EventDate } from "@/components/EventDate";
 import { Notice } from "@/components/feeding/Notice";
+import { GallagherDrop } from "@/components/weights/GallagherImport";
 import { STICKY_HEAD, ScrollTable } from "@/components/ScrollTable";
 import { OperatorField } from "@/components/events/OperatorField";
 import { Page, PageHeading } from "@/components/PageShell";
@@ -188,6 +189,8 @@ export function Weights() {
       </PageHeading>
 
       {failure && <Notice tone="error">{failure}</Notice>}
+
+      <GallagherDrop onImported={() => void load()} />
 
       <Card>
         <CardHeaderRow>
