@@ -109,7 +109,7 @@ describe("the feeding section of the sidebar", () => {
   it("shows Concentrate exactly once where concentrate is in use", () => {
     const items = feedingSection((v) => viewOpen(v, ["Livestock Manager"], true));
     expect(items.filter((l) => l === "Concentrate")).toHaveLength(1);
-    expect(items).toEqual(["Feeding", "Ration Editor", "Concentrate", "Feed in Store", "Ration History", "Procurement"]);
+    expect(items).toEqual(["Feeding", "Ration Editor", "Concentrate", "Feed in Store", "Daily Feed Report", "Ration History", "Procurement"]);
   });
 
   it("hides Concentrate where no herd eats a pre-made one", () => {

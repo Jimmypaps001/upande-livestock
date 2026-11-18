@@ -183,7 +183,18 @@ function AmendDialog({
   );
 }
 
-function HerdDayCard({ day, onChanged }: { day: HerdDay; onChanged: () => void }) {
+function HerdDayCard({
+  day,
+  onChanged,
+  employee,
+  blocked,
+}: {
+  day: HerdDay;
+  onChanged: () => void;
+  employee?: string;
+  /** Why nothing can be changed (view-only user), or null. */
+  blocked?: string | null;
+}) {
   const [amending, setAmending] = useState(false);
   const [busy, setBusy] = useState(false);
   const [intake, setIntake] = useState<AnimalIntake | null>(null);
@@ -194,7 +205,7 @@ function HerdDayCard({ day, onChanged }: { day: HerdDay; onChanged: () => void }
   async function mix() {
     setBusy(true);
     setMessage(null);
-    const r = await manufactureFeedActuals(day.herd, day.date);
+    const r = await manufactureFeedActuals(day.herd, day.date, employee);
     setBusy(false);
     if (isError(r)) {
       setMessage(r.error);
@@ -249,6 +260,7 @@ function HerdDayCard({ day, onChanged }: { day: HerdDay; onChanged: () => void }
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         {message && <Notice tone="error">{message}</Notice>}
+        {blocked && <Notice tone="info">{blocked}</Notice>}
         {day.draft_entries.length > 0 && (
           <Notice tone="info">
             Waiting for stock: {day.draft_entries.join(", ")} stays a draft dated {day.date} until
@@ -257,16 +269,16 @@ function HerdDayCard({ day, onChanged }: { day: HerdDay; onChanged: () => void }
         )}
         <Lines day={day} />
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" disabled={mixed} onClick={() => setAmending(true)}>
+          <Button variant="outline" disabled={mixed || !!blocked} onClick={() => setAmending(true)}>
             Amend
           </Button>
           {day.record && !mixed && (
-            <Button variant="outline" disabled={busy} onClick={reset}>
+            <Button variant="outline" disabled={busy || !!blocked} onClick={reset}>
               Reset to recipe
             </Button>
           )}
           {canMix() && (
-            <Button disabled={mixed || busy} onClick={mix}>
+            <Button disabled={mixed || busy || !!blocked} onClick={mix}>
               {busy && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
               Mix and issue what was fed
             </Button>
@@ -313,7 +325,15 @@ function HerdDayCard({ day, onChanged }: { day: HerdDay; onChanged: () => void }
  * Amend changes the actuals without touching the herd's recipe. What is fed is
  * what gets mixed and issued; with short stock the mix waits as a draft.
  */
-export function FeedDay() {
+export function FeedDay({
+  employee,
+  blocked,
+}: {
+  /** The operator chosen at the top of the Feeding page. */
+  employee?: string;
+  /** The view-only sentence, when this user cannot record at all. */
+  blocked?: string | null;
+}) {
   const [date, setDate] = useState(todayISO());
   const [days, setDays] = useState<HerdDay[] | null>(null);
   const [setup, setSetup] = useState<string[]>([]);
@@ -355,7 +375,13 @@ export function FeedDay() {
       )}
       {days?.length === 0 && <Notice tone="info">No herd has a ration to feed.</Notice>}
       {days?.map((d) => (
-        <HerdDayCard key={`${d.herd}-${d.date}-${d.status}-${d.actual_kg}`} day={d} onChanged={load} />
+        <HerdDayCard
+          key={`${d.herd}-${d.date}-${d.status}-${d.actual_kg}`}
+          day={d}
+          onChanged={load}
+          employee={employee}
+          blocked={blocked}
+        />
       ))}
     </div>
   );

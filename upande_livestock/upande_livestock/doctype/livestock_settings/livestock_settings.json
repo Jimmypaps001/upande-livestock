@@ -81,6 +81,15 @@
   "custom_feed_wip_warehouse",
   "premanufacture_concentrate",
   "feed_by_head_count",
+  "sb_feed_types",
+  "feed_system_desk",
+  "feed_system_phone",
+  "cb_feed_types_1",
+  "feed_manual_desk",
+  "feed_manual_phone",
+  "cb_feed_types_2",
+  "feed_day_sheet_desk",
+  "feed_day_sheet_phone",
   "custom_concentrate_cover_days",
   "sb_feed_sources",
   "feed_source_warehouses",
@@ -504,6 +513,56 @@
    "fieldname": "feed_by_head_count",
    "fieldtype": "Check",
    "label": "Feed by Head Count"
+  },
+  {
+   "fieldname": "sb_feed_types",
+   "fieldtype": "Section Break",
+   "label": "Feed types",
+   "description": "Choose which ways of feeding appear on the desk and on the phone. A way that is switched off on both is refused by the server too."
+  },
+  {
+   "default": "1",
+   "fieldname": "feed_system_desk",
+   "fieldtype": "Check",
+   "label": "System: show on desk"
+  },
+  {
+   "default": "1",
+   "fieldname": "feed_system_phone",
+   "fieldtype": "Check",
+   "label": "System: show on phone"
+  },
+  {
+   "fieldname": "cb_feed_types_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "feed_manual_desk",
+   "fieldtype": "Check",
+   "label": "Manual configuration: show on desk"
+  },
+  {
+   "default": "0",
+   "fieldname": "feed_manual_phone",
+   "fieldtype": "Check",
+   "label": "Manual configuration: show on phone"
+  },
+  {
+   "fieldname": "cb_feed_types_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "1",
+   "fieldname": "feed_day_sheet_desk",
+   "fieldtype": "Check",
+   "label": "Day sheet: show on desk"
+  },
+  {
+   "default": "1",
+   "fieldname": "feed_day_sheet_phone",
+   "fieldtype": "Check",
+   "label": "Day sheet: show on phone"
   },
   {
    "fieldname": "sb_feed_sources",

@@ -218,3 +218,7 @@ upande_livestock.patches.ensure_livestock_desktop_icon
 # Animal.eid, the electronic ear tag the Gallagher scale reads, copied from a tag number
 # that is one (Mutara migrated its RFIDs as tag numbers). Nothing overwritten.
 upande_livestock.patches.backfill_animal_eid
+
+# Feed types: System and Day sheet shown on the desk and the phone, Manual configuration
+# hidden on both until it is turned on. Written only where nothing is stored.
+upande_livestock.patches.default_feed_types

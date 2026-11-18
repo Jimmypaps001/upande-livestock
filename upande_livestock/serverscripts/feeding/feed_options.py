@@ -7,6 +7,7 @@ desk had already authenticated."""
 import frappe
 
 from upande_livestock.serverscripts.common.envelope import guard_read, run
+from upande_livestock.serverscripts.feeding import _feed_types
 
 
 @frappe.whitelist()
@@ -21,6 +22,9 @@ def feed_options():
 		)
 		return {
 			"ok": True,
+			# Which ways of feeding are switched on, per desk and phone (Livestock
+			# Settings > Feeding > Feed types).
+			"feed_types": _feed_types.flags(),
 			"herds": [
 				{
 					"name": h.name,

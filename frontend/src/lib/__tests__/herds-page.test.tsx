@@ -83,7 +83,10 @@ async function pickOperator(which = 0) {
 }
 
 describe("the herds page", () => {
-  beforeEach(() => call.mockClear());
+  beforeEach(() => {
+    call.mockClear();
+    window.LIVESTOCK = { bootstrap: { roles: ["System Manager"] } };
+  });
 
   it("lists the animals that could be split off", async () => {
     draw();

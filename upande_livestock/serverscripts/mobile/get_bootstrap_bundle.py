@@ -37,6 +37,7 @@ from upande_livestock.serverscripts.common.event_items import (
 	must_name_item,
 )
 from upande_livestock.serverscripts.husbandry._shared import husbandry_drug_items
+from upande_livestock.serverscripts.feeding import _feed_types
 from upande_livestock.serverscripts.mobile._shared import digest, unchanged
 
 # The doctypes whose state this payload reflects. A change to any of them must
@@ -87,8 +88,10 @@ def get_bootstrap_bundle(version=None):
 	def go():
 		guard_read("Herds")
 		settings = beef_settings()
+		# Which feeding modes the phone shows (Livestock Settings > Feed types).
+		feed_types = {m: f["phone"] for m, f in _feed_types.flags().items()}
 		# The settings are a Single, which `digest` cannot see; fold them in.
-		current = hashlib.sha1((digest(_SOURCES) + frappe.as_json(settings)).encode()).hexdigest()[:16]
+		current = hashlib.sha1((digest(_SOURCES) + frappe.as_json([settings, feed_types])).encode()).hexdigest()[:16]
 		if unchanged(version, current):
 			return {"ok": True, "unchanged": True, "version": current}
 
@@ -166,6 +169,7 @@ def get_bootstrap_bundle(version=None):
 				if consumes_items(t)
 			},
 			"settings": settings,
+			"feed_types": feed_types,
 			"options": {
 				"service_types": select_options("Livestock Event", "service_type"),
 				"diagnosis_results": select_options("Livestock Event", "diagnosis_result"),

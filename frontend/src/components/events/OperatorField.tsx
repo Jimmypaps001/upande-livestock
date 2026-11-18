@@ -3,7 +3,9 @@ import { Check, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { isError } from "@/lib/frappe";
+import { VIEW_ONLY_MESSAGE } from "@/lib/operator";
 import { searchEmployees, type EmployeeChoice } from "@/lib/people";
+import { canChooseOperator } from "@/lib/roles";
 import { cn } from "@/lib/utils";
 
 /**
@@ -36,6 +38,7 @@ export function OperatorField({
   // herd and once for buying an animal in — so a fixed id would put the same
   // one on both and bind each label to whichever the browser saw first.
   const id = useId();
+  const canPick = canChooseOperator();
   const [term, setTerm] = useState("");
   const [rows, setRows] = useState<EmployeeChoice[]>([]);
   const [open, setOpen] = useState(false);
@@ -63,6 +66,16 @@ export function OperatorField({
   }, []);
 
   const shown = useMemo(() => rows.slice(0, 8), [rows]);
+
+  // Not a System Manager and no Employee of their own: nothing to pick, and
+  // nothing will be recorded. Say so in the app's plain sentence.
+  if (!canPick) {
+    return (
+      <p className={cn("text-[12.5px] text-[var(--sd-muted)]", className)} role="status">
+        {VIEW_ONLY_MESSAGE}
+      </p>
+    );
+  }
 
   return (
     <div ref={box} className={cn("relative flex flex-col gap-1.5", className)}>

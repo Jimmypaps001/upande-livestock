@@ -216,7 +216,18 @@ const MANUFACTURE_CONCENTRATE =
 const FEED_OPTIONS = "upande_livestock.serverscripts.feeding.feed_options.feed_options";
 const HERD_RECIPES = "upande_livestock.serverscripts.feeding.herd_recipes.herd_recipes";
 
-export function feedOptions(): Promise<Envelope<{ herds: HerdOption[] }>> {
+/** Which ways of feeding are shown, from Livestock Settings > Feed types. */
+export type FeedModeKey = "system" | "manual" | "day_sheet";
+export type FeedTypes = Record<FeedModeKey, { desk: boolean; phone: boolean }>;
+
+/** What a site that never saved the setting shows: Manual configuration is off. */
+export const DEFAULT_FEED_TYPES: FeedTypes = {
+  system: { desk: true, phone: true },
+  manual: { desk: false, phone: false },
+  day_sheet: { desk: true, phone: true },
+};
+
+export function feedOptions(): Promise<Envelope<{ herds: HerdOption[]; feed_types?: FeedTypes }>> {
   return call(FEED_OPTIONS, {});
 }
 

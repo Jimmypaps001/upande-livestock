@@ -46,7 +46,9 @@ from frappe.utils import flt, getdate, now_datetime, today
 
 from upande_livestock.serverscripts.common import backdate, event_types
 from upande_livestock.serverscripts.common.envelope import guard, guard_read, guard_stock, run
+from upande_livestock.serverscripts.common.employee import acting_employee
 from upande_livestock.serverscripts.feeding import _engine as feeding
+from upande_livestock.serverscripts.feeding import _feed_types as feed_types
 from upande_livestock.serverscripts.feeding._units import is_kg
 
 DOCTYPE = "Livestock Feed Actual"
@@ -596,6 +598,7 @@ def amend_feed_day(herd, date, components, remarks=None):
 	"""
 
 	def go():
+		feed_types.assert_on(feed_types.DAY_SHEET)
 		guard(DOCTYPE)
 		out = amend_day(herd, date, components, remarks)
 		out["ok"] = True
@@ -612,6 +615,7 @@ def reset_feed_day(herd, date):
 	"""
 
 	def go():
+		feed_types.assert_on(feed_types.DAY_SHEET)
 		guard(DOCTYPE)
 		out = reset_day(herd, date)
 		out["ok"] = True
@@ -624,13 +628,25 @@ def reset_feed_day(herd, date):
 def manufacture_feed_actuals(herd, date=None, employee=None, allow_shortage=False):
 	"""Mix and issue the day's actuals. Short stock leaves a dated draft.
 
+	`employee` is honoured only for a System Manager or Administrator; anyone
+	else is always recorded as their own linked Employee.
+
 	Returns `{ok, ...herd_day, pending, waiting_for, engine}`.
 	"""
 
 	def go():
 		event_types.assert_enabled("Feeding")
+		feed_types.assert_on(feed_types.DAY_SHEET)
 		guard_stock("Work Order", "Stock Entry")
-		out = manufacture_day(herd, date, employee, allow_shortage=frappe.parse_json(allow_shortage))
+		# The operator the desk picked (System Manager only), else the user's own.
+		who = acting_employee(employee)
+		if not who:
+			frappe.throw(
+				_("No Employee is linked to your user ({0}). Choose who is feeding, or ask HR to link your user to an Employee.").format(
+					frappe.session.user
+				)
+			)
+		out = manufacture_day(herd, date, who, allow_shortage=frappe.parse_json(allow_shortage))
 		out["ok"] = True
 		return out
 

@@ -37,7 +37,10 @@ import { canMix } from "@/lib/roles";
 import { routeHash } from "@/lib/router";
 import {
   feedDayStatus,
+  DEFAULT_FEED_TYPES,
   feedOptions,
+  type FeedModeKey,
+  type FeedTypes,
   feedingProgram,
   herdRecipes,
   feedBatches,
@@ -55,7 +58,7 @@ import {
   type ManualRow,
   type Recipe,
 } from "@/lib/feeding";
-import { useOperator } from "@/lib/operator";
+import { useOperator, VIEW_ONLY_MESSAGE } from "@/lib/operator";
 import { usePostingDay } from "@/lib/posting-day";
 import { fmt, num, todayISO } from "@/lib/utils";
 
@@ -98,6 +101,11 @@ export function Feeding() {
   // Who gave the feed. The run is attributed to them — and on a login with no
   // Employee (Administrator, a shared tablet) nothing posts without one.
   const who = useOperator();
+  // Which tabs Livestock Settings > Feed types shows on the desk.
+  const [feedTypes, setFeedTypes] = useState<FeedTypes>(DEFAULT_FEED_TYPES);
+  const [typesKnown, setTypesKnown] = useState(false);
+  // A user with no Employee who cannot pick one records nothing.
+  const blocked = who.viewOnly ? VIEW_ONLY_MESSAGE : null;
 
   /**
    * The day this page posts against — one decision, at the top, for both tabs.
@@ -143,6 +151,8 @@ export function Feeding() {
         return;
       }
       setHerds(r.herds || []);
+      if (r.feed_types) setFeedTypes(r.feed_types);
+      setTypesKnown(true);
     });
   }, []);
 
@@ -412,7 +422,16 @@ export function Feeding() {
   // recomputes from its own per-head amount.
   const kg = runKg(day, portion, selectedRecipe, program?.heads);
   const rationQty = runRationQty(program, portion, selectedRecipe);
-  const manualDisabled = !program ? "Select a herd first." : null;
+  const tabs: Array<"system" | "manual" | "actuals"> = (
+    [
+      ["system", "system"],
+      ["manual", "manual"],
+      ["day_sheet", "actuals"],
+    ] as Array<[FeedModeKey, "system" | "manual" | "actuals"]>
+  )
+    .filter(([k]) => feedTypes[k].desk)
+    .map(([, tab]) => tab);
+  const manualDisabled = !program ? "Select a herd first." : blocked;
   // Livestock Settings > Feed by Head Count. Off: `kg` is only a suggestion.
   const byHeadCount = day?.feed_by_head_count ?? bootstrap().feed_by_head_count;
 
@@ -492,18 +511,32 @@ export function Feeding() {
 
           {program && (
             // One for both tabs: whichever run is made, it is this person's.
-            <OperatorField operator={who.operator} onChange={who.setOperator} className="max-w-sm" />
+            who.mustAsk ? (
+              <OperatorField operator={who.operator} onChange={who.setOperator} className="max-w-sm" />
+            ) : null
           )}
 
-          {program && (
-            <Tabs defaultValue="system" className="flex flex-col gap-5">
-              <TabsList className="self-start">
-                <TabsTrigger value="system">System</TabsTrigger>
-                <TabsTrigger value="manual">Manual configuration</TabsTrigger>
-                <TabsTrigger value="actuals">Day sheet</TabsTrigger>
-              </TabsList>
+          {program && typesKnown && tabs.length === 0 && (
+            <Notice tone="info">
+              No way of feeding is switched on for the desk. Turn one on in Settings, under
+              Feeding, Feed types.
+            </Notice>
+          )}
 
-              <TabsContent value="system" className="flex flex-col gap-5">
+          {program && tabs.length > 0 && (
+            <Tabs key={tabs.join(",")} defaultValue={tabs[0]} className="flex flex-col gap-5">
+              {/* One way switched on: show it without the tab list. */}
+              {tabs.length > 1 && (
+                <TabsList className="self-start">
+                  {tabs.includes("system") && <TabsTrigger value="system">System</TabsTrigger>}
+                  {tabs.includes("manual") && (
+                    <TabsTrigger value="manual">Manual configuration</TabsTrigger>
+                  )}
+                  {tabs.includes("actuals") && <TabsTrigger value="actuals">Day sheet</TabsTrigger>}
+                </TabsList>
+              )}
+
+              {tabs.includes("system") && <TabsContent value="system" className="flex flex-col gap-5">
                 <RecipePicker
                   recipes={recipes}
                   value={selectedBom}
@@ -645,7 +678,7 @@ export function Feeding() {
                       // Short TODAY still records the feeding — its stock
                       // waits as a draft. Only a backdated run must be covered:
                       // a draft dated last month would be a different run.
-                      disabled={mixing || (backdating && usingStandingRecipe && !program.can_manufacture)}
+                      disabled={mixing || !!blocked || (backdating && usingStandingRecipe && !program.can_manufacture)}
                     >
                       {mixing ? "Mixing…" : "Mix & feed"}
                     </Button>
@@ -659,9 +692,9 @@ export function Feeding() {
                     )}
                   </div>
                 </div>
-              </TabsContent>
+              </TabsContent>}
 
-              <TabsContent value="manual" className="flex flex-col gap-5">
+              {tabs.includes("manual") && <TabsContent value="manual" className="flex flex-col gap-5">
                 <RecipePicker
                   recipes={recipes}
                   value={selectedBom}
@@ -681,11 +714,11 @@ export function Feeding() {
                   total={manualTotal}
                   onTotalChange={setManualTotal}
                 />
-              </TabsContent>
+              </TabsContent>}
 
-              <TabsContent value="actuals" className="flex flex-col gap-5">
-                <FeedDay />
-              </TabsContent>
+              {tabs.includes("actuals") && <TabsContent value="actuals" className="flex flex-col gap-5">
+                <FeedDay employee={who.value} blocked={blocked} />
+              </TabsContent>}
             </Tabs>
           )}
         </CardContent>

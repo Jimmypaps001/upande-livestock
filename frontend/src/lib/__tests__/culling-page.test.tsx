@@ -94,6 +94,7 @@ function draw() {
 
 describe("the culling page", () => {
   beforeEach(() => {
+  window.LIVESTOCK = { bootstrap: { roles: ["System Manager"] } };
     vi.clearAllMocks();
     sent.length = 0;
   });

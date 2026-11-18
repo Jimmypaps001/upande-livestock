@@ -41,6 +41,7 @@ from frappe.utils import cint, flt, getdate, today
 from upande_livestock.serverscripts.common import event_types
 from upande_livestock.serverscripts.common.envelope import guard_stock, run
 from upande_livestock.serverscripts.feeding import _engine as feeding
+from upande_livestock.serverscripts.feeding import _feed_types as feed_types
 from upande_livestock.serverscripts.feeding._concentrate import (
 	premanufacture_by_herd,
 	premanufacture_concentrate_on,
@@ -163,6 +164,7 @@ def manufacture_all_feeds(date=None, portion=1.0, preview=0, totals=None):
 		# words before any stock moves — not left to the Feeding event failing
 		# after the feed has already left the store.
 		event_types.assert_enabled("Feeding")
+		feed_types.assert_on(feed_types.SYSTEM)
 		guard_stock("Work Order", "Stock Entry")
 		day = getdate(date) if date else getdate(today())
 		by_head = feed_by_head_count_on()

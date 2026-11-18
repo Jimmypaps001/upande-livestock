@@ -139,8 +139,19 @@ export function resetFeedDay(herd: string, date: string): Promise<Envelope<HerdD
   return call(`${BASE}feed_actuals.reset_feed_day`, { herd, date });
 }
 
-export function manufactureFeedActuals(herd: string, date: string): Promise<Envelope<HerdDay>> {
-  return call(`${BASE}feed_actuals.manufacture_feed_actuals`, { herd, date });
+/** `employee` is the operator the desk picked; the server honours it only for
+ *  a System Manager and otherwise uses the signed-in user's own Employee.
+ *  Left out when empty so that fallback applies. */
+export function manufactureFeedActuals(
+  herd: string,
+  date: string,
+  employee?: string,
+): Promise<Envelope<HerdDay>> {
+  return call(`${BASE}feed_actuals.manufacture_feed_actuals`, {
+    herd,
+    date,
+    employee: employee || undefined,
+  });
 }
 
 export function animalIntake(herd: string, date: string): Promise<Envelope<AnimalIntake>> {
