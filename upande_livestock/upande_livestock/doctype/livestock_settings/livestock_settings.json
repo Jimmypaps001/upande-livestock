@@ -162,7 +162,17 @@
   "labour_rate_feedlot_workers",
   "cb_labour_rates",
   "labour_rate_herders",
-  "labour_rate_other"
+  "labour_rate_other",
+  "tab_daily_report",
+  "sb_daily_report",
+  "daily_report_enabled",
+  "daily_report_time",
+  "daily_report_head",
+  "cb_daily_report",
+  "daily_report_roles",
+  "daily_report_role_profiles",
+  "daily_report_send_now",
+  "daily_report_preview"
  ],
  "fields": [
   {
@@ -1104,13 +1114,72 @@
    "fieldtype": "Currency",
    "label": "Other Worker Day Rate",
    "non_negative": 1
+  },
+  {
+   "fieldname": "tab_daily_report",
+   "fieldtype": "Tab Break",
+   "label": "Daily Report"
+  },
+  {
+   "fieldname": "sb_daily_report",
+   "fieldtype": "Section Break",
+   "label": "Daily Report",
+   "description": "An email each day, after the Send Time, telling the people below what happened on the farm that day: activities, weighings, health, drugs, movements and feeding."
+  },
+  {
+   "fieldname": "daily_report_enabled",
+   "fieldtype": "Check",
+   "label": "Send the Daily Report",
+   "default": "0"
+  },
+  {
+   "fieldname": "daily_report_time",
+   "fieldtype": "Time",
+   "label": "Send Time",
+   "default": "18:00:00",
+   "description": "Site time. It goes out once a day, at the first check after this time."
+  },
+  {
+   "fieldname": "daily_report_head",
+   "fieldtype": "Link",
+   "label": "Livestock Head",
+   "options": "User",
+   "description": "Always receives the report."
+  },
+  {
+   "fieldname": "cb_daily_report",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "daily_report_roles",
+   "fieldtype": "Table MultiSelect",
+   "label": "Recipient Roles",
+   "options": "Livestock Report Role",
+   "description": "Every enabled user with any of these roles also receives it."
+  },
+  {
+   "fieldname": "daily_report_role_profiles",
+   "fieldtype": "Table MultiSelect",
+   "label": "Recipient Role Profiles",
+   "options": "Livestock Report Role Profile",
+   "description": "Every enabled user on any of these role profiles also receives it."
+  },
+  {
+   "fieldname": "daily_report_send_now",
+   "fieldtype": "Button",
+   "label": "Send Now"
+  },
+  {
+   "fieldname": "daily_report_preview",
+   "fieldtype": "Button",
+   "label": "Preview"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-11-11 09:00:00.000000",
+ "modified": "2026-11-18 09:00:00.000000",
  "modified_by": "Administrator",
  "module": "Upande Livestock",
  "name": "Livestock Settings",

@@ -1,0 +1,93 @@
+{%- macro table(headers) -%}
+<table style="border-collapse:collapse;width:100%;margin:6px 0 18px;font-size:13px;">
+<thead><tr>{% for h in headers %}<th style="text-align:left;padding:6px 8px;background:#f1f3f0;border-bottom:1px solid #d9ddd6;color:#444;">{{ h }}</th>{% endfor %}</tr></thead>
+<tbody>{{ caller() }}</tbody></table>
+{%- endmacro -%}
+{%- macro cell(v) -%}<td style="padding:6px 8px;border-bottom:1px solid #eceeea;">{{ v }}</td>{%- endmacro -%}
+{%- macro stat(n, label) -%}<td style="padding:8px 14px 8px 0;vertical-align:top;"><div style="font-size:22px;font-weight:600;color:#1f3d2b;">{{ n }}</div><div style="font-size:12px;color:#666;">{{ label }}</div></td>{%- endmacro -%}
+<div style="font-family:Arial,Helvetica,sans-serif;color:#222;max-width:720px;margin:0 auto;line-height:1.4;">
+<h2 style="margin:0 0 4px;color:#1f3d2b;">{{ _("Livestock daily report") }}</h2>
+<div style="color:#666;margin-bottom:18px;">{{ date_label }}</div>
+
+<h3 style="border-bottom:2px solid #1f3d2b;padding-bottom:4px;">{{ _("Activities") }}</h3>
+<table><tr>{{ stat(activities.total, _("activities done")) }}</tr></table>
+{% if activities.rows %}
+{% call table([_("Activity"), _("Done"), _("Animals")]) %}
+{% for r in activities.rows %}<tr>{{ cell(r.event_type) }}{{ cell(r.n) }}{{ cell(r.animals) }}</tr>{% endfor %}
+{% endcall %}
+{% else %}<p style="color:#666;">{{ _("No activities were recorded.") }}</p>{% endif %}
+
+<h3 style="border-bottom:2px solid #1f3d2b;padding-bottom:4px;">{{ _("Weighings") }}</h3>
+<table><tr>{{ stat(weighings.animals, _("animals weighed")) }}{{ stat(weighings.average_kg or "-", _("average kg")) }}</tr></table>
+{% if weighings.gallagher %}
+{% call table([_("Gallagher session file"), _("Animals")]) %}
+{% for g in weighings.gallagher %}<tr>{{ cell(g.file) }}{{ cell(g.animals) }}</tr>{% endfor %}
+{% endcall %}
+{% elif not weighings.animals %}<p style="color:#666;">{{ _("No animals were weighed.") }}</p>{% endif %}
+
+<h3 style="border-bottom:2px solid #1f3d2b;padding-bottom:4px;">{{ _("Health") }}</h3>
+<table><tr>{{ stat(health.new_cases, _("new cases")) }}{{ stat(health.open_cases, _("open cases")) }}{{ stat(drugs.total_drugs, _("drugs given")) }}</tr></table>
+{% if health.sick %}
+<p style="margin:10px 0 0;font-weight:600;">{{ _("Animals that are sick") }}</p>
+{% call table([_("Tag"), _("Herd"), _("Diagnosis"), _("Status"), _("Severity")]) %}
+{% for s in health.sick %}<tr>{{ cell(s.tag) }}{{ cell(s.herd) }}{{ cell(s.diagnosis) }}{{ cell(s.status) }}{{ cell(s.severity) }}</tr>{% endfor %}
+{% endcall %}
+{% else %}<p style="color:#666;">{{ _("No animals are sick.") }}</p>{% endif %}
+{% if drugs.rows %}
+<p style="margin:10px 0 0;font-weight:600;">{{ _("Drugs administered") }}</p>
+{% call table([_("Drug"), _("Quantity"), _("Animals"), _("Herds")]) %}
+{% for d in drugs.rows %}<tr>{{ cell(d.drug) }}{{ cell(d.qty) }}{{ cell(d.animals) }}{{ cell(d.herds) }}</tr>{% endfor %}
+{% endcall %}
+{% else %}<p style="color:#666;">{{ _("No drugs were given.") }}</p>{% endif %}
+
+<h3 style="border-bottom:2px solid #1f3d2b;padding-bottom:4px;">{{ _("Movements, births and exits") }}</h3>
+<table><tr>
+{{ stat(movements.count, _("moved")) }}{{ stat(births.count, _("births")) }}{{ stat(exits.deaths|length, _("deaths")) }}{{ stat(exits.sales|length, _("sold")) }}{{ stat(exits.other|length, _("other exits")) }}
+</tr></table>
+{% if movements.rows %}
+<p style="margin:10px 0 0;font-weight:600;">{{ _("Movements") }}</p>
+{% call table([_("Tag"), _("From"), _("To")]) %}
+{% for m in movements.rows %}<tr>{{ cell(m.tag) }}{{ cell(m.from_herd) }}{{ cell(m.to_herd) }}</tr>{% endfor %}
+{% endcall %}{% endif %}
+{% if births.rows %}
+<p style="margin:10px 0 0;font-weight:600;">{{ _("Births") }}</p>
+{% call table([_("Dam"), _("Calf tag"), _("Sex"), _("Stillborn")]) %}
+{% for b in births.rows %}<tr>{{ cell(b.dam) }}{{ cell(b.calf) }}{{ cell(b.sex) }}{{ cell(_("Yes") if b.stillborn else "") }}</tr>{% endfor %}
+{% endcall %}{% endif %}
+{% if exits.deaths %}
+<p style="margin:10px 0 0;font-weight:600;">{{ _("Deaths") }}</p>
+{% call table([_("Tag"), _("Type"), _("Cause")]) %}
+{% for x in exits.deaths %}<tr>{{ cell(x.tag) }}{{ cell(x.type) }}{{ cell(x.cause) }}</tr>{% endfor %}
+{% endcall %}{% endif %}
+{% if exits.sales %}
+<p style="margin:10px 0 0;font-weight:600;">{{ _("Sales") }}</p>
+{% call table([_("Tag"), _("Buyer"), _("Price")]) %}
+{% for x in exits.sales %}<tr>{{ cell(x.tag) }}{{ cell(x.buyer) }}{{ cell(x.price) }}</tr>{% endfor %}
+{% endcall %}{% endif %}
+{% if exits.other %}
+<p style="margin:10px 0 0;font-weight:600;">{{ _("Other exits") }}</p>
+{% call table([_("Tag"), _("Type")]) %}
+{% for x in exits.other %}<tr>{{ cell(x.tag) }}{{ cell(x.type) }}</tr>{% endfor %}
+{% endcall %}{% endif %}
+{% if not (movements.rows or births.rows or exits.total) %}<p style="color:#666;">{{ _("Nothing moved, was born or left the farm.") }}</p>{% endif %}
+
+<h3 style="border-bottom:2px solid #1f3d2b;padding-bottom:4px;">{{ _("Feeding") }}</h3>
+{% if feeding.available %}
+<table><tr>{{ stat(feeding.planned_kg|round(1), _("kg planned")) }}{{ stat(feeding.actual_kg|round(1), _("kg fed")) }}{{ stat(feeding.below_plan, _("below plan")) }}{{ stat(feeding.above_plan, _("above plan")) }}{{ stat(feeding.on_plan, _("on plan")) }}</tr></table>
+{% if feeding.herds %}
+{% call table([_("Herd"), _("Head"), _("Planned kg"), _("Fed kg"), _("Changed")]) %}
+{% for h in feeding.herds %}<tr>{{ cell(h.herd_name or h.herd) }}{{ cell(h.head_count) }}{{ cell(h.planned_kg|round(1)) }}{{ cell(h.actual_kg|round(1)) }}{{ cell(_("Yes") if h.amended else "") }}</tr>{% endfor %}
+{% endcall %}
+{% else %}<p style="color:#666;">{{ _("No herd was fed.") }}</p>{% endif %}
+{% if feeding.below %}
+<p style="margin:10px 0 0;font-weight:600;">{{ _("Animals eating less than planned") }}</p>
+{% call table([_("Tag"), _("Herd"), _("Planned kg"), _("Ate kg"), _("Difference")]) %}
+{% for a in feeding.below %}<tr>{{ cell(a.tag) }}{{ cell(a.herd) }}{{ cell(a.planned_kg|round(2)) }}{{ cell(a.actual_kg|round(2)) }}{{ cell(("%.1f"|format(a.variance_pct)) ~ "%") }}</tr>{% endfor %}
+{% endcall %}{% endif %}
+{% if feeding.above %}
+<p style="margin:10px 0 0;font-weight:600;">{{ _("Animals eating more than planned") }}</p>
+{% call table([_("Tag"), _("Herd"), _("Planned kg"), _("Ate kg"), _("Difference")]) %}
+{% for a in feeding.above %}<tr>{{ cell(a.tag) }}{{ cell(a.herd) }}{{ cell(a.planned_kg|round(2)) }}{{ cell(a.actual_kg|round(2)) }}{{ cell(("%+.1f"|format(a.variance_pct)) ~ "%") }}</tr>{% endfor %}
+{% endcall %}{% endif %}
+{% else %}<p style="color:#666;">{{ _("The feeding figures could not be included in this report.") }}</p>{% endif %}
+</div>

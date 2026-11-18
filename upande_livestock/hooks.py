@@ -270,9 +270,19 @@ doc_events = {
 		"on_trash": "upande_livestock.serverscripts.common.live.note",
 	},
 	"File": {"after_insert": "upande_livestock.serverscripts.common.thumbs.thumb_file"},
+	# A feed day follows its Stock Entries: cancelled or deleted, the day goes
+	# back to Planned / Amended; a waiting draft that was posted makes it
+	# Manufactured (serverscripts/feeding/feed_actuals.py).
 	"Stock Entry": {
-		"on_submit": "upande_livestock.serverscripts.common.live.note",
-		"on_cancel": "upande_livestock.serverscripts.common.live.note",
+		"on_submit": [
+			"upande_livestock.serverscripts.common.live.note",
+			"upande_livestock.serverscripts.feeding.feed_actuals.on_stock_entry",
+		],
+		"on_cancel": [
+			"upande_livestock.serverscripts.common.live.note",
+			"upande_livestock.serverscripts.feeding.feed_actuals.on_stock_entry",
+		],
+		"on_trash": "upande_livestock.serverscripts.feeding.feed_actuals.on_stock_entry",
 	},
 }
 
@@ -295,6 +305,12 @@ scheduler_events = {
 	# (Sunday 00:00): accuracy uses snapshots dated before the week's Monday, so
 	# this one leads the week it first covers by a full 7 days, not one.
 	"cron": {
+		# The daily livestock report email. Every 15 minutes: it sends once a
+		# day, at the first run after the Send Time in Livestock Settings, and
+		# records the date it sent (serverscripts/reports/daily_report.py).
+		"*/15 * * * *": [
+			"upande_livestock.serverscripts.reports.daily_report.send_due",
+		],
 		"0 1 * * 1": [
 			"upande_livestock.serverscripts.forecast.snapshot.take_weekly_snapshot",
 		],

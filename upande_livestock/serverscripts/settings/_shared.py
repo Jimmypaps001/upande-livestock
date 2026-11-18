@@ -47,6 +47,12 @@ DISPLAY_FIELDTYPES = frozenset({"HTML", "Heading", "Button", "Image"})
 TABLE_FIELDTYPES = frozenset({"Table", "Table MultiSelect"})
 NUMERIC_FIELDTYPES = frozenset({"Int", "Float", "Percent", "Currency"})
 
+# The Daily Report fields have a card and endpoints of their own
+# (settings/daily_report.py): a Time, a user link and two multi-selects are not
+# what the generic scalar page draws, and the page must never write the
+# last-sent date. Kept out of the mirror, the writer's whitelist and the tables.
+DAILY_REPORT_PREFIX = "daily_report_"
+
 # The links that do not error when they are wrong — they post somewhere wrong.
 # Flagged to the page so an operator can see which choices move stock and money
 # before they touch one, rather than after the month-end reconciliation.
@@ -70,11 +76,16 @@ def scalar_docfields():
 		if df.fieldtype not in LAYOUT_FIELDTYPES
 		and df.fieldtype not in DISPLAY_FIELDTYPES
 		and df.fieldtype not in TABLE_FIELDTYPES
+		and not df.fieldname.startswith(DAILY_REPORT_PREFIX)
 	]
 
 
 def table_docfields():
-	return [df for df in frappe.get_meta(DOCTYPE).fields if df.fieldtype in TABLE_FIELDTYPES]
+	return [
+		df
+		for df in frappe.get_meta(DOCTYPE).fields
+		if df.fieldtype in TABLE_FIELDTYPES and not df.fieldname.startswith(DAILY_REPORT_PREFIX)
+	]
 
 
 def editable_fieldnames() -> frozenset:
@@ -211,7 +222,18 @@ def layout() -> list:
 		}
 		tab["sections"].append(section)
 
+	skipping = False
 	for df in frappe.get_meta(DOCTYPE).fields:
+		if df.fieldname.startswith(DAILY_REPORT_PREFIX):
+			continue
+		if df.fieldname == "tab_daily_report":
+			# Its tab is the card's, and the section after it too.
+			skipping = True
+			continue
+		if skipping:
+			if df.fieldtype != "Tab Break":
+				continue
+			skipping = False
 		if df.fieldtype == "Tab Break":
 			open_tab(df.label, df.fieldname)
 			continue

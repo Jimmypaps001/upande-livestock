@@ -4,6 +4,7 @@ import { BackdatingSetting } from "@/components/settings/BackdatingSetting";
 import { ChildTableEditor } from "@/components/settings/ChildTableEditor";
 import { FeedlotBandsCard } from "@/components/settings/FeedlotBandsCard";
 import { SettingField } from "@/components/settings/SettingField";
+import { DailyReportCard } from "@/components/settings/DailyReportCard";
 import { EventsCard } from "@/components/settings/EventsCard";
 import { AmberNotice, Notice } from "@/components/feeding/Notice";
 import { Page, PageHeading } from "@/components/PageShell";
@@ -45,6 +46,8 @@ import {
  */
 /** The Events tab: not a doctype tab, so a name no doctype tab can have. */
 const EVENTS_TAB = "__events";
+/** The Daily Report tab, likewise the page's own (its fields are not drawn by the generic mirror). */
+const REPORT_TAB = "__daily_report";
 
 export function Settings() {
   const [doc, setDoc] = useState<LivestockSettingsDoc | null>(null);
@@ -167,6 +170,7 @@ export function Settings() {
               </TabsTrigger>
             ))}
             <TabsTrigger value={EVENTS_TAB}>Events</TabsTrigger>
+            <TabsTrigger value={REPORT_TAB}>Daily report</TabsTrigger>
           </TabsList>
 
           {/* Which events the farm records, and each one's stock and timing.
@@ -181,6 +185,10 @@ export function Settings() {
                 setDoc((current) => (current ? { ...current, values: next } : current))
               }
             />
+          </TabsContent>
+
+          <TabsContent value={REPORT_TAB}>
+            <DailyReportCard canWrite={!readOnly} />
           </TabsContent>
 
           {doc.tabs.map((tab) => (

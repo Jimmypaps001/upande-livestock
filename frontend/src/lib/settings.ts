@@ -281,3 +281,56 @@ export function isVisible(
   const current = effectiveValue(dep.replace(/^doc\./, ""), values, draft);
   return !isBlank(current) && Number(current) !== 0;
 }
+
+/* ── Daily report ──────────────────────────────────────────────────────── */
+
+export type DailyReportRecipient = { user: string; full_name: string; email: string };
+
+export type DailyReportState = {
+  ok: boolean;
+  enabled: number;
+  /** HH:MM, site time. */
+  time: string;
+  head: string;
+  roles: string[];
+  role_profiles: string[];
+  last_sent: string | null;
+  recipients: DailyReportRecipient[];
+};
+
+export type DailyReportDoc = DailyReportState & {
+  can_write: boolean;
+  options: {
+    users: { name: string; full_name: string | null }[];
+    roles: string[];
+    role_profiles: string[];
+  };
+};
+
+const REPORT_READ = "upande_livestock.serverscripts.settings.daily_report.daily_report_settings";
+const REPORT_SAVE =
+  "upande_livestock.serverscripts.settings.daily_report.save_daily_report_settings";
+const REPORT_SEND = "upande_livestock.serverscripts.reports.daily_report.send_now";
+const REPORT_PREVIEW = "upande_livestock.serverscripts.reports.daily_report.preview";
+
+export function dailyReportSettings(): Promise<Envelope<DailyReportDoc>> {
+  return call(REPORT_READ);
+}
+
+export function saveDailyReportSettings(
+  changes: Partial<Pick<DailyReportState, "time" | "head" | "roles" | "role_profiles">> & {
+    enabled?: number;
+  },
+): Promise<Envelope<DailyReportState>> {
+  return call(REPORT_SAVE, { payload: changes });
+}
+
+export function sendDailyReportNow(): Promise<Envelope<{ ok: boolean; sent: number; message: string }>> {
+  return call(REPORT_SEND);
+}
+
+export function previewDailyReport(
+  date?: string,
+): Promise<Envelope<{ ok: boolean; date: string; subject: string; html: string }>> {
+  return call(REPORT_PREVIEW, date ? { date } : {});
+}

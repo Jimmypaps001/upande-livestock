@@ -40,6 +40,8 @@ def _scalar_fieldnames():
 		df.fieldname
 		for df in frappe.get_meta(DOCTYPE).fields
 		if df.fieldtype not in LAYOUT and df.fieldtype not in TABLES and df.fieldtype not in DISPLAY
+		# The Daily Report tab has its own card and endpoints (settings/daily_report.py).
+		and not df.fieldname.startswith("daily_report_")
 	}
 
 
@@ -160,3 +162,38 @@ class TestLivestockSettingsEndpoints(IntegrationTestCase):
 		result = save_livestock_settings({"custom_feed_wip_warehouse": "No Such Warehouse - ZZ"})
 		self.assertIn("error", result)
 		self.assertIn("No Such Warehouse - ZZ", result["error"])
+
+
+class TestDailyReportTabIsSkippedOnlyToTheNextTab(IntegrationTestCase):
+	"""The Daily Report tab is the card's, but a tab placed after it still shows."""
+
+	def test_a_tab_after_the_daily_report_tab_is_still_laid_out(self):
+		from unittest.mock import patch
+
+		from upande_livestock.serverscripts.settings import _shared
+
+		def f(fieldname, fieldtype, label=None):
+			return frappe._dict(
+				fieldname=fieldname, fieldtype=fieldtype, label=label or fieldname, description=None,
+				options=None, default=None, depends_on=None, reqd=0,
+			)
+
+		fake = frappe._dict(
+			fields=[
+				f("tab_a", "Tab Break", "A"),
+				f("sec_a", "Section Break", "Sec A"),
+				f("alpha", "Data"),
+				f("tab_daily_report", "Tab Break", "Daily Report"),
+				f("sb_daily_report", "Section Break", "Report"),
+				f("daily_report_enabled", "Check"),
+				f("inside_report_tab", "Data"),
+				f("tab_after", "Tab Break", "After"),
+				f("sec_after", "Section Break", "Sec After"),
+				f("omega", "Data"),
+			]
+		)
+		with patch.object(_shared.frappe, "get_meta", return_value=fake):
+			tabs = _shared.layout()
+		self.assertEqual([t["fieldname"] for t in tabs], ["tab_a", "tab_after"])
+		shown = {fd["fieldname"] for t in tabs for s in t["sections"] for fd in s["fields"]}
+		self.assertEqual(shown, {"alpha", "omega"})
