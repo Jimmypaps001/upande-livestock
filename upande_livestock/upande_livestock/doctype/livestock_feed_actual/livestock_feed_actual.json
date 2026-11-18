@@ -1,0 +1,206 @@
+{
+ "actions": [],
+ "autoname": "hash",
+ "creation": "2026-11-18 09:00:00.000000",
+ "description": "What a herd was actually fed on a day, beside what its recipe planned. The recipe (the herd's ration BOM) is the plan and is never changed from here: amending a day changes only that day's actual kilograms, and those actuals are what is mixed and issued. One record per herd and day.",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "date",
+  "herd",
+  "head_count",
+  "bom",
+  "cb_totals",
+  "planned_kg",
+  "actual_kg",
+  "amended",
+  "status",
+  "sb_items",
+  "items",
+  "sb_runs",
+  "work_order",
+  "transfer_stock_entry",
+  "manufacture_stock_entry",
+  "issue_stock_entry",
+  "cb_runs",
+  "livestock_event",
+  "amended_by",
+  "amended_on",
+  "remarks"
+ ],
+ "fields": [
+  {
+   "fieldname": "date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Date",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "herd",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Herd",
+   "options": "Herds",
+   "reqd": 1
+  },
+  {
+   "description": "The head fed that day; the per-animal figures divide by this.",
+   "fieldname": "head_count",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Head",
+   "non_negative": 1
+  },
+  {
+   "description": "The recipe the plan was read from. It is not changed by an amendment.",
+   "fieldname": "bom",
+   "fieldtype": "Link",
+   "label": "Recipe",
+   "options": "BOM",
+   "read_only": 1
+  },
+  {
+   "fieldname": "cb_totals",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "planned_kg",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Planned Kg",
+   "precision": "3",
+   "read_only": 1
+  },
+  {
+   "fieldname": "actual_kg",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Actual Kg",
+   "precision": "3",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "description": "Ticked when any component's actual differs from the plan.",
+   "fieldname": "amended",
+   "fieldtype": "Check",
+   "label": "Amended",
+   "read_only": 1
+  },
+  {
+   "default": "Planned",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "Planned\nAmended\nWaiting for stock\nManufactured",
+   "read_only": 1
+  },
+  {
+   "fieldname": "sb_items",
+   "fieldtype": "Section Break",
+   "label": "Components"
+  },
+  {
+   "fieldname": "items",
+   "fieldtype": "Table",
+   "label": "Components",
+   "options": "Livestock Feed Actual Item"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "sb_runs",
+   "fieldtype": "Section Break",
+   "label": "Mixing"
+  },
+  {
+   "fieldname": "work_order",
+   "fieldtype": "Link",
+   "label": "Work Order",
+   "options": "Work Order",
+   "read_only": 1
+  },
+  {
+   "fieldname": "transfer_stock_entry",
+   "fieldtype": "Link",
+   "label": "Transfer",
+   "options": "Stock Entry",
+   "read_only": 1
+  },
+  {
+   "fieldname": "manufacture_stock_entry",
+   "fieldtype": "Link",
+   "label": "Mix",
+   "options": "Stock Entry",
+   "read_only": 1
+  },
+  {
+   "fieldname": "issue_stock_entry",
+   "fieldtype": "Link",
+   "label": "Issue",
+   "options": "Stock Entry",
+   "read_only": 1
+  },
+  {
+   "fieldname": "cb_runs",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "livestock_event",
+   "fieldtype": "Link",
+   "label": "Feeding Event",
+   "options": "Livestock Event",
+   "read_only": 1
+  },
+  {
+   "fieldname": "amended_by",
+   "fieldtype": "Link",
+   "label": "Amended By",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "amended_on",
+   "fieldtype": "Datetime",
+   "label": "Amended On",
+   "read_only": 1
+  },
+  {
+   "fieldname": "remarks",
+   "fieldtype": "Small Text",
+   "label": "Remarks"
+  }
+ ],
+ "links": [],
+ "modified": "2026-11-18 09:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Upande Livestock",
+ "name": "Livestock Feed Actual",
+ "naming_rule": "Random",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1, "delete": 1, "email": 1, "export": 1, "print": 1, "read": 1,
+   "report": 1, "role": "Livestock Manager", "share": 1, "write": 1
+  },
+  {
+   "create": 1, "delete": 1, "email": 1, "export": 1, "print": 1, "read": 1,
+   "report": 1, "role": "System Manager", "share": 1, "write": 1
+  },
+  {"create": 1, "read": 1, "report": 1, "role": "Livestock Stores", "write": 1},
+  {"create": 1, "read": 1, "report": 1, "role": "Livestock Attendant", "write": 1},
+  {"read": 1, "report": 1, "role": "Livestock Breeder"},
+  {"read": 1, "report": 1, "role": "Livestock Vet"},
+  {"read": 1, "report": 1, "role": "Livestock Nutritionist"}
+ ],
+ "sort_field": "date",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "herd",
+ "track_changes": 1
+}

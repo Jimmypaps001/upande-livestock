@@ -778,8 +778,16 @@ def manufacture_herd_feed(
 	source_by_item=None,
 	batch_by_item=None,
 	typed_total=None,
+	draft_when_short=False,
 ):
 	"""Manufacture the herd's TMR and issue the whole batch to that herd.
+
+	`draft_when_short` lets a BACKDATED run the stores could not cover on its
+	day wait as a draft dated that day, exactly as a short run fed today does,
+	instead of refusing. The day's actuals (`feed_actuals`) pass it: what the
+	herd ate is a fact to record whether or not the stock was booked in, and the
+	draft on Transactions is what says the stock is still owed. Off for every
+	other caller, which keep the refusal.
 
 	`typed_total` is the group's kilos as the operator weighed them, for a farm
 	that does not feed by head count (`_head_count`). It replaces heads x per
@@ -895,7 +903,19 @@ def manufacture_herd_feed(
 		# rather than recounted, so the two can never disagree about the day.
 		runs_before = feed_day_status.runs_already_posted(bom.item, herd, posting_date)
 		run_posting_time = _run_posting_time(runs_before)
-		_availability.assert_can_cover_on(bom.name, total_qty, posting_date, run_posting_time)
+		if frappe.parse_json(draft_when_short) and not frappe.parse_json(allow_shortage):
+			short_then = _availability.shortfalls_on(bom.name, total_qty, posting_date, run_posting_time)
+			if short_then:
+				pending = _("Not enough to mix {0} on {1}: {2}").format(
+					bom.item,
+					getdate(posting_date),
+					", ".join(
+						"{0} short {1:,.2f} {2}".format(r["item_name"], r["short"], r["uom"]).strip()
+						for r in short_then
+					),
+				)
+		else:
+			_availability.assert_can_cover_on(bom.name, total_qty, posting_date, run_posting_time)
 	else:
 		# Against the store the run will draw from: judged against the default
 		# store, a run from a near-empty pit passed here and died in ERPNext.

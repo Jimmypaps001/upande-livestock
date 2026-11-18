@@ -62,6 +62,9 @@ const Concentrate = page(() =>
   import("@/pages/Concentrate").then((m) => ({ default: m.Concentrate })),
 );
 const Stock = page(() => import("@/pages/Stock").then((m) => ({ default: m.Stock })));
+const FeedReport = page(() =>
+  import("@/pages/FeedReport").then((m) => ({ default: m.FeedReport })),
+);
 const Rations = page(() =>
   import("@/pages/Rations").then((m) => ({ default: m.Rations })),
 );
@@ -137,6 +140,7 @@ const TITLES: Record<View, string> = {
   concentrate: "Concentrate",
   stock: "Feed in Store",
   rations: "Ration History",
+  "feed-report": "Daily Feed Report",
   "ration-editor": "Ration Editor",
   procurement: "Procurement",
   movement: "Movement",
@@ -168,6 +172,7 @@ const PAGES: Partial<Record<View, React.ComponentType>> = {
   concentrate: Concentrate,
   stock: Stock,
   rations: Rations,
+  "feed-report": FeedReport,
   animals: Animals,
   dashboard: Dashboard,
   settings: Settings,

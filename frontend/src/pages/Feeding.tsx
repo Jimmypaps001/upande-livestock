@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
+import { FeedDay } from "@/components/feeding/FeedDay";
 import { DayStatus } from "@/components/feeding/DayStatus";
 import { ManualConfig } from "@/components/feeding/ManualConfig";
 import { ManufactureAll } from "@/components/feeding/ManufactureAll";
@@ -499,6 +500,7 @@ export function Feeding() {
               <TabsList className="self-start">
                 <TabsTrigger value="system">System</TabsTrigger>
                 <TabsTrigger value="manual">Manual configuration</TabsTrigger>
+                <TabsTrigger value="actuals">Day sheet</TabsTrigger>
               </TabsList>
 
               <TabsContent value="system" className="flex flex-col gap-5">
@@ -679,6 +681,10 @@ export function Feeding() {
                   total={manualTotal}
                   onTotalChange={setManualTotal}
                 />
+              </TabsContent>
+
+              <TabsContent value="actuals" className="flex flex-col gap-5">
+                <FeedDay />
               </TabsContent>
             </Tabs>
           )}
