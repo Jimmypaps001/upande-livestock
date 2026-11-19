@@ -278,9 +278,19 @@ doc_events = {
 		"on_trash": "upande_livestock.serverscripts.common.live.note",
 	},
 	"File": {"after_insert": "upande_livestock.serverscripts.common.thumbs.thumb_file"},
+	# A feed day follows its Stock Entries: cancelled or deleted, the day goes
+	# back to Planned / Amended; a waiting draft that was posted makes it
+	# Manufactured (serverscripts/feeding/feed_actuals.py).
 	"Stock Entry": {
-		"on_submit": "upande_livestock.serverscripts.common.live.note",
-		"on_cancel": "upande_livestock.serverscripts.common.live.note",
+		"on_submit": [
+			"upande_livestock.serverscripts.common.live.note",
+			"upande_livestock.serverscripts.feeding.feed_actuals.on_stock_entry",
+		],
+		"on_cancel": [
+			"upande_livestock.serverscripts.common.live.note",
+			"upande_livestock.serverscripts.feeding.feed_actuals.on_stock_entry",
+		],
+		"on_trash": "upande_livestock.serverscripts.feeding.feed_actuals.on_stock_entry",
 	},
 }
 

@@ -70,7 +70,10 @@ const draw = (Page: () => React.ReactElement) =>
   );
 
 describe("the record-an-event scaffold", () => {
-  beforeEach(() => call.mockClear());
+  beforeEach(() => {
+    call.mockClear();
+    window.LIVESTOCK = { bootstrap: { roles: ["System Manager"] } };
+  });
 
   it("offers the animals the server said may be served", async () => {
     draw(Service);

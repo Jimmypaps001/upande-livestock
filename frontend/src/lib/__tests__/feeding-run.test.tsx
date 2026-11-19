@@ -11,6 +11,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 const state = vi.hoisted(() => ({
   run: { ok: true } as Record<string, unknown>,
   sent: [] as Record<string, unknown>[],
+  feedTypes: null as Record<string, { desk: boolean; phone: boolean }> | null,
 }));
 
 const program = {
@@ -43,10 +44,14 @@ const call = vi.fn(async (method?: string, args?: { payload?: Record<string, unk
       mine: null,
       query: "",
       more: false,
-      employees: [{ value: "HR-EMP-1", label: "JOSIAH KIPTOO", detail: "HR-EMP-1 · Herdsman" }],
+      employees: [{ value: "HR-EMP-1", label: "JOSIAH KIPTOO", detail: "HR-EMP-1 · Milker" }],
     };
   if (m.includes("feed_options"))
-    return { ok: true, herds: [{ name: "H1", label: "Lactating group 1", heads: 10, bom: "BOM-1" }] };
+    return {
+      ok: true,
+      herds: [{ name: "H1", label: "Lactating group 1", heads: 10, bom: "BOM-1" }],
+      ...(state.feedTypes ? { feed_types: state.feedTypes } : {}),
+    };
   if (m.includes("herd_recipes")) return { ok: true, recipes: [], standing_bom: "BOM-1" };
   if (m.includes("record_feeding") && action === "info") return program;
   if (m.includes("record_feeding") && action === "day") return { error: "no day" };
@@ -88,7 +93,9 @@ async function pickOperator() {
 const toasts = () => document.querySelector(".fixed.bottom-3") as HTMLElement;
 
 beforeEach(() => {
+  window.LIVESTOCK = { bootstrap: { roles: ["System Manager"] } };
   state.sent = [];
+  state.feedTypes = null;
   state.run = { ok: true };
   try {
     window.localStorage.clear();
@@ -135,5 +142,33 @@ describe("a feed run", () => {
     // (lib/stock-drafts) — once, not twice.
     expect(await within(toasts()).findByText(/Fed 90.00 Kg to Lactating group 1 and recorded on Work Order WO-2/)).toBeTruthy();
     expect(within(toasts()).queryByText(/waits as a draft/)).toBeNull();
+  });
+});
+
+describe("the feed types on the desk", () => {
+  const on = { desk: true, phone: true };
+  const off = { desk: false, phone: false };
+
+  it("hides Manual configuration until it is turned on", async () => {
+    draw();
+    await pickHerd();
+    expect(await screen.findByRole("tab", { name: "System" })).toBeTruthy();
+    expect(screen.getByRole("tab", { name: "Day sheet" })).toBeTruthy();
+    expect(screen.queryByRole("tab", { name: "Manual configuration" })).toBeNull();
+  });
+
+  it("shows a single tab without the tab list", async () => {
+    state.feedTypes = { system: on, manual: off, day_sheet: off };
+    draw();
+    await pickHerd();
+    expect(await screen.findByRole("button", { name: "Mix & feed" })).toBeTruthy();
+    expect(screen.queryByRole("tablist")).toBeNull();
+  });
+
+  it("says where to turn one on when none is", async () => {
+    state.feedTypes = { system: off, manual: off, day_sheet: off };
+    draw();
+    await pickHerd();
+    expect(await screen.findByText(/Turn one on in Settings, under Feeding, Feed types/)).toBeTruthy();
   });
 });

@@ -109,6 +109,12 @@ const NAV: NavSection[] = [
         hint: "What the feed stores are holding",
       },
       {
+        view: "feed-report",
+        label: "Daily Feed Report",
+        icon: ClipboardList,
+        hint: "What each animal was fed against its plan, with its weight and gain",
+      },
+      {
         view: "rations",
         label: "Rations",
         icon: ClipboardPen,
@@ -185,6 +191,7 @@ export const BUILT_VIEWS: ReadonlySet<View> = new Set<View>([
   "concentrate",
   "stock",
   "rations",
+  "feed-report",
   "ration-editor",
   "procurement",
   "herds",

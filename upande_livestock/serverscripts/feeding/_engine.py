@@ -58,6 +58,7 @@ from upande_livestock.serverscripts.common import cost_center as livestock_cost_
 from upande_livestock.serverscripts.common import backdate
 from upande_livestock.serverscripts.common import stock as livestock_stock
 from upande_livestock.serverscripts.common.company import default_company
+from upande_livestock.serverscripts.feeding._head_count import clean_total, portion_for_total
 
 # _availability imports resolve_requirement from this module, so this cannot be
 # a top-level import without a circular import (confirmed empirically: bench
@@ -133,15 +134,34 @@ def _run_posting_time(runs_before):
 	return candidate.strftime("%H:%M:%S")
 
 
+def feed_store_missing_message():
+	return _(
+		"Feeding needs a feed store: the store the feed is mixed in and kept. "
+		"Set Feed Store in Livestock Settings, on the Dairy tab."
+	)
+
+
+def feed_store_or_none():
+	"""Livestock Settings' feed store, or None while it is not set. For reads: a
+	page that shows the rations, the stock and the plan still opens, and says
+	what is missing (setup_gaps) instead of failing to load."""
+	return frappe.db.get_single_value("Livestock Settings", "custom_feed_wip_warehouse") or None
+
+
 def _feed_store():
-	"""Livestock Settings' feed store. It fell back to one site's warehouse
-	("Concentrate Mixing Store - KR"), which on any other site is a store of
-	another company or no store at all; both sites set it, so unset is a
-	configuration gap to name, not to paper over."""
-	store = frappe.db.get_single_value("Livestock Settings", "custom_feed_wip_warehouse")
+	"""Livestock Settings' feed store, for anything that moves feed. It fell back
+	to one site's warehouse ("Concentrate Mixing Store - KR"), which on any
+	other site is a store of another company or no store at all; unset is a
+	configuration gap to name, not to paper over — in words, not the field."""
+	store = feed_store_or_none()
 	if not store:
-		frappe.throw(_("Set the Feed Store (custom_feed_wip_warehouse) in Livestock Settings."))
+		frappe.throw(feed_store_missing_message(), title=_("No feed store"))
 	return store
+
+
+def setup_gaps():
+	"""What the feeding screens need set before they can mix or issue, as sentences."""
+	return [] if feed_store_or_none() else [feed_store_missing_message()]
 
 
 def _company():
@@ -164,7 +184,7 @@ def _feed_source_warehouses():
 		order_by="idx asc",
 	)
 	names = [r.warehouse for r in rows if r.warehouse]
-	store = _feed_store()
+	store = feed_store_or_none()
 	if store and store not in names:
 		names.append(store)
 	return names
@@ -465,7 +485,7 @@ def get_herd_feeding_program(herd):
 	herd_doc, bom, heads = _herd_bom(herd)
 	per_head = flt(bom.quantity) or 1.0
 	total_qty = manufacture_qty(per_head, heads)
-	store = _feed_store()
+	store = feed_store_or_none()
 
 	bom, lines = resolve_requirement(bom.name, total_qty)
 	shortages = [ln for ln in lines if ln["short_qty"] > 0]
@@ -487,7 +507,9 @@ def get_herd_feeding_program(herd):
 		"lines": lines,
 		"shortages": shortages,
 		"concentrates": concentrates,
-		"can_manufacture": not shortages,
+		# Nothing is mixed into a store that is not named.
+		"can_manufacture": not shortages and bool(store),
+		"setup": setup_gaps(),
 	}
 
 
@@ -750,8 +772,22 @@ def manufacture_herd_feed(
 	source_warehouse=None,
 	source_by_item=None,
 	batch_by_item=None,
+	typed_total=None,
+	draft_when_short=False,
 ):
 	"""Manufacture the herd's TMR and issue the whole batch to that herd.
+
+	`draft_when_short` lets a BACKDATED run the stores could not cover on its
+	day wait as a draft dated that day, exactly as a short run fed today does,
+	instead of refusing. The feeding day sheet passes it: what the herd ate is a
+	fact to record whether or not the stock was booked in, and the draft on
+	Transactions is what says the stock is still owed. Off for every other
+	caller, which keep the refusal.
+
+	`typed_total` is the kilos actually mixed, when that is not head x per head
+	(the day sheet, once amended). It replaces heads x per head x portion as
+	the quantity mixed; the ration's lines scale to it through the Work Order,
+	and the run is recorded as the share of a head-count day it amounts to.
 
 	`source_by_item` and `batch_by_item` are the operator's choices per
 	ingredient — the silage from a pit, the concentrate from the mixing store,
@@ -828,6 +864,11 @@ def manufacture_herd_feed(
 	if portion <= 0:
 		frappe.throw(_("A feeding run has to be for more than nothing."))
 	total_qty = manufacture_qty(per_head, heads, portion)
+	if clean_total(typed_total):
+		# What was weighed is what is mixed. Rounded the way `manufacture_qty`
+		# rounds, so the Work Order and the Stock Entries agree on the number.
+		total_qty = manufacture_qty(clean_total(typed_total), 1, 1)
+		portion = round(portion_for_total(per_head, heads, total_qty), 4) or portion
 	pending = None
 
 	# Availability first — it writes nothing, and a shortage is the more useful
@@ -855,7 +896,19 @@ def manufacture_herd_feed(
 		# rather than recounted, so the two can never disagree about the day.
 		runs_before = feed_day_status.runs_already_posted(bom.item, herd, posting_date)
 		run_posting_time = _run_posting_time(runs_before)
-		_availability.assert_can_cover_on(bom.name, total_qty, posting_date, run_posting_time)
+		if frappe.parse_json(draft_when_short) and not frappe.parse_json(allow_shortage):
+			short_then = _availability.shortfalls_on(bom.name, total_qty, posting_date, run_posting_time)
+			if short_then:
+				pending = _("Not enough to mix {0} on {1}: {2}").format(
+					bom.item,
+					getdate(posting_date),
+					", ".join(
+						"{0} short {1:,.2f} {2}".format(r["item_name"], r["short"], r["uom"]).strip()
+						for r in short_then
+					),
+				)
+		else:
+			_availability.assert_can_cover_on(bom.name, total_qty, posting_date, run_posting_time)
 	else:
 		# Against the store the run will draw from: judged against the default
 		# store, a run from a near-empty pit passed here and died in ERPNext.

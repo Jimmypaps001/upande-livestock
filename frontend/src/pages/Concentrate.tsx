@@ -58,6 +58,8 @@ export function Concentrate() {
   const [mixing, setMixing] = useState<string | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
   const [said, setSaid] = useState<string | null>(null);
+  // What Livestock Settings still needs before anything can be mixed (the feed store).
+  const [setup, setSetup] = useState<string[]>([]);
 
   // Editing / creating
   const [editing, setEditing] = useState(false);
@@ -76,6 +78,7 @@ export function Concentrate() {
       setList(r.concentrates);
       setStores(r.warehouses || []);
       setTo((cur) => cur || r.default_target || "");
+      setSetup(r.setup ?? []);
     },
     [],
   );
@@ -214,6 +217,9 @@ export function Concentrate() {
         A mix made for the store. Not for a herd, and not for a number of days.
       </PageHeading>
 
+      {setup.map((s) => (
+        <Notice key={s} tone="info">{s}</Notice>
+      ))}
       {problem && <Notice tone="error">{problem}</Notice>}
       {said && <Notice tone="ok">{said}</Notice>}
 

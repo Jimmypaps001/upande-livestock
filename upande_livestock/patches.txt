@@ -193,3 +193,7 @@ upande_livestock.patches.enable_every_event_type
 # Every calf born on the farm goes on the fixed-asset register: seed the Calf asset settings
 # (item herd, category Herd, location Kapkolia, value 5000) only where unset.
 upande_livestock.patches.seed_calf_asset_settings
+
+# Feed types: Kaitet feeds from the Day sheet. System and Day sheet on, Manual configuration off,
+# on desk and phone. Written only where nothing is stored, so a choice already made is kept.
+upande_livestock.patches.default_feed_types

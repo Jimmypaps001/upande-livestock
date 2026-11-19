@@ -125,3 +125,20 @@ export function landingView(
   if (limited) return limited;
   return viewEventsOn("feeding", disabled) ? "feeding" : "dashboard";
 }
+
+/**
+ * May this user record on behalf of another Employee (the operator picker)?
+ * Only a System Manager or Administrator; the server enforces the same rule
+ * (`common/employee.acting_employee`) and gives everyone else their own.
+ */
+export function canChooseOperator(
+  roles: string[] = bootstrap().roles,
+  user: string = bootstrap().user,
+): boolean {
+  return user === "Administrator" || roles.includes("System Manager");
+}
+
+/** Mixing and issuing feed moves stock: the farm's stores and manager roles (the server decides). */
+export function canMix(roles: string[] = bootstrap().roles): boolean {
+  return roles.some((r) => ["Livestock Stores", "Livestock Manager", "System Manager", "Administrator"].includes(r));
+}

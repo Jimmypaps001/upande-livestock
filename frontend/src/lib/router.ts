@@ -21,6 +21,7 @@ export const VIEWS = [
   "concentrate",
   "stock",
   "rations",
+  "feed-report",
   "ration-editor",
   "procurement",
   "milking",

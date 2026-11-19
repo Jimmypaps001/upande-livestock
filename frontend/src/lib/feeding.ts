@@ -60,12 +60,16 @@ export type FeedingProgram = {
   per_head_qty: number;
   total_manufacture_qty: number;
   uom: string;
-  store: string;
+  /** Null while Livestock Settings names no feed store (see `setup`). */
+  store: string | null;
   available_in_store: number;
   lines: FeedLine[];
   shortages: FeedLine[];
   concentrates: ConcentratePlanCard[];
   can_manufacture: boolean;
+  /** What must be set before feed can be mixed or issued, in words (the feed
+   *  store). The page still loads; it shows these instead of failing. */
+  setup?: string[];
   /** The feed stores this run may draw from, in the order they are searched.
    *  Already returned by `get_herd_feeding_program`; the picker offers these
    *  so the page cannot name a store the engine would not look in. */
@@ -210,7 +214,18 @@ const MANUFACTURE_CONCENTRATE =
 const FEED_OPTIONS = "upande_livestock.serverscripts.feeding.feed_options.feed_options";
 const HERD_RECIPES = "upande_livestock.serverscripts.feeding.herd_recipes.herd_recipes";
 
-export function feedOptions(): Promise<Envelope<{ herds: HerdOption[] }>> {
+/** Which ways of feeding are shown, from Livestock Settings > Feed types. */
+export type FeedModeKey = "system" | "manual" | "day_sheet";
+export type FeedTypes = Record<FeedModeKey, { desk: boolean; phone: boolean }>;
+
+/** What a site that never saved the setting shows: Manual configuration is off. */
+export const DEFAULT_FEED_TYPES: FeedTypes = {
+  system: { desk: true, phone: true },
+  manual: { desk: false, phone: false },
+  day_sheet: { desk: true, phone: true },
+};
+
+export function feedOptions(): Promise<Envelope<{ herds: HerdOption[]; feed_types?: FeedTypes }>> {
   return call(FEED_OPTIONS, {});
 }
 
@@ -334,7 +349,7 @@ export function feedBatches(
 
 export function concentrates(
   qtyByItem?: Record<string, number>,
-): Promise<Envelope<{ concentrates: Concentrate[]; warehouses: string[]; default_target: string }>> {
+): Promise<Envelope<{ concentrates: Concentrate[]; warehouses: string[]; default_target: string | null; setup?: string[] }>> {
   return call(CONCENTRATES, qtyByItem ? { qty_by_item: JSON.stringify(qtyByItem) } : {});
 }
 

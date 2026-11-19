@@ -24,3 +24,27 @@ def employee_or_throw(employee=None):
 			)
 		)
 	return employee
+
+
+def acting_employee(employee=None):
+	"""The Employee an action is recorded against.
+
+	Only a System Manager or Administrator may name someone other than their
+	own linked Employee (the desk's operator picker). Everyone else always
+	gets their own, whatever they send. A named Employee must exist and not
+	have left. With nobody named, it is the session user's linked Employee,
+	or None when there is none (the caller decides how to refuse).
+	"""
+	mine = current_employee()
+	named = (employee or "").strip() if isinstance(employee, str) else employee
+	if not named:
+		return mine
+	user = frappe.session.user
+	if user != "Administrator" and "System Manager" not in frappe.get_roles(user):
+		return mine or None
+	status = frappe.db.get_value("Employee", named, "status")
+	if status is None:
+		frappe.throw(_("There is no Employee {0}. Pick the operator from the list.").format(named))
+	if status != "Active":
+		frappe.throw(_("{0} is not an active Employee, so cannot be named as the operator.").format(named))
+	return named

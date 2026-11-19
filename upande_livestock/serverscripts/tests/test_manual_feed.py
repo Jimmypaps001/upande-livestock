@@ -1,4 +1,5 @@
 import inspect
+from unittest.mock import patch
 
 import frappe
 from frappe.tests import IntegrationTestCase
@@ -37,6 +38,11 @@ def _slice(bom):
 
 class TestManualFeed(IntegrationTestCase):
 	def setUp(self):
+		# Manual configuration is off until somebody turns it on (Livestock
+		# Settings > Feed types); these tests exercise the feeding itself.
+		on = patch.object(manual_feed_module.feed_types, "assert_on")
+		on.start()
+		self.addCleanup(on.stop)
 		self.herd = _a_feedable_herd()
 		if not self.herd:
 			self.skipTest("no herd on kaitet.local can currently be fed")

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { isError } from "@/lib/frappe";
 import { searchEmployees } from "@/lib/people";
+import { canChooseOperator } from "@/lib/roles";
 
 /**
  * Who is recording this.
@@ -28,6 +29,11 @@ import { searchEmployees } from "@/lib/people";
  */
 const KEY = "upande.livestock.operator";
 
+/** What a user with no linked Employee, who may not pick one, is told. The
+ *  same sentence the server (guards.NOT_EMPLOYEE) and the phone use. */
+export const VIEW_ONLY_MESSAGE =
+  "You're not registered as an employee, so you can't record. Ask HR to link your user to an Employee.";
+
 function remembered(): string {
   try {
     return window.localStorage.getItem(KEY) || "";
@@ -39,7 +45,11 @@ function remembered(): string {
 }
 
 export function useOperator(fromServer?: string | null) {
-  const [operator, set] = useState<string>(() => remembered());
+  // Only a System Manager (or Administrator) may name somebody else, so only
+  // they carry a remembered choice. Everybody else is the operator themselves
+  // (their linked Employee) or view-only; the server decides either way.
+  const canPick = canChooseOperator();
+  const [operator, set] = useState<string>(() => (canPick ? remembered() : ""));
   // Null until the server has answered; the screens must not decide whether to
   // ask before they know.
   const [linked, setLinked] = useState<string | null>(fromServer ?? null);
@@ -74,6 +84,7 @@ export function useOperator(fromServer?: string | null) {
   }, [fromServer, asked]);
 
   const setOperator = useCallback((next: string) => {
+    if (!canChooseOperator()) return;
     set(next);
     try {
       window.localStorage.setItem(KEY, next);
@@ -85,8 +96,14 @@ export function useOperator(fromServer?: string | null) {
   return {
     operator,
     setOperator,
-    /** Show the picker: the signed-in user has no Employee of their own. */
+    /** The signed-in user has no Employee of their own. What is drawn for it:
+     *  the picker for a System Manager, the view-only sentence for anyone
+     *  else (see OperatorField). */
     mustAsk: asked && !linked,
+    /** May choose somebody else as the operator (System Manager or Administrator). */
+    canPick,
+    /** No Employee and no right to pick one: nothing can be recorded. */
+    viewOnly: asked && !linked && !canPick,
     /** Block the save: we still have nobody to name. */
     needed: !operator.trim(),
     /** What to send. Undefined rather than "" so the server's own fallback

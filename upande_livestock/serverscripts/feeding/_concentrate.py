@@ -228,7 +228,7 @@ def concentrate_list(qty_by_item=None):
 	from upande_livestock.serverscripts.feeding import _engine
 
 	qty_by_item = qty_by_item or {}
-	store = _engine._feed_store()
+	store = _engine.feed_store_or_none()
 
 	out = []
 	for item in sorted(concentrate_items()):

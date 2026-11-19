@@ -20,6 +20,8 @@ Read-guarded on Herds. It discloses herd structure, store balances and the
 farm's settings — not something an arbitrary logged-in user should collect.
 """
 
+import hashlib
+
 import frappe
 
 from upande_livestock.serverscripts.common import event_types, herd_movement
@@ -35,6 +37,7 @@ from upande_livestock.serverscripts.common.event_items import (
 	must_name_item,
 )
 from upande_livestock.serverscripts.husbandry._shared import husbandry_drug_items
+from upande_livestock.serverscripts.feeding import _feed_types
 from upande_livestock.serverscripts.mobile._shared import digest, unchanged
 
 # The doctypes whose state this payload reflects. A change to any of them must
@@ -67,7 +70,11 @@ def herd_category(h, milking=(), dry=()):
 def get_bootstrap_bundle(version=None):
 	def go():
 		guard_read("Herds")
-		current = digest(_SOURCES)
+		# Which feeding modes the phone shows (Livestock Settings > Feed types),
+		# as {system, manual, day_sheet}. A Single, which `digest` cannot see, so
+		# folded into the version: a switch flipped on the desk must reach phones.
+		feed_types = {m: f["phone"] for m, f in _feed_types.flags().items()}
+		current = hashlib.sha1((digest(_SOURCES) + frappe.as_json(feed_types)).encode()).hexdigest()[:16]
 		if unchanged(version, current):
 			return {"ok": True, "unchanged": True, "version": current}
 
@@ -95,6 +102,7 @@ def get_bootstrap_bundle(version=None):
 			"ok": True,
 			"version": current,
 			"operator": current_employee(),
+			"feed_types": feed_types,
 			"company": default_company(),
 			"warehouses": {"drug": default_store("Vaccination") or default_store("Treatment"),
 			               "semen": default_store("Service")},

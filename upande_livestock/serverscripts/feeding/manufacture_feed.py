@@ -32,6 +32,7 @@ import frappe
 from upande_livestock.serverscripts.common import event_types
 from upande_livestock.serverscripts.common.envelope import guard_stock, run
 from upande_livestock.serverscripts.feeding import _engine as feeding
+from upande_livestock.serverscripts.feeding import _feed_types as feed_types
 from upande_livestock.serverscripts.feeding._tuned_bom import _base_for
 
 
@@ -45,6 +46,7 @@ def manufacture_feed(
 		# words before any stock moves — not left to the Feeding event failing
 		# after the feed has already left the store.
 		event_types.assert_enabled("Feeding")
+		feed_types.assert_on(feed_types.SYSTEM)
 		guard_stock("Work Order", "Stock Entry")
 		resolved_bom_no = _base_for(herd, bom_no).name if bom_no else None
 		res = feeding.manufacture_herd_feed(

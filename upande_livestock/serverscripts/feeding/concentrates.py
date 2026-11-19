@@ -33,7 +33,8 @@ def concentrates(qty_by_item=None):
 			# the engine's own list rather than composed here, so the page
 			# cannot offer a store the run would never look in.
 			"warehouses": _engine._feed_source_warehouses(),
-			"default_target": _engine._feed_store(),
+			"default_target": _engine.feed_store_or_none(),
+			"setup": _engine.setup_gaps(),
 		}
 
 	return run(go, "livestock concentrates failed")

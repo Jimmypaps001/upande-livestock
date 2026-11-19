@@ -1,0 +1,68 @@
+{
+ "actions": [],
+ "creation": "2026-11-18 09:00:00.000000",
+ "description": "One component of a herd's day: what the recipe planned for the herd and what was actually fed, in the recipe's unit (kilograms for every feed line).",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "item_code",
+  "item_name",
+  "uom",
+  "planned_kg",
+  "actual_kg"
+ ],
+ "fields": [
+  {
+   "fieldname": "item_code",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Feed",
+   "options": "Item",
+   "reqd": 1
+  },
+  {
+   "fieldname": "item_name",
+   "fieldtype": "Data",
+   "label": "Feed Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "uom",
+   "fieldtype": "Link",
+   "label": "Unit",
+   "options": "UOM",
+   "read_only": 1
+  },
+  {
+   "description": "The herd's recipe for the day: per head times head count.",
+   "fieldname": "planned_kg",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Planned",
+   "non_negative": 1,
+   "precision": "3",
+   "read_only": 1
+  },
+  {
+   "description": "What actually went into the mixer for this herd on the day.",
+   "fieldname": "actual_kg",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Actual",
+   "non_negative": 1,
+   "precision": "3"
+  }
+ ],
+ "istable": 1,
+ "links": [],
+ "modified": "2026-11-18 09:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Upande Livestock",
+ "name": "Livestock Feed Actual Item",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

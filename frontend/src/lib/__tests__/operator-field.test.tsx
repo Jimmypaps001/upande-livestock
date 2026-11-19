@@ -16,7 +16,7 @@ const call = vi.fn(async () => ({
   query: "",
   more: false,
   employees: [
-    { value: "HR-EMP-1", label: "JOSIAH KIPTOO", detail: "HR-EMP-1 · Herdsman" },
+    { value: "HR-EMP-1", label: "JOSIAH KIPTOO", detail: "HR-EMP-1 · Milker" },
     { value: "HR-EMP-2", label: "MARY CHEPKOECH", detail: "HR-EMP-2 · Milker" },
   ],
 }));
@@ -33,7 +33,10 @@ const { OperatorField } = await import("@/components/events/OperatorField");
 const { PageDock } = await import("@/components/PageDock");
 
 describe("naming the operator", () => {
-  beforeEach(() => call.mockClear());
+  beforeEach(() => {
+    call.mockClear();
+    window.LIVESTOCK = { bootstrap: { roles: ["System Manager"] } };
+  });
 
   it("stays on screen while somebody types into it", async () => {
     // It disappeared on the first letter, which read as the page breaking.
@@ -48,7 +51,7 @@ describe("naming the operator", () => {
     render(<OperatorField operator="" onChange={vi.fn()} />);
     fireEvent.focus(screen.getByLabelText("Who is recording this"));
     await waitFor(() => expect(screen.getByText("JOSIAH KIPTOO")).toBeTruthy());
-    expect(screen.getByText("HR-EMP-1 · Herdsman")).toBeTruthy();
+    expect(screen.getByText("HR-EMP-1 · Milker")).toBeTruthy();
   });
 
   it("sends an employee, never the half-typed text", async () => {
@@ -72,6 +75,27 @@ describe("naming the operator", () => {
     }
     await waitFor(() => expect(screen.getByText("JOSIAH KIPTOO")).toBeTruthy());
     expect(call.mock.calls.length).toBeLessThanOrEqual(2);
+  });
+});
+
+describe("who may pick an operator", () => {
+  it("shows the picker to a System Manager", () => {
+    window.LIVESTOCK = { bootstrap: { roles: ["System Manager"] } };
+    render(<OperatorField operator="" onChange={vi.fn()} />);
+    expect(screen.getByLabelText("Who is recording this")).toBeTruthy();
+  });
+
+  it("shows the Administrator the picker too", () => {
+    window.LIVESTOCK = { bootstrap: { user: "Administrator", roles: [] } };
+    render(<OperatorField operator="" onChange={vi.fn()} />);
+    expect(screen.getByLabelText("Who is recording this")).toBeTruthy();
+  });
+
+  it("shows anyone else the view-only sentence and no picker", () => {
+    window.LIVESTOCK = { bootstrap: { roles: ["Livestock Attendant"] } };
+    render(<OperatorField operator="" onChange={vi.fn()} />);
+    expect(screen.queryByLabelText("Who is recording this")).toBeNull();
+    expect(screen.getByText(/You're not registered as an employee/)).toBeTruthy();
   });
 });
 

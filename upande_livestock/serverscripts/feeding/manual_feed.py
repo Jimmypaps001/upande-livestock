@@ -30,6 +30,7 @@ from frappe import _
 
 from upande_livestock.serverscripts.common import event_types
 from upande_livestock.serverscripts.common.envelope import as_dict, guard_stock, run
+from upande_livestock.serverscripts.feeding import _feed_types as feed_types
 from upande_livestock.serverscripts.feeding._engine import manufacture_herd_feed
 from upande_livestock.serverscripts.feeding._tuned_bom import tuned_bom
 
@@ -43,6 +44,7 @@ def manual_feed(payload):
 		# words before any stock moves — not left to the Feeding event failing
 		# after the feed has already left the store.
 		event_types.assert_enabled("Feeding")
+		feed_types.assert_on(feed_types.MANUAL)
 		guard_stock("Work Order", "Stock Entry")
 		d = as_dict(payload)
 
