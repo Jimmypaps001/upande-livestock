@@ -22,6 +22,7 @@ from frappe.utils import getdate, nowdate
 from upande_livestock.serverscripts.common import backdate
 from upande_livestock.serverscripts.common import event_items, event_types
 from upande_livestock.serverscripts.common import stock as livestock_stock
+from upande_livestock.serverscripts.common import cost_center as livestock_cost_center
 
 from upande_livestock.serverscripts.common.animal import create_calf
 from upande_livestock.serverscripts.common.guards import check_guards
@@ -1501,6 +1502,10 @@ class LivestockEvent(Document):
 
 		return event_items.consumes_items(self.event_type)
 
+	def stock_herd(self):
+		"""The herd this event's stock is charged to: the animal's, at the event."""
+		return self.get("current_herd") or livestock_cost_center.herd_of(self.animal)
+
 	def post_stock_issue(self):
 		"""Issue whatever this event consumed out of stock.
 
@@ -1584,6 +1589,9 @@ class LivestockEvent(Document):
 			what=what,
 			posting_date=self.event_date,
 			employee=self.operator,
+			# The animal's herd carries the cost centre: with no settings row and
+			# no company default nothing else names one and ERPNext refuses.
+			herd=self.stock_herd(),
 			# Short: the event stands and the issue waits as a draft.
 			draft_if_short=True,
 		)
@@ -1615,6 +1623,7 @@ class LivestockEvent(Document):
 			posting_date=self.event_date,
 			what=self.event_type,
 			employee=self.operator,
+			herd=self.stock_herd(),
 		)
 		if not name:
 			return None

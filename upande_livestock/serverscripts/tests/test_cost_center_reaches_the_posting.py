@@ -94,7 +94,7 @@ class TestTheDrugCallersWorkOutTheirHerd(unittest.TestCase):
 			livestock_health_case,
 		)
 
-		self.assertTrue(_passes_herd(livestock_health_case, "issue_items"))
+		self.assertTrue(_passes_herd(livestock_health_case, "issue"))
 
 
 def _passes_herd(module, callee):
@@ -107,7 +107,7 @@ def _passes_herd(module, callee):
 	calls = [
 		n
 		for n in ast.walk(tree)
-		if isinstance(n, ast.Call) and getattr(n.func, "attr", "") == callee
+		if isinstance(n, ast.Call) and (getattr(n.func, "attr", "") or getattr(n.func, "id", "")) == callee
 	]
 	return bool(calls) and all(any(k.arg == "herd" for k in c.keywords) for c in calls)
 
@@ -171,3 +171,80 @@ class TestMilkRecordingChargesTheHerd(unittest.TestCase):
 		self.assertTrue(calls, "milk recording must stamp its rows through cost_center")
 		passed = {k.arg for c in calls for k in c.keywords}
 		self.assertIn("herd", passed)
+
+
+class TestAnEventsStrawAndDrugsChargeTheAnimalsHerd(unittest.TestCase):
+	"""18 Nov, live: recording an insemination with a straw died on "Cost Center
+	is mandatory for Item SEMEN ...". `Livestock Event.post_stock_issue` called
+	`issue_items` with no herd, so the herd's own cost centre was never tried
+	and, with no settings row and no company default, nothing was found."""
+
+	def _event(self, herd="Lactating group 1"):
+		from upande_livestock.upande_livestock.doctype.livestock_event import livestock_event as LE
+
+		ev = frappe.new_doc("Livestock Event")
+		ev.event_type = "Service"
+		ev.animal = "ZZ-ANIMAL"
+		ev.current_herd = herd
+		ev.event_date = "2026-11-18"
+		ev.append("drug_issues", {"item_code": "SEMEN X", "qty": 1, "source_warehouse": "Store - KR"})
+		return LE, ev
+
+	def _capture(self, which, herd="Lactating group 1"):
+		from upande_livestock.serverscripts.common import event_items
+
+		LE, ev = self._event(herd)
+		seen = {}
+
+		def fake(rows, **kw):
+			seen.update(kw)
+			return None
+
+		with patch.object(event_items, "consumes_items", return_value=True), patch.object(
+			event_items, "default_store", return_value="Store - KR"
+		), patch.object(LE.backdate, "suppresses_stock", return_value=False), patch.object(
+			frappe.db, "get_value", return_value=None
+		), patch.object(LE.livestock_stock, "issue_items", side_effect=fake), patch.object(
+			LE.livestock_stock, "placeholder_if_short", side_effect=fake
+		):
+			if which == "issue":
+				ev.post_stock_issue()
+			else:
+				ev.backdated_placeholder()
+		return seen
+
+	def test_the_issue_carries_the_animals_herd(self):
+		self.assertEqual(self._capture("issue").get("herd"), "Lactating group 1")
+
+	def test_the_backdated_placeholder_carries_it_too(self):
+		self.assertEqual(self._capture("placeholder").get("herd"), "Lactating group 1")
+
+	def test_an_event_with_no_herd_falls_through_as_before(self):
+		self.assertFalse(self._capture("issue", herd=None).get("herd"))
+
+	def test_the_chain_then_lands_on_the_herds_cost_centre(self):
+		"""No settings row, no company default: the herd's centre is the answer."""
+		with patch.object(CC, "_herd_field", return_value="Dairy - KR"), patch.object(
+			CC, "usable", return_value=True
+		), patch.object(CC, "setting_cost_center", return_value=None), patch.object(
+			CC, "company_cost_center", return_value=None
+		):
+			doc = frappe._dict(company="Karen Roses", items=[frappe._dict(cost_center=None)])
+			self.assertEqual(CC.stamp(doc, "Karen Roses", herd="Lactating group 1"), 1)
+			self.assertEqual(doc["items"][0].cost_center, "Dairy - KR")
+
+	def test_a_herd_with_no_usable_cost_centre_still_falls_through(self):
+		with patch.object(CC, "_herd_field", return_value=None), patch.object(
+			CC, "setting_cost_center", return_value=None
+		), patch.object(CC, "company_cost_center", return_value=None):
+			doc = frappe._dict(company="Karen Roses", items=[frappe._dict(cost_center=None)])
+			self.assertEqual(CC.stamp(doc, "Karen Roses", herd="Lactating group 1"), 0)
+
+	def test_every_animal_stock_issuer_names_a_herd(self):
+		from upande_livestock.serverscripts.common import stock as S
+		from upande_livestock.upande_livestock.doctype.livestock_diagnosis import livestock_diagnosis
+		from upande_livestock.upande_livestock.doctype.livestock_event import livestock_event
+
+		self.assertTrue(_passes_herd(livestock_event, "issue_items"))
+		self.assertTrue(_passes_herd(livestock_event, "placeholder_if_short"))
+		self.assertTrue(_passes_herd(livestock_diagnosis, "issue"))
