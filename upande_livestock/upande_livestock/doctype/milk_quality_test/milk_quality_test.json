@@ -1,0 +1,351 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "MQT-.YYYY.-.#####",
+ "creation": "2026-11-20 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "sb_sample",
+  "sample_date",
+  "shift",
+  "sample_type",
+  "buyer",
+  "cb_sample",
+  "milk_recording",
+  "quantity_l",
+  "receiving_temp_c",
+  "recorded_by",
+  "sb_composition",
+  "ph",
+  "tta",
+  "snf_percent",
+  "cb_comp",
+  "freezing_point",
+  "specific_gravity",
+  "protein_percent",
+  "butterfat_percent",
+  "sb_tests",
+  "resazurin_score",
+  "resazurin_result",
+  "antibiotics",
+  "hydrogen_peroxide",
+  "cb_tests",
+  "frothing",
+  "aflatoxin_ppt",
+  "sensory_score",
+  "sensory_note",
+  "sb_result",
+  "overall_result",
+  "failed_tests",
+  "aflatoxin_over_limit",
+  "sb_notes",
+  "remarks",
+  "lab_slip",
+  "client_ref"
+ ],
+ "fields": [
+  {
+   "fieldname": "sb_sample",
+   "fieldtype": "Section Break",
+   "label": "Sample"
+  },
+  {
+   "fieldname": "sample_date",
+   "fieldtype": "Date",
+   "label": "Sample Date",
+   "reqd": 1,
+   "default": "Today",
+   "in_list_view": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "shift",
+   "fieldtype": "Select",
+   "label": "Shift",
+   "options": "\nMorning\nAfternoon\nEvening",
+   "description": "Which milking the sample came from, when no milk recording is linked."
+  },
+  {
+   "fieldname": "sample_type",
+   "fieldtype": "Select",
+   "label": "Sample Type",
+   "options": "Bottle sample\nTanker\nCan",
+   "default": "Bottle sample",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "buyer",
+   "fieldtype": "Link",
+   "label": "Buyer / Lab",
+   "options": "Customer",
+   "description": "Who graded the milk — normally the buyer (Westwood).",
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "cb_sample",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "milk_recording",
+   "fieldtype": "Link",
+   "label": "Milk Recording",
+   "options": "Milk Recording",
+   "description": "Optional: the milking this batch came from."
+  },
+  {
+   "fieldname": "quantity_l",
+   "fieldtype": "Float",
+   "label": "Quantity (L)",
+   "precision": "2"
+  },
+  {
+   "fieldname": "receiving_temp_c",
+   "fieldtype": "Float",
+   "label": "Receiving Temp (°C)",
+   "precision": "1"
+  },
+  {
+   "fieldname": "recorded_by",
+   "fieldtype": "Link",
+   "label": "Recorded By",
+   "options": "User",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "sb_composition",
+   "fieldtype": "Section Break",
+   "label": "Composition"
+  },
+  {
+   "fieldname": "ph",
+   "fieldtype": "Float",
+   "label": "pH",
+   "precision": "2"
+  },
+  {
+   "fieldname": "tta",
+   "fieldtype": "Float",
+   "label": "TTA",
+   "precision": "2"
+  },
+  {
+   "fieldname": "snf_percent",
+   "fieldtype": "Float",
+   "label": "SNF (%)",
+   "precision": "2"
+  },
+  {
+   "fieldname": "cb_comp",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "freezing_point",
+   "fieldtype": "Float",
+   "label": "Freezing Point (°C)",
+   "precision": "3",
+   "description": "Always below zero; a positive entry is read as its negative."
+  },
+  {
+   "fieldname": "specific_gravity",
+   "fieldtype": "Float",
+   "label": "Specific Gravity",
+   "precision": "3"
+  },
+  {
+   "fieldname": "protein_percent",
+   "fieldtype": "Float",
+   "label": "Protein (%)",
+   "precision": "2"
+  },
+  {
+   "fieldname": "butterfat_percent",
+   "fieldtype": "Float",
+   "label": "Butterfat (%)",
+   "precision": "2"
+  },
+  {
+   "fieldname": "sb_tests",
+   "fieldtype": "Section Break",
+   "label": "Quality Tests"
+  },
+  {
+   "fieldname": "resazurin_score",
+   "fieldtype": "Select",
+   "label": "Resazurin Score (0-6)",
+   "options": "\n0\n1\n2\n3\n4\n5\n6"
+  },
+  {
+   "fieldname": "resazurin_result",
+   "fieldtype": "Select",
+   "label": "Resazurin Result",
+   "options": "\nPass\nFail",
+   "description": "Left blank, it is worked out from the score and the minimum in Livestock Settings."
+  },
+  {
+   "fieldname": "antibiotics",
+   "fieldtype": "Select",
+   "label": "Antibiotics",
+   "options": "\nNegative\nPositive"
+  },
+  {
+   "fieldname": "hydrogen_peroxide",
+   "fieldtype": "Select",
+   "label": "Hydrogen Peroxide",
+   "options": "\nNil\nPresent"
+  },
+  {
+   "fieldname": "cb_tests",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "frothing",
+   "fieldtype": "Select",
+   "label": "Frothing",
+   "options": "\nPass\nFail"
+  },
+  {
+   "fieldname": "aflatoxin_ppt",
+   "fieldtype": "Float",
+   "label": "Aflatoxin M1 (ppt)",
+   "precision": "1",
+   "description": "Failing limit is set in Livestock Settings (default 50 ppt, the EU limit). 0 is read as not tested."
+  },
+  {
+   "fieldname": "sensory_score",
+   "fieldtype": "Data",
+   "label": "Sensory Score",
+   "description": "Signed whole number for taste and smell, e.g. +1, 0, -1."
+  },
+  {
+   "fieldname": "sensory_note",
+   "fieldtype": "Data",
+   "label": "Sensory Note"
+  },
+  {
+   "fieldname": "sb_result",
+   "fieldtype": "Section Break",
+   "label": "Result"
+  },
+  {
+   "fieldname": "overall_result",
+   "fieldtype": "Select",
+   "label": "Overall Result",
+   "options": "Pass\nFail\nNot assessed",
+   "read_only": 1,
+   "no_copy": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "failed_tests",
+   "fieldtype": "Small Text",
+   "label": "Failed Tests",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "aflatoxin_over_limit",
+   "fieldtype": "Check",
+   "label": "Aflatoxin Over Limit",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "sb_notes",
+   "fieldtype": "Section Break",
+   "label": "Notes"
+  },
+  {
+   "fieldname": "remarks",
+   "fieldtype": "Small Text",
+   "label": "Remarks"
+  },
+  {
+   "fieldname": "lab_slip",
+   "fieldtype": "Attach Image",
+   "label": "Lab Slip Photo"
+  },
+  {
+   "fieldname": "client_ref",
+   "fieldtype": "Data",
+   "label": "Client Ref",
+   "hidden": 1,
+   "read_only": 1,
+   "no_copy": 1,
+   "search_index": 1,
+   "print_hide": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-11-20 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Upande Livestock",
+ "name": "Milk Quality Test",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "permlevel": 0,
+   "idx": 1,
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "share": 1
+  },
+  {
+   "role": "Livestock Manager",
+   "permlevel": 0,
+   "idx": 2,
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "share": 1
+  },
+  {
+   "role": "Livestock Quality",
+   "permlevel": 0,
+   "idx": 3,
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "write": 1,
+   "create": 1
+  },
+  {
+   "role": "Livestock Attendant",
+   "permlevel": 0,
+   "idx": 4,
+   "read": 1,
+   "print": 1
+  },
+  {
+   "role": "Livestock Milker",
+   "permlevel": 0,
+   "idx": 5,
+   "read": 1,
+   "print": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "sample_date",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

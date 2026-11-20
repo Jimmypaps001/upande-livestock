@@ -3,6 +3,7 @@ import { AlertTriangle, FlaskConical } from "lucide-react";
 import { DatePicker } from "@/components/DatePicker";
 import { Figure, FigureRow } from "@/components/Figure";
 import { Notice } from "@/components/feeding/Notice";
+import { QualityBatch } from "@/components/quality/QualityBatch";
 import { STICKY_HEAD, ScrollTable } from "@/components/ScrollTable";
 import { Page, PageHeading } from "@/components/PageShell";
 import { RefreshButton } from "@/components/RefreshButton";
@@ -353,6 +354,8 @@ export function Quality() {
           )}
         </CardContent>
       </Card>
+
+      <QualityBatch />
     </Page>
   );
 }
