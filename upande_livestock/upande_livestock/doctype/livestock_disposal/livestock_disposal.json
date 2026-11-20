@@ -90,7 +90,7 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Disposal Type",
-   "options": "\nSold\nGifted\nCulled (Farm Use)\nDied — Natural Causes\nDied — Disease\nDied — Accident\nCondemned\nSlaughtered",
+   "options": "\nSold\nGifted\nCulled (Farm Use)\nDied — Natural Causes\nDied — Disease\nDied — Accident\nCondemned\nSlaughtered\nStolen",
    "reqd": 1,
    "search_index": 1
   },

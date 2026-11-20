@@ -170,6 +170,10 @@
   "custom_insurance_income_account",
   "cb_insurance",
   "custom_default_payout_percent",
+  "sb_sale_gate",
+  "sale_waits_for",
+  "cb_sale_gate",
+  "sale_invoice_alert_roles",
   "tab_bulls",
   "sb_bull_cull",
   "cull_bulls_after_birth",
@@ -210,7 +214,6 @@
   "custom_weaning_complete_day",
   "tab_notifications",
   "sb_notifications",
-  "sale_invoice_alert_roles",
   "tab_mobile",
   "sb_mobile",
   "allow_offline_milking_grace"
@@ -1206,6 +1209,30 @@
    "description": "Used for a claim when its policy names no payout percentage."
   },
   {
+   "fieldname": "sb_sale_gate",
+   "fieldtype": "Section Break",
+   "label": "Selling an insured animal"
+  },
+  {
+   "fieldname": "sale_waits_for",
+   "fieldtype": "Select",
+   "label": "Sale of an insured animal waits for",
+   "options": "Nothing\nClaim recorded\nInsurer approved",
+   "default": "Claim recorded",
+   "description": "Applies to an animal with an insurance claim from a recorded loss. The sale (Livestock Disposal of type Sold) is refused until the claim reaches this stage. A rejected or cancelled claim never blocks. Only Accounts Manager or System Manager may change this."
+  },
+  {
+   "fieldname": "cb_sale_gate",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Accounts Manager, Accounts User",
+   "description": "Users with these roles (comma separated) are emailed, and get a bell notice, when a sale creates a draft Sales Invoice to submit, and when a loss or insurance claim moves. Only Accounts Manager or System Manager may change this.",
+   "fieldname": "sale_invoice_alert_roles",
+   "fieldtype": "Small Text",
+   "label": "Sale invoice alert roles"
+  },
+  {
    "fieldname": "tab_bulls",
    "fieldtype": "Tab Break",
    "label": "Bulls"
@@ -1411,13 +1438,6 @@
    "fieldname": "sb_notifications",
    "fieldtype": "Section Break",
    "label": "Alerts"
-  },
-  {
-   "default": "Accounts Manager, Accounts User",
-   "description": "Users with these roles (comma separated) are emailed, and get a bell notice, when a sale creates a draft Sales Invoice to submit.",
-   "fieldname": "sale_invoice_alert_roles",
-   "fieldtype": "Small Text",
-   "label": "Sale invoice alert roles"
   },
   {
    "fieldname": "tab_mobile",

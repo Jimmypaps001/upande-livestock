@@ -199,11 +199,11 @@ export async function searchItems(
  * its URL, or `{error}`. Public, like the calf photo: an <img> loads it with no
  * further ceremony. Attaching it to something is the caller's next call.
  */
-export async function uploadFile(file: File): Promise<{ file_url: string } | { error: string }> {
+export async function uploadFile(file: File, isPrivate = false): Promise<{ file_url: string } | { error: string }> {
   try {
     const form = new FormData();
     form.append("file", file, file.name);
-    form.append("is_private", "0");
+    form.append("is_private", isPrivate ? "1" : "0");
     const res = await fetch("/api/method/upload_file", {
       method: "POST",
       credentials: "include",

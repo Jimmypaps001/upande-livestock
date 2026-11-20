@@ -126,6 +126,10 @@ const Events = page(() => import("@/pages/Insights").then((m) => ({ default: m.E
 const Production = page(() => import("@/pages/Insights").then((m) => ({ default: m.Production })));
 const Reports = page(() => import("@/pages/Insights").then((m) => ({ default: m.Reports })));
 const Vets = page(() => import("@/pages/Vets").then((m) => ({ default: m.Vets })));
+const Claims = page(() => import("@/pages/Claims").then((m) => ({ default: m.Claims })));
+const LossScenarios = page(() =>
+  import("@/pages/LossScenarios").then((m) => ({ default: m.LossScenarios })),
+);
 const HealthDashboard = page(() =>
   import("@/pages/HealthDashboard").then((m) => ({ default: m.HealthDashboard })),
 );
@@ -165,6 +169,8 @@ const TITLES: Record<View, string> = {
   transactions: "Transactions",
   "feed-quality": "Quality & Feed",
   vets: "Vets",
+  claims: "Insurance claims",
+  "loss-scenarios": "Loss scenarios",
 };
 
 /** The surfaces this frontend implements. Everything else renders a
@@ -204,6 +210,8 @@ const PAGES: Partial<Record<View, React.ComponentType>> = {
   transactions: Transactions,
   "feed-quality": FeedQuality,
   vets: Vets,
+  claims: Claims,
+  "loss-scenarios": LossScenarios,
 };
 
 export function App() {

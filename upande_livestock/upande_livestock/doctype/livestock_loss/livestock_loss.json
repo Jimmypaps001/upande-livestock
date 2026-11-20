@@ -1,0 +1,212 @@
+{
+ "actions": [],
+ "engine": "InnoDB",
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-11-20 09:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Upande Livestock",
+ "owner": "Administrator",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "creation": "2026-11-20 09:00:00.000000",
+ "doctype": "DocType",
+ "name": "Livestock Loss",
+ "autoname": "LOSS-.YYYY.-.#####",
+ "title_field": "animal",
+ "track_changes": 1,
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "permlevel": 0,
+   "create": 1,
+   "write": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "email": 1,
+   "share": 1
+  },
+  {
+   "role": "Livestock Manager",
+   "read": 1,
+   "permlevel": 0,
+   "create": 1,
+   "write": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "email": 1,
+   "share": 1
+  },
+  {
+   "role": "Livestock Vet",
+   "read": 1,
+   "permlevel": 0,
+   "create": 1,
+   "write": 1
+  },
+  {
+   "role": "Livestock Attendant",
+   "read": 1,
+   "permlevel": 0,
+   "create": 1,
+   "write": 1
+  },
+  {
+   "role": "Livestock Breeder",
+   "read": 1,
+   "permlevel": 0,
+   "create": 1,
+   "write": 1
+  },
+  {
+   "role": "Accounts Manager",
+   "read": 1,
+   "permlevel": 0,
+   "write": 1
+  },
+  {
+   "role": "Accounts User",
+   "read": 1,
+   "permlevel": 0
+  }
+ ],
+ "fields": [
+  {
+   "fieldname": "animal",
+   "fieldtype": "Link",
+   "label": "Animal",
+   "options": "Animal",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "animal_name",
+   "fieldtype": "Data",
+   "label": "Animal name",
+   "fetch_from": "animal.animal_name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "scenario",
+   "fieldtype": "Link",
+   "label": "Scenario",
+   "options": "Livestock Loss Scenario",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "loss_trigger",
+   "fieldtype": "Data",
+   "label": "Trigger",
+   "fetch_from": "scenario.trigger",
+   "read_only": 1
+  },
+  {
+   "fieldname": "cb_main",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "incident_date",
+   "fieldtype": "Date",
+   "label": "Incident date",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Recorded\nAwaiting claim\nSale waiting\nClosed",
+   "default": "Recorded",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Small Text",
+   "label": "Notes"
+  },
+  {
+   "fieldname": "sb_trail",
+   "fieldtype": "Section Break",
+   "label": "Claim and disposal"
+  },
+  {
+   "fieldname": "claim",
+   "fieldtype": "Link",
+   "label": "Insurance claim",
+   "options": "Insurance Claim",
+   "read_only": 1
+  },
+  {
+   "fieldname": "claim_status",
+   "fieldtype": "Data",
+   "label": "Claim status",
+   "read_only": 1
+  },
+  {
+   "fieldname": "claim_note",
+   "fieldtype": "Small Text",
+   "label": "Claim note",
+   "read_only": 1
+  },
+  {
+   "fieldname": "cb_trail",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "disposal",
+   "fieldtype": "Link",
+   "label": "Disposal",
+   "options": "Livestock Disposal",
+   "read_only": 1
+  },
+  {
+   "fieldname": "disposal_status",
+   "fieldtype": "Data",
+   "label": "Disposal status",
+   "read_only": 1
+  },
+  {
+   "fieldname": "sales_invoice",
+   "fieldtype": "Link",
+   "label": "Sales invoice",
+   "options": "Sales Invoice",
+   "read_only": 1
+  },
+  {
+   "fieldname": "missing_documents",
+   "fieldtype": "Small Text",
+   "label": "Documents still to attach",
+   "read_only": 1
+  }
+ ],
+ "field_order": [
+  "animal",
+  "animal_name",
+  "scenario",
+  "loss_trigger",
+  "cb_main",
+  "incident_date",
+  "status",
+  "notes",
+  "sb_trail",
+  "claim",
+  "claim_status",
+  "claim_note",
+  "cb_trail",
+  "disposal",
+  "disposal_status",
+  "sales_invoice",
+  "missing_documents"
+ ]
+}

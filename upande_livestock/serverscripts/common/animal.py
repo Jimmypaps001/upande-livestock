@@ -264,6 +264,8 @@ STATUS_BY_DISPOSAL_TYPE = {
 	"Died — Accident": "Dead",
 	"Condemned": "Culled",
 	"Slaughtered": "Culled",
+	# Gone from the farm, not destroyed: like a gift, with no sale behind it.
+	"Stolen": "Transferred Out",
 }
 
 

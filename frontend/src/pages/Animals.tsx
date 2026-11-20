@@ -7,6 +7,7 @@ import { AnimalSearch } from "@/components/animals/AnimalSearch";
 import { CycleRing, CycleRingSkeleton } from "@/components/animals/CycleRing";
 import { BullPanel } from "@/components/animals/BullPanel";
 import { FamilyCard } from "@/components/animals/FamilyCard";
+import { LossCard } from "@/components/losses/LossCard";
 import { EventFeed, EventFeedSkeleton } from "@/components/animals/EventFeed";
 import { KpiRadar, KpiRadarSkeleton } from "@/components/animals/KpiRadar";
 import { LifeTimeline, LifeTimelineSkeleton } from "@/components/animals/LifeTimeline";
@@ -321,6 +322,7 @@ export function Animals() {
                 )}
                 {profile && <PhotoStrip key={profile.id} animal={profile.id} upload={{ context: "profile", label: "New profile photo" }} />}
                 {profile && <FamilyCard key={profile.id} animal={profile.id} onOpen={(id) => setSelected((cur) => herd.find((h) => h.id === id) ?? cur)} />}
+                {profile && <LossCard key={`loss-${profile.id}`} animal={profile.id} status={profile.status} onChanged={() => reloadProfile(profile.id)} />}
                 {!bull && <Card>
                   <CardHeaderRow className="pb-0">
                     <CardHeading>

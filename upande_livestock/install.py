@@ -178,7 +178,15 @@ def before_install():
 		)
 
 
+def ensure_loss_scenarios():
+	"""Seed the example loss scenarios (see serverscripts/common/loss.py)."""
+	from upande_livestock.serverscripts.common.loss import ensure_loss_scenarios as seed
+
+	seed()
+
+
 def after_install():
+	ensure_loss_scenarios()
 	ensure_milking_stock_entry_type()
 	ensure_livestock_event_types()
 	ensure_livestock_timing_defaults()
