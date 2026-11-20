@@ -30,6 +30,14 @@ class TestAnimalsSince(IntegrationTestCase):
 		                    update_modified=False)
 
 	def tearDown(self):
+		# Weight records outlive their animal's deletion; a later test reusing the
+		# name would inherit the weighing.
+		for wr in frappe.get_all("Livestock Weight Record",
+		                         filters={"animal": ["in", ["TEST-SINCE-A", "TEST-SINCE-B"]]}, pluck="name"):
+			doc = frappe.get_doc("Livestock Weight Record", wr)
+			if doc.docstatus == 1:
+				doc.cancel()
+			frappe.delete_doc("Livestock Weight Record", wr, force=True, ignore_permissions=True)
 		for n in ("TEST-SINCE-A", "TEST-SINCE-B"):
 			if frappe.db.exists("Animal", n):
 				frappe.delete_doc("Animal", n, force=True, ignore_permissions=True)

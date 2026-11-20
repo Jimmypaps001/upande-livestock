@@ -36,9 +36,9 @@ class TestAnimalFamily(IntegrationTestCase):
 				frappe.delete_doc("Animal", n, force=True, ignore_permissions=True)
 
 	def test_parents_and_offspring_with_disposed(self):
-		son = self._make("ZZFAM-SON", "Male", dam=self.cow.name, sire=self.bull.name,
+		son = self._make("ZZFAM-SON", "Male", dam=self.cow.name, sire_name=self.bull.name,
 		                 date_of_birth=add_days(today(), -100))
-		daughter = self._make("ZZFAM-DAU", "Female", dam=self.cow.name, sire=self.bull.name,
+		daughter = self._make("ZZFAM-DAU", "Female", dam=self.cow.name, sire_name=self.bull.name,
 		                      date_of_birth=add_days(today(), -400))
 		sold = self._make("ZZFAM-SOLD", "Female", dam=self.cow.name, date_of_birth=add_days(today(), -800))
 		frappe.db.set_value("Animal", sold.name, "status", "Sold")
