@@ -479,3 +479,20 @@ def _straw_items():
 		return [(r.name, r.item_name) for r in rows]
 	except Exception:
 		return []
+
+
+def require_active(sire):
+	"""The Livestock Sire name when it exists and is active; throws otherwise.
+
+	A blank sire is fine (returns None). A picked sire that was deleted or
+	switched off must not be recorded on a new service.
+	"""
+	sire = tidy(sire)
+	if not sire:
+		return None
+	row = frappe.db.get_value("Livestock Sire", sire, ["active"], as_dict=True)
+	if not row:
+		frappe.throw(frappe._("{0} is not a Livestock Sire.").format(sire))
+	if not row.active:
+		frappe.throw(frappe._("{0} is not active; pick another sire.").format(sire))
+	return sire

@@ -154,6 +154,23 @@ class TestSireRecord(unittest.TestCase):
 		with self.assertRaises(frappe.ValidationError):
 			make(sire_name="ZZTEST Two", sire_code="nl900000001")
 
+	def test_require_active_validates_a_picked_sire(self):
+		a = make(sire_name="ZZTEST Live", sire_code="NL900000010")
+		off = make(sire_name="ZZTEST Off", sire_code="NL900000011", active=0)
+		self.assertEqual(LS.require_active(a.name), a.name)
+		self.assertIsNone(LS.require_active(""))
+		with self.assertRaises(frappe.ValidationError):
+			LS.require_active(off.name)
+		with self.assertRaises(frappe.ValidationError):
+			LS.require_active("ZZTEST Nobody")
+
+	def test_options_carry_sexed_and_animal(self):
+		make(sire_name="ZZTEST Sx", sire_code="NL900000012", sexed=1)
+		from upande_livestock.serverscripts.breeding.sire_options import options
+		row = [r for r in options(q="ZZTEST Sx")][0]
+		self.assertEqual(row["sexed"], 1)
+		self.assertIn("animal", row)
+
 	def test_find_by_label_code_and_name(self):
 		s = make(sire_name="ZZTEST Dolmen", sire_code="NL900000002")
 		self.assertEqual(LS.find("ZZTEST Dolmen · NL900000002"), s.name)
@@ -194,3 +211,21 @@ class TestSireRecord(unittest.TestCase):
 		self.assertEqual(frappe.db.count("Livestock Sire"), before)
 		self.assertEqual(out["dry_run"], 1)
 		self.assertEqual(out["distinct_sires"], len(out["sires"]))
+
+
+class TestSireEndpoints(unittest.TestCase):
+	def tearDown(self):
+		frappe.db.rollback()
+
+	def test_save_sire_adds_and_edits_and_list_shows_inactive(self):
+		from upande_livestock.serverscripts.breeding.save_sire import save_sire
+		from upande_livestock.serverscripts.breeding.sires_list import sires_list
+
+		made = save_sire({"sire_name": "ZZTEST Saved", "sire_code": "NL900000020", "sire_type": "Semen", "sexed": 1})
+		self.assertTrue(made.get("ok"), made)
+		edited = save_sire({"name": made["name"], "active": 0})
+		self.assertTrue(edited.get("ok"), edited)
+		rows = {r["name"]: r for r in sires_list()["sires"]}
+		self.assertEqual(rows[made["name"]]["active"], 0)
+		self.assertEqual(rows[made["name"]]["sexed"], 1)
+		self.assertIn("error", save_sire({"sire_name": ""}))

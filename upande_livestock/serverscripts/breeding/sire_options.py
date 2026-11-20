@@ -15,12 +15,13 @@ def options(type=None, q=None):
 	or_filters = ([["sire_name", "like", f"%{q}%"], ["sire_code", "like", f"%{q}%"]] if q else None)
 	rows = frappe.get_all(
 		"Livestock Sire", filters=filters, or_filters=or_filters,
-		fields=["name", "sire_name", "sire_code", "sire_type", "semen_item"],
+		fields=["name", "sire_name", "sire_code", "sire_type", "semen_item", "sexed", "animal"],
 		order_by="sire_name asc", limit_page_length=500,
 	)
 	return [{"name": r.name, "sire_name": r.sire_name, "code": r.sire_code or "",
 	         "label": LS.label(r.sire_name, r.sire_code), "type": r.sire_type,
-	         "semen_item": r.semen_item or ""} for r in rows]
+	         "semen_item": r.semen_item or "", "sexed": 1 if r.sexed else 0,
+	         "animal": r.animal or ""} for r in rows]
 
 
 @frappe.whitelist()

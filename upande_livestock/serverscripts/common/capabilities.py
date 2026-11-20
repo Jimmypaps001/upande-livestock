@@ -21,7 +21,7 @@ READ = (
 	"Animal", "Herds", "Livestock Event", "Livestock Health Case", "Livestock Weight Record",
 	"Milk Recording", "Milk Quality Test", "Livestock Disposal", "Livestock Vet", "Livestock Loss",
 	"Livestock Loss Scenario", "Livestock Insurance Claim", "Livestock Settings", "BOM", "Item",
-	"Work Order", "Notification Log", "Livestock Alert",
+	"Work Order", "Notification Log", "Livestock Alert", "Livestock Sire",
 )
 CREATE = (
 	"Livestock Event", "Livestock Health Case", "Livestock Diagnosis", "Livestock Weight Record",
@@ -77,6 +77,8 @@ def capabilities() -> dict:
 		"cull_manager": holds(culling.MANAGER_ROLE, "System Manager"),
 		# envelope.QUALITY_ROLE (+ the manager): the Quality pages are the lab's and the manager's only.
 		"quality": holds(QUALITY_ROLE, "Livestock Manager", "System Manager"),
+		# save_sire: the bulls list is the manager's to keep.
+		"manage_sires": holds("Livestock Manager", "System Manager"),
 		# employee.acting_employee: record on behalf of another Employee.
 		"operator": system,
 	}

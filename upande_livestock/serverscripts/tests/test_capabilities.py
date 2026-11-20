@@ -74,6 +74,7 @@ class TestCapabilities(IntegrationTestCase):
 		self.assertFalse(c["cull_vet"])
 		self.assertFalse(c["operator"])
 		self.assertTrue(c["quality"])
+		self.assertTrue(c["manage_sires"])
 
 	def test_an_attendant_records_but_does_not_stock_cull_or_override(self):
 		c = _as("attendant")
@@ -82,6 +83,7 @@ class TestCapabilities(IntegrationTestCase):
 		for flag in ("stock", "post_draft", "override_feed", "insure", "accounts", "appreciate",
 			"cull_vet", "cull_manager"):
 			self.assertFalse(c[flag], flag)
+		self.assertFalse(c["manage_sires"])  # the bulls list is the manager's
 		self.assertFalse(c["quality"])  # the Quality pages are the lab's and the manager's
 		self.assertFalse(c["create"]["Milk Quality Test"])
 		self.assertFalse(c["create"]["Milk Recording"])
@@ -120,7 +122,7 @@ class TestCapabilities(IntegrationTestCase):
 		"""Every key the SPA's Capabilities type names is in the map."""
 		c = _as("manager")
 		for key in ("read", "create", "write", "stock", "post_draft", "override_feed", "insure",
-			"accounts", "appreciate", "cull_vet", "cull_manager", "quality", "operator"):
+			"accounts", "appreciate", "cull_vet", "cull_manager", "quality", "manage_sires", "operator"):
 			self.assertIn(key, c)
 
 	def test_the_phone_gets_the_same_map_with_its_roles(self):
