@@ -61,7 +61,7 @@ def animal_profile(payload=None):
 			frappe.throw(frappe._("Select an animal."))
 		a = frappe.db.get_value(
 			"Animal", name,
-			["name", "burn_name", "sex", "current_herd", "breed", "date_of_birth",
+			["name", "burn_name", "sex", "current_herd", "breed", "date_of_birth", "dob_basis",
 			 "status", "disabled", "image", "dam", "sire_name", "repro_status"],
 			as_dict=True)
 		if not a:
@@ -71,8 +71,8 @@ def animal_profile(payload=None):
 			"Livestock Event",
 			filters={"animal": name, "docstatus": 1},
 			fields=["name", "event_type", "event_date", "current_herd", "new_herd",
-			        "service_type", "diagnosis_result", "expected_calving_date",
-			        "custom_calving_outcome", "abortion_cause", "remarks"],
+			        "service_type", "sire", "semen_item", "diagnosis_result", "expected_calving_date",
+			        "custom_calving_outcome", "abortion_cause", "remarks", "date_basis"],
 			order_by="event_date asc, creation asc",
 		)
 
@@ -89,6 +89,7 @@ def animal_profile(payload=None):
 			"herd": a.current_herd or "no herd",
 			"breed": a.breed,
 			"bornOn": str(a.date_of_birth) if a.date_of_birth else None,
+			"bornEstimated": a.dob_basis == "Estimate",
 			"status": a.status,
 			"stage": cycle["stage"],
 			"photo": a.image,
@@ -97,6 +98,7 @@ def animal_profile(payload=None):
 			"dam": a.dam,
 			"sire": a.sire_name,
 			"lastCalving": last_calving,
+			"lastService": _last_service(events),
 			"expectedCalving": expected,
 			"cycle": cycle,
 			"kpis": _kpis(name, events, a),
@@ -172,8 +174,41 @@ def _kpis(name, events, a):
 	}
 
 
+def _sire_of(e, items):
+	"""Who the insemination was by, as the farm wrote it.
+
+	A Service keeps its bull as free text (`sire`), because the farm's semen is
+	not stocked as Items. `semen_item` is the other way a service can name him,
+	when the straw was issued from the store. THE TEXT WAS NEVER READ HERE, which
+	is why an animal's page showed an A.I. with no bull and no date of its own.
+	"""
+	text = (e.sire or "").strip()
+	if text:
+		return text
+	return (items.get(e.semen_item) or e.semen_item or "").strip() or None
+
+
+def _semen_names(events):
+	codes = {e.semen_item for e in events if e.event_type == "Service" and e.semen_item}
+	if not codes:
+		return {}
+	return {r.name: r.item_name for r in frappe.get_all(
+		"Item", filters={"name": ["in", list(codes)]}, fields=["name", "item_name"])}
+
+
+def _last_service(events):
+	"""Her newest insemination: when, by whom, and how."""
+	items = _semen_names(events)
+	for e in reversed(events):
+		if e.event_type == "Service" and e.event_date:
+			return {"on": str(e.event_date), "sire": _sire_of(e, items), "type": e.service_type or None,
+			        "estimated": e.date_basis == "Estimate"}
+	return None
+
+
 def _milestones(events):
 	out = []
+	items = _semen_names(events)
 	for e in events:
 		if not e.event_date:
 			continue
@@ -184,8 +219,9 @@ def _milestones(events):
 		detail = None
 		if e.event_type == "Movement" and e.new_herd:
 			detail = f"{e.current_herd or 'nowhere'} → {e.new_herd}"
-		elif e.event_type == "Service" and e.service_type:
-			detail = e.service_type
+		elif e.event_type == "Service" and (e.service_type or _sire_of(e, items)):
+			sire = _sire_of(e, items)
+			detail = " · ".join(x for x in (e.service_type, f"by {sire}" if sire else None) if x)
 		elif e.event_type == "Pregnancy Diagnosis" and e.diagnosis_result:
 			detail = e.diagnosis_result
 		elif e.event_type == "Calving" and e.custom_calving_outcome:
@@ -194,7 +230,8 @@ def _milestones(events):
 			detail = e.abortion_cause
 		elif e.remarks:
 			detail = e.remarks[:120]
-		out.append({"kind": kind, "on": str(e.event_date), "label": label, "detail": detail})
+		out.append({"kind": kind, "on": str(e.event_date), "label": label, "detail": detail,
+		            "estimated": e.date_basis == "Estimate"})
 	return out
 
 

@@ -12,6 +12,7 @@
   "cb_details",
   "event_type",
   "event_date",
+  "date_basis",
   "operator",
   "vet",
   "remarks",
@@ -567,13 +568,22 @@
    "options": "Work Order",
    "read_only": 1,
    "description": "The mixing run this feeding gave out. Cancelling the feeding takes it back too."
+  },
+  {
+   "default": "Actual",
+   "description": "Actual: the date comes from the farm's own record. Estimate: the date is our calculation.",
+   "fieldname": "date_basis",
+   "fieldtype": "Select",
+   "label": "Date Basis",
+   "options": "Actual\nEstimate",
+   "in_standard_filter": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-10-05 17:30:00.000000",
+ "modified": "2026-11-20 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Upande Livestock",
  "name": "Livestock Event",

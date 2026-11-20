@@ -47,6 +47,16 @@ export interface Milestone {
   on: string;
   label: string;
   detail?: string;
+  /** The date is our calculation, not the farm's own record. */
+  estimated?: boolean;
+}
+
+/** Her newest insemination. The bull is the farm's free text, not an Item. */
+export interface LastService {
+  on: string;
+  sire: string | null;
+  type: string | null;
+  estimated?: boolean;
 }
 
 /** A stretch of her life spent in one herd — the bands under the timeline. */
@@ -118,6 +128,8 @@ export interface AnimalProfile extends AnimalSummary {
   coverDetail?: CoverDetail;
   dam: string | null;
   sire: string | null;
+  bornEstimated?: boolean;
+  lastService?: LastService | null;
   lastCalving: string | null;
   expectedCalving: string | null;
   cycle: CycleState;

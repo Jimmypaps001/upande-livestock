@@ -21,6 +21,7 @@
   "tab_lineage",
   "sb_birth",
   "date_of_birth",
+  "dob_basis",
   "origin",
   "acquisition_date",
   "birth_weight_kg",
@@ -409,6 +410,15 @@
    "label": "Marked By",
    "options": "User",
    "read_only": 1
+  },
+  {
+   "default": "Actual",
+   "description": "Actual: the farm's own birth date. Estimate: worked out from an age.",
+   "fieldname": "dob_basis",
+   "fieldtype": "Select",
+   "label": "Birth Date Basis",
+   "options": "Actual\nEstimate",
+   "allow_on_submit": 1
   }
  ],
  "grid_page_length": 50,
@@ -416,7 +426,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-10-05 17:00:00.000000",
+ "modified": "2026-11-20 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Upande Livestock",
  "name": "Animal",

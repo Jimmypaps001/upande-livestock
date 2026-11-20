@@ -194,6 +194,11 @@ export function LifeTimeline({
                 </span>
                 <span className="text-[14px] font-medium text-[var(--sd-ink)]">{m.label}</span>
                 <span className="text-[12px] tabular-nums text-[var(--sd-muted)]">{m.on}</span>
+                {m.estimated && (
+                  <span className="rounded-[var(--sd-radius-pill)] border border-[var(--sd-line)] px-1.5 py-px text-[10px] font-medium uppercase tracking-[0.08em] text-[var(--sd-quiet)]">
+                    Estimated date
+                  </span>
+                )}
                 {herd && (
                   <span className="text-[12px] text-[var(--sd-quiet)]">in {herd.herd}</span>
                 )}

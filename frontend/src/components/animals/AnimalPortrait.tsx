@@ -91,15 +91,24 @@ export function AnimalPortrait({ animal, onInsured }: { animal: AnimalProfile; o
       </div>
 
       <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
-        <Fact label="Age" value={ageFrom(animal.bornOn)} />
+        <Fact label="Age" value={ageFrom(animal.bornOn) + (animal.bornEstimated ? " (est.)" : "")} />
         <Fact label="Breed" value={animal.breed || "—"} />
         <Fact label="Herd" value={animal.herd} />
         <Fact label="Sex" value={animal.sex} />
         <Fact label="Dam" value={animal.dam || "—"} />
         <Fact label="Sire" value={animal.sire || "—"} />
+        <Fact label="Last served" value={lastServed(animal)} />
       </dl>
     </div>
   );
+}
+
+/** "STORMER · 2026-11-17": who inseminated her last, and the day. */
+export function lastServed(animal: Pick<AnimalProfile, "lastService">): string {
+  const s = animal.lastService;
+  if (!s) return "—";
+  const who = s.sire || (s.type ? `${s.type}, bull not recorded` : "bull not recorded");
+  return `${who} · ${s.on}${s.estimated ? " (est.)" : ""}`;
 }
 
 function Fact({ label, value }: { label: string; value: string }) {

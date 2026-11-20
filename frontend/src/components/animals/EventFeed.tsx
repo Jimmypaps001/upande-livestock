@@ -84,8 +84,16 @@ export function EventFeed({ milestones }: { milestones: Milestone[] }) {
                     />
                   </span>
                   <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                    <span className="text-[13.5px] font-medium text-[var(--sd-ink)]">
+                    <span className="flex items-center gap-2 text-[13.5px] font-medium text-[var(--sd-ink)]">
                       {m.label}
+                      {m.estimated && (
+                        <span
+                          className="rounded-[var(--sd-radius-pill)] border border-[var(--sd-line)] px-1.5 py-px text-[10px] font-medium uppercase tracking-[0.08em] text-[var(--sd-quiet)]"
+                          title="This date is our calculation, not the farm's own record."
+                        >
+                          Estimated date
+                        </span>
+                      )}
                     </span>
                     {m.detail && (
                       <span className="text-[12px] text-[var(--sd-muted)]">{m.detail}</span>
