@@ -121,6 +121,10 @@ export interface AnimalSummary {
   status: string;
   stage: CycleStage;
   photo: string | null;
+  /** ~240 px list thumbnail of `photo`; lists use it, only the portrait loads `photo`. */
+  thumb?: string | null;
+  /** Cattle, Sheep, Goat… Absent on older servers, which only kept cattle. */
+  species?: string | null;
   cover?: CoverState;
 }
 
@@ -154,6 +158,19 @@ export const STAGES: Record<
 
 /** The loop, in the order a cow travels it. `retired` and `heifer` sit outside. */
 export const CYCLE_ORDER: CycleStage[] = ["fresh", "open", "served", "confirmed", "dry"];
+
+/**
+ * The sex chips on the animal search: All / Cows / Bulls.
+ *
+ * "Bulls" is every MALE: the list carries sex but not the cycle stage (that
+ * needs the profile), and a farmer looking for "the bulls" means the males.
+ */
+export type SexFilter = "all" | "cows" | "bulls";
+
+export function matchesSex(a: { sex?: string | null }, f: SexFilter): boolean {
+  if (f === "all") return true;
+  return f === "bulls" ? a.sex === "Male" : a.sex !== "Male";
+}
 
 export const MILESTONE_TONE: Record<MilestoneKind, string> = {
   birth: "var(--sd-data-indigo)",

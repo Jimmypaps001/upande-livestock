@@ -27,6 +27,42 @@ export function getAnimalProfile(animal: string): Promise<Envelope<AnimalProfile
   return call<AnimalProfile>(PROFILE, { payload: { animal } });
 }
 
+const FAMILY = "upande_livestock.serverscripts.animals.animal_family.animal_family";
+
+/** One relative on the family card. `onRecord` is false for a sire written in by name only. */
+export interface Relative {
+  id: string | null;
+  name: string;
+  tag: string | null;
+  sex: string | null;
+  dob: string | null;
+  status: string | null;
+  active: boolean;
+  herd?: string | null;
+  photo: string | null;
+  thumb: string | null;
+  onRecord: boolean;
+}
+
+export interface AnimalFamily {
+  id: string;
+  parents: { dam: Relative | null; sire: Relative | null };
+  offspring: Relative[];
+  sons: number;
+  daughters: number;
+  bred: {
+    cows: number;
+    services: number;
+    lastService: string | null;
+    conceptions: number;
+    conceptionRate: number | null;
+  } | null;
+}
+
+export function getAnimalFamily(animal: string): Promise<Envelope<AnimalFamily>> {
+  return call<AnimalFamily>(FAMILY, { payload: { animal } });
+}
+
 const COVER = "upande_livestock.serverscripts.animals.animal_cover";
 
 export interface CoverPolicy {

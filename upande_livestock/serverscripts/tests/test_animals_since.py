@@ -10,7 +10,7 @@ active, or is deleted, is named in `removed` so the phone can drop it.
 
 import frappe
 from frappe.tests import IntegrationTestCase
-from frappe.utils import add_to_date, now
+from frappe.utils import add_days, add_to_date, now, today
 
 from upande_livestock.serverscripts.mobile.animals_since import animals_since
 from upande_livestock.serverscripts.tests.test_animal import make_dam
@@ -78,3 +78,24 @@ class TestAnimalsSince(IntegrationTestCase):
 		finally:
 			frappe.set_user("Administrator")
 		self.assertIn("error", r)
+
+	def _weigh(self, animal, kg, day):
+		return frappe.get_doc({
+			"doctype": "Livestock Weight Record", "animal": animal, "weight_date": day,
+			"weight_kg": kg, "method": "Platform Scale",
+		}).insert(ignore_permissions=True).submit()
+
+	def test_rows_carry_the_date_of_the_latest_weighing(self):
+		self._weigh(self.a.name, 300, add_days(today(), -9))
+		self._weigh(self.a.name, 309, add_days(today(), -3))
+		row = next(x for x in animals_since()["animals"] if x["name"] == self.a.name)
+		self.assertEqual(row["last_weight_date"], str(add_days(today(), -3)))
+		never = next(x for x in animals_since()["animals"] if x["name"] == self.b.name)
+		self.assertIsNone(never["last_weight_date"])
+
+	def test_delta_takes_an_animal_weighed_since(self):
+		# A weighing leaves Animal.modified alone; the delta must still bring it.
+		self._weigh(self.b.name, 280, today())
+		row = next((x for x in animals_since(self.past)["animals"] if x["name"] == self.b.name), None)
+		self.assertIsNotNone(row)
+		self.assertEqual(row["last_weight_date"], str(today()))

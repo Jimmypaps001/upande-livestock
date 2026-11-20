@@ -11,7 +11,8 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Notice } from "@/components/feeding/Notice";
-import { STAGES, initialsOf, type AnimalProfile, type AnimalSummary } from "@/lib/animals";
+import { SilhouetteFrame } from "@/components/animals/AnimalSilhouette";
+import { STAGES, type AnimalProfile, type AnimalSummary } from "@/lib/animals";
 import { cn } from "@/lib/utils";
 
 /**
@@ -292,12 +293,17 @@ export function CompareDialog({
                       }}
                       className="inline-flex items-center gap-1.5 rounded-[var(--sd-radius-pill)] bg-[var(--sd-bg-soft)] px-2.5 py-1 text-[12px] text-[var(--sd-ink)] transition-colors hover:bg-[var(--sd-pistachio)]"
                     >
-                      <span
-                        className="flex h-4 w-4 items-center justify-center rounded-full text-[8px] font-semibold text-white"
-                        style={{ background: STAGES[a.stage].tone }}
-                      >
-                        {initialsOf(a.name, a.id)}
-                      </span>
+                      {a.thumb || a.photo ? (
+                        <img
+                          src={a.thumb || a.photo || ""}
+                          alt=""
+                          loading="lazy"
+                          decoding="async"
+                          className="-ml-1 h-5 w-5 rounded-full object-cover"
+                        />
+                      ) : (
+                        <SilhouetteFrame animal={a} tone={STAGES[a.stage].tone} round className="-ml-1 h-5 w-5" />
+                      )}
                       {a.name}
                       <Plus className="h-3 w-3 text-[var(--sd-quiet)]" />
                     </button>

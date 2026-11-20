@@ -5,6 +5,7 @@ import { PhotoStrip } from "@/components/animals/PhotoStrip";
 import { AnimalPortrait, AnimalPortraitSkeleton } from "@/components/animals/AnimalPortrait";
 import { AnimalSearch } from "@/components/animals/AnimalSearch";
 import { CycleRing, CycleRingSkeleton } from "@/components/animals/CycleRing";
+import { FamilyCard } from "@/components/animals/FamilyCard";
 import { EventFeed, EventFeedSkeleton } from "@/components/animals/EventFeed";
 import { KpiRadar, KpiRadarSkeleton } from "@/components/animals/KpiRadar";
 import { LifeTimeline, LifeTimelineSkeleton } from "@/components/animals/LifeTimeline";
@@ -289,6 +290,7 @@ export function Animals() {
                   <AnimalPortraitSkeleton />
                 )}
                 {profile && <PhotoStrip key={profile.id} animal={profile.id} upload={{ context: "profile", label: "New profile photo" }} />}
+                {profile && <FamilyCard key={profile.id} animal={profile.id} onOpen={(id) => setSelected((cur) => herd.find((h) => h.id === id) ?? cur)} />}
                 <Card>
                   <CardHeaderRow className="pb-0">
                     <CardHeading>
