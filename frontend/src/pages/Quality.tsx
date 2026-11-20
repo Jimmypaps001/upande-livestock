@@ -21,6 +21,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/Toast";
+import { can } from "@/lib/can";
 import { isError } from "@/lib/frappe";
 import {
   getQualityOptions,
@@ -146,7 +147,8 @@ export function Quality() {
         />
       </FigureRow>
 
-      <div className="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,340px)_minmax(0,1fr)]">
+      {/* Filing is the lab's and the manager's; whoever may only read sees the results. */}
+      {can.create("Milk Quality Test") && <div className="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,340px)_minmax(0,1fr)]">
         <Card>
           <CardHeaderRow>
             <CardHeading>
@@ -298,7 +300,7 @@ export function Quality() {
             )}
           </CardContent>
         </Card>
-      </div>
+      </div>}
 
       <Card>
         <CardHeaderRow>
@@ -358,7 +360,7 @@ export function Quality() {
         </CardContent>
       </Card>
 
-      <QualityBatch />
+      {can.create("Milk Quality Test") && <QualityBatch />}
     </Page>
   );
 }

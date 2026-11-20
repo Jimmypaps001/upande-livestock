@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { can } from "@/lib/can";
 import { Check, Plus, ShieldAlert, X } from "lucide-react";
 import { axesFrom } from "@/components/animals/KpiRadar";
 import { Button } from "@/components/ui/button";
@@ -312,7 +313,7 @@ export function CompareDialog({
               </div>
             )}
 
-            {suggestCull && !marked && (
+            {suggestCull && !marked && can.write("Animal") && (
               <Notice tone="error">
                 <span className="flex flex-col gap-2">
                   <span className="inline-flex items-center gap-2 font-medium">

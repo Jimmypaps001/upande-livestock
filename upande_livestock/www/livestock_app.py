@@ -27,6 +27,7 @@ import os
 
 import frappe
 
+from upande_livestock.serverscripts.common.capabilities import capabilities
 from upande_livestock.serverscripts.common.event_types import disabled_events
 
 no_cache = 1
@@ -89,6 +90,9 @@ def get_context(context):
 			# Event types the farm switched off (Settings -> Events): their
 			# pages leave the menu and their routes send you elsewhere.
 			"disabled_events": disabled_events(),
+			# What this user may do (common/capabilities): the page leaves out
+			# whatever its roles cannot use, rather than offering it and being refused.
+			"can": capabilities(),
 			"csrf_token": csrf_token,
 		}
 	)

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { can } from "@/lib/can";
 import { CalendarClock, ShoppingCart } from "lucide-react";
 import { DatePicker } from "@/components/DatePicker";
 import { Figure, FigureRow } from "@/components/Figure";
@@ -201,7 +202,7 @@ export function Procurement() {
                 </table>
               </div>
 
-              <div className="flex flex-wrap items-end gap-4">
+              {can.flag("stock") && <div className="flex flex-wrap items-end gap-4">
                 <div className="flex flex-col gap-1.5">
                   <Label htmlFor="p-wanted">Wanted by</Label>
                   <DatePicker id="p-wanted" value={wanted} min={todayISO()} onChange={setWanted} />
@@ -215,7 +216,7 @@ export function Procurement() {
                 <span className="text-[11.5px] text-[var(--sd-muted)]">
                   Drafted, not sent — somebody has to look at it before it reaches a supplier.
                 </span>
-              </div>
+              </div>}
             </>
           )}
         </CardContent>

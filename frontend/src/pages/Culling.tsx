@@ -21,6 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { RowsSkeleton } from "@/components/Loading";
+import { can } from "@/lib/can";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/Toast";
 import { isError } from "@/lib/frappe";
@@ -66,6 +67,8 @@ export function Culling() {
   // When each open claim was paid, keyed by claim. Defaults to today per row.
   const [paidOn, setPaidOn] = useState<Record<string, string>>({});
   const [tab, setTab] = useState("queue");
+  // Opening a case is whoever may create one; the other tabs only read.
+  const mayRaise = can.create("Livestock Disposal");
   const [preselect, setPreselect] = useState<string | null>(null);
   const [term, setTerm] = useState("");
   const toast = useToast();
@@ -158,8 +161,8 @@ export function Culling() {
           <TabsTrigger value="queue">
             Queue{all.length ? ` (${all.length})` : ""}
           </TabsTrigger>
-          <TabsTrigger value="suggested">Worth a look</TabsTrigger>
-          <TabsTrigger value="raise">Open a case</TabsTrigger>
+          {mayRaise && <TabsTrigger value="suggested">Worth a look</TabsTrigger>}
+          {mayRaise && <TabsTrigger value="raise">Open a case</TabsTrigger>}
           <TabsTrigger value="gone">Left the farm</TabsTrigger>
         </TabsList>
 
@@ -283,16 +286,16 @@ export function Culling() {
           </div>
         </TabsContent>
 
-        <TabsContent value="suggested" className="pt-5">
+        {mayRaise && <TabsContent value="suggested" className="pt-5">
           <CullSuggestions
             onPick={(animal) => {
               setPreselect(animal);
               setTab("raise");
             }}
           />
-        </TabsContent>
+        </TabsContent>}
 
-        <TabsContent value="raise" className="flex flex-col gap-5 pt-5">
+        {mayRaise && <TabsContent value="raise" className="flex flex-col gap-5 pt-5">
           <Card>
             <CardHeaderRow>
               <CardHeading>
@@ -342,7 +345,7 @@ export function Culling() {
                         {cl.policy} · {cl.cause || "no cause given"} · {cl.status}
                       </span>
                     </span>
-                    {cl.status === "Draft" && (
+                    {cl.status === "Draft" && can.write("Livestock Insurance Claim") && (
                       <Button
                         variant="outline"
                         size="sm"
@@ -354,7 +357,7 @@ export function Culling() {
                         Sent to the insurer
                       </Button>
                     )}
-                    {cl.status === "Submitted" && (
+                    {cl.status === "Submitted" && can.write("Livestock Insurance Claim") && (
                       <div className="flex items-end gap-2">
                         {/* WHEN the insurer paid. The claim has always had a
                             "Paid On" field and nothing ever sent one, so the
@@ -403,7 +406,7 @@ export function Culling() {
               </CardContent>
             </Card>
           )}
-        </TabsContent>
+        </TabsContent>}
 
         <TabsContent value="gone" className="pt-5">
           <Card>
@@ -511,7 +514,7 @@ function CaseChain({
         </p>
       )}
 
-      {c.status === "Awaiting Vet" && (
+      {c.status === "Awaiting Vet" && can.flag("cull_vet") && can.write("Livestock Disposal") && (
         <div className="flex flex-col gap-3">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="vet-notes">What the vet found</Label>
@@ -540,7 +543,7 @@ function CaseChain({
         </div>
       )}
 
-      {c.status === "Awaiting Approval" && (
+      {c.status === "Awaiting Approval" && can.write("Livestock Disposal") && (
         <div className="flex flex-col gap-3">
           {c.flow === "Sale" && (
             <div className="grid gap-4 sm:grid-cols-2">
@@ -576,7 +579,7 @@ function CaseChain({
             </div>
           )}
           <div className="flex flex-wrap gap-2">
-            <Button
+            {can.flag("cull_manager") && <Button
               disabled={busy}
               onClick={() =>
                 act(
@@ -596,7 +599,7 @@ function CaseChain({
               }
             >
               Approve
-            </Button>
+            </Button>}
             <Button
               variant="outline"
               disabled={busy || !notes.trim()}
@@ -612,7 +615,7 @@ function CaseChain({
         </div>
       )}
 
-      {c.status === "Approved" && (
+      {c.status === "Approved" && can.create("Livestock Disposal") && (c.flow === "Mortality" || can.flag("cull_manager")) && (
         <div className="flex flex-col gap-3">
           <Notice tone="info">
             Posting is the step that cannot be undone by editing a record. She leaves her

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { can } from "@/lib/can";
 import { ArrowLeft, CheckCircle2, FileText, Stethoscope } from "lucide-react";
 import { PhotoStrip } from "@/components/animals/PhotoStrip";
 import { CaseTimeline } from "@/components/health/CaseTimeline";
@@ -241,7 +242,7 @@ export function CaseFile({
         </CardContent>
       </Card>
 
-      {c.open && (
+      {c.open && can.create("Livestock Health Case") && (
         <Card>
           <CardHeaderRow>
             <CardHeading>

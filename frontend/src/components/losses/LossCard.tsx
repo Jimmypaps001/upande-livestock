@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeaderRow, CardHeading, CardTitle } from "@/components/ui/card";
 import { Notice } from "@/components/feeding/Notice";
 import { RecordLossDialog } from "@/components/losses/RecordLossDialog";
+import { can } from "@/lib/can";
 import { isError } from "@/lib/frappe";
 import { getLossTrail, trailSteps, type LossTrail } from "@/lib/losses";
 
@@ -16,9 +17,10 @@ export function LossCard({ animal, status, onChanged }: { animal: string; status
   const [losses, setLosses] = useState<LossTrail[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
-  const mayRecord = !status || !LEFT.includes(status);
+  const mayRecord = (!status || !LEFT.includes(status)) && can.create("Livestock Loss");
 
   const load = useCallback(async () => {
+    if (!can.read("Livestock Loss")) return;
     const r = await getLossTrail(animal);
     if (isError(r)) setError(r.error);
     else {
@@ -32,6 +34,8 @@ export function LossCard({ animal, status, onChanged }: { animal: string; status
     void load();
   }, [load]);
 
+  // Whoever may not read losses has no card at all.
+  if (!can.read("Livestock Loss")) return null;
   // Nothing to show and nothing to do: the card stays out of the way.
   if (losses && losses.length === 0 && !mayRecord) return null;
 

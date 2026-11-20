@@ -16,6 +16,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { isError } from "@/lib/frappe";
+import { can } from "@/lib/can";
 import { canMix } from "@/lib/roles";
 import {
   APPETITE_LABEL,
@@ -34,6 +35,7 @@ import {
   defaultChoice,
   needsOverride,
   overrideSentence,
+  allowedChoices,
   secondSessionDue,
   type SessionChoice,
 } from "@/lib/feed-sessions";
@@ -212,7 +214,10 @@ function HerdDayCard({
   const toast = useToast();
   const mixed = day.status === "Manufactured" || day.status === "Waiting for stock";
   const sess = day.session;
-  const [choice, setChoice] = useState<SessionChoice>(defaultChoice(sess));
+  const [chosen, setChoice] = useState<SessionChoice>(defaultChoice(sess));
+  // Feeding past a full day is a manager's override; anyone else is not offered it.
+  const allowed = allowedChoices(sess, !!sess?.can_override);
+  const choice: SessionChoice = allowed.includes(chosen) ? chosen : (allowed[0] ?? chosen);
 
   async function mix() {
     // More than a day (a full day after a half, a third session) is a manager's
@@ -299,18 +304,20 @@ function HerdDayCard({
         )}
         <Lines day={day} />
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" disabled={mixed || !!blocked} onClick={() => setAmending(true)}>
-            Amend
-          </Button>
-          {day.record && !mixed && !secondSessionDue(sess) && (
+          {can.create("Livestock Feed Actual") && (
+            <Button variant="outline" disabled={mixed || !!blocked} onClick={() => setAmending(true)}>
+              Amend
+            </Button>
+          )}
+          {can.create("Livestock Feed Actual") && day.record && !mixed && !secondSessionDue(sess) && (
             <Button variant="outline" disabled={busy || !!blocked} onClick={reset}>
               Reset to recipe
             </Button>
           )}
-          {canMix() && (
+          {canMix() && allowed.length > 0 && (
             <>
-              <SessionControl value={choice} onChange={setChoice} state={sess} disabled={busy} />
-              <Button disabled={(mixed && !sess?.can_override) || busy || !!blocked} onClick={mix}>
+              <SessionControl value={choice} onChange={setChoice} state={sess} disabled={busy} allowed={allowed} />
+              <Button disabled={busy || !!blocked} onClick={mix}>
                 {busy && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
                 Mix and issue what was fed: {choiceLabel(choice, sess).toLowerCase()}
               </Button>

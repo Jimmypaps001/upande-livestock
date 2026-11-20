@@ -1,4 +1,5 @@
-import { bootstrap } from "@/lib/frappe";
+import { can } from "@/lib/can";
+import { bootstrap, type Capabilities } from "@/lib/frappe";
 import type { View } from "@/lib/router";
 
 /**
@@ -53,10 +54,85 @@ export function qualityOnly(roles: string[] = bootstrap().roles): boolean {
   return roles.includes(QUALITY_ROLE) && limitedViews(roles) !== null;
 }
 
-/** May this user see `view`? Everyone may, except a user limited to other screens. */
-export function viewAllowed(view: View, roles: string[] = bootstrap().roles): boolean {
+/**
+ * What a screen needs of the user, read off the guards of the endpoints it
+ * calls (guard_read: read; guard: create; guard_stock: a flag). A screen the
+ * user fails is left out of the menu and its route sends them home — hidden,
+ * not shown and refused. Quality-only users are limited by LIMITED_ROLES above.
+ */
+type Flag = Parameters<typeof can.flag>[0];
+type Need = {
+  read?: string[];
+  create?: string[];
+  flag?: Flag;
+  /** Enough that ANY one of these holds (a page with two kinds of work on it). */
+  any?: Array<{ create?: string; flag?: Flag }>;
+};
+const EVENT = { read: ["Livestock Event"], create: ["Livestock Event"] };
+export const VIEW_NEEDS: Partial<Record<View, Need>> = {
+  dashboard: { read: ["Animal"] },
+  animals: { read: ["Animal"] },
+  events: { read: ["Animal"] },
+  production: { read: ["Animal"] },
+  reports: { read: ["Animal"] },
+  health: { read: ["Livestock Health Case"] },
+  transactions: { flag: "post_draft" },
+  // Mixing and issuing needs the stock roles; the day sheet needs the actuals.
+  feeding: { read: ["Herds"], any: [{ flag: "stock" }, { create: "Livestock Feed Actual" }] },
+  concentrate: { read: ["BOM"] },
+  stock: { read: ["Item"] },
+  "feed-report": { read: ["Herds", "Animal"] },
+  rations: { read: ["BOM"] },
+  "ration-editor": { read: ["BOM"], create: ["BOM"] },
+  procurement: { read: ["Item"], flag: "stock" },
+  milking: { read: ["Milk Recording"], create: ["Milk Recording"] },
+  quality: { read: ["Milk Quality Test"] },
+  "feed-quality": { read: ["Milk Recording"] },
+  movement: EVENT,
+  "drying-off": EVENT,
+  calving: EVENT,
+  heat: EVENT,
+  service: EVENT,
+  diagnosis: EVENT,
+  husbandry: EVENT,
+  abortion: EVENT,
+  weight: { read: ["Livestock Weight Record"], create: ["Livestock Weight Record"] },
+  "check-up": { read: ["Livestock Health Case"], create: ["Livestock Diagnosis"] },
+  treatment: { read: ["Livestock Health Case"], create: ["Livestock Health Case"] },
+  "health-case": { read: ["Livestock Health Case"] },
+  herds: { read: ["Herds"], any: [{ create: "Herds" }, { create: "Animal" }] },
+  culling: { read: ["Livestock Disposal"] },
+  vets: { read: ["Livestock Vet"] },
+  claims: { read: ["Livestock Loss"] },
+  "loss-scenarios": { read: ["Livestock Loss Scenario"] },
+  settings: { read: ["Livestock Settings"] },
+  notifications: { read: ["Notification Log"] },
+};
+
+/** Does the user's capability map cover everything `view` needs? */
+export function viewPermitted(view: View, from: Capabilities | null = bootstrap().can): boolean {
+  const need = VIEW_NEEDS[view];
+  // No map (a stale page): nothing is hidden for permissions; the server refuses.
+  if (!need || !from) return true;
+  return (
+    (need.read ?? []).every((d) => can.read(d, from)) &&
+    (need.create ?? []).every((d) => can.create(d, from)) &&
+    (!need.flag || can.flag(need.flag, from)) &&
+    (!need.any ||
+      need.any.some((a) => (a.create ? can.create(a.create, from) : false) || (a.flag ? can.flag(a.flag, from) : false)))
+  );
+}
+
+/** May this user see `view`? Not a user limited to other screens, and not one
+ *  whose permissions do not cover what the screen reads and records. */
+export function viewAllowed(
+  view: View,
+  roles: string[] = bootstrap().roles,
+  from: Capabilities | null = bootstrap().can,
+): boolean {
   const limited = limitedViews(roles);
-  return limited === null || limited.includes(view);
+  if (limited !== null && !limited.includes(view)) return false;
+  return viewPermitted(view, from);
 }
 
 /**
@@ -109,8 +185,9 @@ export function viewOpen(
   view: View,
   roles: string[] = bootstrap().roles,
   disabled: readonly string[] = bootstrap().disabled_events,
+  from: Capabilities | null = bootstrap().can,
 ): boolean {
-  return viewEventsOn(view, disabled) && viewAllowed(view, roles);
+  return viewEventsOn(view, disabled) && viewAllowed(view, roles, from);
 }
 
 /** Where a user starts, and where one who opened a screen they may not is sent:
@@ -120,11 +197,17 @@ export function viewOpen(
 export function landingView(
   roles: string[] = bootstrap().roles,
   disabled: readonly string[] = bootstrap().disabled_events,
+  from: Capabilities | null = bootstrap().can,
 ): View {
   const limited = limitedViews(roles)?.[0];
   if (limited) return limited;
-  return viewEventsOn("feeding", disabled) ? "feeding" : "dashboard";
+  // The first screen the user may open, in the order of the menu: Feeding is
+  // the farm's home, but a user who cannot read herds lands on what they can.
+  const open = (v: View) => viewOpen(v, roles, disabled, from);
+  return LANDING.find(open) ?? "notifications";
 }
+
+const LANDING: readonly View[] = ["feeding", "dashboard", "animals", "milking", "quality", "health", "vets", "settings", "notifications"];
 
 /**
  * May this user record on behalf of another Employee (the operator picker)?
@@ -135,10 +218,12 @@ export function canChooseOperator(
   roles: string[] = bootstrap().roles,
   user: string = bootstrap().user,
 ): boolean {
+  const from = bootstrap().can;
+  if (from) return from.operator;
   return user === "Administrator" || roles.includes("System Manager");
 }
 
 /** Mixing and issuing feed moves stock: the farm's stores and manager roles (the server decides). */
 export function canMix(roles: string[] = bootstrap().roles): boolean {
-  return roles.some((r) => ["Livestock Stores", "Livestock Manager", "System Manager", "Administrator"].includes(r));
+  return can.flag("stock", bootstrap().can, roles);
 }

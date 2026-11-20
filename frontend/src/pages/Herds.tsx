@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { can } from "@/lib/can";
 import { Check, PackagePlus, Split } from "lucide-react";
 import { AnimalSearch } from "@/components/animals/AnimalSearch";
 import { DatePicker } from "@/components/DatePicker";
@@ -80,7 +81,7 @@ export function Herds() {
       </FigureRow>
 
       <div className="grid min-w-0 gap-5 lg:grid-cols-2">
-        <SplitHerd
+        {can.create("Herds") && <SplitHerd
           who={who}
           roster={roster}
           loading={loading}
@@ -89,15 +90,15 @@ export function Herds() {
             toast(m);
             void load();
           }}
-        />
-        <BuyIn
+        />}
+        {can.create("Animal") && <BuyIn
           who={who}
           herds={herds}
           onDone={(m) => {
             toast(m);
             void load();
           }}
-        />
+        />}
       </div>
     </Page>
   );

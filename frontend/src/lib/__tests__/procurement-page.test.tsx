@@ -77,7 +77,11 @@ function draw() {
 }
 
 describe("the procurement page", () => {
-  beforeEach(() => call.mockClear());
+  beforeEach(() => {
+    call.mockClear();
+    // Drafting a request is the stores' and managers' (guard_stock).
+    window.LIVESTOCK = { bootstrap: { roles: ["Livestock Stores"] } };
+  });
 
   it("shows what is short and when it goes", async () => {
     draw();

@@ -181,6 +181,20 @@ export function allFields(doc: LivestockSettingsDoc | null): SettingsField[] {
   return doc.tabs.flatMap((tab) => tab.sections.flatMap((section) => section.fields));
 }
 
+/**
+ * The tabs this user is shown. Whoever may change all of it, or none of it
+ * (read-only), sees every tab; one who may change only some fields (an
+ * Accounts Manager: the Accounts & Insurance tab) sees the tabs holding them.
+ */
+export function visibleTabs(doc: LivestockSettingsDoc | null): SettingsTab[] {
+  if (!doc) return [];
+  if (doc.can_write || !doc.writable || doc.writable.length === 0) return doc.tabs;
+  const mine = new Set(doc.writable);
+  return doc.tabs.filter((tab) =>
+    tab.sections.some((s) => s.fields.some((f) => mine.has(f.fieldname)) || s.tables.some((t) => mine.has(t))),
+  );
+}
+
 export type PendingChange = {
   field: SettingsField;
   from: SettingsValue;

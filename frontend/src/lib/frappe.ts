@@ -24,6 +24,25 @@ export interface LivestockBootstrap {
   /** Livestock Event Types the farm switched off (Settings → Events). Their
    *  record pages leave the menu (lib/roles: viewOpen). Unset means none. */
   disabled_events: string[];
+  /** What this user may do, computed by the server (serverscripts/common/
+   *  capabilities.py) from the same permissions its endpoints check. Absent on
+   *  a stale page; lib/can.ts then falls back to the roles. */
+  can: Capabilities | null;
+}
+
+export interface Capabilities {
+  read: Record<string, boolean>;
+  create: Record<string, boolean>;
+  write: Record<string, boolean>;
+  stock: boolean;
+  post_draft: boolean;
+  override_feed: boolean;
+  insure: boolean;
+  accounts: boolean;
+  appreciate: boolean;
+  cull_vet: boolean;
+  cull_manager: boolean;
+  operator: boolean;
 }
 
 declare global {
@@ -49,6 +68,7 @@ export function bootstrap(): LivestockBootstrap {
     site_name: typeof raw.site_name === "string" ? raw.site_name : "",
     roles: Array.isArray(raw.roles) ? (raw.roles as string[]) : [],
     disabled_events: Array.isArray(raw.disabled_events) ? (raw.disabled_events as string[]) : [],
+    can: raw.can && typeof raw.can === "object" ? (raw.can as Capabilities) : null,
   };
 }
 

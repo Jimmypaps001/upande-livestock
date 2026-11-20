@@ -1,6 +1,7 @@
 /** The loss flow's calls: record a loss, follow its trail, the claims list and the scenarios. */
 import { call } from "@/lib/frappe";
 import { bootstrap } from "@/lib/frappe";
+import { can } from "@/lib/can";
 
 const API = "upande_livestock.serverscripts.losses";
 
@@ -143,6 +144,8 @@ export function getLossClaims(status?: string) {
 export const SCENARIO_ROLES = ["Livestock Manager", "System Manager"];
 
 export function canEditScenarios(roles: string[] = bootstrap().roles): boolean {
+  const from = bootstrap().can;
+  if (from) return can.create("Livestock Loss Scenario", from);
   return roles.some((r) => SCENARIO_ROLES.includes(r) || r === "Administrator");
 }
 

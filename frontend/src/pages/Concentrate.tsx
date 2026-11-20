@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { can } from "@/lib/can";
 import { Loader2 } from "lucide-react";
 import { Figure, FigureRow } from "@/components/Figure";
 import { Notice } from "@/components/feeding/Notice";
@@ -299,16 +300,20 @@ export function Concentrate() {
                           onBlur={() => void reprice(c)}
                         />
                       </div>
-                      <Button variant="secondary" onClick={() => edit(c)}>
-                        Recipe
-                      </Button>
-                      <Button disabled={mixing === c.item_code} onClick={() => void mix(c)}>
-                        {mixing === c.item_code ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          "Mix"
-                        )}
-                      </Button>
+                      {can.create("BOM") && (
+                        <Button variant="secondary" onClick={() => edit(c)}>
+                          Recipe
+                        </Button>
+                      )}
+                      {can.flag("stock") && (
+                        <Button disabled={mixing === c.item_code} onClick={() => void mix(c)}>
+                          {mixing === c.item_code ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            "Mix"
+                          )}
+                        </Button>
+                      )}
                     </div>
                   </div>
 
@@ -496,7 +501,7 @@ export function Concentrate() {
         </Card>
       )}
 
-      {!editing && (
+      {!editing && can.create("BOM") && (
         <Button variant="secondary" className="self-start" onClick={startNew}>
           New concentrate
         </Button>

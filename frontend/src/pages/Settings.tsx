@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { can } from "@/lib/can";
 import { Loader2, ShieldAlert } from "lucide-react";
 import { AppreciationRun } from "@/components/settings/AppreciationRun";
 import { BackdatingSetting } from "@/components/settings/BackdatingSetting";
@@ -23,6 +24,7 @@ import {
   pendingChanges,
   saveLivestockSettings,
   showValue,
+  visibleTabs,
   zeroWarnings,
   type LivestockSettingsDoc,
   type SettingsSection,
@@ -79,6 +81,10 @@ export function Settings() {
   }, [load]);
 
   const fields = useMemo(() => allFields(doc), [doc]);
+  // A user who may edit only part of the page (an Accounts Manager: the
+  // Accounts & Insurance tab) is shown that part, not a farm's worth of rules
+  // they cannot touch. Whoever may only read sees every tab, read-only.
+  const tabs = useMemo(() => visibleTabs(doc), [doc]);
   const values = doc?.values || {};
   const changes = useMemo(
     () => pendingChanges(fields, values, draft),
@@ -188,20 +194,20 @@ export function Settings() {
       )}
 
       {doc && (
-        <Tabs defaultValue={doc.tabs[0]?.fieldname} className="flex flex-col gap-5">
+        <Tabs defaultValue={tabs[0]?.fieldname} className="flex flex-col gap-5">
           <TabsList className="flex-wrap self-start">
-            {doc.tabs.map((tab) => (
+            {tabs.map((tab) => (
               <TabsTrigger key={tab.fieldname} value={tab.fieldname}>
                 {tab.label}
               </TabsTrigger>
             ))}
-            <TabsTrigger value={EVENTS_TAB}>Events</TabsTrigger>
+            {doc.can_write && <TabsTrigger value={EVENTS_TAB}>Events</TabsTrigger>}
           </TabsList>
 
           {/* Which events the farm records, and each one's stock and timing.
               The switch and the stock rule live on each Livestock Event Type,
               not on this doctype, so the tab is the page's own. */}
-          <TabsContent value={EVENTS_TAB}>
+          {doc.can_write && <TabsContent value={EVENTS_TAB}>
             <EventsCard
               canWrite={!!doc.can_write}
               fields={fields}
@@ -210,9 +216,9 @@ export function Settings() {
                 setDoc((current) => (current ? { ...current, values: next } : current))
               }
             />
-          </TabsContent>
+          </TabsContent>}
 
-          {doc.tabs.map((tab) => (
+          {tabs.map((tab) => (
             <TabsContent key={tab.fieldname} value={tab.fieldname}>
               <div className="flex flex-col gap-5">
                 {tab.sections.map((section) => (
@@ -379,7 +385,7 @@ function SectionCard({
           />
         ))}
 
-        {section.fieldname === "sb_appreciation" && <AppreciationRun canRun={doc.can_write} />}
+        {section.fieldname === "sb_appreciation" && can.flag("appreciate") && <AppreciationRun canRun />}
       </CardContent>
     </Card>
   );

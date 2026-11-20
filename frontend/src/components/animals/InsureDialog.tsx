@@ -12,13 +12,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Notice } from "@/components/feeding/Notice";
 import { getCoverPolicies, insureAnimal, type CoverPolicy } from "@/lib/animals-api";
+import { can } from "@/lib/can";
 import { bootstrap, isError } from "@/lib/frappe";
 
 /** Only Accounts insures an animal for now; the server refuses everyone else too. */
 export const INSURE_ROLES = ["Accounts Manager", "Accounts User", "System Manager"];
 
 export function canInsure(roles: string[] = bootstrap().roles): boolean {
-  return roles.some((r) => INSURE_ROLES.includes(r) || r === "Administrator");
+  return can.flag("insure", bootstrap().can, roles);
 }
 
 /**

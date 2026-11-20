@@ -11,6 +11,7 @@ import {
   defaultChoice,
   needsOverride,
   overrideSentence,
+  allowedChoices,
   secondSessionDue,
   type SessionChoice,
 } from "@/lib/feed-sessions";
@@ -38,6 +39,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { can } from "@/lib/can";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { isError } from "@/lib/frappe";
 import {
@@ -116,6 +118,13 @@ export function Feeding() {
 
   // System tab
   const [portion, setPortion] = useState(0.5);
+  // Past a full day is a manager's override: anyone else is offered only what
+  // the day still allows, and a herd already fed offers no Mix at all.
+  const allowedNow = allowedChoices(day?.session, !!day?.session?.can_override);
+  useEffect(() => {
+    const want = portion === 1 ? "Full" : "Half";
+    if (allowedNow.length > 0 && !allowedNow.includes(want)) setPortion(allowedNow[0] === "Full" ? 1 : 0.5);
+  }, [allowedNow.join(","), portion]); // eslint-disable-line react-hooks/exhaustive-deps
   const [mixing, setMixing] = useState(false);
 
   // Manual tab — seeded once per herd (and once per recipe pick), then the
@@ -427,7 +436,10 @@ export function Feeding() {
     ] as Array<[FeedModeKey, "system" | "manual" | "actuals"]>
   )
     .filter(([k]) => feedTypes[k].desk)
-    .map(([, tab]) => tab);
+    .map(([, tab]) => tab)
+    // Mixing and issuing is the stores' and managers' (guard_stock); the day
+    // sheet is whoever may record the actuals. What a user cannot do is not shown.
+    .filter((tab) => (tab === "actuals" ? can.create("Livestock Feed Actual") : can.flag("stock")));
   const manualDisabled = !program ? "Select a herd first." : blocked;
 
   return (
@@ -616,6 +628,7 @@ export function Feeding() {
                         onChange={(c) => setPortion(c === "Full" ? 1 : 0.5)}
                         state={day?.session}
                         disabled={mixing}
+                        allowed={allowedNow}
                       />
                       <StateChip session={day?.session} />
                     </div>
@@ -642,7 +655,7 @@ export function Feeding() {
                   </div>
 
                   <div className="flex flex-wrap items-center gap-3">
-                    <Button
+                    {allowedNow.length > 0 && <Button
                       onClick={mixAndFeed}
                       // Short TODAY still records the feeding — its stock
                       // waits as a draft. Only a backdated run must be covered:
@@ -650,7 +663,7 @@ export function Feeding() {
                       disabled={mixing || !!blocked || (backdating && usingStandingRecipe && !program.can_manufacture)}
                     >
                       {mixing ? "Mixing…" : "Mix & feed"}
-                    </Button>
+                    </Button>}
                     {backdating && <Mark>Backdated · {effectiveDate}</Mark>}
                     {usingStandingRecipe && !program.can_manufacture && (
                       <span className="text-[12px] text-[var(--sd-quiet)]">

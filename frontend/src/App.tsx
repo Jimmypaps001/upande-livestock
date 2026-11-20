@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { ToastProvider } from "@/components/Toast";
 import { PageSkeleton } from "@/components/Loading";
 import { Stub } from "@/pages/Stub";
+import { NotAvailable } from "@/pages/NotAvailable";
 import { landingView, viewOpen } from "@/lib/roles";
 import { useRoute, type View } from "@/lib/router";
 
@@ -221,9 +222,10 @@ export function App() {
   // and stays within, their own; a direct URL to any other redirects there. So
   // does a direct URL to the page of an event the farm switched off.
   const allowed = viewOpen(view);
+  const home = landingView();
   useEffect(() => {
-    if (!allowed) navigate(landingView());
-  }, [allowed, navigate]);
+    if (!allowed && home !== view) navigate(home);
+  }, [allowed, home, view, navigate]);
 
   // Once the first screen is on the page, quietly pull the rest of the code so
   // the next click waits for data and nothing else.
@@ -245,7 +247,7 @@ export function App() {
               a slow line) it is the same silhouette the page settles into,
               rather than a blank that reflows the moment it arrives. */}
           <Suspense fallback={<PageSkeleton />}>
-            {!allowed ? null : Built ? <Built /> : <Stub title={TITLES[view]} />}
+            {!allowed ? (home === view ? <NotAvailable title={TITLES[view]} /> : null) : Built ? <Built /> : <Stub title={TITLES[view]} />}
           </Suspense>
         </SidebarInset>
       </SidebarProvider>

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Picker } from "@/components/ui/picker";
+import { can } from "@/lib/can";
 import { AddVetDialog } from "@/components/vets/AddVetDialog";
 import { VetCard } from "@/components/vets/VetCard";
 import { isError } from "@/lib/frappe";
@@ -74,10 +75,12 @@ export function Vets() {
               />
             </div>
             <RefreshButton onClick={load} loading={loading} label="the vets" />
-            <Button onClick={() => setAdding(true)}>
-              <Plus className="mr-1.5 h-4 w-4" />
-              Add vet
-            </Button>
+            {can.create("Livestock Vet") && (
+              <Button onClick={() => setAdding(true)}>
+                <Plus className="mr-1.5 h-4 w-4" />
+                Add vet
+              </Button>
+            )}
           </>
         }
       >
@@ -132,11 +135,11 @@ export function Vets() {
         </div>
       ) : data ? (
         <p className="py-10 text-center text-[13px] text-[var(--sd-muted)]">
-          {data.vets.length ? "No vet matches." : "No vets yet. Add the first one."}
+          {data.vets.length ? "No vet matches." : can.create("Livestock Vet") ? "No vets yet. Add the first one." : "No vets yet."}
         </p>
       ) : null}
 
-      <AddVetDialog open={adding} onOpenChange={setAdding} onAdded={() => void load()} />
+      {can.create("Livestock Vet") && <AddVetDialog open={adding} onOpenChange={setAdding} onAdded={() => void load()} />}
     </Page>
   );
 }

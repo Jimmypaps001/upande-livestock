@@ -77,6 +77,12 @@ export function needsOverride(choice: SessionChoice, s?: SessionState | null): b
   return false;
 }
 
+/** The choices this user may make: past a full day is a manager's override, so
+ *  anyone else is not offered it (a fully fed herd offers them nothing). */
+export function allowedChoices(s: SessionState | null | undefined, mayOverride: boolean): SessionChoice[] {
+  return (["Full", "Half"] as SessionChoice[]).filter((c) => mayOverride || !needsOverride(c, s));
+}
+
 /** The sentence the confirm dialog shows. */
 export function overrideSentence(choice: SessionChoice, s: SessionState): string {
   return `${s.label}. Feeding ${choiceLabel(choice, s).toLowerCase()} now is more than a full day.`;
