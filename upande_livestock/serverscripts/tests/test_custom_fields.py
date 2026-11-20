@@ -61,6 +61,9 @@ class TestTheDeclarationCoversWhatTheCodeReads(unittest.TestCase):
 				"custom_milking_time",
 				"custom_cows_milked",
 				"custom_milking_end_section",
+				# the feeding session a mix belonged to (feeding/_sessions.py)
+				"custom_feed_session",
+				"custom_session_fraction",
 			},
 		)
 
