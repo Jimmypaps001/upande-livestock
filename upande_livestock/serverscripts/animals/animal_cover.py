@@ -30,20 +30,6 @@ def animal_cover(payload=None):
 	return run(go, "livestock animal_cover failed")
 
 
-@frappe.whitelist()
-def cover_policies(payload=None):
-	"""The running policies she could be added to."""
-
-	def go():
-		guard_read("Animal")
-		d = as_dict(payload)
-		company = frappe.db.get_value("Animal", d["animal"], "company") if d.get("animal") else None
-		return {"ok": True, "available": asset_cover.available(),
-		        "policies": asset_cover.open_policies(company)}
-
-	return run(go, "livestock cover_policies failed")
-
-
 INSURE_ROLES = ("Accounts Manager", "Accounts User", "System Manager")
 
 
@@ -51,19 +37,8 @@ def can_insure():
 	return bool(set(frappe.get_roles()) & set(INSURE_ROLES)) or frappe.session.user == "Administrator"
 
 
-@frappe.whitelist()
-def insure_animal(payload):
-	"""Put her Asset under a policy. Only Accounts (and System Manager) may for now."""
-
-	def go():
-		guard_read("Animal")
-		if not can_insure():
-			frappe.throw(_("Only Accounts can insure an animal. Ask Accounts to put {0} under a policy.").format(
-				as_dict(payload).get("animal") or _("her")))
-		d = as_dict(payload)
-		res = asset_cover.put_under_cover(
-			_animal(d), d.get("policy"), d.get("sum_insured"),
-			d.get("effective_date"), d.get("endorsement_no"))
-		return {"ok": True, **res}
-
-	return run(go, "livestock insure_animal failed")
+# The endpoints split out into their own modules. Imported here so the dotted paths the phone and
+# the desk already call still resolve (Frappe checks the whitelist by function identity).
+# Last, because each of them imports helpers from this module.
+from upande_livestock.serverscripts.animals.cover_policies import cover_policies  # noqa: E402,F401
+from upande_livestock.serverscripts.animals.insure_animal import insure_animal  # noqa: E402,F401

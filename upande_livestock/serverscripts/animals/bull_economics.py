@@ -260,26 +260,7 @@ def bull_economics(payload=None):
 	return run(go, "livestock bull_economics failed")
 
 
-@frappe.whitelist()
-def bull_economics_bulk(payload=None):
-	"""{bulls: {id: economics}} for the named bulls, or every bull still on the farm.
-
-	One cache across the lot: a herd's feed days are read once however many of
-	its bulls are asked about. No weight series -- the list needs the figures.
-	"""
-
-	def go():
-		guard_read("Animal")
-		names = as_dict(payload).get("animals")
-		filters = {"sex": "Male"}
-		if names:
-			filters["name"] = ["in", list(names)]
-		rows = frappe.get_all("Animal", filters=filters, fields=_fields(), limit_page_length=0)
-		if not names:
-			rows = [r for r in rows if not r.disabled and (r.status or "") not in RETIRED]
-		price = flt(frappe.db.get_single_value("Livestock Settings", "bull_price_per_kg"))
-		cache, why = _Cache(), purpose()
-		return {"ok": True, "purpose": why,
-		        "bulls": {r.name: economics(r, cache, price, why, with_series=False) for r in rows}}
-
-	return run(go, "livestock bull_economics_bulk failed")
+# The endpoints split out into their own modules. Imported here so the dotted paths the phone and
+# the desk already call still resolve (Frappe checks the whitelist by function identity).
+# Last, because each of them imports helpers from this module.
+from upande_livestock.serverscripts.animals.bull_economics_bulk import bull_economics_bulk  # noqa: E402,F401

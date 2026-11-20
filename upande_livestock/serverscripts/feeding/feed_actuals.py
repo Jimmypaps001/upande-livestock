@@ -567,109 +567,11 @@ def manufacture_day(herd, date=None, employee=None, allow_shortage=False):
 # ---------------------------------------------------------------------------
 
 
-@frappe.whitelist()
-def feed_day_program(date=None, herd=None):
-	"""Every herd's formula for a day: planned and actual per component.
-
-	Returns `{ok, date, herds: [{herd, herd_name, date, record, bom, head_count,
-	status, amended, planned_kg, actual_kg, planned_per_head, actual_per_head,
-	variance_kg, components: [{item_code, item_name, uom, planned_kg, actual_kg,
-	planned_per_head, actual_per_head, removed}], draft_entries, stock, remarks}],
-	skipped, setup}`.
-	"""
-
-	def go():
-		guard_read("Herds")
-		out = day_program(date, herd)
-		out["ok"] = True
-		return out
-
-	return run(go, "livestock feed_day_program failed")
-
-
-@frappe.whitelist()
-@idempotent
-def amend_feed_day(herd, date, components, remarks=None):
-	"""Amend what a herd was actually fed. `components`: `[{item_code, actual_kg}]`;
-	an actual of 0 removes an item that was not used.
-
-	Returns `{ok, ...herd_day}`. The herd's recipe is never changed and the
-	amendment applies to this herd and day only.
-	"""
-
-	def go():
-		feed_types.assert_on(feed_types.DAY_SHEET)
-		guard(DOCTYPE)
-		out = amend_day(herd, date, components, remarks)
-		out["ok"] = True
-		return out
-
-	return run(go, "livestock amend_feed_day failed")
-
-
-@frappe.whitelist()
-@idempotent
-def reset_feed_day(herd, date):
-	"""Put a herd's day back to the recipe (drops the amendment). Refused once mixed.
-
-	Returns `{ok, ...herd_day}`.
-	"""
-
-	def go():
-		feed_types.assert_on(feed_types.DAY_SHEET)
-		guard(DOCTYPE)
-		out = reset_day(herd, date)
-		out["ok"] = True
-		return out
-
-	return run(go, "livestock reset_feed_day failed")
-
-
-@frappe.whitelist()
-@idempotent
-def manufacture_feed_actuals(herd, date=None, employee=None, allow_shortage=False):
-	"""Mix and issue the day's actuals. Short stock leaves a dated draft.
-
-	`employee` is honoured only for a System Manager or Administrator; anyone
-	else is always recorded as their own linked Employee.
-
-	Returns `{ok, ...herd_day, pending, waiting_for, engine}`.
-	"""
-
-	def go():
-		event_types.assert_enabled("Feeding")
-		feed_types.assert_on(feed_types.DAY_SHEET)
-		guard_stock("Work Order", "Stock Entry")
-		# The operator the desk picked (System Manager only), else the user's own.
-		who = acting_employee(employee)
-		if not who:
-			frappe.throw(
-				_("No Employee is linked to your user ({0}). Choose who is feeding, or ask HR to link your user to an Employee.").format(
-					frappe.session.user
-				)
-			)
-		out = manufacture_day(herd, date, who, allow_shortage=frappe.parse_json(allow_shortage))
-		out["ok"] = True
-		return out
-
-	return run(go, "livestock manufacture_feed_actuals failed")
-
-
-@frappe.whitelist()
-def animal_intake(herd, date=None):
-	"""What each animal in a herd took on a day: actual against planned kg.
-
-	Returns `{ok, herd, date, head_count, planned_kg, actual_kg, variance_kg,
-	variance_pct, appetite, totals: {planned_kg, actual_kg, below_plan, above_plan,
-	on_plan}, animals: [{animal, tag, planned_kg, actual_kg, variance_kg,
-	variance_pct, appetite}]}` (the kg figures are per animal; appetite is
-	"below" | "above" | "on_plan", with no threshold).
-	"""
-
-	def go():
-		guard_read("Herds")
-		out = per_animal_intake(herd, date)
-		out["ok"] = True
-		return out
-
-	return run(go, "livestock animal_intake failed")
+# The endpoints split out into their own modules. Imported here so the dotted paths the phone and
+# the desk already call still resolve (Frappe checks the whitelist by function identity).
+# Last, because each of them imports helpers from this module.
+from upande_livestock.serverscripts.feeding.feed_day_program import feed_day_program  # noqa: E402,F401
+from upande_livestock.serverscripts.feeding.amend_feed_day import amend_feed_day  # noqa: E402,F401
+from upande_livestock.serverscripts.feeding.reset_feed_day import reset_feed_day  # noqa: E402,F401
+from upande_livestock.serverscripts.feeding.manufacture_feed_actuals import manufacture_feed_actuals  # noqa: E402,F401
+from upande_livestock.serverscripts.feeding.animal_intake import animal_intake  # noqa: E402,F401

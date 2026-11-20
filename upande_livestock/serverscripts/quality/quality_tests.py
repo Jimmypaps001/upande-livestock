@@ -37,74 +37,6 @@ def _row(r, lim):
 	return r
 
 
-@frappe.whitelist()
-def quality_test_options(date=None):
-	"""What the form needs: defaults, choices, the farm's limits, and that
-	day's milk recordings to link the batch to."""
-
-	def go():
-		guard_read(DT)
-		on = mq.check_date(date)
-		lim = mq.limits()
-		buyer = frappe.db.get_value("Customer", {"name": ["like", "%Westwood%"]}, "name")
-		recordings = frappe.get_all(
-			"Milk Recording",
-			filters={"docstatus": 1, "recording_date": on},
-			fields=["name", "herd", "milking_time", "net_yield_kg"],
-			order_by="milking_time",
-			limit=50,
-		)
-		for r in recordings:
-			r["milking_time"] = str(r.get("milking_time") or "")[:5]
-		return {
-			"ok": True,
-			"date": on,
-			"default_buyer": buyer or "",
-			"sample_types": list(mq.SAMPLE_TYPES),
-			"shifts": list(mq.SHIFTS),
-			"limits": lim,
-			"recordings": recordings,
-			"can_write": bool(frappe.has_permission(DT, "create")),
-		}
-
-	return run(go, "livestock quality_test_options failed")
-
-
-@frappe.whitelist()
-def record_quality_test(payload):
-	"""Create a Milk Quality Test. `client_ref` makes it safe to send twice: a
-	phone that never saw the reply and retries gets the first record back."""
-
-	def go():
-		guard(DT)
-		d = as_dict(payload)
-		ref = (d.get("client_ref") or "").strip()[:140]
-		if ref:
-			existing = frappe.db.get_value(DT, {"client_ref": ref}, "name")
-			if existing:
-				return _full(existing, duplicate=True)
-
-		values = mq.clean(d)
-		doc = frappe.new_doc(DT)
-		doc.sample_date = mq.check_date(d.get("sample_date"))
-		doc.shift = values.pop("shift") or ""
-		doc.sample_type = values.pop("sample_type") or "Bottle sample"
-		for k, v in values.items():
-			doc.set(k, v)
-		doc.buyer = (d.get("buyer") or "").strip() or None
-		if doc.buyer and not frappe.db.exists("Customer", doc.buyer):
-			frappe.throw(_("{0} is not a customer.").format(doc.buyer))
-		doc.milk_recording = (d.get("milk_recording") or "").strip() or None
-		doc.sensory_note = (d.get("sensory_note") or "").strip()[:140]
-		doc.remarks = (d.get("remarks") or "").strip()
-		doc.lab_slip = (d.get("lab_slip") or "").strip() or None
-		doc.client_ref = ref or None
-		doc.insert()
-		return _full(doc.name)
-
-	return run(go, "livestock record_quality_test failed")
-
-
 def _full(name, duplicate=False):
 	row = frappe.db.get_value(DT, name, LIST_FIELDS, as_dict=True)
 	out = {"ok": True, "name": name, "duplicate": duplicate, "test": _row(row, mq.limits())}
@@ -147,12 +79,9 @@ def quality_tests(filters=None, limit=50, start=0):
 	return run(go, "livestock quality_tests failed")
 
 
-@frappe.whitelist()
-def quality_test(name):
-	def go():
-		guard_read(DT)
-		if not frappe.db.exists(DT, name):
-			frappe.throw(_("{0} is not a milk quality test.").format(name))
-		return _full(name)
-
-	return run(go, "livestock quality_test failed")
+# The endpoints split out into their own modules. Imported here so the dotted paths the phone and
+# the desk already call still resolve (Frappe checks the whitelist by function identity).
+# Last, because each of them imports helpers from this module.
+from upande_livestock.serverscripts.quality.quality_test_options import quality_test_options  # noqa: E402,F401
+from upande_livestock.serverscripts.quality.record_quality_test import record_quality_test  # noqa: E402,F401
+from upande_livestock.serverscripts.quality.quality_test import quality_test  # noqa: E402,F401
