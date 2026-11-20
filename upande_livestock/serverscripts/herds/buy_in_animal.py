@@ -119,11 +119,20 @@ def _capitalise(doc, price, arrived, supplier=None):
 	books refused is a cow in a pen that the system says does not exist.
 	"""
 	try:
-		template = frappe.db.get_value(
-			"Animal", {"is_capitalised": 1, "asset_link": ["is", "set"]}, "asset_link")
-		spec = frappe.db.get_value(
-			"Asset", template, ["item_code", "asset_category", "location", "company"],
-			as_dict=True) if template else None
+		# The pattern must be an Asset that still exists: asset_link can dangle
+		# (a deleted or rolled-back asset), and the first such row used to win,
+		# silently leaving every later buy-in off the books.
+		spec = None
+		for template in frappe.get_all(
+			"Animal", filters={"is_capitalised": 1, "asset_link": ["is", "set"]},
+			pluck="asset_link", order_by="modified desc", limit=50,
+		):
+			spec = frappe.db.get_value(
+				"Asset", template, ["item_code", "asset_category", "location", "company"],
+				as_dict=True)
+			if spec and spec.get("item_code"):
+				break
+			spec = None
 		if not spec or not spec.get("item_code"):
 			frappe.msgprint(
 				_("No animal on this farm is capitalised, so there is no pattern to "

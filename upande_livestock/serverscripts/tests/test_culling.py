@@ -270,8 +270,12 @@ class TestPostingActuallyRemovesHerFromTheFarm(IntegrationTestCase):
 
 	def test_the_holding_herd_does_not_count_her_either(self):
 		"""She is parked there for her records, not as a head of cattle."""
-		self._post(self._approved_gift())
-		self.assertEqual(frappe.db.get_value("Herds", HERD, "number_of_animals"), 0)
+		case = self._approved_gift()
+		# The holding herd may already hold animals (a staged data load), so
+		# compare against what it held before, not against zero.
+		before = frappe.db.get_value("Herds", HERD, "number_of_animals")
+		self._post(case)
+		self.assertEqual(frappe.db.get_value("Herds", HERD, "number_of_animals"), before)
 
 	def test_it_cannot_be_posted_twice(self):
 		case = self._approved_gift()
