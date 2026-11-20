@@ -30,6 +30,7 @@ import {
   Wheat,
   CalendarClock,
   TrendingUp,
+  UserRound,
 } from "lucide-react";
 import {
   Sidebar,
@@ -172,6 +173,17 @@ const NAV: NavSection[] = [
     ],
   },
   {
+    label: "People",
+    items: [
+      {
+        view: "vets",
+        label: "Vets",
+        icon: UserRound,
+        hint: "Each vet's work for a period, and adding one",
+      },
+    ],
+  },
+  {
     label: "Configuration",
     items: [
       {
@@ -219,6 +231,7 @@ export const BUILT_VIEWS: ReadonlySet<View> = new Set<View>([
   "animals",
   "transactions",
   "feed-quality",
+  "vets",
 ]);
 
 export function AppSidebar({
