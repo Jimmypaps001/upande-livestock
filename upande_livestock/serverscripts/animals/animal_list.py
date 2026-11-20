@@ -17,6 +17,7 @@ Read-guarded on Animal.
 
 import frappe
 
+from upande_livestock.serverscripts.common import thumbs
 from upande_livestock.serverscripts.common.asset_cover import covers_for_animals
 from upande_livestock.serverscripts.common.envelope import guard_read, run
 
@@ -30,7 +31,7 @@ def animal_list():
 		rows = frappe.get_all(
 			"Animal",
 			fields=["name", "burn_name", "sex", "current_herd", "breed",
-			        "date_of_birth", "status", "disabled", "image", "repro_status"],
+			        "date_of_birth", "status", "disabled", "image", "repro_status", "species"],
 			order_by="name asc",
 			limit_page_length=0,
 		)
@@ -51,6 +52,9 @@ def animal_list():
 					# can answer cheaply and the page needs to colour a row.
 					"stage": "retired" if (r.disabled or r.status in RETIRED) else "open",
 					"photo": r.image,
+					"thumb": thumbs.existing_thumb(r.image) if r.image else None,
+					# picks the stand-in picture when there is no photo
+					"species": r.species,
 					"cover": cover.get(r.name, "none"),
 				}
 				for r in rows

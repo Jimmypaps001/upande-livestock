@@ -26,7 +26,7 @@ from itertools import pairwise
 import frappe
 from frappe.utils import add_days, date_diff, flt, getdate, today
 
-from upande_livestock.serverscripts.common import animal_stage, asset_cover
+from upande_livestock.serverscripts.common import animal_stage, asset_cover, thumbs
 from upande_livestock.serverscripts.common.envelope import as_dict, guard_read, run
 
 RETIRED = animal_stage.RETIRED
@@ -62,7 +62,7 @@ def animal_profile(payload=None):
 		a = frappe.db.get_value(
 			"Animal", name,
 			["name", "burn_name", "sex", "current_herd", "breed", "date_of_birth",
-			 "status", "disabled", "image", "dam", "sire_name", "repro_status"],
+			 "status", "disabled", "image", "dam", "sire_name", "repro_status", "species"],
 			as_dict=True)
 		if not a:
 			frappe.throw(frappe._("{0} is not an animal on this farm.").format(name))
@@ -92,6 +92,8 @@ def animal_profile(payload=None):
 			"status": a.status,
 			"stage": cycle["stage"],
 			"photo": a.image,
+			"thumb": thumbs.existing_thumb(a.image) if a.image else None,
+			"species": a.species,
 			"cover": cover["state"],
 			"coverDetail": cover,
 			"dam": a.dam,
