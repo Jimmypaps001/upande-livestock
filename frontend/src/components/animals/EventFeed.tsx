@@ -9,7 +9,7 @@ import {
   Sparkle,
   type LucideIcon,
 } from "lucide-react";
-import { MILESTONE_TONE, type Milestone, type MilestoneKind } from "@/lib/animals";
+import { MILESTONE_TONE, pronouns, type Milestone, type MilestoneKind } from "@/lib/animals";
 
 /**
  * Everything that has happened to her, newest first.
@@ -34,7 +34,7 @@ const ICON: Record<MilestoneKind, LucideIcon> = {
   weight: Scale,
 };
 
-export function EventFeed({ milestones }: { milestones: Milestone[] }) {
+export function EventFeed({ milestones, sex }: { milestones: Milestone[]; sex?: string | null }) {
   const byYear = new Map<string, Milestone[]>();
   for (const m of [...milestones].sort((a, b) => (a.on < b.on ? 1 : -1))) {
     const y = m.on.slice(0, 4);
@@ -45,7 +45,7 @@ export function EventFeed({ milestones }: { milestones: Milestone[] }) {
   if (!milestones.length) {
     return (
       <p className="text-[13px] text-[var(--sd-muted)]">
-        Nothing recorded against her yet. Events booked anywhere in the app will
+        Nothing recorded against {pronouns(sex).obj} yet. Events booked anywhere in the app will
         appear here.
       </p>
     );

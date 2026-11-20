@@ -203,3 +203,6 @@ upande_livestock.patches.default_feed_types
 # calves that carry the text are linked. The text is left alone. Same routine as the manager's
 # match_sires tool, safe to run again.
 upande_livestock.patches.create_livestock_sires
+
+# Bulls: what a bull calf is kept for (Kaitet: cull for sale at birth).
+upande_livestock.patches.default_bull_purpose

@@ -130,6 +130,10 @@
   "bull_cull_max_days",
   "cb_bull_cull",
   "bull_cull_warn_percent",
+  "sb_bull_purpose",
+  "bull_purpose",
+  "cb_bull_purpose",
+  "bull_price_per_kg",
   "sb_growth_ladder",
   "growth_ladder",
   "sb_first_pregnancy",
@@ -721,6 +725,29 @@
    "fieldname": "bull_cull_warn_percent",
    "fieldtype": "Percent",
    "label": "Warn At (% of window)"
+  },
+  {
+   "fieldname": "sb_bull_purpose",
+   "fieldtype": "Section Break",
+   "label": "Bull Purpose"
+  },
+  {
+   "default": "Cull for sale at birth",
+   "description": "Why the farm keeps its bulls. 'Cull for sale at birth': sold as soon as born, there is no natural service, so every day a bull stays is cost. 'Fattening': grown out for beef. 'Breeding': kept as a sire.",
+   "fieldname": "bull_purpose",
+   "fieldtype": "Select",
+   "label": "Bull Purpose",
+   "options": "Cull for sale at birth\nFattening\nBreeding"
+  },
+  {
+   "fieldname": "cb_bull_purpose",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Used to value a bull that has no Asset: this price times his last weight. Leave empty to show no value for those bulls.",
+   "fieldname": "bull_price_per_kg",
+   "fieldtype": "Currency",
+   "label": "Bull Price per kg"
   },
   {
    "description": "The herds a heifer climbs before she is old enough to serve, in order. The first row is where female calves land; the last should be marked 'exits on service'.",

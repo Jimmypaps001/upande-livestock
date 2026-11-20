@@ -223,3 +223,10 @@ function parse(id: string): { prefix: string; seq: number; yy: number } | null {
   const m = /^([AB])(\d{3})\/(\d{2})$/.exec((id || "").trim().toUpperCase());
   return m ? { prefix: m[1], seq: Number(m[2]), yy: Number(m[3]) } : null;
 }
+
+/** Pronouns by the animal's sex: he/his for a male, she/her for a female, "it"/"its" when unknown. */
+export function pronouns(sex?: string | null): { subj: string; obj: string; poss: string } {
+  if (sex === "Male") return { subj: "he", obj: "him", poss: "his" };
+  if (sex === "Female") return { subj: "she", obj: "her", poss: "her" };
+  return { subj: "it", obj: "it", poss: "its" };
+}

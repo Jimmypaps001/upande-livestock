@@ -1,5 +1,6 @@
 import { AlertTriangle, Coins } from "lucide-react";
 import { LinkPicker } from "@/components/settings/LinkPicker";
+import { Picker } from "@/components/ui/picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -65,6 +66,15 @@ export function SettingField({
           doctype={field.options || "DocType"}
           value={value === null || value === undefined ? null : String(value)}
           onChange={(next) => onChange(next)}
+          disabled={disabled}
+        />
+      ) : field.fieldtype === "Select" ? (
+        <Picker
+          id={id}
+          label={field.label}
+          value={isBlank(value) ? field.default || "" : String(value)}
+          onChange={(next) => onChange(next)}
+          options={(field.options || "").split("\n").filter(Boolean)}
           disabled={disabled}
         />
       ) : field.fieldtype === "Check" ? (
