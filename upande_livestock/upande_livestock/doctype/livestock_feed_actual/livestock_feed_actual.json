@@ -15,6 +15,7 @@
   "actual_kg",
   "amended",
   "status",
+  "fed_fraction",
   "sb_items",
   "items",
   "sb_runs",
@@ -98,7 +99,7 @@
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Status",
-   "options": "Planned\nAmended\nWaiting for stock\nManufactured",
+   "options": "Planned\nAmended\nHalf fed\nWaiting for stock\nManufactured",
    "read_only": 1
   },
   {
@@ -174,6 +175,13 @@
    "fieldname": "remarks",
    "fieldtype": "Small Text",
    "label": "Remarks"
+  },
+  {
+   "fieldname": "fed_fraction",
+   "fieldtype": "Float",
+   "label": "Share of the day fed",
+   "precision": "3",
+   "read_only": 1
   }
  ],
  "links": [],

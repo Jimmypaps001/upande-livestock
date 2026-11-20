@@ -86,6 +86,8 @@ class TestFeedActuals(IntegrationTestCase):
 		for ev in self.events:
 			if frappe.db.get_value("Livestock Event", ev, "docstatus") == 1:
 				frappe.get_doc("Livestock Event", ev).cancel()
+		for n in frappe.get_all("Livestock Feed Session", filters={"herd": self.herd, "date": today()}, pluck="name"):
+			frappe.delete_doc("Livestock Feed Session", n, force=True, ignore_permissions=True)
 		name = FA._record_name(self.herd, today())
 		if name:
 			frappe.delete_doc(FA.DOCTYPE, name, force=True, ignore_permissions=True)
@@ -405,8 +407,8 @@ class TestFeedActuals(IntegrationTestCase):
 		code = self._day()["components"][0]["item_code"]
 		FA.amend_day(self.herd, today(), [{"item_code": code, "actual_kg": 9}])
 		seen = []
-		real = FA._is_mixed
-		with patch.object(FA, "_is_mixed", side_effect=lambda *a, **k: seen.append(k) or real(*a, **k)):
+		real = FA._fed_fraction
+		with patch.object(FA, "_fed_fraction", side_effect=lambda *a, **k: seen.append(k) or real(*a, **k)):
 			try:
 				self._manufacture_short()
 			except Exception:

@@ -103,6 +103,13 @@ def runs_already_posted(item_code, herd, posting_date):
 	return len(_issues_on(item_code, herd, getdate(posting_date)))
 
 
+def _session(herd, issued):
+	"""The day's session state (Not fed / Half fed / Fully fed); a day fed before sessions counts as full."""
+	from upande_livestock.serverscripts.feeding import _sessions
+
+	return _sessions.session_state(herd, today(), legacy_fed=issued > 0)
+
+
 @frappe.whitelist()
 def feed_day_status(herd):
 	def go():
@@ -150,6 +157,8 @@ def feed_day_status(herd):
 			"issued_kg": issued,
 			"remaining_kg": remaining,
 			"complete": remaining <= 0,
+			# Full day / Half day: what the sessions say is fed and what may be chosen next.
+			"session": _session(herd, issued),
 		}
 
 	return run(go, "livestock feed_day_status failed")

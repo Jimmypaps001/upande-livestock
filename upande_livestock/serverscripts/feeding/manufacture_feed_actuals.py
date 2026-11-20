@@ -15,13 +15,19 @@ from upande_livestock.serverscripts.common.idempotency import idempotent
 
 @frappe.whitelist()
 @idempotent
-def manufacture_feed_actuals(herd, date=None, employee=None, allow_shortage=False):
+def manufacture_feed_actuals(herd, date=None, employee=None, allow_shortage=False, feed_session=None, override=False):
 	"""Mix and issue the day's actuals. Short stock leaves a dated draft.
 
 	`employee` is honoured only for a System Manager or Administrator; anyone
 	else is always recorded as their own linked Employee.
 
-	Returns `{ok, ...herd_day, pending, waiting_for, engine}`.
+	`feed_session` is "Full" (default), "Half" (the next half of the day) or
+	"Half-1" / "Half-2": a half mixes exactly half of the planned or amended
+	quantities. Feeding more than a day is refused unless `override` is set by
+	a Livestock Manager or System Manager.
+
+	Returns `{ok, ...herd_day, pending, waiting_for, engine}`; `session` in it is
+	the day's state (Not fed / Half fed / Fully fed) and its sessions.
 	"""
 
 	# Shared helpers live with the module this was split from; imported at call time because that module re-exports this one.
@@ -40,7 +46,12 @@ def manufacture_feed_actuals(herd, date=None, employee=None, allow_shortage=Fals
 					frappe.session.user
 				)
 			)
-		out = manufacture_day(herd, date, who, allow_shortage=frappe.parse_json(allow_shortage))
+		extra = {}
+		if feed_session:
+			extra["feed_session"] = feed_session
+		if frappe.parse_json(override):
+			extra["override"] = True
+		out = manufacture_day(herd, date, who, allow_shortage=frappe.parse_json(allow_shortage), **extra)
 		out["ok"] = True
 		return out
 

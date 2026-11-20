@@ -105,6 +105,8 @@
   "cb_milk_price",
   "custom_colostrum_item",
   "custom_colostrum_warehouse",
+  "sb_feed_sessions",
+  "second_session_reminder_time",
   "sb_appreciation",
   "appreciation_enabled",
   "appreciation_account",
@@ -1373,6 +1375,18 @@
    "fieldtype": "HTML",
    "label": "Event stock rules",
    "options": "<p>Whether an event posts a Stock Entry, the item groups it draws on, its default store and whether it must name an item are set per event type — on each <a href='/app/livestock-event-type'>Livestock Event Type</a>, or all together on the app's <b>Settings → Events</b> tab, where an event can also be switched off.</p>"
+  },
+  {
+   "fieldname": "sb_feed_sessions",
+   "fieldtype": "Section Break",
+   "label": "Feeding Sessions",
+   "description": "A herd fed half a day is notified that the second session is due, and reminded at this time if it has not happened."
+  },
+  {
+   "fieldname": "second_session_reminder_time",
+   "fieldtype": "Time",
+   "label": "Second Session Reminder Time",
+   "default": "14:00:00"
   }
  ],
  "grid_page_length": 50,

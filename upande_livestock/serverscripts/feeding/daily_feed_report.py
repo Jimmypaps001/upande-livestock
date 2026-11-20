@@ -14,6 +14,9 @@ divided by the head fed (`feed_actuals.per_animal_intake`).
 daily email does). `daily_feed_report` is the whitelisted wrapper with the
 read guards.
 
+A herd fed in sessions shows what was fed so far (a half-fed day is compared
+with the half that was planned, not with the whole day) and lists its sessions.
+
 A herd counts as fed on the day when its feed day was mixed (or is waiting for
 stock), or when feed runs for it stand on that day from the older route. For
 the second kind there is no record of components, so the actual is what was
@@ -37,6 +40,9 @@ def appetite_flag(variance_kg):
 def _fed_day(herd, day):
 	"""The herd's day with its true actual, or None when the herd was not fed."""
 	info = feed_actuals.herd_day(herd, day)
+	if info["session"]["sessions"]:
+		# Fed in sessions: what was fed so far, against what was planned for it.
+		return feed_actuals.fed_view(info)
 	if info["status"] in ("Manufactured", "Waiting for stock"):
 		return info
 	bom_item = frappe.db.get_value("BOM", info["bom"], "item") if info["bom"] else None
@@ -131,6 +137,13 @@ def get_daily_feed_report(date=None, herd=None):
 				"actual_kg": info["actual_kg"],
 				"amended": info["amended"],
 				"draft_entries": info["draft_entries"],
+				"day_state": info["day_state"],
+				"fed_fraction": info["fed_fraction"],
+				"sessions": [
+					{k: x[k] for k in ("feed_session", "label", "session_fraction", "source", "status",
+					                    "planned_kg", "fed_kg", "amended", "fed_on", "components")}
+					for x in info["session"]["sessions"]
+				],
 				"components": [
 					{k: c[k] for k in ("item_code", "item_name", "uom", "planned_kg", "actual_kg")}
 					for c in info["components"]

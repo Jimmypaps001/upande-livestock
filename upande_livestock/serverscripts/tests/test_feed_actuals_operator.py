@@ -55,7 +55,7 @@ class TestFeedActualsOperator(IntegrationTestCase):
 		self.addCleanup(self._restore)
 		self.seen = []
 
-		def stub(herd, date=None, employee=None, allow_shortage=False):
+		def stub(herd, date=None, employee=None, allow_shortage=False, **kw):
 			self.seen.append(employee)
 			return {"status": "Manufactured"}
 

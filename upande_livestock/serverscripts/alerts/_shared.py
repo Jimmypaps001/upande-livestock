@@ -22,7 +22,9 @@ BREEDING_KINDS = ("Cow Open Too Long", "Calving Due", "Pregnancy Check Overdue")
 #: The store. These are the only kinds that are NOT about an animal — a
 #: concentrate running out is about a feed and about the whole farm, so they
 #: carry `item` instead of `animal` and are deduplicated on it.
-FEED_KINDS = ("Concentrate Low", "Concentrate Out")
+#: "Feed Session Due" is about a herd: it was fed half a day and the second
+#: session is owed (feeding/_sessions.py raises and settles it, not the sweep).
+FEED_KINDS = ("Concentrate Low", "Concentrate Out", "Feed Session Due")
 
 KINDS = MOVEMENT_KINDS + BREEDING_KINDS + FEED_KINDS
 

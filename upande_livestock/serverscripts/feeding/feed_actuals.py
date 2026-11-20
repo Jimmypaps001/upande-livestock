@@ -35,6 +35,13 @@ Units: a component's figures are in its recipe unit (kilograms for a feed
 line). The `planned_kg` / `actual_kg` names are kept for every row, and only
 kilogram rows add into the totals.
 
+SESSIONS: a herd's day can be mixed in one session (Full day) or two (Half day,
+session 1 of 2 and 2 of 2; `_sessions`). Each mix asks which it is and mixes
+that share of the planned (or amended) quantities, so what is manufactured is
+what was fed. `herd_day` reports the day's sessions and its state (Not fed /
+Half fed / Fully fed); the record keeps the amended quantities, each session
+keeps what it fed. Feeding more than a day needs a manager's override.
+
 Per-animal figures are the herd's total divided by the head fed
 (`Herds.number_of_animals`): the farm feeds a pen, so each animal is credited
 with an equal share. The daily report
@@ -51,6 +58,7 @@ from upande_livestock.serverscripts.common.envelope import guard, guard_read, gu
 from upande_livestock.serverscripts.common.employee import acting_employee
 from upande_livestock.serverscripts.feeding import _engine as feeding
 from upande_livestock.serverscripts.feeding import _feed_types as feed_types
+from upande_livestock.serverscripts.feeding import _sessions as sessions
 from upande_livestock.serverscripts.feeding._units import is_kg
 
 DOCTYPE = "Livestock Feed Actual"
@@ -188,6 +196,19 @@ def herd_day(herd, date=None):
 		c["planned_per_head"] = flt(c["planned_kg"] / heads, 4) if heads else 0.0
 		c["actual_per_head"] = flt(c["actual_kg"] / heads, 4) if heads else 0.0
 	drafts = _draft_entries(stock)
+	sess = sessions.session_state(herd, day, legacy_fed=status in ("Manufactured", "Waiting for stock"))
+	rows = sess["sessions"]
+	if rows:
+		# The record's status follows the sessions: Half fed until the day is complete.
+		if sess["state"] == "half_fed":
+			status = "Half fed"
+		elif sess["state"] == "fully_fed":
+			status = "Waiting for stock" if any(r["status"] == "Waiting for stock" for r in rows) else "Manufactured"
+		elif status in ("Manufactured", "Waiting for stock", "Half fed"):
+			status = "Amended" if amended else "Planned"
+		fed_kg = flt(sum(flt(r["fed_kg"]) for r in rows), PRECISION)
+	else:
+		fed_kg = actual_kg if sess["legacy"] else 0.0
 	return {
 		"herd": herd,
 		"herd_name": herd_doc.herd_name or herd,
@@ -206,7 +227,51 @@ def herd_day(herd, date=None):
 		"draft_entries": drafts,
 		"stock": stock,
 		"remarks": remarks,
+		"session": sess,
+		"day_state": sess["state"],
+		"fed_fraction": sess["fed_fraction"],
+		"fed_kg": fed_kg,
+		"fed_per_head": flt(fed_kg / heads, PRECISION) if heads else 0.0,
 	}
+
+
+def fed_view(info):
+	"""A herd's day as FED so far: planned and actual are the sessions' totals, not the day's.
+
+	A half-fed day compares what was fed with what was planned for that half, so
+	a herd that ate exactly its first half is on plan, not 50% below. A day
+	with no sessions (not fed, or fed before sessions existed) is unchanged.
+	"""
+	rows = info["session"]["sessions"]
+	if not rows:
+		return info
+	by_item = {}
+	for sess in rows:
+		for c in sess["components"]:
+			d = by_item.setdefault(
+				c["item_code"],
+				{"item_code": c["item_code"], "item_name": c.get("item_name") or c["item_code"],
+				 "uom": c.get("uom") or "", "planned_kg": 0.0, "actual_kg": 0.0, "removed": False},
+			)
+			d["planned_kg"] += flt(c["planned_kg"])
+			d["actual_kg"] += flt(c["fed_kg"])
+	heads = info["head_count"]
+	comps = list(by_item.values())
+	for c in comps:
+		c["planned_kg"], c["actual_kg"] = flt(c["planned_kg"], PRECISION), flt(c["actual_kg"], PRECISION)
+		c["planned_per_head"] = flt(c["planned_kg"] / heads, 4) if heads else 0.0
+		c["actual_per_head"] = flt(c["actual_kg"] / heads, 4) if heads else 0.0
+	planned, actual = _total_kg(comps, "planned_kg"), _total_kg(comps, "actual_kg")
+	out = dict(info)
+	out.update(
+		components=comps,
+		planned_kg=planned,
+		actual_kg=actual,
+		planned_per_head=flt(planned / heads, PRECISION) if heads else 0.0,
+		actual_per_head=flt(actual / heads, PRECISION) if heads else 0.0,
+		variance_kg=flt(actual - planned, PRECISION),
+	)
+	return out
 
 
 def _draft_entries(stock):
@@ -244,7 +309,7 @@ def per_animal_intake(herd, date=None):
 	"""
 	from upande_livestock.serverscripts.common.choices import RETIRED_STATUSES
 
-	day_info = herd_day(herd, date)
+	day_info = fed_view(herd_day(herd, date))
 	planned, actual = day_info["planned_per_head"], day_info["actual_per_head"]
 	animals = []
 	for a in frappe.get_all(
@@ -318,7 +383,10 @@ def resync_record(name, for_update=False):
 	again); if the waiting draft was posted it is Manufactured. Returns the
 	status. Called from `_is_mixed` and from the Stock Entry events in hooks.
 	"""
-	row = frappe.db.get_value(DOCTYPE, name, ["status", *STOCK_LINKS], as_dict=True, for_update=for_update)
+	row = frappe.db.get_value(
+		DOCTYPE, name, ["status", "herd", "date", *STOCK_LINKS], as_dict=True, for_update=for_update)
+	if row and frappe.db.exists(sessions.DT, {"herd": row.herd, "date": row.date}):
+		return _resync_with_sessions(name, row)
 	if not row or row.status not in ("Manufactured", "Waiting for stock"):
 		return row.status if row else None
 	linked = [row[f] for f in STOCK_LINKS if row[f]]
@@ -340,15 +408,47 @@ def resync_record(name, for_update=False):
 	return row.status
 
 
+def _resync_with_sessions(name, row):
+	"""A day fed in sessions: its status and links follow the sessions that still stand."""
+	sessions.resync(row.herd, row.date)
+	rows = sessions.sessions_of(row.herd, row.date)
+	fraction = sessions.fed_fraction(rows)
+	if fraction <= sessions.EPS:
+		if row.status not in ("Manufactured", "Waiting for stock", "Half fed"):
+			return row.status
+		doc = frappe.get_doc(DOCTYPE, name)
+		doc.status = "Planned"  # validate() turns it into Amended when it differs from the plan
+		doc.fed_fraction = 0
+		for f in ("work_order", *STOCK_LINKS, "livestock_event"):
+			doc.set(f, None)
+		doc.flags.ignore_permissions = True
+		doc.save(ignore_permissions=True)
+		return doc.status
+	if fraction < 1 - sessions.EPS:
+		status = "Half fed"
+	else:
+		status = "Waiting for stock" if any(r["status"] == "Waiting for stock" for r in rows) else "Manufactured"
+	if status != row.status:
+		frappe.db.set_value(DOCTYPE, name, {"status": status, "fed_fraction": fraction}, update_modified=False)
+	return status
+
+
 def on_stock_entry(doc, method=None):
 	"""Stock Entry on_submit / on_cancel / on_trash: re-check the feed days linked to it."""
 	try:
+		days = sessions.sessions_for_entry(doc.name)
+		if method == "on_trash":
+			sessions.unlink_entry(doc.name)
 		names = frappe.get_all(
 			DOCTYPE,
 			or_filters=[[f, "=", doc.name] for f in STOCK_LINKS],
-			filters={"status": ["in", ["Manufactured", "Waiting for stock"]]},
+			filters={"status": ["in", ["Manufactured", "Waiting for stock", "Half fed"]]},
 			pluck="name",
 		)
+		for d in days:
+			rec = _record_name(d.herd, d.date)
+			if rec and rec not in names:
+				names.append(rec)
 		for name in names:
 			if method == "on_trash":
 				# The entry is going: unlink it first (the link would block the
@@ -356,6 +456,10 @@ def on_stock_entry(doc, method=None):
 				for f in STOCK_LINKS:
 					if frappe.db.get_value(DOCTYPE, name, f) == doc.name:
 						frappe.db.set_value(DOCTYPE, name, f, None, update_modified=False)
+				if frappe.db.exists(sessions.DT, {"herd": frappe.db.get_value(DOCTYPE, name, "herd"),
+				                                  "date": frappe.db.get_value(DOCTYPE, name, "date")}):
+					resync_record(name)
+					continue
 				frappe.db.set_value(DOCTYPE, name, "status", "Planned", update_modified=False)
 				_fall_back_if_empty(name)
 			else:
@@ -381,18 +485,31 @@ def _fall_back_if_empty(name):
 	doc.save(ignore_permissions=True)
 
 
-def _is_mixed(herd, day, for_update=False):
-	"""Is this herd's day already mixed or waiting for stock (by us or the old route)?
+def _fed_fraction(herd, day, for_update=False):
+	"""How much of the herd's day has been fed: the sessions that stand, else 1 for a day
+	fed before sessions existed (a mixed record, or feed runs from the older route), else 0.
 
-	A day we marked mixed is re-checked against its Stock Entries first: if
-	they were cancelled or deleted it is not mixed any more.
+	A day's Stock Entries are re-checked first: sessions whose entries were cancelled or
+	deleted do not count.
 	"""
 	name = _record_name(herd, day)
-	if name and resync_record(name, for_update=for_update) in ("Manufactured", "Waiting for stock"):
-		return True
+	if name:
+		resync_record(name, for_update=for_update)
+	else:
+		sessions.resync(herd, day)
+	rows = sessions.sessions_of(herd, day)
+	if rows:
+		return sessions.fed_fraction(rows)
+	if name and frappe.db.get_value(DOCTYPE, name, "status") in ("Manufactured", "Waiting for stock"):
+		return 1.0
 	bom = frappe.db.get_value("Herds", herd, "bom")
 	item = frappe.db.get_value("BOM", bom, "item") if bom else None
-	return bool(item and _issued_on(frappe._dict(item=item), herd, day))
+	return 1.0 if item and _issued_on(frappe._dict(item=item), herd, day) else 0.0
+
+
+def _is_mixed(herd, day, for_update=False):
+	"""Is this herd's day fully fed (by us in one or two sessions, or by the old route)?"""
+	return _fed_fraction(herd, day, for_update=for_update) >= 1 - sessions.EPS
 
 
 def amend_day(herd, date, components, remarks=None):
@@ -438,8 +555,11 @@ def amend_day(herd, date, components, remarks=None):
 				},
 			)
 	by_item = {r.item_code: r for r in doc.items}
+	trail = []
 	for code, kg in wanted.items():
 		row = by_item.get(code)
+		trail.append("{0}: {1:g} kg (plan {2:g})".format(
+			(row.item_name if row else None) or code, flt(kg), flt(row.planned_kg) if row else 0))
 		if not row:
 			item = frappe.db.get_value("Item", code, ["item_name", "stock_uom"], as_dict=True)
 			row = doc.append(
@@ -455,6 +575,9 @@ def amend_day(herd, date, components, remarks=None):
 		doc.insert(ignore_permissions=True)
 	else:
 		doc.save(ignore_permissions=True)
+	fed = sessions.sessions_of(herd, day)
+	when = ("after " + ", ".join(sessions.LABELS[r["feed_session"]].lower() for r in fed)) if fed else "before any feeding"
+	doc.add_comment("Info", "Amended {0} by {1}: {2}".format(when, frappe.session.user, "; ".join(trail)))
 	return herd_day(herd, day)
 
 
@@ -465,7 +588,7 @@ def reset_day(herd, date):
 	day is mixed, like `amend_day`.
 	"""
 	day = _day_of(date)
-	if _is_mixed(herd, day):
+	if _fed_fraction(herd, day) > sessions.EPS:
 		frappe.throw(
 			_("The feed for {0} on {1} is already mixed. Cancel that feeding before resetting the day.").format(
 				herd, day
@@ -473,6 +596,14 @@ def reset_day(herd, date):
 		)
 	name = _record_name(herd, day)
 	if name:
+		was = frappe.get_doc(DOCTYPE, name)
+		if was.amended:
+			frappe.get_doc({
+				"doctype": "Comment", "comment_type": "Info", "reference_doctype": "Herds",
+				"reference_name": herd,
+				"content": "Feed day {0} reset to the recipe by {1} (it had been amended: {2} kg of {3} kg planned)."
+				.format(day, frappe.session.user, flt(was.actual_kg), flt(was.planned_kg)),
+			}).insert(ignore_permissions=True)
 		frappe.delete_doc(DOCTYPE, name, force=True, ignore_permissions=True)
 	return herd_day(herd, day)
 
@@ -501,8 +632,14 @@ def _actual_lines(day_info, base_quantity):
 	return lines
 
 
-def manufacture_day(herd, date=None, employee=None, allow_shortage=False):
-	"""Mix and issue the day's ACTUALS for a herd; a short store leaves a draft.
+def manufacture_day(herd, date=None, employee=None, allow_shortage=False, feed_session=None, override=False):
+	"""Mix and issue the day's ACTUALS for a herd (all of it, or one half); a short store leaves a draft.
+
+	`feed_session` is "Full" (the default), "Half" (the next half of the day) or
+	"Half-1" / "Half-2". A half manufactures exactly half of the planned, or of
+	the amended, quantities, so what is manufactured is what was fed. The
+	session is kept (`_sessions.record`). Feeding more than a day needs
+	`override` by a manager.
 
 	Without an amendment this is the herd's recipe for the head fed. With one,
 	a tuned recipe is minted from the actuals and mixed to the actual total.
@@ -513,26 +650,39 @@ def manufacture_day(herd, date=None, employee=None, allow_shortage=False):
 
 	day = _day_of(date)
 	# Lock the day's record before judging it: two taps of Mix at once must not
-	# both see "not mixed" and both move stock.
-	if _is_mixed(herd, day, for_update=True):
-		frappe.throw(_("{0} has already been fed on {1}.").format(herd, day))
+	# both see "not fed" and both move stock.
+	name = _record_name(herd, day)
+	if name:
+		resync_record(name, for_update=True)
+	if not sessions.sessions_of(herd, day) and _fed_fraction(herd, day, for_update=True) >= 1 - sessions.EPS:
+		# Fed whole before sessions existed: another mix is a second feeding of the day.
+		if not (frappe.parse_json(override) and sessions.can_override()):
+			frappe.throw(_("{0} has already been fed on {1}.").format(herd, day))
+		choice, fraction, overridden = sessions.normalise(feed_session), 1.0, True
+		choice = "Full" if choice == "Half" else choice
+		fraction = sessions.FRACTION[choice]
+	else:
+		choice, fraction, overridden = sessions.resolve(herd, day, feed_session, override)
+	fed_before = sessions.fed_fraction(sessions.sessions_of(herd, day))
 	info = herd_day(herd, day)
 	total = _total_kg(info["components"], "actual_kg")
 	if total <= 0:
 		frappe.throw(_("Enter the kilograms actually fed before mixing."))
 	if not info["head_count"]:
 		frappe.throw(_("Enter how many animals were fed."))
+	session_total = flt(total * fraction, PRECISION)
 
 	standing = frappe.get_doc("BOM", frappe.db.get_value("Herds", herd, "bom"))
 	kwargs = {}
 	if info["amended"]:
 		kwargs["bom_no"] = tuned_bom(herd, _actual_lines(info, standing.quantity), base_bom=standing.name)
-		kwargs["typed_total"] = total
+		kwargs["typed_total"] = session_total
 
 	res = feeding.manufacture_herd_feed(
 		herd,
 		allow_shortage=allow_shortage,
 		employee=employee,
+		portion=fraction,
 		posting_date=str(day),
 		heads=info["head_count"],
 		draft_when_short=True,
@@ -546,7 +696,12 @@ def manufacture_day(herd, date=None, employee=None, allow_shortage=False):
 		doc.update({"date": day, "herd": herd, "head_count": info["head_count"], "bom": info["bom"]})
 		for c in info["components"]:
 			doc.append("items", {k: c[k] for k in ("item_code", "item_name", "uom", "planned_kg", "actual_kg")})
-	doc.status = "Waiting for stock" if res.get("pending") else "Manufactured"
+	total_fed = fed_before + fraction
+	if total_fed < 1 - sessions.EPS:
+		doc.status = "Half fed"
+	else:
+		doc.status = "Waiting for stock" if res.get("pending") else "Manufactured"
+	doc.fed_fraction = flt(total_fed, 3)
 	doc.work_order = res.get("work_order")
 	doc.transfer_stock_entry = res.get("transfer_stock_entry")
 	doc.manufacture_stock_entry = res.get("manufacture_stock_entry") or None
@@ -557,6 +712,17 @@ def manufacture_day(herd, date=None, employee=None, allow_shortage=False):
 		doc.insert(ignore_permissions=True)
 	else:
 		doc.save(ignore_permissions=True)
+	sessions.record(
+		herd, day, choice, fraction, "Day sheet", res,
+		heads=info["head_count"],
+		components=sessions.plan_components(info["components"], fraction),
+		planned_kg=info["planned_kg"] * fraction,
+		fed_kg=session_total,
+		amended=info["amended"],
+		employee=employee,
+		overridden=overridden,
+		feed_actual=doc.name,
+	)
 	out = herd_day(herd, day)
 	out.update({"pending": bool(res.get("pending")), "waiting_for": res.get("waiting_for"), "engine": res})
 	return out

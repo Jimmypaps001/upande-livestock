@@ -303,6 +303,13 @@ scheduler_events = {
 	"hourly": [
 		"upande_livestock.serverscripts.common.appreciation.run_if_due",
 	],
+	# A herd fed half a day: remind the herdsman at Livestock Settings > Second
+	# Session Reminder Time if the second session has not happened.
+	"cron": {
+		"*/15 * * * *": [
+			"upande_livestock.serverscripts.feeding._sessions.send_reminders_job",
+		],
+	},
 	# Ex "CHECK OVERDUE PREGNANCY DIAGNOSES" Server Script (Daily).
 	"daily": [
 		"upande_livestock.serverscripts.alerts.tasks.check_overdue_pregnancy_diagnoses",

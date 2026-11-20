@@ -130,6 +130,26 @@ def field_spec():
 				"insert_after": "custom_herd",
 				"module": MODULE,
 			},
+			{
+				# Which session of the day this mix was: Full, or half 1 / half 2
+				# (serverscripts/feeding/_sessions.py writes it after the mix).
+				"fieldname": "custom_feed_session",
+				"label": "Feed Session",
+				"fieldtype": "Select",
+				"options": "\nFull\nHalf-1\nHalf-2",
+				"read_only": 1,
+				"insert_after": "custom_no_of_cows",
+				"module": MODULE,
+			},
+			{
+				"fieldname": "custom_session_fraction",
+				"label": "Share of the Day",
+				"fieldtype": "Float",
+				"precision": "3",
+				"read_only": 1,
+				"insert_after": "custom_feed_session",
+				"module": MODULE,
+			},
 		],
 		"BOM": [
 			{
@@ -200,6 +220,26 @@ def field_spec():
 				"fieldname": "custom_milking_end_section",
 				"fieldtype": "Section Break",
 				"insert_after": "custom_cows_milked",
+				"module": MODULE,
+			},
+			{
+				# Which session of the day this mix was: Full, or half 1 / half 2
+				# (serverscripts/feeding/_sessions.py writes it after the mix).
+				"fieldname": "custom_feed_session",
+				"label": "Feed Session",
+				"fieldtype": "Select",
+				"options": "\nFull\nHalf-1\nHalf-2",
+				"read_only": 1,
+				"insert_after": "custom_milking_end_section",
+				"module": MODULE,
+			},
+			{
+				"fieldname": "custom_session_fraction",
+				"label": "Share of the Day",
+				"fieldtype": "Float",
+				"precision": "3",
+				"read_only": 1,
+				"insert_after": "custom_feed_session",
 				"module": MODULE,
 			},
 		],

@@ -85,6 +85,9 @@ ROLES_FOR_KIND = {
 	# the one that teaches him to ignore the rest.
 	"Concentrate Low": ("Livestock Manager", "Livestock Stores"),
 	"Concentrate Out": ("Livestock Manager", "Livestock Stores"),
+	# A herd fed half a day: whoever feeds it (the attendant, or whoever is
+	# restricted to the herd) owes the second session; the manager is told too.
+	"Feed Session Due": ("Livestock Manager", "Livestock Attendant"),
 }
 
 #: A kind nobody thought to map still reaches the person accountable for the

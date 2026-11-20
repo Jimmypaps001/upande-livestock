@@ -64,6 +64,8 @@ def record_feeding(payload=None):
 				portion=d.get("portion", 1.0),
 				posting_date=d.get("posting_date"),
 				bom_no=d.get("bom_no"),
+				feed_session=d.get("feed_session"),
+				override=d.get("override", False),
 			)
 		if action == "issue":
 			return issue_feed(
