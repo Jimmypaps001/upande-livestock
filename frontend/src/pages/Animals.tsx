@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { BarChart3, CalendarClock, ChevronLeft, ShieldAlert } from "lucide-react";
 import { CompareDialog } from "@/components/animals/CompareDialog";
 import { PhotoStrip } from "@/components/animals/PhotoStrip";
 import { AnimalPortrait, AnimalPortraitSkeleton } from "@/components/animals/AnimalPortrait";
 import { AnimalSearch } from "@/components/animals/AnimalSearch";
 import { CycleRing, CycleRingSkeleton } from "@/components/animals/CycleRing";
+import { BullPanel } from "@/components/animals/BullPanel";
 import { FamilyCard } from "@/components/animals/FamilyCard";
 import { EventFeed, EventFeedSkeleton } from "@/components/animals/EventFeed";
 import { KpiRadar, KpiRadarSkeleton } from "@/components/animals/KpiRadar";
@@ -29,7 +30,8 @@ import {
   type HerdBenchmarks,
 } from "@/lib/animals-api";
 import { isError } from "@/lib/frappe";
-import { ageFrom, type AnimalProfile, type AnimalSummary } from "@/lib/animals";
+import { getBullEconomicsBulk, type BullEconomics } from "@/lib/bulls";
+import { ageFrom, pronouns, type AnimalProfile, type AnimalSummary } from "@/lib/animals";
 import { Button } from "@/components/ui/button";
 
 /**
@@ -62,8 +64,26 @@ export function Animals() {
   const [bench, setBench] = useState<HerdBenchmarks | null>(null);
   const [culled, setCulled] = useState<Record<string, string>>({});
   const [failure, setFailure] = useState<string | null>(null);
+  const [bulls, setBulls] = useState<Record<string, BullEconomics>>({});
+  const bullsAsked = useRef(false);
+
+  // A bull is asked about once for the whole list, and only when a bull is on
+  // screen: the figures walk every herd's feed days, which a cow's page never needs.
+  const loadBulls = useCallback(() => {
+    if (bullsAsked.current) return;
+    bullsAsked.current = true;
+    void getBullEconomicsGuarded();
+  }, []);
+  async function getBullEconomicsGuarded() {
+    const r = await getBullEconomicsBulk();
+    if (isError(r)) bullsAsked.current = false;
+    else setBulls(r.bulls);
+  }
 
   const profile = selected ? profiles[selected.id] ?? null : null;
+  // A bull has no calving loop. The list already knows his sex, so the page
+  // takes the bull's shape before his profile has arrived.
+  const bull = (profile?.sex ?? selected?.sex) === "Male";
 
   const fetchProfile = useCallback((id: string) => {
     setProfiles((have) => {
@@ -94,7 +114,8 @@ export function Animals() {
 
   useEffect(() => {
     if (selected) fetchProfile(selected.id);
-  }, [selected, fetchProfile]);
+    if (selected?.sex === "Male") loadBulls();
+  }, [selected, fetchProfile, loadBulls]);
 
   // The herd's own medians, which are real even while the profiles are not:
   // the comparison is the one thing on this page that would be a lie if it
@@ -131,6 +152,8 @@ export function Animals() {
                 animals={herd}
                 selectedId={profile?.id ?? null}
                 onSelect={setSelected}
+                bulls={bulls}
+                onBulls={loadBulls}
               />
             </CardContent>
           </Card>
@@ -151,7 +174,9 @@ export function Animals() {
             <div className="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,280px)]">
               {/* the story */}
               <div className="flex min-w-0 flex-col gap-5">
-                <Card>
+                {bull && <BullPanel animal={selected.id} />}
+
+                {!bull && <Card>
                   <CardHeaderRow>
                     <CardHeading>
                       <CardTitle>Where she is in the cycle</CardTitle>
@@ -173,9 +198,9 @@ export function Animals() {
                   <CardContent className="pt-0">
                     {profile ? <CycleRing cycle={profile.cycle} /> : <CycleRingSkeleton />}
                   </CardContent>
-                </Card>
+                </Card>}
 
-                <button
+                {!bull && <button
                   type="button"
                   onClick={() => setComparing(true)}
                   // Her figures are what a comparison compares; until they have
@@ -220,9 +245,9 @@ export function Animals() {
                     }
                   />
                 </FigureRow>
-                </button>
+                </button>}
 
-                <div className="-mt-2 flex flex-wrap items-center gap-3">
+                {!bull && <div className="-mt-2 flex flex-wrap items-center gap-3">
                   <Button
                     variant="outline"
                     size="sm"
@@ -238,21 +263,22 @@ export function Animals() {
                       Marked for cull review
                     </span>
                   )}
-                </div>
+                </div>}
 
                 <Card>
                   <CardHeaderRow>
                     <CardHeading>
-                      <CardTitle>Her life so far</CardTitle>
+                      <CardTitle>{bull ? "His life so far" : "Her life so far"}</CardTitle>
                       <CardDescription>
                         {ageFrom(selected.bornOn)} on one line, to scale. The band underneath
-                        is the herd she was standing in.
+                        is the herd {pronouns(selected.sex).subj} was standing in.
                       </CardDescription>
                     </CardHeading>
                   </CardHeaderRow>
                   <CardContent className="pt-0">
                     {profile ? (
                       <LifeTimeline
+                        sex={selected.sex}
                         bornOn={profile.bornOn}
                         milestones={profile.milestones}
                         spells={profile.spells}
@@ -274,7 +300,7 @@ export function Animals() {
                   </CardHeaderRow>
                   <CardContent className="pt-0">
                     {profile ? (
-                      <EventFeed milestones={profile.milestones} />
+                      <EventFeed milestones={profile.milestones} sex={selected.sex} />
                     ) : (
                       <EventFeedSkeleton />
                     )}
@@ -291,7 +317,7 @@ export function Animals() {
                 )}
                 {profile && <PhotoStrip key={profile.id} animal={profile.id} upload={{ context: "profile", label: "New profile photo" }} />}
                 {profile && <FamilyCard key={profile.id} animal={profile.id} onOpen={(id) => setSelected((cur) => herd.find((h) => h.id === id) ?? cur)} />}
-                <Card>
+                {!bull && <Card>
                   <CardHeaderRow className="pb-0">
                     <CardHeading>
                       <CardTitle className="text-[14px]">How she compares</CardTitle>
@@ -301,7 +327,7 @@ export function Animals() {
                   <CardContent>
                     {profile ? <KpiRadar kpis={profile.kpis} /> : <KpiRadarSkeleton />}
                   </CardContent>
-                </Card>
+                </Card>}
               </div>
             </div>
           </div>
@@ -320,7 +346,7 @@ export function Animals() {
         )}
       </div>
 
-      {profile && (
+      {profile && !bull && (
         <CompareDialog
           open={comparing}
           onOpenChange={setComparing}

@@ -1,8 +1,9 @@
 import { CoverBadge } from "@/components/animals/CoverBadge";
-import { useMemo, useState } from "react";
-import { ChevronRight, Search, X } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { ChevronRight, ChevronsDownUp, ChevronsUpDown, Search, X } from "lucide-react";
 import { STAGES, ageFrom, matchesSex, type AnimalSummary, type SexFilter } from "@/lib/animals";
 import { SilhouetteFrame } from "@/components/animals/AnimalSilhouette";
+import { money, verdict, type BullEconomics } from "@/lib/bulls";
 import { Input } from "@/components/ui/input";
 import { Picker } from "@/components/ui/picker";
 import { cn } from "@/lib/utils";
@@ -107,10 +108,16 @@ export function AnimalSearch({
   animals,
   selectedId,
   onSelect,
+  bulls,
+  onBulls,
 }: {
   animals: AnimalSummary[];
   selectedId: string | null;
   onSelect: (a: AnimalSummary) => void;
+  /** Feed cost against value, by bull id. Shown on the selected bull's row, and on every bull's while Bulls is on. */
+  bulls?: Record<string, BullEconomics>;
+  /** Called when the Bulls chip is on, so the page can fetch `bulls` only then. */
+  onBulls?: () => void;
 }) {
   const [term, setTerm] = useState("");
   const [grouping, setGrouping] = useState<Grouping>("none");
@@ -124,6 +131,10 @@ export function AnimalSearch({
       /* the choice still holds for this page */
     }
   };
+
+  useEffect(() => {
+    if (sex === "bulls") onBulls?.();
+  }, [sex, onBulls]);
 
   // The text search first: the chips' counts describe what the search found, so
   // "Cows 12" always means twelve cows among the matches.
@@ -168,6 +179,10 @@ export function AnimalSearch({
     }
     return order.sort((a, b) => a[0].localeCompare(b[0]));
   }, [grouping, term, results]);
+
+  const allOpen = !!grouped && grouped.length > 0 && grouped.every(([g]) => !shut[g]);
+  const expandAll = (open: boolean) =>
+    setShut(open ? {} : Object.fromEntries((grouped ?? []).map(([g]) => [g, true])));
 
   return (
     <div className="flex min-h-0 flex-col gap-3">
@@ -242,6 +257,22 @@ export function AnimalSearch({
         </span>
       </div>
 
+      {grouped && grouped.length > 0 && (
+        // Placed as the TreePicker places it: one icon at the right of a row of
+        // its own above the list, which says what a click will do.
+        <div className="flex flex-nowrap items-center justify-end px-0.5 text-xs">
+          <button
+            type="button"
+            aria-label={allOpen ? "Collapse all" : "Expand all"}
+            title={allOpen ? "Collapse all" : "Expand all"}
+            onClick={() => expandAll(!allOpen)}
+            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[var(--sd-muted)] transition-colors hover:bg-[var(--sd-bg-soft)] hover:text-[var(--sd-ink)]"
+          >
+            {allOpen ? <ChevronsDownUp className="h-3.5 w-3.5" /> : <ChevronsUpDown className="h-3.5 w-3.5" />}
+          </button>
+        </div>
+      )}
+
       {grouped && (
         <ul className={cn("flex min-h-0 flex-col gap-1 overflow-y-auto", CAP)}>
           {grouped.map(([herd, members]) => (
@@ -311,6 +342,7 @@ export function AnimalSearch({
                   <span className="truncate text-[11.5px] text-[var(--sd-muted)]">
                     {a.herd}
                   </span>
+                  {burden(a)}
                 </span>
                 <span className="shrink-0 text-[11px] tabular-nums text-[var(--sd-quiet)]">
                   {ageFrom(a.bornOn)}
@@ -330,6 +362,22 @@ export function AnimalSearch({
       )}
     </div>
   );
+
+  /** A bull's feed cost, value and net under his herd name; nothing for a cow. */
+  function burden(a: AnimalSummary) {
+    const e = a.sex === "Male" ? bulls?.[a.id] : undefined;
+    if (!e || !(a.id === selectedId || sex === "bulls")) return null;
+    const v = verdict(e);
+    return (
+      <span
+        data-testid="bull-burden"
+        className={cn("truncate text-[11px] tabular-nums", v.loss ? "text-[var(--sd-sev-critical)]" : "text-[var(--sd-muted)]")}
+      >
+        Feed {money(e.feed.cost, e.currency)} · Value {money(e.value.amount, e.currency)} · {v.text}
+        {e.burden_since ? ` · Burden since ${e.burden_since}` : ""}
+      </span>
+    );
+  }
 
   /** One animal, drawn the same whether she is in a group or a flat list. */
   function row(a: AnimalSummary) {
@@ -355,6 +403,7 @@ export function AnimalSearch({
             <CoverBadge state={a.cover} />
           </span>
           <span className="truncate text-[11.5px] text-[var(--sd-muted)]">{a.herd}</span>
+          {burden(a)}
         </span>
         <span className="shrink-0 text-[11px] tabular-nums text-[var(--sd-quiet)]">
           {ageFrom(a.bornOn)}

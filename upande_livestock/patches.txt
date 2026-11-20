@@ -197,3 +197,4 @@ upande_livestock.patches.seed_calf_asset_settings
 # Feed types: Kaitet feeds from the Day sheet. System and Day sheet on, Manual configuration off,
 # on desk and phone. Written only where nothing is stored, so a choice already made is kept.
 upande_livestock.patches.default_feed_types
+upande_livestock.patches.default_bull_purpose

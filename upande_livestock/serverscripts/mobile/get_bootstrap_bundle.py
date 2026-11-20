@@ -74,7 +74,12 @@ def get_bootstrap_bundle(version=None):
 		# as {system, manual, day_sheet}. A Single, which `digest` cannot see, so
 		# folded into the version: a switch flipped on the desk must reach phones.
 		feed_types = {m: f["phone"] for m, f in _feed_types.flags().items()}
-		current = hashlib.sha1((digest(_SOURCES) + frappe.as_json(feed_types)).encode()).hexdigest()[:16]
+		from upande_livestock.serverscripts.animals.bull_economics import purpose as bull_purpose
+
+		why_bulls = bull_purpose()
+		current = hashlib.sha1(
+			(digest(_SOURCES) + frappe.as_json(feed_types) + why_bulls).encode()
+		).hexdigest()[:16]
 		if unchanged(version, current):
 			return {"ok": True, "unchanged": True, "version": current}
 
@@ -103,6 +108,8 @@ def get_bootstrap_bundle(version=None):
 			"version": current,
 			"operator": current_employee(),
 			"feed_types": feed_types,
+			# Why the farm keeps bulls (Livestock Settings > Bull purpose).
+			"bull_purpose": why_bulls,
 			"company": default_company(),
 			"warehouses": {"drug": default_store("Vaccination") or default_store("Treatment"),
 			               "semen": default_store("Service")},

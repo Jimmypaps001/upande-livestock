@@ -1,3 +1,4 @@
+import { pronouns } from "@/lib/animals";
 import { useMemo, useState } from "react";
 import {
   MILESTONE_TONE,
@@ -54,7 +55,9 @@ export function LifeTimeline({
   bornOn,
   milestones,
   spells,
+  sex,
 }: {
+  sex?: string | null;
   bornOn: string | null;
   milestones: Milestone[];
   spells: HerdSpell[];
@@ -95,7 +98,7 @@ export function LifeTimeline({
   if (!model.marks.length) {
     return (
       <p className="text-[13px] text-[var(--sd-muted)]">
-        Nothing recorded against her yet.
+        Nothing recorded against {pronouns(sex).obj} yet.
       </p>
     );
   }
@@ -173,7 +176,7 @@ export function LifeTimeline({
       <div className="min-h-[52px] rounded-[var(--sd-radius-lg)] bg-[var(--sd-bg-soft)] px-4 py-3">
         {open === null ? (
           <p className="text-[12.5px] text-[var(--sd-quiet)]">
-            Pick a marker to read what happened. The band beneath is the herd she was
+            Pick a marker to read what happened. The band beneath is the herd {pronouns(sex).subj} was
             standing in at the time.
           </p>
         ) : (

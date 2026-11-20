@@ -85,7 +85,7 @@ export function AnimalPortrait({ animal, onInsured }: { animal: AnimalProfile; o
           </button>
         )}
         {mayInsure && (
-          <InsureDialog open={insuring} onOpenChange={setInsuring} animal={animal.id} onInsured={onInsured} />
+          <InsureDialog open={insuring} onOpenChange={setInsuring} animal={animal.id} sex={animal.sex} onInsured={onInsured} />
         )}
       </div>
 

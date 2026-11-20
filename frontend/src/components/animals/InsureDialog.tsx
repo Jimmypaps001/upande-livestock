@@ -1,3 +1,4 @@
+import { pronouns } from "@/lib/animals";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,8 +29,10 @@ export function InsureDialog({
   open,
   onOpenChange,
   animal,
+  sex,
   onInsured,
 }: {
+  sex?: string | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   animal: string;
@@ -69,7 +72,7 @@ export function InsureDialog({
       setError(r.error);
       return;
     }
-    setDone(endorsement.trim() ? "She is under cover." : "Request sent to the insurer.");
+    setDone(endorsement.trim() ? `${pronouns(sex).subj === "he" ? "He" : pronouns(sex).subj === "she" ? "She" : "It"} is under cover.` : "Request sent to the insurer.");
     onInsured?.();
   }
 
@@ -79,13 +82,13 @@ export function InsureDialog({
         <DialogHeader>
           <DialogTitle>Insure {animal}</DialogTitle>
           <DialogDescription>
-            Add her to a running policy. Leave the endorsement number empty to send the insurer a request.
+            Add {pronouns(sex).obj} to a running policy. Leave the endorsement number empty to send the insurer a request.
           </DialogDescription>
         </DialogHeader>
         {error && <Notice tone="error">{error}</Notice>}
         {done && <Notice tone="ok">{done}</Notice>}
         {policies && policies.length === 0 && !error && (
-          <Notice tone="info">There is no running policy to add her to. Create one in Upande Asset first.</Notice>
+          <Notice tone="info">There is no running policy to add {pronouns(sex).obj} to. Create one in Upande Asset first.</Notice>
         )}
         <div className="grid gap-3">
           <div className="grid gap-1">
@@ -105,7 +108,7 @@ export function InsureDialog({
             </select>
           </div>
           <div className="grid gap-1">
-            <Label htmlFor="insure-sum">Sum insured (blank: her book value)</Label>
+            <Label htmlFor="insure-sum">Sum insured (blank: {pronouns(sex).poss} book value)</Label>
             <Input id="insure-sum" type="number" min="0" value={sum} onChange={(e) => setSum(e.target.value)} />
           </div>
           <div className="grid gap-1">
