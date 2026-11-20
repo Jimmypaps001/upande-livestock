@@ -16,7 +16,7 @@ from frappe.tests import IntegrationTestCase
 from frappe.utils import today
 
 from upande_livestock.serverscripts.common import asset_cover, loss
-from upande_livestock.serverscripts.losses import loss_api
+from upande_livestock.serverscripts.losses.record_loss import record_loss
 from upande_livestock.serverscripts.tests.test_operations import _make_cow, _purge
 
 SETTING = "sale_waits_for"
@@ -105,7 +105,7 @@ class TestSaleGate(_Base):
 class TestRecordLoss(_Base):
 	def test_write_off_retires_the_animal_without_a_claim(self):
 		sc = _scenario("ZZ death", "Write off", trigger="Death")
-		out = loss_api.record_loss(animal=self.tag, scenario=sc.name, notes="found dead")
+		out = record_loss(animal=self.tag, scenario=sc.name, notes="found dead")
 		self.assertTrue(out.get("ok"), out)
 		self.assertEqual(out["status"], "Closed")
 		status, disabled = frappe.db.get_value("Animal", self.tag, ["status", "disabled"])
@@ -115,7 +115,7 @@ class TestRecordLoss(_Base):
 
 	def test_theft_is_written_off_as_stolen(self):
 		sc = _scenario("ZZ theft", "Write off", trigger="Theft")
-		out = loss_api.record_loss(animal=self.tag, scenario=sc.name)
+		out = record_loss(animal=self.tag, scenario=sc.name)
 		self.assertEqual(frappe.db.get_value("Animal", self.tag, "status"), "Transferred Out")
 		self.assertEqual(frappe.db.get_value("Livestock Disposal", out["disposal"], "disposal_type"), "Stolen")
 
@@ -127,7 +127,7 @@ class TestRecordLoss(_Base):
 		with mock.patch.object(loss, "create_claim", return_value=(fake, None)), \
 		     mock.patch.object(loss, "missing_documents", return_value=[]), \
 		     mock.patch.object(loss, "claim_state", return_value="Draft"):
-			out = loss_api.record_loss(animal=self.tag, scenario=sc.name, customer=None, sale_price=5000)
+			out = record_loss(animal=self.tag, scenario=sc.name, customer=None, sale_price=5000)
 		self.assertTrue(out.get("ok"), out)
 		self.assertEqual(out["status"], "Awaiting claim")
 		self.assertIn("cannot be sold yet", out["blocked"])
@@ -150,14 +150,14 @@ class TestRecordLoss(_Base):
 		sc = _scenario("ZZ sell3", "Sell live")
 		frappe.get_doc({"doctype": "Livestock Loss", "animal": self.tag, "scenario": sc.name,
 		                "incident_date": today(), "status": "Sale waiting"}).insert(ignore_permissions=True)
-		out = loss_api.record_loss(animal=self.tag, scenario=sc.name)
+		out = record_loss(animal=self.tag, scenario=sc.name)
 		self.assertIn("already has a loss", out.get("error", ""))
 
 	def test_an_unknown_or_inactive_scenario_is_refused(self):
-		self.assertIn("scenario", loss_api.record_loss(animal=self.tag, scenario="nope").get("error", "").lower())
+		self.assertIn("scenario", record_loss(animal=self.tag, scenario="nope").get("error", "").lower())
 		sc = _scenario("ZZ off", "Write off")
 		sc.db_set("active", 0)
-		self.assertIn("switched off", loss_api.record_loss(animal=self.tag, scenario=sc.name).get("error", ""))
+		self.assertIn("switched off", record_loss(animal=self.tag, scenario=sc.name).get("error", ""))
 
 
 class TestClaimThroughUpandeAsset(_Base):
@@ -211,6 +211,28 @@ class TestClaimThroughUpandeAsset(_Base):
 		meta = frappe.get_meta("Insurance Claim")
 		for f in ("asset", "incident_date", "reported_date", "incident_type", "loss_treatment", "documents"):
 			self.assertTrue(meta.has_field(f), f)
+
+
+class TestClaimPapersArePrivate(_Base):
+	def _file(self, private):
+		f = frappe.get_doc({"doctype": "File", "file_name": f"zz-{frappe.generate_hash(length=5)}.txt",
+		                    "content": "x", "is_private": private}).insert(ignore_permissions=True)
+		return f
+
+	def test_a_public_file_is_refused_as_claim_paper(self):
+		pub = self._file(0)
+		with self.assertRaises(frappe.ValidationError):
+			loss.check_private([{"document_name": "Police abstract", "attachment": pub.file_url}])
+		out = record_loss(animal=self.tag, scenario=_scenario("ZZ priv", "Write off").name,
+		                  documents=[{"document_name": "Photo", "attachment": pub.file_url}])
+		self.assertIn("private", out.get("error", ""))
+
+	def test_a_private_file_is_accepted_and_attached_to_the_claim(self):
+		priv = self._file(1)
+		loss.check_private([{"document_name": "Police abstract", "attachment": priv.file_url}])
+		claim = frappe._dict(name="CLM-PRIV", documents=[frappe._dict(attachment=priv.file_url)])
+		loss.attach_to_claim(claim)
+		self.assertEqual(frappe.db.get_value("File", priv.name, "attached_to_name"), "CLM-PRIV")
 
 
 class TestScenarioRules(_Base):

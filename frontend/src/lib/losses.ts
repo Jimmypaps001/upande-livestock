@@ -2,7 +2,7 @@
 import { call } from "@/lib/frappe";
 import { bootstrap } from "@/lib/frappe";
 
-const API = "upande_livestock.serverscripts.losses.loss_api";
+const API = "upande_livestock.serverscripts.losses";
 
 export const TRIGGERS = ["Injury", "Disease", "Death", "Theft", "Low production", "Other"] as const;
 export const OUTCOMES = ["Sell for slaughter", "Sell live", "Write off"] as const;
@@ -97,17 +97,17 @@ export interface RecordedLoss {
 
 export function getLossScenarios(includeInactive = false) {
   return call<{ scenarios: LossScenario[]; requirement: string; incident_types: string[] }>(
-    `${API}.loss_scenarios`,
+    `${API}.loss_scenarios.loss_scenarios`,
     { payload: { include_inactive: includeInactive ? 1 : 0 } },
   );
 }
 
 export function saveLossScenario(s: Partial<LossScenario>) {
-  return call<{ scenario: LossScenario }>(`${API}.save_loss_scenario`, { payload: s });
+  return call<{ scenario: LossScenario }>(`${API}.save_loss_scenario.save_loss_scenario`, { payload: s });
 }
 
 export function deleteLossScenario(name: string) {
-  return call<{ deleted: boolean; message?: string }>(`${API}.delete_loss_scenario`, { payload: { name } });
+  return call<{ deleted: boolean; message?: string }>(`${API}.delete_loss_scenario.delete_loss_scenario`, { payload: { name } });
 }
 
 export function recordLoss(p: {
@@ -120,21 +120,21 @@ export function recordLoss(p: {
   sale_price?: number;
   buyer_name?: string;
 }) {
-  return call<RecordedLoss>(`${API}.record_loss`, { payload: p });
+  return call<RecordedLoss>(`${API}.record_loss.record_loss`, { payload: p });
 }
 
 export function completeLoss(p: { loss_name: string; customer?: string; sale_price?: number; buyer_name?: string }) {
-  return call<{ name: string; status: string }>(`${API}.complete_loss`, { payload: p });
+  return call<{ name: string; status: string }>(`${API}.complete_loss.complete_loss`, { payload: p });
 }
 
 export function getLossTrail(animal: string) {
-  return call<{ losses: LossTrail[]; requirement: string; cover: string }>(`${API}.loss_trail`, {
+  return call<{ losses: LossTrail[]; requirement: string; cover: string }>(`${API}.loss_trail.loss_trail`, {
     payload: { animal },
   });
 }
 
 export function getLossClaims(status?: string) {
-  return call<{ claims: ClaimRow[]; requirement: string }>(`${API}.loss_claims`, {
+  return call<{ claims: ClaimRow[]; requirement: string }>(`${API}.loss_claims.loss_claims`, {
     payload: status ? { status } : {},
   });
 }

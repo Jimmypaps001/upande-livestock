@@ -55,7 +55,7 @@ export function RecordLossDialog({
 
   async function attach(doc: string, file: File | undefined) {
     if (!file) return;
-    const r = await uploadFile(file);
+    const r = await uploadFile(file, true); // claim papers are never public
     if (isError(r)) setError(r.error);
     else setFiles((f) => ({ ...f, [doc]: r.file_url }));
   }

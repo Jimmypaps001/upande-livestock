@@ -21,9 +21,13 @@ so it binds the desk, the phone and the API alike. A Rejected or Cancelled
 claim never blocks: the insurer has said no and the farm may sell.
 """
 
+import json
+
 import frappe
 from frappe import _
-from frappe.utils import escape_html, get_url_to_form, getdate, today
+from frappe.utils import escape_html, flt, get_url_to_form, getdate, today
+
+from upande_livestock.serverscripts.common.envelope import as_dict
 
 from upande_livestock.serverscripts.disposal.notify_accounts import parse_roles, recipients
 
@@ -168,7 +172,7 @@ def scenario_dict(name):
 SEEDS = [
 	{"scenario_name": "Injury - salvage slaughter", "trigger": "Injury", "claim_insurance": 1,
 	 "incident_type": "Injury", "loss_treatment": "Impairment", "outcome": OUTCOME_SLAUGHTER,
-	 "description": "Badly injured, slaughtered for salvage. The sale waits for the claim.",
+	 "description": "Badly injured, sold for slaughter. Claimed as an Impairment (the carcass sale is the salvage, the claim covers the shortfall); the sale waits for the claim.",
 	 "required_documents": [("Vet report", 1), ("Photos of the injury", 0)]},
 	{"scenario_name": "Sudden death", "trigger": "Death", "claim_insurance": 1,
 	 "incident_type": "Death / Mortality", "loss_treatment": "Total Loss", "outcome": OUTCOME_WRITE_OFF,
@@ -254,7 +258,29 @@ def create_claim(loss, scenario, documents=None):
 		if isinstance(e, frappe.ValidationError):
 			return None, str(getattr(e, "message", None) or e)
 		raise
+	attach_to_claim(claim)
 	return claim, None
+
+
+def check_private(documents):
+	"""Claim papers (a police abstract, a vet report) are never public files."""
+	for d in documents or []:
+		url = d.get("attachment")
+		if not url:
+			continue
+		private = frappe.db.get_value("File", {"file_url": url}, "is_private")
+		if not private:
+			frappe.throw(_("{0}: attach claim papers as private files.").format(d.get("document_name") or url))
+
+
+def attach_to_claim(claim):
+	"""Point each private file on the claim's documents at the claim it belongs to."""
+	for row in claim.documents:
+		if row.attachment:
+			for name in frappe.get_all("File", filters={"file_url": row.attachment, "is_private": 1},
+			                           or_filters=[["attached_to_doctype", "is", "not set"]], pluck="name"):
+				frappe.db.set_value("File", name, {"attached_to_doctype": "Insurance Claim",
+				                                   "attached_to_name": claim.name}, update_modified=False)
 
 
 def missing_documents(claim_name):
@@ -410,3 +436,54 @@ def send_notice(loss, subject, detail):
 	except Exception:
 		frappe.log_error(title="livestock loss notice failed")
 		return []
+
+
+# --- shared by the endpoints (serverscripts/losses) -----------------------
+
+
+def merge(payload, **kw):
+	d = dict(as_dict(payload) or {}) if payload else {}
+	d.update({k: v for k, v in kw.items() if v is not None})
+	return d
+
+
+def documents(raw):
+	if isinstance(raw, str):
+		raw = json.loads(raw or "[]")
+	return [dict(r) for r in (raw or []) if isinstance(r, dict)]
+
+
+def sale(d):
+	return {"customer": d.get("customer"), "sale_price": flt(d.get("sale_price")) or None,
+	        "buyer_name": d.get("buyer_name")}
+
+
+def trail(name):
+	doc = frappe.get_doc("Livestock Loss", name)
+	sc = frappe.db.get_value("Livestock Loss Scenario", doc.scenario, ["trigger", "outcome"], as_dict=True) or {}
+	claim = None
+	if doc.claim and frappe.db.exists("Insurance Claim", doc.claim):
+		c = frappe.db.get_value(
+			"Insurance Claim", doc.claim,
+			["name", "status", "docstatus", "amount_claimed", "amount_approved", "amount_received",
+			 "outstanding_amount", "shortfall_amount", "insurer", "policy_number", "claim_journal_entry"],
+			as_dict=True)
+		claim = dict(c)
+		claim["missing_documents"] = missing_documents(doc.claim)
+		if c.status != doc.claim_status:
+			frappe.db.set_value("Livestock Loss", name, "claim_status", c.status, update_modified=False)
+	disposal = None
+	if doc.disposal and frappe.db.exists("Livestock Disposal", doc.disposal):
+		disposal = dict(frappe.db.get_value(
+			"Livestock Disposal", doc.disposal,
+			["name", "docstatus", "disposal_type", "disposal_date", "sale_price", "customer", "sales_invoice"],
+			as_dict=True))
+		if disposal.get("sales_invoice"):
+			disposal["invoice_status"] = frappe.db.get_value("Sales Invoice", disposal["sales_invoice"], "docstatus")
+	return {
+		"name": doc.name, "animal": doc.animal, "animal_name": doc.animal_name, "scenario": doc.scenario,
+		"trigger": sc.get("trigger"), "outcome": sc.get("outcome"), "incident_date": str(doc.incident_date),
+		"notes": doc.notes, "status": doc.status, "claim": claim, "claim_note": doc.claim_note,
+		"disposal": disposal, "waiting_for": (sale_gate_message(doc.animal) if doc.status != "Closed" else None),
+		"requirement": required_status(),
+	}
