@@ -16,6 +16,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Picker, type PickerOption } from "@/components/ui/picker";
+import { SearchPicker } from "@/components/ui/search-picker";
 import { Textarea } from "@/components/ui/textarea";
 import { OperatorField } from "@/components/events/OperatorField";
 import { VetField } from "@/components/events/VetField";
@@ -45,7 +46,7 @@ import { cn, todayISO } from "@/lib/utils";
  * client is how the two answers drift apart.
  */
 
-export type FieldKind = "text" | "number" | "select" | "date" | "notes";
+export type FieldKind = "text" | "number" | "select" | "date" | "notes" | "search";
 
 /** What a select would actually submit, whether its options are labelled. */
 function optionValues(spec: FieldSpec): string[] {
@@ -61,7 +62,7 @@ export interface FieldSpec {
    *  picker sends an item code and shows "Semen Chico · 12 Nos in Westwood
    *  Dairy Store", which is the difference between choosing a straw and
    *  choosing a number. */
-  options?: (PickerOption | string)[];
+  options?: (PickerOption | (PickerOption & { short?: string }) | string)[];
   placeholder?: string;
   hint?: string;
   /** What the field starts at. A select whose farm-configured answer is on the
@@ -413,11 +414,20 @@ function Field({
   onChange: (v: string) => void;
 }) {
   const id = `f-${spec.name}`;
-  if (spec.kind === "select" && !spec.options?.length) return null;
+  if ((spec.kind === "select" || spec.kind === "search") && !spec.options?.length) return null;
   return (
     <div className={cn("flex flex-col gap-1.5", spec.kind === "notes" && "sm:col-span-2")}>
       <Label htmlFor={id}>{spec.label}</Label>
-      {spec.kind === "select" ? (
+      {spec.kind === "search" ? (
+        <SearchPicker
+          id={id}
+          value={value}
+          onChange={onChange}
+          options={(spec.options ?? []).map((o) => (typeof o === "string" ? { value: o, label: o } : o))}
+          label={spec.label}
+          placeholder="Search by name or code"
+        />
+      ) : spec.kind === "select" ? (
         <Picker
           id={id}
           value={value}

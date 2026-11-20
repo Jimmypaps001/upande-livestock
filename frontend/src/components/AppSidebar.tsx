@@ -31,6 +31,7 @@ import {
   CalendarClock,
   TrendingUp,
   UserRound,
+  Dna,
   ShieldAlert,
   Siren,
 } from "lucide-react";
@@ -56,6 +57,9 @@ import { viewAllowed, viewOpen } from "@/lib/roles";
 import { routeHash, type View } from "@/lib/router";
 import { cn } from "@/lib/utils";
 import upandeLogo from "@/assets/upande_logo.png";
+
+/** The line under the product name. */
+export const SUBTITLE = "Dairy";
 
 type IconType = React.ComponentType<{ className?: string }>;
 
@@ -192,6 +196,12 @@ const NAV: NavSection[] = [
         icon: UserRound,
         hint: "Each vet's work for a period, and adding one",
       },
+      {
+        view: "sires",
+        label: "Sires",
+        icon: Dna,
+        hint: "The bulls and straws a service can name",
+      },
     ],
   },
   {
@@ -255,6 +265,7 @@ export const BUILT_VIEWS: ReadonlySet<View> = new Set<View>([
   "transactions",
   "feed-quality",
   "vets",
+  "sires",
   "claims",
   "loss-scenarios",
 ]);
@@ -338,7 +349,7 @@ export function AppSidebar({
               Upande Livestock
             </span>
             <span className="mt-0.5 truncate text-[10px] font-medium uppercase tracking-[0.16em] text-[var(--sd-quiet)]">
-              Herd &amp; Dairy Operations
+              {SUBTITLE}
             </span>
           </div>
         </div>
@@ -351,13 +362,15 @@ export function AppSidebar({
         <ScrollArea
           className={cn(
             "h-full w-full",
+            // Always block (not only collapsed): the table wrapper otherwise
+            // grows past the viewport and the active pill is cut at the right.
+            "[&>[data-radix-scroll-area-viewport]>div]:!block",
             // Radix wraps viewport content in a `display: table` div, which
             // sizes to its content rather than to the viewport. Collapsed, the
             // labels are hidden but still measure, so that div keeps the
             // EXPANDED width and every row is laid out against its left edge
             // instead of the rail's centre. Forcing it to block lets it take
             // the rail's width, so the rows have somewhere symmetrical to sit.
-            "group-data-[collapsible=icon]:[&>[data-radix-scroll-area-viewport]>div]:!block",
           )}
         >
           <div
@@ -402,7 +415,14 @@ export function AppSidebar({
                               }}
                             >
                               <Icon className="h-4 w-4" />
-                              <span className={built ? "" : "text-[var(--sd-quiet)]"}>
+                              <span
+                                className={cn(
+                                  // Wrap a long label rather than clip it;
+                                  // collapsed, the label is hidden anyway.
+                                  "!whitespace-normal !overflow-visible leading-snug group-data-[collapsible=icon]:!whitespace-nowrap",
+                                  !built && "text-[var(--sd-quiet)]",
+                                )}
+                              >
                                 {item.label}
                               </span>
                             </a>

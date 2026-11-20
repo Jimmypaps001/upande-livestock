@@ -43,6 +43,7 @@ export const VIEWS = [
   "transactions",
   "feed-quality",
   "vets",
+  "sires",
   "claims",
   "loss-scenarios",
 ] as const;

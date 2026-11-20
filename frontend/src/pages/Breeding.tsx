@@ -95,8 +95,16 @@ export function Service() {
           return [
             { name: "service_date", label: "Service date", kind: "date" },
             { name: "service_type", label: "How", kind: "select", options: o.service_types, required: true },
-            { name: "sire", label: "Sire", kind: "select", options: o.sires,
-              hint: "Or leave blank and note it below." },
+            // The Livestock Sire records, shown as "Name · CODE". An old service's
+            // typed bull that is not a record is no longer offered; the picker is
+            // the way in, and the server fills the straw of a semen sire.
+            { name: "sire_link", label: "Sire", kind: "search",
+              options: (o.sire_options ?? []).map((b) => ({
+                value: b.name,
+                label: b.label + (b.type === "Live bull" ? " (live bull)" : "") + (b.sexed ? " (sexed)" : ""),
+                short: b.label,
+              })),
+              hint: "Pick the bull. His straw is used when none is chosen below." },
             ...legacyStraw,
             { name: "remarks", label: "Notes", kind: "notes",
               placeholder: "Standing heat at 6am, served at 4pm." },

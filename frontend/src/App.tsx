@@ -127,6 +127,7 @@ const Events = page(() => import("@/pages/Insights").then((m) => ({ default: m.E
 const Production = page(() => import("@/pages/Insights").then((m) => ({ default: m.Production })));
 const Reports = page(() => import("@/pages/Insights").then((m) => ({ default: m.Reports })));
 const Vets = page(() => import("@/pages/Vets").then((m) => ({ default: m.Vets })));
+const Sires = page(() => import("@/pages/Sires").then((m) => ({ default: m.Sires })));
 const Claims = page(() => import("@/pages/Claims").then((m) => ({ default: m.Claims })));
 const LossScenarios = page(() =>
   import("@/pages/LossScenarios").then((m) => ({ default: m.LossScenarios })),
@@ -170,6 +171,7 @@ const TITLES: Record<View, string> = {
   transactions: "Transactions",
   "feed-quality": "Quality & Feed",
   vets: "Vets",
+  sires: "Sires",
   claims: "Insurance claims",
   "loss-scenarios": "Loss scenarios",
 };
@@ -211,6 +213,7 @@ const PAGES: Partial<Record<View, React.ComponentType>> = {
   transactions: Transactions,
   "feed-quality": FeedQuality,
   vets: Vets,
+  sires: Sires,
   claims: Claims,
   "loss-scenarios": LossScenarios,
 };

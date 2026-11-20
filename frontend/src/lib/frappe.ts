@@ -43,6 +43,7 @@ export interface Capabilities {
   cull_vet: boolean;
   cull_manager: boolean;
   quality: boolean;
+  manage_sires: boolean;
   operator: boolean;
 }
 

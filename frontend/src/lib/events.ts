@@ -93,10 +93,23 @@ export interface BreedingOptions {
   service_types: string[];
   diagnosis_results: string[];
   sires: string[];
+  /** Active Livestock Sires, for the picker: `name` is what a Service links. */
+  sire_options?: SireChoice[];
   semen_items: StockChoice[];
   default_semen_item: string | null;
   service_wait_days: number;
   employee: string | null;
+}
+
+export interface SireChoice {
+  name: string;
+  sire_name: string;
+  code: string;
+  label: string;
+  type: "Semen" | "Live bull";
+  semen_item: string;
+  sexed?: number;
+  animal?: string;
 }
 
 export interface HealthOptions {

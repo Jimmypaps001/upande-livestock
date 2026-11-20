@@ -26,14 +26,14 @@ function caps(o: {
   return {
     read: m([...(o.read ?? []), "Notification Log"]), create: m(o.create), write: m(o.write),
     stock: false, post_draft: false, override_feed: false, insure: false, accounts: false,
-    appreciate: false, cull_vet: false, cull_manager: false, quality: false, operator: false,
+    appreciate: false, cull_vet: false, cull_manager: false, quality: false, manage_sires: false, operator: false,
     ...o.flags,
   } as Capabilities;
 }
 
 const ALL_READ = ["Animal", "Herds", "Livestock Event", "Livestock Health Case", "Livestock Weight Record",
   "Milk Recording", "Milk Quality Test", "Livestock Disposal", "Livestock Vet", "Livestock Loss",
-  "Livestock Loss Scenario", "Livestock Insurance Claim", "Livestock Settings", "BOM", "Item", "Notification Log"];
+  "Livestock Loss Scenario", "Livestock Insurance Claim", "Livestock Settings", "BOM", "Item", "Notification Log", "Livestock Sire"];
 
 const ROLES: Record<string, { roles: string[]; can: Capabilities }> = {
   manager: {
@@ -44,7 +44,7 @@ const ROLES: Record<string, { roles: string[]; can: Capabilities }> = {
         "Milk Quality Test", "Livestock Disposal", "Livestock Vet", "Livestock Loss", "Livestock Loss Scenario",
         "Herds", "Animal", "BOM", "Livestock Feed Actual"],
       write: ["Livestock Disposal", "Livestock Insurance Claim", "Livestock Settings", "BOM", "Animal"],
-      flags: { stock: true, post_draft: true, override_feed: true, appreciate: true, cull_manager: true, quality: true },
+      flags: { stock: true, post_draft: true, override_feed: true, appreciate: true, cull_manager: true, quality: true, manage_sires: true },
     }),
   },
   milker: {
@@ -157,20 +157,20 @@ describe("the sidebar leaves out what a role cannot open", () => {
   it("Livestock Manager sees every group", () => {
     sidebar("manager");
     groups("Herd", "Operations", "People", "Configuration");
-    present("transactions", "culling", "settings", "vets", "claims");
+    present("transactions", "culling", "settings", "vets", "claims", "sires");
   });
 
   it("Milker: no People or Configuration group, no Transactions, Culling, Feeding items", () => {
     sidebar("milker");
     noGroups("People", "Servicing");
-    absent("vets", "claims", "transactions", "culling", "procurement", "ration-editor", "herds", "movement", "feeding");
+    absent("vets", "claims", "transactions", "culling", "procurement", "ration-editor", "herds", "movement", "feeding", "sires");
     present("milking");
     absent("quality", "feed-quality");
   });
 
   it("Attendant: no Milking, Culling, Claims", () => {
     sidebar("attendant");
-    absent("milking", "culling", "claims", "transactions", "ration-editor", "treatment");
+    absent("milking", "culling", "claims", "transactions", "ration-editor", "treatment", "sires");
     present("movement", "weight");
   });
 
@@ -193,6 +193,7 @@ describe("the sidebar leaves out what a role cannot open", () => {
     sidebar("vet");
     absent("feeding", "milking", "quality", "transactions", "procurement", "herds");
     present("check-up", "treatment", "culling", "vets");
+    absent("sires");
   });
 });
 

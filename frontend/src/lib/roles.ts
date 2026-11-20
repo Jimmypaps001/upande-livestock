@@ -103,6 +103,7 @@ export const VIEW_NEEDS: Partial<Record<View, Need>> = {
   herds: { read: ["Herds"], any: [{ create: "Herds" }, { create: "Animal" }] },
   culling: { read: ["Livestock Disposal"] },
   vets: { read: ["Livestock Vet"] },
+  sires: { read: ["Livestock Sire"], flag: "manage_sires" },
   claims: { read: ["Livestock Loss"] },
   "loss-scenarios": { read: ["Livestock Loss Scenario"] },
   settings: { read: ["Livestock Settings"] },

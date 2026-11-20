@@ -27,6 +27,7 @@ const FLAG_ROLES: Record<Flag, readonly string[] | null> = {
   accounts: null,
   appreciate: null,
   quality: ["Livestock Quality", "Livestock Manager", ...ALL],
+  manage_sires: ["Livestock Manager", ...ALL],
   cull_vet: null,
   cull_manager: null,
   operator: ALL,

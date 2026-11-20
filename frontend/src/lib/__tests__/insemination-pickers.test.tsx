@@ -57,6 +57,10 @@ const breeding: Record<string, unknown> = {
   service_types: ["A.I.", "Natural"],
   diagnosis_results: ["Confirmed", "Not Pregnant"],
   sires: ["BULL-1"],
+  sire_options: [
+    { name: "NL900000001", sire_name: "Dolmen", code: "NL900000001", label: "Dolmen · NL900000001", type: "Semen", semen_item: "4040030118", sexed: 1 },
+    { name: "Mazira", sire_name: "Mazira", code: "", label: "Mazira", type: "Live bull", semen_item: "" },
+  ],
   semen_items: straws,
   default_semen_item: null,
   service_wait_days: 60,
@@ -114,6 +118,20 @@ describe("the insemination pickers", () => {
     expect(
       await screen.findByRole("option", { name: /Semen Chico · 12 Nos in Westwood Dairy Store/ }),
     ).toBeTruthy();
+  });
+
+  it("picks the sire from the Livestock Sire records, by name or code, and sends sire_link", async () => {
+    await pickTheCow();
+    fireEvent.click(screen.getByLabelText("Sire"));
+    fireEvent.change(await screen.findByPlaceholderText(/Type to search/), { target: { value: "9000" } });
+    expect(screen.queryByText(/Mazira/)).toBeNull();
+    fireEvent.click(await screen.findByText(/Dolmen · NL900000001 \(sexed\)/));
+    await choose("How", "A.I.");
+    fireEvent.click(screen.getByRole("button", { name: /Record the service/ }));
+    await waitFor(() => expect(sent.length).toBe(1));
+    const payload = (sent[0].payload ?? sent[0]) as Record<string, unknown>;
+    expect(payload.sire_link).toBe("NL900000001");
+    expect(payload.sire).toBeUndefined();
   });
 
   it("offers a store only once a straw is chosen", async () => {
