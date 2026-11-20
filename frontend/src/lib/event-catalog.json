@@ -1,0 +1,195 @@
+{
+  "_doc": "Single source of truth for event order, grouping and icons. Desk (frontend/src/lib/event-icons.ts) reads this file; the phone app mirrors it exactly. 'icon' is a lucide icon name (PascalCase); array order is the display order. eventType is the Livestock Event Type name (null when it is not an event type); view is the desk route (null when the desk has no page of its own; Husbandry events share the 'husbandry' page).",
+  "groups": [
+    {
+      "key": "servicing",
+      "label": "Servicing"
+    },
+    {
+      "key": "health",
+      "label": "Health"
+    },
+    {
+      "key": "quality",
+      "label": "Quality"
+    },
+    {
+      "key": "herd",
+      "label": "Herd"
+    },
+    {
+      "key": "production",
+      "label": "Production"
+    },
+    {
+      "key": "husbandry",
+      "label": "Husbandry"
+    },
+    {
+      "key": "disposal",
+      "label": "Disposal"
+    }
+  ],
+  "events": [
+    {
+      "eventType": "Heat Detection",
+      "key": "Heat Detection",
+      "view": "heat",
+      "label": "Heat detection",
+      "group": "servicing",
+      "icon": "Flame"
+    },
+    {
+      "eventType": "Service",
+      "key": "Service",
+      "view": "service",
+      "label": "Service",
+      "group": "servicing",
+      "icon": "Dna"
+    },
+    {
+      "eventType": "Pregnancy Diagnosis",
+      "key": "Pregnancy Diagnosis",
+      "view": "diagnosis",
+      "label": "Pregnancy confirmation (PD)",
+      "group": "servicing",
+      "icon": "ScanHeart"
+    },
+    {
+      "eventType": "Abortion",
+      "key": "Abortion",
+      "view": "abortion",
+      "label": "Abortion",
+      "group": "servicing",
+      "icon": "HeartCrack"
+    },
+    {
+      "eventType": "Calving",
+      "key": "Calving",
+      "view": "calving",
+      "label": "Calving",
+      "group": "servicing",
+      "icon": "Baby"
+    },
+    {
+      "eventType": "Birth",
+      "key": "Birth",
+      "view": null,
+      "label": "Birth",
+      "group": "servicing",
+      "icon": "Sparkles"
+    },
+    {
+      "eventType": "Check Up",
+      "key": "Check Up",
+      "view": "check-up",
+      "label": "Check-up",
+      "group": "health",
+      "icon": "Stethoscope"
+    },
+    {
+      "eventType": "Health Case",
+      "key": "Health Case",
+      "view": "health-case",
+      "label": "Case files",
+      "group": "health",
+      "icon": "ClipboardPlus"
+    },
+    {
+      "eventType": "Treatment",
+      "key": "Treatment",
+      "view": "treatment",
+      "label": "Treatment",
+      "group": "health",
+      "icon": "Pill"
+    },
+    {
+      "eventType": null,
+      "key": "Milk Quality",
+      "view": "quality",
+      "label": "Quality recording",
+      "group": "quality",
+      "icon": "FlaskConical"
+    },
+    {
+      "eventType": "Weight Recording",
+      "key": "Weight Recording",
+      "view": "weight",
+      "label": "Weight",
+      "group": "herd",
+      "icon": "Scale"
+    },
+    {
+      "eventType": "Movement",
+      "key": "Movement",
+      "view": "movement",
+      "label": "Movement",
+      "group": "herd",
+      "icon": "ArrowRightLeft"
+    },
+    {
+      "eventType": "Milking",
+      "key": "Milking",
+      "view": "milking",
+      "label": "Milking",
+      "group": "production",
+      "icon": "Droplets"
+    },
+    {
+      "eventType": "Drying Off",
+      "key": "Drying Off",
+      "view": "drying-off",
+      "label": "Drying off",
+      "group": "production",
+      "icon": "Moon"
+    },
+    {
+      "eventType": "Feeding",
+      "key": "Feeding",
+      "view": "feeding",
+      "label": "Feeding",
+      "group": "production",
+      "icon": "Utensils"
+    },
+    {
+      "eventType": "Vaccination",
+      "key": "Vaccination",
+      "view": null,
+      "label": "Vaccination",
+      "group": "husbandry",
+      "icon": "Syringe"
+    },
+    {
+      "eventType": "Deworming",
+      "key": "Deworming",
+      "view": null,
+      "label": "Deworming",
+      "group": "husbandry",
+      "icon": "Bug"
+    },
+    {
+      "eventType": "Dehorning",
+      "key": "Dehorning",
+      "view": null,
+      "label": "Dehorning",
+      "group": "husbandry",
+      "icon": "Scissors"
+    },
+    {
+      "eventType": "Hoof Trimming",
+      "key": "Hoof Trimming",
+      "view": null,
+      "label": "Hoof trimming",
+      "group": "husbandry",
+      "icon": "Footprints"
+    },
+    {
+      "eventType": "Cull Review",
+      "key": "Cull Review",
+      "view": "culling",
+      "label": "Culling",
+      "group": "disposal",
+      "icon": "Trash2"
+    }
+  ]
+}

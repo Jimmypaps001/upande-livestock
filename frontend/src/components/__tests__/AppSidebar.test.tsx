@@ -187,3 +187,17 @@ describe("sidebar for a user limited to the quality screens", () => {
     expect(hrefs()).toContain("#/feeding");
   });
 });
+
+describe("sidebar event order", () => {
+  it("lists servicing, then health, then quality, in the catalog order", () => {
+    const { container } = mount();
+    const labels = [...container.querySelectorAll('[data-sidebar="group-label"]')].map((n) => n.textContent);
+    const i = labels.indexOf("Servicing");
+    expect(labels.slice(i, i + 3)).toEqual(["Servicing", "Health", "Quality"]);
+    const text = container.textContent || "";
+    const order = ["Heat detection", "Service", "Pregnancy confirmation (PD)", "Abortion", "Calving",
+      "Check-up", "Case files", "Treatment", "Quality recording"].map((t) => text.indexOf(t));
+    expect(order.every((n) => n >= 0)).toBe(true);
+    expect([...order].sort((a, b) => a - b)).toEqual(order);
+  });
+});

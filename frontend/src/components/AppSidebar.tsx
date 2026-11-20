@@ -47,6 +47,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { iconByName, viewEntry } from "@/lib/event-icons";
 import { SidebarUser } from "@/components/SidebarUser";
 import { useUnreadNotifications } from "@/hooks/use-notifications";
 import { viewAllowed, viewOpen } from "@/lib/roles";
@@ -65,6 +66,22 @@ type NavSection = { label: string; items: NavItem[] };
  * that says so rather than miming a screen that does not work — see
  * pages/Stub.tsx.
  */
+/** A nav entry whose icon comes from the shared event catalog (lib/event-icons). */
+const TITLE: Partial<Record<View, string>> = {
+  heat: "Heat detection",
+  diagnosis: "Pregnancy confirmation (PD)",
+  "check-up": "Check-up",
+  "health-case": "Case files",
+  quality: "Quality recording",
+  husbandry: "Husbandry",
+  culling: "Culling",
+  "drying-off": "Drying off",
+};
+function ev(view: View, hint?: string): NavItem {
+  const e = viewEntry(view)!;
+  return { view, label: TITLE[view] ?? e.label, icon: iconByName(e.icon), hint };
+}
+
 const NAV: NavSection[] = [
   {
     label: "Herd",
@@ -92,10 +109,7 @@ const NAV: NavSection[] = [
     label: "Feeding",
     items: [
       {
-        view: "feeding",
-        label: "Feeding",
-        icon: Utensils,
-        hint: "Mix and issue a herd's ration",
+        ...ev("feeding", "Mix and issue a herd's ration"),
       },
       {
         view: "concentrate",
@@ -136,40 +150,35 @@ const NAV: NavSection[] = [
     ],
   },
   {
-    label: "Operations",
+    label: "Servicing",
+    items: [ev("heat"), ev("service"), ev("diagnosis"), ev("abortion"), ev("calving")],
+  },
+  {
+    label: "Health",
+    items: [ev("check-up"), ev("health-case"), ev("treatment")],
+  },
+  {
+    label: "Quality",
     items: [
-      {
-        view: "milking",
-        label: "Milking",
-        icon: Droplets,
-        hint: "Record what a herd gave at one milking",
-      },
-      {
-        view: "quality",
-        label: "Quality",
-        icon: FlaskConical,
-        hint: "File the creamery's figures against a milking",
-      },
+      ev("quality", "File the creamery's figures against a milking"),
       {
         view: "feed-quality",
         label: "Quality & Feed",
         icon: TrendingUp,
         hint: "Milk quality beside each herd's ration",
       },
-      { view: "movement", label: "Movement", icon: ArrowRightLeft },
-      { view: "drying-off", label: "Drying Off", icon: Sun },
-      { view: "calving", label: "Calving", icon: Baby },
-      { view: "heat", label: "Heat", icon: Sun },
-      { view: "service", label: "Service", icon: Heart },
-      { view: "diagnosis", label: "Pregnancy Diagnosis", icon: Activity },
-      { view: "husbandry", label: "Husbandry", icon: Scissors },
-      { view: "abortion", label: "Abortion", icon: Heart },
-      { view: "weight", label: "Weight", icon: Scale },
-      { view: "check-up", label: "Check Up", icon: Stethoscope },
-      { view: "treatment", label: "Treatment", icon: Beaker },
-      { view: "health-case", label: "Health Files", icon: HeartPulse },
+    ],
+  },
+  {
+    label: "Operations",
+    items: [
+      ev("milking", "Record what a herd gave at one milking"),
+      ev("movement"),
+      ev("weight"),
+      ev("drying-off"),
+      ev("husbandry"),
       { view: "herds", label: "Herds", icon: Home },
-      { view: "culling", label: "Culling", icon: Trash2 },
+      ev("culling"),
     ],
   },
   {
