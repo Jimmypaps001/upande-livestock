@@ -62,3 +62,12 @@ def reject_invalid_zeros(values: dict, meta=None) -> None:
 class LivestockSettings(Document):
 	def validate(self):
 		reject_invalid_zeros({f: self.get(f) for f in ZERO_IS_INVALID}, self.meta)
+		self.check_accounts_fields()
+
+	def check_accounts_fields(self):
+		"""The sale gate and the alert roles are Accounts' to change."""
+		from upande_livestock.serverscripts.common.loss import ACCOUNTS_FIELDS, assert_may_change_accounts
+
+		before = self.get_doc_before_save()
+		changed = [f for f in ACCOUNTS_FIELDS if before is not None and self.get(f) != before.get(f)]
+		assert_may_change_accounts(changed)

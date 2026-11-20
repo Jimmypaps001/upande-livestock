@@ -14,13 +14,17 @@ DEFAULT_ROLES = "Accounts Manager, Accounts User"
 SKIP_USERS = ("Administrator", "Guest")
 
 
+def parse_roles(raw):
+	return [r.strip() for r in (raw or "").replace("\n", ",").split(",") if r.strip()]
+
+
 def alert_roles():
 	raw = frappe.db.get_single_value("Livestock Settings", "sale_invoice_alert_roles") or DEFAULT_ROLES
-	return [r.strip() for r in raw.replace("\n", ",").split(",") if r.strip()]
+	return parse_roles(raw)
 
 
-def recipients():
-	roles = alert_roles()
+def recipients(roles=None):
+	roles = roles or alert_roles()
 	users = frappe.get_all("Has Role", filters={"role": ["in", roles], "parenttype": "User"}, pluck="parent")
 	if not users:
 		return []

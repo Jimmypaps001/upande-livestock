@@ -169,6 +169,7 @@ after_install = "upande_livestock.install.after_install"
 # before_migrate would be a silent no-op (guarded by table_exists) anyway.
 before_migrate = ["upande_livestock.install.ensure_milking_stock_entry_type"]
 after_migrate = [
+	"upande_livestock.install.ensure_loss_scenarios",
 	# The custom fields this app puts on Work Order, BOM and Stock Entry are
 	# declared in code and rebuilt here, not exported as a fixture — a fixture
 	# only restores what was last exported from some site, which is how
@@ -276,6 +277,14 @@ doc_events = {
 		"on_update_after_submit": "upande_livestock.serverscripts.common.live.note",
 		"on_cancel": "upande_livestock.serverscripts.common.live.note",
 		"on_trash": "upande_livestock.serverscripts.common.live.note",
+	},
+	# An insurance claim moving on (Upande Asset) moves the loss it came from,
+	# tells the roles, and releases a sale that was waiting (common/loss.py).
+	"Insurance Claim": {
+		"on_update": "upande_livestock.serverscripts.common.loss.claim_changed",
+		"on_submit": "upande_livestock.serverscripts.common.loss.claim_changed",
+		"on_update_after_submit": "upande_livestock.serverscripts.common.loss.claim_changed",
+		"on_cancel": "upande_livestock.serverscripts.common.loss.claim_changed",
 	},
 	"File": {"after_insert": "upande_livestock.serverscripts.common.thumbs.thumb_file"},
 	# A feed day follows its Stock Entries: cancelled or deleted, the day goes

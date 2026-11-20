@@ -67,6 +67,8 @@ def save_livestock_settings(payload=None):
 		if not changes:
 			frappe.throw(_("Nothing to save."))
 
+		from upande_livestock.serverscripts.common.loss import assert_may_change_accounts
+
 		unknown = sorted(set(changes) - editable_fieldnames())
 		if unknown:
 			frappe.throw(_("Livestock Settings has no field called {0}.").format(", ".join(unknown)))
@@ -79,6 +81,7 @@ def save_livestock_settings(payload=None):
 		for fieldname, raw in changes.items():
 			wanted[fieldname] = coerce_for_write(docfield(fieldname), raw)
 		reject_invalid_zeros(wanted)
+		assert_may_change_accounts([f for f, v in wanted.items() if before.get(f) != v])
 
 		changed = {}
 		for fieldname, value in wanted.items():

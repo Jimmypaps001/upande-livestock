@@ -1,0 +1,189 @@
+{
+ "actions": [],
+ "engine": "InnoDB",
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-11-20 09:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Upande Livestock",
+ "owner": "Administrator",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "creation": "2026-11-20 09:00:00.000000",
+ "doctype": "DocType",
+ "name": "Livestock Loss Scenario",
+ "autoname": "field:scenario_name",
+ "allow_rename": 1,
+ "title_field": "scenario_name",
+ "track_changes": 1,
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "permlevel": 0,
+   "create": 1,
+   "write": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "email": 1,
+   "share": 1
+  },
+  {
+   "role": "Livestock Manager",
+   "read": 1,
+   "permlevel": 0,
+   "create": 1,
+   "write": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "email": 1,
+   "share": 1
+  },
+  {
+   "role": "Accounts Manager",
+   "read": 1,
+   "permlevel": 0,
+   "write": 1
+  },
+  {
+   "role": "Accounts User",
+   "read": 1,
+   "permlevel": 0
+  },
+  {
+   "role": "Livestock Vet",
+   "read": 1,
+   "permlevel": 0
+  },
+  {
+   "role": "Livestock Attendant",
+   "read": 1,
+   "permlevel": 0
+  },
+  {
+   "role": "Livestock Breeder",
+   "read": 1,
+   "permlevel": 0
+  },
+  {
+   "role": "Livestock Milker",
+   "read": 1,
+   "permlevel": 0
+  },
+  {
+   "role": "Livestock Stores",
+   "read": 1,
+   "permlevel": 0
+  }
+ ],
+ "fields": [
+  {
+   "fieldname": "scenario_name",
+   "fieldtype": "Data",
+   "label": "Scenario",
+   "reqd": 1,
+   "unique": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "active",
+   "fieldtype": "Check",
+   "label": "Active",
+   "default": "1",
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "trigger",
+   "fieldtype": "Select",
+   "label": "Trigger",
+   "options": "\nInjury\nDisease\nDeath\nTheft\nLow production\nOther",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "outcome",
+   "fieldtype": "Select",
+   "label": "Outcome",
+   "options": "\nSell for slaughter\nSell live\nWrite off",
+   "reqd": 1,
+   "in_list_view": 1,
+   "description": "Sales wait for the insurance claim as set in Livestock Settings. Write off scraps the asset."
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Small Text",
+   "label": "Description"
+  },
+  {
+   "fieldname": "sb_claim",
+   "fieldtype": "Section Break",
+   "label": "Insurance"
+  },
+  {
+   "fieldname": "claim_insurance",
+   "fieldtype": "Check",
+   "label": "Claim insurance",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "incident_type",
+   "fieldtype": "Link",
+   "label": "Incident type",
+   "options": "Insurance Incident Type",
+   "depends_on": "claim_insurance",
+   "mandatory_depends_on": "claim_insurance"
+  },
+  {
+   "fieldname": "cb_claim",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "loss_treatment",
+   "fieldtype": "Select",
+   "label": "Loss treatment",
+   "options": "\nRepair\nTotal Loss\nImpairment",
+   "depends_on": "claim_insurance",
+   "mandatory_depends_on": "claim_insurance",
+   "description": "Total Loss needs the asset scrapped before the claim is approved, so use it with Write off. A salvage sale is an Impairment."
+  },
+  {
+   "fieldname": "sb_docs",
+   "fieldtype": "Section Break",
+   "label": "Checklist and alerts"
+  },
+  {
+   "fieldname": "required_documents",
+   "fieldtype": "Table",
+   "label": "Required documents",
+   "options": "Livestock Loss Document"
+  },
+  {
+   "fieldname": "notify_roles",
+   "fieldtype": "Small Text",
+   "label": "Notify roles",
+   "description": "Comma separated. Told at each step: loss recorded, claim moved, sale released. Blank: the Accounts alert roles in Livestock Settings."
+  }
+ ],
+ "field_order": [
+  "scenario_name",
+  "active",
+  "trigger",
+  "outcome",
+  "description",
+  "sb_claim",
+  "claim_insurance",
+  "incident_type",
+  "cb_claim",
+  "loss_treatment",
+  "sb_docs",
+  "required_documents",
+  "notify_roles"
+ ]
+}

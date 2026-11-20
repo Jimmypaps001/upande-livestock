@@ -31,6 +31,8 @@ import {
   CalendarClock,
   TrendingUp,
   UserRound,
+  ShieldAlert,
+  Siren,
 } from "lucide-react";
 import {
   Sidebar,
@@ -187,6 +189,18 @@ const NAV: NavSection[] = [
     label: "Configuration",
     items: [
       {
+        view: "claims",
+        label: "Insurance claims",
+        icon: ShieldAlert,
+        hint: "Claims raised by animal losses",
+      },
+      {
+        view: "loss-scenarios",
+        label: "Loss scenarios",
+        icon: Siren,
+        hint: "What each kind of loss means for claims and sales",
+      },
+      {
         view: "settings",
         label: "Settings",
         icon: SlidersHorizontal,
@@ -232,6 +246,8 @@ export const BUILT_VIEWS: ReadonlySet<View> = new Set<View>([
   "transactions",
   "feed-quality",
   "vets",
+  "claims",
+  "loss-scenarios",
 ]);
 
 export function AppSidebar({

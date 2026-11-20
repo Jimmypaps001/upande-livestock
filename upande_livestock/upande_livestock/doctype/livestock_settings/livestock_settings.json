@@ -73,7 +73,6 @@
   "sb_concentrates",
   "bought_in_concentrates",
   "sb_accounting",
-  "sale_invoice_alert_roles",
   "custom_default_company",
   "custom_default_credit_account",
   "custom_concentrate_cost_center",
@@ -203,7 +202,12 @@
   "sb_health_cases",
   "health_case_concern_days",
   "cb_health_cases",
-  "health_case_stale_days"
+  "health_case_stale_days",
+  "tab_accounts_insurance",
+  "sb_sale_gate",
+  "sale_waits_for",
+  "cb_sale_gate",
+  "sale_invoice_alert_roles"
  ],
  "fields": [
   {
@@ -634,7 +638,7 @@
   },
   {
    "default": "Accounts Manager, Accounts User",
-   "description": "Users with these roles (comma separated) are emailed, and get a bell notice, when a sale creates a draft Sales Invoice to submit.",
+   "description": "Users with these roles (comma separated) are emailed, and get a bell notice, when a sale creates a draft Sales Invoice to submit, and when a loss or insurance claim moves. Only Accounts Manager or System Manager may change this.",
    "fieldname": "sale_invoice_alert_roles",
    "fieldtype": "Small Text",
    "label": "Sale invoice alert roles"
@@ -1373,13 +1377,35 @@
    "fieldtype": "HTML",
    "label": "Event stock rules",
    "options": "<p>Whether an event posts a Stock Entry, the item groups it draws on, its default store and whether it must name an item are set per event type — on each <a href='/app/livestock-event-type'>Livestock Event Type</a>, or all together on the app's <b>Settings → Events</b> tab, where an event can also be switched off.</p>"
+  },
+  {
+   "fieldname": "tab_accounts_insurance",
+   "fieldtype": "Tab Break",
+   "label": "Accounts & Insurance"
+  },
+  {
+   "fieldname": "sb_sale_gate",
+   "fieldtype": "Section Break",
+   "label": "Selling an insured animal"
+  },
+  {
+   "fieldname": "sale_waits_for",
+   "fieldtype": "Select",
+   "label": "Sale of an insured animal waits for",
+   "options": "Nothing\nClaim recorded\nInsurer approved",
+   "default": "Claim recorded",
+   "description": "Applies to an animal with an insurance claim from a recorded loss. The sale (Livestock Disposal of type Sold) is refused until the claim reaches this stage. A rejected or cancelled claim never blocks. Only Accounts Manager or System Manager may change this."
+  },
+  {
+   "fieldname": "cb_sale_gate",
+   "fieldtype": "Column Break"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-11-12 09:00:00.000000",
+ "modified": "2026-11-20 09:00:00.000000",
  "modified_by": "Administrator",
  "module": "Upande Livestock",
  "name": "Livestock Settings",

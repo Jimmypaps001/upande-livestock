@@ -20,7 +20,7 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 
-from upande_livestock.serverscripts.common import backdate, culling
+from upande_livestock.serverscripts.common import backdate, culling, loss
 from upande_livestock.serverscripts.common.animal import recompute_herd_count, retire_animal
 from upande_livestock.serverscripts.disposal.scrap_livestock_asset import (
 	_scrap_livestock_asset,
@@ -50,6 +50,13 @@ class LivestockDisposal(Document):
 			frappe.throw(
 				_("This cull case is {0}. It is posted from the Culling screen once approved.").format(status)
 			)
+		if self.disposal_type in SALE_TYPES:
+			# An animal with an insurance claim from a recorded loss is not sold
+			# until the claim is as far along as Livestock Settings asks. Here, so
+			# the desk, the phone and the API are all held to it.
+			held = loss.sale_gate_message(self.animal)
+			if held:
+				frappe.throw(held, title=_("Waiting for the insurance claim"))
 		if self.disposal_type in SALE_TYPES and self.sale_price and not self.customer:
 			# A buyer typed by name has no Customer to invoice, so the sale used to
 			# post nothing and report success.
@@ -58,6 +65,7 @@ class LivestockDisposal(Document):
 	def on_submit(self):
 		self.post_asset_disposal()
 		retire_animal(self.animal, self.disposal_type)
+		loss.on_disposal_submit(self)
 
 	def on_cancel(self):
 		"""Undo the disposal: postings first, then the animal.
@@ -69,6 +77,7 @@ class LivestockDisposal(Document):
 		place and the insurance claim open.
 		"""
 		self.reverse_asset_disposal()
+		loss.on_disposal_cancel(self)
 		self.withdraw_draft_claims()
 		self.undo_cull_herd_move()
 		frappe.db.set_value("Animal", self.animal, {"status": "Active", "disabled": 0}, update_modified=False)
