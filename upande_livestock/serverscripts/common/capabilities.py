@@ -43,7 +43,7 @@ def capabilities() -> dict:
 	"""The `can` map: per-doctype read/create/write, and the role-gated actions."""
 	from upande_livestock.serverscripts.animals.animal_cover import can_insure
 	from upande_livestock.serverscripts.common import culling
-	from upande_livestock.serverscripts.common.envelope import STOCK_ROLES
+	from upande_livestock.serverscripts.common.envelope import QUALITY_ROLE, STOCK_ROLES
 	from upande_livestock.serverscripts.common.loss import ACCOUNTS_ROLES
 	from upande_livestock.serverscripts.feeding._sessions import can_override
 	from upande_livestock.serverscripts.common.appreciation import POSTING_ROLES
@@ -75,6 +75,8 @@ def capabilities() -> dict:
 		# culling.assert_vet / assert_manager: the two signatures on a departure.
 		"cull_vet": holds(culling.VET_ROLE, "System Manager"),
 		"cull_manager": holds(culling.MANAGER_ROLE, "System Manager"),
+		# envelope.QUALITY_ROLE (+ the manager): the Quality pages are the lab's and the manager's only.
+		"quality": holds(QUALITY_ROLE, "Livestock Manager", "System Manager"),
 		# employee.acting_employee: record on behalf of another Employee.
 		"operator": system,
 	}

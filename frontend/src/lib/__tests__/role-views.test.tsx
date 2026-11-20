@@ -26,7 +26,7 @@ function caps(o: {
   return {
     read: m([...(o.read ?? []), "Notification Log"]), create: m(o.create), write: m(o.write),
     stock: false, post_draft: false, override_feed: false, insure: false, accounts: false,
-    appreciate: false, cull_vet: false, cull_manager: false, operator: false,
+    appreciate: false, cull_vet: false, cull_manager: false, quality: false, operator: false,
     ...o.flags,
   } as Capabilities;
 }
@@ -44,7 +44,7 @@ const ROLES: Record<string, { roles: string[]; can: Capabilities }> = {
         "Milk Quality Test", "Livestock Disposal", "Livestock Vet", "Livestock Loss", "Livestock Loss Scenario",
         "Herds", "Animal", "BOM", "Livestock Feed Actual"],
       write: ["Livestock Disposal", "Livestock Insurance Claim", "Livestock Settings", "BOM", "Animal"],
-      flags: { stock: true, post_draft: true, override_feed: true, appreciate: true, cull_manager: true },
+      flags: { stock: true, post_draft: true, override_feed: true, appreciate: true, cull_manager: true, quality: true },
     }),
   },
   milker: {
@@ -65,7 +65,7 @@ const ROLES: Record<string, { roles: string[]; can: Capabilities }> = {
   },
   quality: {
     roles: ["Livestock Quality"],
-    can: caps({ read: ["Milk Recording", "Milk Quality Test"], create: ["Milk Quality Test"] }),
+    can: caps({ read: ["Milk Recording", "Milk Quality Test"], create: ["Milk Quality Test"], flags: { quality: true } }),
   },
   accounts: {
     roles: ["Accounts Manager"],
@@ -95,7 +95,8 @@ describe("which screens each role is shown", () => {
   });
 
   it("a milker records milk and reads the herd: no stock, quality filing, culling, claims or vets", () => {
-    for (const v of ["milking", "animals", "dashboard", "feed-quality", "quality"]) expect(open("milker", v), v).toBe(true);
+    for (const v of ["milking", "animals", "dashboard"]) expect(open("milker", v), v).toBe(true);
+    for (const v of ["feed-quality", "quality"]) expect(open("milker", v), v).toBe(false);
     for (const v of ["transactions", "feeding", "procurement", "ration-editor", "culling", "claims", "vets", "herds", "movement", "weight", "treatment"])
       expect(open("milker", v), v).toBe(false);
   });
@@ -163,7 +164,8 @@ describe("the sidebar leaves out what a role cannot open", () => {
     sidebar("milker");
     noGroups("People", "Servicing");
     absent("vets", "claims", "transactions", "culling", "procurement", "ration-editor", "herds", "movement", "feeding");
-    present("milking", "quality");
+    present("milking");
+    absent("quality", "feed-quality");
   });
 
   it("Attendant: no Milking, Culling, Claims", () => {

@@ -22,7 +22,6 @@
   "column_break_breeding",
   "pregnancy_check_days_after_service",
   "heat_cycle_days",
-  "calving_alert_lead_days",
   "diagnosis_section",
   "diagnosis_earliest_days",
   "diagnosis_latest_days",
@@ -214,6 +213,7 @@
   "custom_weaning_complete_day",
   "tab_notifications",
   "sb_notifications",
+  "calving_alert_lead_days",
   "tab_mobile",
   "sb_mobile",
   "allow_offline_milking_grace"

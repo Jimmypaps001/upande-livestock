@@ -42,6 +42,7 @@ export interface Capabilities {
   appreciate: boolean;
   cull_vet: boolean;
   cull_manager: boolean;
+  quality: boolean;
   operator: boolean;
 }
 

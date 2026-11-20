@@ -73,6 +73,7 @@ class TestCapabilities(IntegrationTestCase):
 		self.assertFalse(c["accounts"])
 		self.assertFalse(c["cull_vet"])
 		self.assertFalse(c["operator"])
+		self.assertTrue(c["quality"])
 
 	def test_an_attendant_records_but_does_not_stock_cull_or_override(self):
 		c = _as("attendant")
@@ -81,6 +82,7 @@ class TestCapabilities(IntegrationTestCase):
 		for flag in ("stock", "post_draft", "override_feed", "insure", "accounts", "appreciate",
 			"cull_vet", "cull_manager"):
 			self.assertFalse(c[flag], flag)
+		self.assertFalse(c["quality"])  # the Quality pages are the lab's and the manager's
 		self.assertFalse(c["create"]["Milk Quality Test"])
 		self.assertFalse(c["create"]["Milk Recording"])
 		self.assertFalse(c["read"]["Livestock Disposal"])
@@ -90,6 +92,7 @@ class TestCapabilities(IntegrationTestCase):
 		c = _as("quality")
 		self.assertTrue(c["read"]["Milk Quality Test"])
 		self.assertTrue(c["create"]["Milk Quality Test"])
+		self.assertTrue(c["quality"])
 		self.assertFalse(c["read"]["Animal"])
 		self.assertFalse(c["read"]["Livestock Settings"])
 		self.assertFalse(c["stock"])
@@ -117,5 +120,21 @@ class TestCapabilities(IntegrationTestCase):
 		"""Every key the SPA's Capabilities type names is in the map."""
 		c = _as("manager")
 		for key in ("read", "create", "write", "stock", "post_draft", "override_feed", "insure",
-			"accounts", "appreciate", "cull_vet", "cull_manager", "operator"):
+			"accounts", "appreciate", "cull_vet", "cull_manager", "quality", "operator"):
 			self.assertIn(key, c)
+
+	def test_the_phone_gets_the_same_map_with_its_roles(self):
+		"""posting_day (the light call the phone makes on waking) carries the map."""
+		from upande_livestock.serverscripts.settings.posting_day import posting_day
+
+		frappe.set_user(USERS["attendant"][0])
+		frappe.clear_cache(user=USERS["attendant"][0])
+		try:
+			out = posting_day()
+		finally:
+			frappe.set_user("Administrator")
+		self.assertTrue(out["ok"], out)
+		self.assertIn("can", out)
+		self.assertFalse(out["can"]["create"]["Milk Recording"])
+		self.assertTrue(out["can"]["create"]["Livestock Event"])
+		self.assertFalse(out["can"]["quality"])

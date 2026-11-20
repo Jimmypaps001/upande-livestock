@@ -14,6 +14,7 @@ import frappe
 from frappe.utils import today
 
 from upande_livestock.serverscripts.common import backdate
+from upande_livestock.serverscripts.common.capabilities import capabilities
 from upande_livestock.serverscripts.common.envelope import QUALITY_ROLE, guard_read, livestock_roles, run
 from upande_livestock.serverscripts.common.guards import employee_status
 
@@ -37,6 +38,9 @@ def posting_day():
 			# Which livestock roles the user holds: the phone shows a user whose only
 			# role is Livestock Quality just the quality view.
 			"roles": livestock_roles(),
+			# What the user may do (common/capabilities): the phone leaves out what
+			# the server would refuse, the same map the desk reads at boot.
+			"can": capabilities(),
 		}
 
 	return run(go, "livestock posting_day failed")
