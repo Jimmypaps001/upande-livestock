@@ -52,6 +52,84 @@ class TestPropose(unittest.TestCase):
 		self.assertEqual(len(sires), 1)
 
 
+class TestCodesAndItems(unittest.TestCase):
+	def test_zero_typed_for_o_is_the_same_code(self):
+		self.assertEqual(LS.canon_code("250H0015388"), "250HO15388")
+		self.assertEqual(LS.code_key("14HO07923"), LS.code_key("14HO7923"))
+		self.assertEqual(LS.split_code("STOCKTON 250H0015388"), ("STOCKTON", "250HO15388"))
+
+	def test_item_names_give_bull_and_code(self):
+		self.assertEqual(LS.item_bull("Baymax Semen 14HO14919"), ("Baymax", "14HO14919"))
+		self.assertEqual(LS.item_bull("Freon Sexed Semen 250ho15674"), ("Freon", "250HO15674"))
+		self.assertEqual(LS.item_bull("Prominent NL719787292 Semen"), ("Prominent", "NL719787292"))
+		self.assertEqual(LS.item_bull("Semen Delta Wodan-F")[1], "")
+		self.assertEqual(LS.base_key(LS.item_bull("SIR YX Semen Delta Stormer")[0]), "STORMER")
+		for t in ("Semen Straws", "Semen Defroster", "Cups Strawberry 150g"):
+			self.assertEqual(LS.item_bull(t), ("", ""))
+
+	def test_base_key_drops_wording_and_endings(self):
+		self.assertEqual(LS.base_key("PRINCIPAL PP"), "PRINCIPAL")
+		self.assertEqual(LS.base_key("Steady P RF"), "STEADY")
+		self.assertEqual(LS.base_key("FAST LANE"), LS.base_key("Semen Fastlane"))
+		self.assertEqual(LS.base_key("P"), "P")
+
+	def test_spelling_variants_are_one_bull(self):
+		sires, t2k = LS.propose([
+			("PRINCIPAL NL613536745", "animal", 7), ("PRINCIPAL PP", "service", 15), ("PRINCIPAL PP", "animal", 1),
+			("RICOCHET", "service", 8), ("RICCOCHET", "service", 2),
+			("STARLINE", "animal", 3), ("STARLINER NL688518408", "animal", 1), ("STARLINER", "service", 6),
+			("STEADY P", "animal", 3), ("Steady P RF", "service", 57), ("STEADY P RF NL648906029", "animal", 2),
+		])
+		self.assertEqual(len(sires), 4)
+		by = {s["key"]: s for s in sires}
+		self.assertEqual(by["NL613536745"]["name"], "PRINCIPAL")
+		self.assertEqual(by["NL613536745"]["counts"], {"animal": 8, "service": 15})
+		self.assertEqual(t2k["PRINCIPAL PP"], "NL613536745")
+		self.assertEqual(t2k["STARLINE"], "NL688518408")
+		self.assertEqual(t2k["STEADY P"], t2k["Steady P RF"], "NL648906029")
+		ric = by["RICOCHET"]
+		self.assertEqual(ric["counts"]["service"], 10)
+		self.assertEqual(t2k["RICCOCHET"], "RICOCHET")
+
+	def test_different_codes_never_merge_by_spelling(self):
+		sires, _ = LS.propose([("BAYMAX 14HO14919", "animal", 1), ("MADMAX 1HO11094", "animal", 1),
+		                       ("Bolen 7HO12000", "animal", 1), ("Bowen 7HO13276", "animal", 1)])
+		self.assertEqual(len(sires), 4)
+
+	def test_short_names_are_not_fuzzy_merged(self):
+		sires, _ = LS.propose([("BEAR", "service", 1), ("BEAN", "service", 1)])
+		self.assertEqual(len(sires), 2)
+
+	def test_straw_item_reconciles_to_the_calves_sire(self):
+		sires, _ = LS.propose(
+			[("FAVORITE 250HO15230", "animal", 1), ("MADMAX 1HO11094", "animal", 3), ("Keen", "service", 14),
+			 ("STOCKTON 250HO15388", "animal", 1), ("BEAR 7HO15142", "animal", 9)],
+			[("I1", "Favorite Semen 250HO15230"), ("I2", "Semen Madmax"), ("I3", "Semen Delta Keen"),
+			 ("I4", "Semen Delta Keen-F"), ("I5", "Stockton Semen 250H0015388"),
+			 ("I6", "Semen Bear 507HO15142 Badger"), ("I7", "Semen Straws"), ("I8", "Semen Galaxy")])
+		by = {s["name"]: s for s in sires}
+		self.assertEqual([i[0] for i in by["FAVORITE"]["items"]], ["I1"])
+		self.assertEqual([i[0] for i in by["MADMAX"]["items"]], ["I2"])
+		self.assertEqual(by["MADMAX"]["code"], "1HO11094")
+		self.assertEqual([i[0] for i in by["Keen"]["items"]], ["I3", "I4"])
+		self.assertEqual(by["STOCKTON"]["code"], "250HO15388")
+		self.assertEqual([i[0] for i in by["STOCKTON"]["items"]], ["I5"])
+		self.assertEqual(by["BEAR"]["code"], "7HO15142")
+		self.assertEqual([i[0] for i in by["BEAR"]["items"]], ["I6"])
+		self.assertIn("Galaxy", by)
+		self.assertEqual(by["Galaxy"]["code"], "")
+		self.assertEqual(len(sires), 6)  # no bull for the generic "Semen Straws"
+
+	def test_primary_item_prefers_plain_straw(self):
+		self.assertEqual(LS.primary_item([("A", "Semen Unique Sexed"), ("B", "Semen Unique")]), "B")
+		self.assertIsNone(LS.primary_item([]))
+
+	def test_same_name_two_codes_is_left_alone_for_the_item(self):
+		sires, _ = LS.propose([("X NL111111111", "a", 1), ("X NL222222222", "a", 1)], [("I", "Semen X")])
+		self.assertEqual(len(sires), 3)
+		self.assertTrue(any(s["notes"] for s in sires if not s["code"]))
+
+
 def make(**kw):
 	kw.setdefault("sire_type", "Semen")
 	return frappe.get_doc({"doctype": "Livestock Sire", "active": 1, **kw}).insert(ignore_permissions=True)
