@@ -35,7 +35,7 @@ class TestMilkByHerd(unittest.TestCase):
 		self.assertEqual(out["herds"][0]["per_cow"], [5.0, None])
 
 	def test_window_defaults_and_clamps(self):
-		s, e = M.window("2026-01-01", "2026-11-01")
+		s, e = M.window("2024-01-01", "2026-11-01")
 		self.assertEqual((e - s).days, M.MAX_DAYS - 1)
 		s, e = M.window("2026-11-05", "2026-11-01")
 		self.assertLess(s, e)
