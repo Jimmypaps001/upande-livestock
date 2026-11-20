@@ -163,7 +163,7 @@ export function Movement() {
                 hint="herds they are going to" />
       </FigureRow>
 
-      <div className="flex flex-wrap items-end gap-4">
+      <div className="flex flex-wrap items-start gap-4">
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="mv-when">Moved on</Label>
           <EventDate id="mv-when" value={when} onChange={setWhen} />
@@ -181,7 +181,7 @@ export function Movement() {
         {who.mustAsk && (
           <OperatorField operator={who.operator} onChange={who.setOperator} />
         )}
-        <RefreshButton onClick={load} loading={loading} label="who is due" />
+        <span className="mt-[22px]"><RefreshButton onClick={load} loading={loading} label="who is due" /></span>
       </div>
 
       

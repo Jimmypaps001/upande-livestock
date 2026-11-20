@@ -255,7 +255,7 @@ export function Husbandry() {
           </CardTools>
         </CardHeaderRow>
         <CardContent className="flex flex-col gap-4 pt-0">
-          <div className="flex flex-wrap items-end gap-4">
+          <div className="flex flex-wrap items-start gap-4">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="h-kind">The job</Label>
               <Picker

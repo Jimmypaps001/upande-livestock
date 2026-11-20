@@ -384,7 +384,7 @@ export function Treatment() {
               </CardHeading>
             </CardHeaderRow>
             <CardContent className="flex flex-col gap-4 pt-0">
-              <div className="flex flex-wrap items-end gap-4">
+              <div className="flex flex-wrap items-start gap-4">
                 <div className="flex flex-col gap-1.5">
                   <Label htmlFor="tx-when">Given on</Label>
                   <EventDate id="tx-when" value={when} onChange={setWhen} />
