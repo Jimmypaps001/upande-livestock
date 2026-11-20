@@ -69,6 +69,7 @@ class TestLivestockSettingsEndpoints(IntegrationTestCase):
 		self.assertEqual(
 			sorted(tables),
 			[
+				"appreciation_matrix",
 				"bought_in_concentrates",
 				"calf_herds",
 				"custom_company_cost_centers",

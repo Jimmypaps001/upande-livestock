@@ -17,7 +17,7 @@ from frappe.utils import today
 
 from upande_livestock.serverscripts.common import asset_cover, loss
 from upande_livestock.serverscripts.losses.record_loss import record_loss
-from upande_livestock.serverscripts.tests.test_operations import _make_cow, _purge
+from upande_livestock.serverscripts.tests.test_operations import _make_cow
 
 SETTING = "sale_waits_for"
 
@@ -35,16 +35,25 @@ def _scenario(name, outcome, claim=0, trigger="Injury", docs=(), **kw):
 class _Base(IntegrationTestCase):
 	def setUp(self):
 		frappe.db.savepoint("loss_tests")
-		self.addCleanup(frappe.db.rollback, save_point="loss_tests")
+		self.addCleanup(self._undo)
 		self.tag = "ZZ LOSS COW"
 		_make_cow(self.tag)
-		self.addCleanup(_purge, "Animal", self.tag)
+
+	def _undo(self):
+		# The run() envelope rolls the whole transaction back on a refused request,
+		# which also drops our savepoint; then there is nothing left to undo.
+		try:
+			frappe.db.rollback(save_point="loss_tests")
+		except Exception:
+			frappe.db.rollback()
 
 	def loss_with_claim(self, status):
-		sc = _scenario("ZZ sell", "Sell live")
+		sc = frappe.db.exists("Livestock Loss Scenario", "ZZ sell") and frappe.get_doc("Livestock Loss Scenario", "ZZ sell") or _scenario("ZZ sell", "Sell live")
 		doc = frappe.get_doc({"doctype": "Livestock Loss", "animal": self.tag, "scenario": sc.name,
 		                      "incident_date": today(), "status": "Awaiting claim", "claim": "CLM-X",
-		                      "claim_status": status}).insert(ignore_permissions=True)
+		                      "claim_status": status})
+		doc.flags.ignore_links = True
+		doc.insert(ignore_permissions=True)
 		return doc
 
 
@@ -94,7 +103,7 @@ class TestSaleGate(_Base):
 
 	def test_only_accounts_may_change_the_gate(self):
 		with mock.patch("frappe.get_roles", return_value=["Livestock Manager"]), \
-		     mock.patch.object(frappe.session, "user", "someone@example.com"):
+		     mock.patch.dict(frappe.session, {"user": "someone@example.com"}):
 			with self.assertRaises(frappe.PermissionError):
 				loss.assert_may_change_accounts(["sale_waits_for"])
 			loss.assert_may_change_accounts(["custom_farm"])
@@ -138,7 +147,9 @@ class TestRecordLoss(_Base):
 		sc = _scenario("ZZ salvage2", "Sell live")
 		doc = frappe.get_doc({"doctype": "Livestock Loss", "animal": self.tag, "scenario": sc.name,
 		                      "incident_date": today(), "status": "Awaiting claim", "claim": "CLM-Y",
-		                      "claim_status": "Draft"}).insert(ignore_permissions=True)
+		                      "claim_status": "Draft"})
+		doc.flags.ignore_links = True
+		doc.insert(ignore_permissions=True)
 		frappe.db.set_single_value("Livestock Settings", SETTING, "Claim recorded")
 		with mock.patch.object(loss, "notify_step") as note:
 			loss.claim_changed(frappe._dict(name="CLM-Y", status="Recorded"))
@@ -153,8 +164,10 @@ class TestRecordLoss(_Base):
 		out = record_loss(animal=self.tag, scenario=sc.name)
 		self.assertIn("already has a loss", out.get("error", ""))
 
-	def test_an_unknown_or_inactive_scenario_is_refused(self):
+	def test_an_unknown_scenario_is_refused(self):
 		self.assertIn("scenario", record_loss(animal=self.tag, scenario="nope").get("error", "").lower())
+
+	def test_an_inactive_scenario_is_refused(self):
 		sc = _scenario("ZZ off", "Write off")
 		sc.db_set("active", 0)
 		self.assertIn("switched off", record_loss(animal=self.tag, scenario=sc.name).get("error", ""))
@@ -168,7 +181,7 @@ class TestClaimThroughUpandeAsset(_Base):
 
 		class Claim(frappe._dict):
 			def append(self, table, row):
-				self.setdefault(table, []).append(row)
+				self.setdefault(table, []).append(frappe._dict(row))
 
 			def update(self, d):
 				super().update(d)

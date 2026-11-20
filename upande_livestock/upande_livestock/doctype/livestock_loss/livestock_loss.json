@@ -91,7 +91,7 @@
    "fieldname": "animal_name",
    "fieldtype": "Data",
    "label": "Animal name",
-   "fetch_from": "animal.animal_name",
+   "fetch_from": "animal.burn_name",
    "read_only": 1
   },
   {
