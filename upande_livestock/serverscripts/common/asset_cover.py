@@ -175,7 +175,14 @@ def put_under_cover(animal, policy, sum_insured=None, effective_date=None, endor
 	payload = {"effective_date": str(eff), "assets": [{"asset": asset, "sum_insured": value}]}
 	if endorsement_no:
 		payload["endorsement_no"] = endorsement_no
-	res = frappe.call(ENDORSE, policy=policy, action="Add Assets", payload=payload)
+	# Upande Asset only lets a policy carry an Asset flagged Insurance Required.
+	if frappe.get_meta("Asset").has_field("insurance_required") and not frappe.db.get_value(
+			"Asset", asset, "insurance_required"):
+		frappe.db.set_value("Asset", asset, "insurance_required", 1)
+	try:
+		res = frappe.call(ENDORSE, policy=policy, action="Add Assets", payload=payload)
+	except frappe.PermissionError:
+		frappe.throw(_("Upande Asset only lets an Accounts Manager endorse a policy. Ask one to insure {0}.").format(animal))
 	res = dict(res or {})
 	res["asset"] = asset
 	return res

@@ -1,3 +1,5 @@
+import { useState } from "react";
+import { InsureDialog, canInsure } from "@/components/animals/InsureDialog";
 import { STAGES, ageFrom, initialsOf, type AnimalProfile } from "@/lib/animals";
 import { CoverBadge } from "@/components/animals/CoverBadge";
 import { cn } from "@/lib/utils";
@@ -11,7 +13,10 @@ import { cn } from "@/lib/utils";
  * the empty state is the common case, so it has to be a deliberate surface
  * rather than a gap.
  */
-export function AnimalPortrait({ animal }: { animal: AnimalProfile }) {
+export function AnimalPortrait({ animal, onInsured }: { animal: AnimalProfile; onInsured?: () => void }) {
+  const [insuring, setInsuring] = useState(false);
+  const mayInsure =
+    canInsure() && (animal.cover === "none" || animal.cover === "expired");
   const stage = STAGES[animal.stage];
   return (
     <div className="flex flex-col gap-4">
@@ -70,6 +75,18 @@ export function AnimalPortrait({ animal }: { animal: AnimalProfile }) {
           <span>
             {animal.cover === "expired" ? "ended" : "until"} {animal.coverDetail.end}
           </span>
+        )}
+        {mayInsure && (
+          <button
+            type="button"
+            className="ml-auto rounded-[var(--sd-radius-pill)] border border-[var(--sd-line)] px-2.5 py-1 text-[11px] font-medium text-[var(--sd-ink)] hover:bg-[var(--sd-card)]"
+            onClick={() => setInsuring(true)}
+          >
+            Insure
+          </button>
+        )}
+        {mayInsure && (
+          <InsureDialog open={insuring} onOpenChange={setInsuring} animal={animal.id} onInsured={onInsured} />
         )}
       </div>
 

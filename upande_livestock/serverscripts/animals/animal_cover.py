@@ -44,12 +44,22 @@ def cover_policies(payload=None):
 	return run(go, "livestock cover_policies failed")
 
 
+INSURE_ROLES = ("Accounts Manager", "Accounts User", "System Manager")
+
+
+def can_insure():
+	return bool(set(frappe.get_roles()) & set(INSURE_ROLES)) or frappe.session.user == "Administrator"
+
+
 @frappe.whitelist()
 def insure_animal(payload):
-	"""Put her Asset under a policy. Upande Asset decides who may."""
+	"""Put her Asset under a policy. Only Accounts (and System Manager) may for now."""
 
 	def go():
 		guard_read("Animal")
+		if not can_insure():
+			frappe.throw(_("Only Accounts can insure an animal. Ask Accounts to put {0} under a policy.").format(
+				as_dict(payload).get("animal") or _("her")))
 		d = as_dict(payload)
 		res = asset_cover.put_under_cover(
 			_animal(d), d.get("policy"), d.get("sum_insured"),

@@ -73,6 +73,7 @@
   "sb_concentrates",
   "bought_in_concentrates",
   "sb_accounting",
+  "sale_invoice_alert_roles",
   "custom_default_company",
   "custom_default_credit_account",
   "custom_concentrate_cost_center",
@@ -153,6 +154,9 @@
   "cb_milk_quality",
   "custom_quality_required_in_lab",
   "custom_quality_scc_ceiling",
+  "custom_quality_aflatoxin_limit_ppt",
+  "custom_quality_antibiotics_fail",
+  "custom_quality_resazurin_min_score",
   "custom_concentrate_cover_days",
   "tab_targets",
   "sb_production_targets",
@@ -616,6 +620,13 @@
    "label": "Accounting"
   },
   {
+   "default": "Accounts Manager, Accounts User",
+   "description": "Users with these roles (comma separated) are emailed, and get a bell notice, when a sale creates a draft Sales Invoice to submit.",
+   "fieldname": "sale_invoice_alert_roles",
+   "fieldtype": "Small Text",
+   "label": "Sale invoice alert roles"
+  },
+  {
    "fieldname": "custom_default_company",
    "fieldtype": "Link",
    "label": "Default Company (Livestock JE)",
@@ -881,6 +892,28 @@
    "fieldname": "custom_quality_scc_ceiling",
    "fieldtype": "Float",
    "label": "Bulk Tank SCC Ceiling (× 1000)"
+  },
+  {
+   "default": "50",
+   "description": "A buyer's milk quality test fails when aflatoxin M1 is above this. 50 ppt is the EU limit; change it to the limit your buyer applies. 0 turns the check off.",
+   "fieldname": "custom_quality_aflatoxin_limit_ppt",
+   "fieldtype": "Float",
+   "label": "Aflatoxin M1 Limit (ppt)",
+   "precision": "1"
+  },
+  {
+   "default": "1",
+   "description": "A positive antibiotics result fails the milk quality test. Untick to record it as a warning only.",
+   "fieldname": "custom_quality_antibiotics_fail",
+   "fieldtype": "Check",
+   "label": "Positive Antibiotics Fails The Test"
+  },
+  {
+   "default": "4",
+   "description": "A resazurin score (0 spoiled to 6 clean) below this is a fail when no Pass/Fail was entered.",
+   "fieldname": "custom_quality_resazurin_min_score",
+   "fieldtype": "Int",
+   "label": "Resazurin Minimum Passing Score"
   },
   {
    "default": "7",

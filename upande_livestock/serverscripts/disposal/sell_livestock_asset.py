@@ -96,6 +96,10 @@ def _sell_livestock_asset(
 	si.flags.ignore_permissions = True
 	si.insert(ignore_permissions=True)
 
+	from upande_livestock.serverscripts.disposal.notify_accounts import notify_sale_invoice
+
+	notify_sale_invoice(animal_name, asset_name, customer, selling_amount, si.name, si.currency)
+
 	# See scrap_livestock_asset: retirement belongs to api/animal.retire_animal(),
 	# and this function does not commit.
 

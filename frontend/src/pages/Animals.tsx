@@ -74,6 +74,12 @@ export function Animals() {
     });
   }, []);
 
+  const reloadProfile = useCallback((id: string) => {
+    void getAnimalProfile(id).then((r) => {
+      if (!isError(r)) setProfiles((s) => ({ ...s, [id]: r }));
+    });
+  }, []);
+
   useEffect(() => {
     void getAnimals().then((r) => {
       if (isError(r)) {
@@ -278,7 +284,7 @@ export function Animals() {
               {/* who she is — identity does not scroll */}
               <div className="flex min-w-0 flex-col gap-5 lg:sticky lg:top-6 lg:self-start">
                 {profile ? (
-                  <AnimalPortrait animal={profile} />
+                  <AnimalPortrait animal={profile} onInsured={() => reloadProfile(profile.id)} />
                 ) : (
                   <AnimalPortraitSkeleton />
                 )}
