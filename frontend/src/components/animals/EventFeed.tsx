@@ -1,14 +1,5 @@
-import {
-  Activity,
-  ArrowRightLeft,
-  Baby,
-  CircleSlash,
-  Droplet,
-  HeartPulse,
-  Scale,
-  Sparkle,
-  type LucideIcon,
-} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import { eventIcon } from "@/lib/event-icons";
 import { MILESTONE_TONE, pronouns, type Milestone, type MilestoneKind } from "@/lib/animals";
 
 /**
@@ -23,15 +14,15 @@ import { MILESTONE_TONE, pronouns, type Milestone, type MilestoneKind } from "@/
  */
 
 const ICON: Record<MilestoneKind, LucideIcon> = {
-  birth: Sparkle,
-  movement: ArrowRightLeft,
-  service: Droplet,
-  confirmed: HeartPulse,
-  calving: Baby,
-  abortion: CircleSlash,
-  drying: Activity,
-  health: HeartPulse,
-  weight: Scale,
+  birth: eventIcon("Birth"),
+  movement: eventIcon("Movement"),
+  service: eventIcon("Service"),
+  confirmed: eventIcon("Pregnancy Diagnosis"),
+  calving: eventIcon("Calving"),
+  abortion: eventIcon("Abortion"),
+  drying: eventIcon("Drying Off"),
+  health: eventIcon("Check Up"),
+  weight: eventIcon("Weight Recording"),
 };
 
 export function EventFeed({ milestones, sex }: { milestones: Milestone[]; sex?: string | null }) {

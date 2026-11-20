@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { Loader2, X } from "lucide-react";
+import { eventIcon, groupOf, sortEventTypes } from "@/lib/event-icons";
 import { LinkPicker } from "@/components/settings/LinkPicker";
 import { SettingField } from "@/components/settings/SettingField";
 import { useToast } from "@/components/Toast";
@@ -39,6 +40,9 @@ import {
  * event — the same fields the guards and alerts read, shown here beside the
  * event they belong to rather than copied. One Save writes both.
  */
+const byCatalog = (a: { row: StockRule }, b: { row: StockRule }) =>
+  sortEventTypes([a.row, b.row], (r) => r.event_type)[0] === a.row ? -1 : 1;
+
 export function EventsCard({
   canWrite,
   fields,
@@ -148,15 +152,23 @@ export function EventsCard({
 
         {saved && (
           <div className="flex flex-col divide-y divide-[var(--sd-line)]">
-            {rows.map((row, i) => {
+            {rows.map((row, i) => ({ row, i })).sort(byCatalog).map(({ row, i }, pos, all) => {
+              const Icon = eventIcon(row.event_type);
+              const group = groupOf(row.event_type)?.label ?? "Other";
+              const heading = pos === 0 || (groupOf(all[pos - 1].row.event_type)?.label ?? "Other") !== group ? group : null;
               const problem = ruleProblem(row);
               const open = detailsShown(row);
               const timingFields = row.timings
                 .map((f) => byName.get(f))
                 .filter((f): f is SettingsField => !!f);
               return (
+                <Fragment key={row.event_type}>
+                {heading && (
+                  <h3 className="pt-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--sd-quiet)]">
+                    {heading}
+                  </h3>
+                )}
                 <section
-                  key={row.event_type}
                   aria-label={row.event_type}
                   data-enabled={open ? "true" : "false"}
                   className="flex flex-col gap-3 py-3"
@@ -169,6 +181,7 @@ export function EventsCard({
                         onCheckedChange={(on) => update(i, { enabled: on })}
                         aria-label={`${row.event_type} enabled`}
                       />
+                      <Icon className="h-4 w-4 shrink-0" aria-hidden />
                       <span className={open ? "" : "text-[var(--sd-quiet)]"}>{row.event_type}</span>
                     </label>
                     <span className="text-[12.5px] text-[var(--sd-quiet)]">{ruleSummary(row)}</span>
@@ -285,6 +298,7 @@ export function EventsCard({
                     </div>
                   )}
                 </section>
+                </Fragment>
               );
             })}
           </div>

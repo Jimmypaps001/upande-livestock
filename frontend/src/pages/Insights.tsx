@@ -1,3 +1,4 @@
+import { eventIcon, sortEventTypes } from "@/lib/event-icons";
 import { BackdatedBadge, backdatedTint } from "@/components/BackdatedBadge";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Activity, HeartPulse, Milk } from "lucide-react";
@@ -50,6 +51,16 @@ function useView<T>(load: () => Promise<{ error?: string } | T>) {
   return { data, loading, failure, refresh };
 }
 
+function FilterLabel({ type }: { type: string }) {
+  const Icon = eventIcon(type);
+  return (
+    <span className="inline-flex items-center gap-1">
+      <Icon className="h-3 w-3" aria-hidden />
+      {type}
+    </span>
+  );
+}
+
 export function Events() {
   const load = useCallback(() => getEventsView(), []);
   const { data, loading, failure, refresh } = useView<EventsView>(load);
@@ -69,7 +80,7 @@ export function Events() {
     );
   }, [data, type, term]);
 
-  const types = data?.filters?.types ?? [];
+  const types = sortEventTypes(data?.filters?.types ?? []);
 
   return (
     <Page>
@@ -119,7 +130,7 @@ export function Events() {
                       : "text-[var(--sd-muted)] hover:text-[var(--sd-ink)]",
                   )}
                 >
-                  {t || "All"}
+                  {t ? <FilterLabel type={t} /> : "All"}
                 </button>
               ))}
             </div>
