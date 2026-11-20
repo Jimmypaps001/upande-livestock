@@ -45,7 +45,7 @@ TAB = "custom_livestock_tab"
 
 #: Doctypes this app borrows. A field of ours on one of these that is no longer
 #: in the spec is stale and gets removed — see `ensure_livestock_custom_fields`.
-MANAGED_DOCTYPES = ("Work Order", "BOM", "Stock Entry", "File")
+MANAGED_DOCTYPES = ("Work Order", "BOM", "Stock Entry", "File", "Asset Value Adjustment")
 
 #: Shown only on a document that is ours.
 LIVESTOCK_ONLY = "eval:doc.custom_is_livestock_feed"
@@ -63,6 +63,29 @@ def field_spec():
 				"fieldtype": "Data",
 				"insert_after": "file_name",
 				"length": 140,
+				"module": MODULE,
+			},
+		],
+		# Which weighing an appreciation was posted for (common/appreciation), so
+		# the same weighing is never posted twice.
+		"Asset Value Adjustment": [
+			{
+				"fieldname": "livestock_weight_ref",
+				"label": "Livestock Weighing",
+				"fieldtype": "Data",
+				"insert_after": "difference_account",
+				"read_only": 1,
+				"no_copy": 1,
+				"length": 140,
+				"module": MODULE,
+			},
+			{
+				"fieldname": "livestock_basis",
+				"label": "Livestock Basis",
+				"fieldtype": "Small Text",
+				"insert_after": "livestock_weight_ref",
+				"read_only": 1,
+				"no_copy": 1,
 				"module": MODULE,
 			},
 		],

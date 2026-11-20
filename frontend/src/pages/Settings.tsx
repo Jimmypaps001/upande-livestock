@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Loader2, ShieldAlert } from "lucide-react";
+import { AppreciationRun } from "@/components/settings/AppreciationRun";
 import { BackdatingSetting } from "@/components/settings/BackdatingSetting";
 import { ChildTableEditor } from "@/components/settings/ChildTableEditor";
 import { SettingField } from "@/components/settings/SettingField";
@@ -333,6 +334,8 @@ function SectionCard({
             onSaved={onTableSaved}
           />
         ))}
+
+        {section.fieldname === "sb_appreciation" && <AppreciationRun canRun={!readOnly} />}
       </CardContent>
     </Card>
   );

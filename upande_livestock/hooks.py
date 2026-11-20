@@ -298,6 +298,11 @@ doc_events = {
 # ---------------
 
 scheduler_events = {
+	# Weight-based asset appreciation: due-check against Livestock Settings
+	# (frequency + hour); a no-op unless the farm switched it on.
+	"hourly": [
+		"upande_livestock.serverscripts.common.appreciation.run_if_due",
+	],
 	# Ex "CHECK OVERDUE PREGNANCY DIAGNOSES" Server Script (Daily).
 	"daily": [
 		"upande_livestock.serverscripts.alerts.tasks.check_overdue_pregnancy_diagnoses",

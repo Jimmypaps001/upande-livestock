@@ -105,6 +105,15 @@
   "cb_milk_price",
   "custom_colostrum_item",
   "custom_colostrum_warehouse",
+  "sb_appreciation",
+  "appreciation_enabled",
+  "appreciation_account",
+  "appreciation_min_change",
+  "appreciation_allow_decrease",
+  "cb_appreciation",
+  "appreciation_frequency",
+  "appreciation_hour",
+  "appreciation_matrix",
   "tab_stock",
   "stock_rules_note",
   "sb_husbandry_stock",
@@ -1267,6 +1276,65 @@
    "label": "Calf herds",
    "options": "Livestock Calf Herd",
    "description": "The calf groups (for example the bull calves, 0-2 and 2-4). The mobile app's Calves filter shows the animals in these herds."
+  },
+  {
+   "fieldname": "sb_appreciation",
+   "fieldtype": "Section Break",
+   "label": "Asset Appreciation",
+   "description": "Raises each animal's Asset value as it gains weight, by posting an Asset Value Adjustment (price per kg of live weight from the matrix below). Nothing is posted until this is switched on and the account and prices are set."
+  },
+  {
+   "fieldname": "appreciation_enabled",
+   "fieldtype": "Check",
+   "label": "Appreciate Animal Assets",
+   "default": "0"
+  },
+  {
+   "fieldname": "appreciation_account",
+   "fieldtype": "Link",
+   "label": "Appreciation Account",
+   "options": "Account",
+   "description": "Income / revaluation account the difference is posted to (credited on an increase)."
+  },
+  {
+   "fieldname": "appreciation_min_change",
+   "fieldtype": "Currency",
+   "label": "Minimum Change to Post",
+   "default": "500",
+   "description": "Smaller differences are left until the next weighing (KES)."
+  },
+  {
+   "fieldname": "appreciation_allow_decrease",
+   "fieldtype": "Check",
+   "label": "Allow Value Decrease",
+   "default": "0",
+   "description": "When a lower weight or price gives a lower value, post the fall too. Off: values only go up."
+  },
+  {
+   "fieldname": "cb_appreciation",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "appreciation_frequency",
+   "fieldtype": "Select",
+   "label": "Run Frequency",
+   "options": "Daily\nWeekly\nMonthly",
+   "default": "Weekly",
+   "description": "Weekly runs on Mondays, monthly on the 1st."
+  },
+  {
+   "fieldname": "appreciation_hour",
+   "fieldtype": "Int",
+   "label": "Run at Hour (0-23)",
+   "default": "2",
+   "description": "Server time. The scheduler checks hourly and runs once in this hour."
+  },
+  {
+   "fieldname": "appreciation_matrix",
+   "fieldtype": "Table",
+   "label": "Appreciation Matrix",
+   "options": "Livestock Appreciation Rate",
+   "description": "The first row that fits the animal (band, age, weight) prices it. Prices are placeholders for the farm to fill in."
   },
   {
    "fieldname": "tab_stock",

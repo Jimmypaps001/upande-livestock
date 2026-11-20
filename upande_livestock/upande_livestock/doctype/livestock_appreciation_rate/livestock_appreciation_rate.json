@@ -1,0 +1,107 @@
+{
+ "actions": [],
+ "creation": "2026-11-20 09:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "band",
+  "sex",
+  "age_from_months",
+  "age_to_months",
+  "weight_from_kg",
+  "weight_to_kg",
+  "price_per_kg",
+  "max_value",
+  "stop_after_months",
+  "stop_at_first_calving"
+ ],
+ "fields": [
+  {
+   "fieldname": "band",
+   "fieldtype": "Select",
+   "label": "Band",
+   "options": "\nCalf\nWeaner\nHeifer\nIn-calf Heifer\nCow\nBull",
+   "in_list_view": 1,
+   "columns": 2,
+   "description": "Blank fits any animal."
+  },
+  {
+   "fieldname": "sex",
+   "fieldtype": "Select",
+   "label": "Sex",
+   "options": "\nFemale\nMale",
+   "in_list_view": 1,
+   "columns": 1
+  },
+  {
+   "fieldname": "age_from_months",
+   "fieldtype": "Int",
+   "label": "Age from (months)",
+   "in_list_view": 1,
+   "columns": 1
+  },
+  {
+   "fieldname": "age_to_months",
+   "fieldtype": "Int",
+   "label": "Age to (months)",
+   "in_list_view": 1,
+   "columns": 1,
+   "description": "0 = no upper limit."
+  },
+  {
+   "fieldname": "weight_from_kg",
+   "fieldtype": "Float",
+   "label": "Weight from (kg)",
+   "in_list_view": 1,
+   "columns": 1
+  },
+  {
+   "fieldname": "weight_to_kg",
+   "fieldtype": "Float",
+   "label": "Weight to (kg)",
+   "description": "0 = no upper limit."
+  },
+  {
+   "fieldname": "price_per_kg",
+   "fieldtype": "Currency",
+   "label": "Price per kg live weight",
+   "in_list_view": 1,
+   "columns": 2,
+   "reqd": 1,
+   "description": "PLACEHOLDER until the farm sets it. A row at 0 values the animal at nothing, so it is skipped."
+  },
+  {
+   "fieldname": "max_value",
+   "fieldtype": "Currency",
+   "label": "Max value",
+   "in_list_view": 1,
+   "columns": 1,
+   "description": "Cap on the asset value. 0 = no cap."
+  },
+  {
+   "fieldname": "stop_after_months",
+   "fieldtype": "Int",
+   "label": "Stop appreciating after age (months)",
+   "description": "0 = never stops on age."
+  },
+  {
+   "fieldname": "stop_at_first_calving",
+   "fieldtype": "Check",
+   "label": "Stop at first calving",
+   "description": "Once she has calved her value is left where it is."
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-11-20 09:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Upande Livestock",
+ "name": "Livestock Appreciation Rate",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}
