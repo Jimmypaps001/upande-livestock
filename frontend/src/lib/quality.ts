@@ -9,7 +9,6 @@
 import { call, type Envelope } from "@/lib/frappe";
 
 const OPTIONS = "upande_livestock.serverscripts.quality.quality_options.quality_options";
-const RECORD = "upande_livestock.serverscripts.quality.record_milk_quality.record_milk_quality";
 
 export type CaptureMode = "At milking" | "Afterwards";
 
@@ -48,26 +47,6 @@ export function getQualityOptions(days = 60): Promise<Envelope<QualityOptions>> 
   return call<QualityOptions>(OPTIONS, { days });
 }
 
-export interface QualityEntry {
-  recording: string;
-  bulk_scc?: number;
-  fat_percent?: number;
-  protein_percent?: number;
-  lab_test_date?: string;
-  remarks?: string;
-}
-
-export function recordMilkQuality(entry: QualityEntry) {
-  return call<{
-    name: string;
-    bulk_scc: number | null;
-    fat_percent: number | null;
-    protein_percent: number | null;
-    over_ceiling: boolean;
-    still_pending: boolean;
-  }>(RECORD, { payload: entry });
-}
-
 /** The disclaimer shown when the lab boxes are left empty on the milking form. */
 export const SKIPPED_NOTICE =
   "Left blank, this milking is filed as awaiting quality and appears on the " +
@@ -78,7 +57,8 @@ export const SKIPPED_NOTICE =
 // The buyer's quality sheet (Milk Quality Test). The phone calls the same four
 // server functions; the rules below only preview what the server will decide.
 
-const TESTS = "upande_livestock.serverscripts.quality.quality_tests";
+const QUALITY = "upande_livestock.serverscripts.quality";
+const TESTS = `${QUALITY}.quality_tests`;
 
 export type Chip = "pass" | "fail" | "warn" | null;
 export type CheckKey = "resazurin" | "antibiotics" | "hydrogen_peroxide" | "frothing" | "aflatoxin";
@@ -113,6 +93,8 @@ export interface QualityTest {
   specific_gravity: number | null;
   protein_percent: number | null;
   butterfat_percent: number | null;
+  bulk_scc: number | null;
+  scc_over_ceiling: boolean;
   resazurin_score: string;
   resazurin_result: string;
   antibiotics: string;
@@ -136,6 +118,7 @@ export interface QualityTestOptions {
   sample_types: string[];
   shifts: string[];
   limits: QualityLimits;
+  scc_ceiling: number;
   recordings: { name: string; herd: string; milking_time: string; net_yield_kg: number }[];
   can_write: boolean;
 }
@@ -144,6 +127,7 @@ export interface QualityTestList {
   tests: QualityTest[];
   total: number;
   limits: QualityLimits;
+  scc_ceiling: number;
   can_write: boolean;
 }
 
@@ -171,6 +155,7 @@ export interface QualityTestForm {
   specific_gravity: string;
   protein_percent: string;
   butterfat_percent: string;
+  bulk_scc: string;
   resazurin_score: string;
   resazurin_result: string;
   antibiotics: string;
@@ -186,14 +171,14 @@ export interface QualityTestForm {
 export const emptyForm = (date: string, buyer = ""): QualityTestForm => ({
   sample_date: date, shift: "", sample_type: "Bottle sample", buyer, milk_recording: "",
   quantity_l: "", receiving_temp_c: "", ph: "", tta: "", snf_percent: "", freezing_point: "",
-  specific_gravity: "", protein_percent: "", butterfat_percent: "", resazurin_score: "",
+  specific_gravity: "", protein_percent: "", butterfat_percent: "", bulk_scc: "", resazurin_score: "",
   resazurin_result: "", antibiotics: "", hydrogen_peroxide: "", frothing: "", aflatoxin_ppt: "",
   sensory_score: "", sensory_note: "", remarks: "", lab_slip: "",
 });
 
 const NUMBER_FIELDS = [
   "quantity_l", "receiving_temp_c", "ph", "tta", "snf_percent", "freezing_point",
-  "specific_gravity", "protein_percent", "butterfat_percent", "aflatoxin_ppt",
+  "specific_gravity", "protein_percent", "butterfat_percent", "bulk_scc", "aflatoxin_ppt",
 ] as const;
 
 /** Numbers are read with a comma or a dot; blanks are left out of the payload. */
@@ -260,4 +245,43 @@ export function getQualityTests(filters: QualityTestFilters = {}, limit = 50, st
 
 export function getQualityTest(name: string) {
   return call<{ name: string; test: QualityTest }>(`${TESTS}.quality_test`, { name });
+}
+
+// ---------------------------------------------------------------------------
+// Step 1 of the one quality form: the milked batch the result belongs to.
+
+export interface MilkBatch {
+  key: string;
+  date: string;
+  shift: string;
+  total_kg: number;
+  herds: string[];
+  recordings: { name: string; herd: string; net_yield_kg: number }[];
+  milk_recording: string;
+  tested: boolean;
+  /** A recording of the batch still awaits a lab result. */
+  pending: boolean;
+}
+
+export function getMilkBatches(date_from?: string, date_to?: string) {
+  return call<{ batches: MilkBatch[]; from: string; to: string }>(`${QUALITY}.milk_batches.milk_batches`, {
+    date_from,
+    date_to,
+  });
+}
+
+/** What the server is sent for a picked batch: its date, shift, link and every recording. */
+export function batchFields(b: MilkBatch): { sample_date: string; shift: string; milk_recording: string; recordings: string[] } {
+  return { sample_date: b.date, shift: b.shift, milk_recording: b.milk_recording, recordings: b.recordings.map((r) => r.name) };
+}
+
+/** Pending batches first, each group newest first (the server already does this; kept for stubs). */
+export function pendingFirst(batches: MilkBatch[]): MilkBatch[] {
+  return [...batches].sort((a, b) => Number(b.pending) - Number(a.pending));
+}
+
+/** True when a typed bulk SCC is above the farm's ceiling (0 = no ceiling). */
+export function sccOver(value: string, ceiling: number): boolean {
+  const n = Number(value.replace(",", "."));
+  return !!ceiling && Number.isFinite(n) && n > ceiling;
 }

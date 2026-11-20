@@ -39,6 +39,7 @@ RANGES = {
 	"specific_gravity": ("Specific gravity", 0.9, 1.2, 3),
 	"protein_percent": ("Protein", 0, 15, 2),
 	"butterfat_percent": ("Butterfat", 0, 20, 2),
+	"bulk_scc": ("Bulk SCC", 0, 100000, 1),
 	"aflatoxin_ppt": ("Aflatoxin M1", 0, 100000, 1),
 }
 

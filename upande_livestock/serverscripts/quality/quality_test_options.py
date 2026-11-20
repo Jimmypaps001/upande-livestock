@@ -7,6 +7,7 @@ import frappe
 
 from upande_livestock.serverscripts.common.envelope import guard_read, run
 from upande_livestock.serverscripts.common import milk_quality_test as mq
+from upande_livestock.serverscripts.common import quality
 
 
 @frappe.whitelist()
@@ -39,6 +40,7 @@ def quality_test_options(date=None):
 			"sample_types": list(mq.SAMPLE_TYPES),
 			"shifts": list(mq.SHIFTS),
 			"limits": lim,
+			"scc_ceiling": quality.scc_ceiling(),
 			"recordings": recordings,
 			"can_write": bool(frappe.has_permission(DT, "create")),
 		}

@@ -11,6 +11,7 @@ from frappe import _
 from frappe.utils import add_days, cint, flt, today
 
 from upande_livestock.serverscripts.common import milk_quality_test as mq
+from upande_livestock.serverscripts.common import quality
 from upande_livestock.serverscripts.common.envelope import as_dict, guard, guard_read, run
 
 DT = mq.DOCTYPE
@@ -18,7 +19,7 @@ DT = mq.DOCTYPE
 LIST_FIELDS = [
 	"name", "sample_date", "shift", "sample_type", "buyer", "milk_recording", "quantity_l",
 	"receiving_temp_c", "ph", "tta", "snf_percent", "freezing_point", "specific_gravity",
-	"protein_percent", "butterfat_percent", "resazurin_score", "resazurin_result",
+	"protein_percent", "butterfat_percent", "bulk_scc", "resazurin_score", "resazurin_result",
 	"antibiotics", "hydrogen_peroxide", "frothing", "aflatoxin_ppt", "sensory_score",
 	"sensory_note", "overall_result", "failed_tests", "aflatoxin_over_limit", "remarks",
 	"lab_slip", "recorded_by", "creation",
@@ -34,6 +35,8 @@ def _row(r, lim):
 		r[k] = r.get(k) if r.get(k) else None  # 0 is "not recorded" on a Float column
 	r["aflatoxin_over_limit"] = bool(r.get("aflatoxin_over_limit"))
 	r["checks"] = mq.checks(r, lim)
+	ceiling = quality.scc_ceiling()
+	r["scc_over_ceiling"] = bool(ceiling and flt(r.get("bulk_scc")) > ceiling)
 	return r
 
 
@@ -73,6 +76,7 @@ def quality_tests(filters=None, limit=50, start=0):
 			"tests": [_row(r, lim) for r in rows],
 			"total": total,
 			"limits": lim,
+			"scc_ceiling": quality.scc_ceiling(),
 			"can_write": bool(frappe.has_permission(DT, "create")),
 		}
 

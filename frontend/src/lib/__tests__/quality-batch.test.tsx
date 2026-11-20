@@ -12,16 +12,24 @@ const row = (over: Record<string, unknown> = {}) => ({
   freezing_point: -0.548, specific_gravity: 1.03, protein_percent: 3.2, butterfat_percent: 2.9,
   resazurin_score: "0", resazurin_result: "Fail", antibiotics: "Negative", hydrogen_peroxide: "Nil", frothing: "Pass",
   aflatoxin_ppt: 67, sensory_score: "+1", sensory_note: "", overall_result: "Fail", failed_tests: "Resazurin, Aflatoxin M1",
-  aflatoxin_over_limit: true, remarks: "", lab_slip: null, recorded_by: "a@b.c",
+  bulk_scc: 250, scc_over_ceiling: true, aflatoxin_over_limit: true, remarks: "", lab_slip: null, recorded_by: "a@b.c",
   checks: { resazurin: "fail", antibiotics: "pass", hydrogen_peroxide: "pass", frothing: "pass", aflatoxin: "fail" },
   ...over,
 });
 
+const BATCHES = [
+  { key: "2026-11-19|Morning", date: "2026-11-19", shift: "Morning", total_kg: 300, herds: ["A", "B"], tested: false, pending: true,
+    milk_recording: "MR-1", recordings: [{ name: "MR-1", herd: "A", net_yield_kg: 200 }, { name: "MR-2", herd: "B", net_yield_kg: 100 }] },
+  { key: "2026-11-18|Evening", date: "2026-11-18", shift: "Evening", total_kg: 90, herds: ["A"], tested: true, pending: false,
+    milk_recording: "MR-3", recordings: [{ name: "MR-3", herd: "A", net_yield_kg: 90 }] },
+];
+
 const call = vi.fn(async (method?: string, args?: { payload?: Record<string, unknown> }) => {
   if (method?.endsWith("quality_test_options")) {
     return { ok: true, date: "2026-11-20", default_buyer: "BU Westwood Milk", sample_types: ["Bottle sample", "Tanker", "Can"],
-      shifts: ["Morning", "Afternoon", "Evening"], limits: LIM, recordings: [], can_write: true };
+      shifts: ["Morning", "Afternoon", "Evening"], limits: LIM, scc_ceiling: 200, recordings: [], can_write: true };
   }
+  if (method?.endsWith("milk_batches")) return { ok: true, from: "x", to: "y", batches: BATCHES };
   if (method?.endsWith("quality_tests")) return { ok: true, tests: [row()], total: 1, limits: LIM, can_write: true };
   if (method?.endsWith("record_quality_test")) {
     state.sent.push(args?.payload ?? {});
@@ -86,6 +94,34 @@ describe("Record quality batch", () => {
     expect(within(history).getByText("Fail")).toBeTruthy();
   });
 
+  it("shows the merged result: SCC against the ceiling beside the chips", async () => {
+    draw();
+    const history = await screen.findByLabelText("Quality batch history");
+    expect(history.querySelector("[data-over-ceiling=true]")?.textContent).toContain("250");
+    expect(within(history).getByText("over ceiling")).toBeTruthy();
+  });
+
+  it("lists the batches with the awaiting one first and no separate File-the-result form", async () => {
+    draw();
+    const step = await screen.findByLabelText("Step 1: pick the batch");
+    const items = within(step).getAllByRole("button");
+    expect(items[0].textContent).toContain("2026-11-19");
+    expect(within(step).getByText("Awaiting result")).toBeTruthy();
+    expect(screen.queryByText("File the result")).toBeNull();
+  });
+
+  it("warns when the bulk SCC is over the ceiling and sends it with the whole batch", async () => {
+    draw();
+    await screen.findByLabelText("Step 1: pick the batch");
+    fireEvent.change(screen.getByLabelText("Bulk SCC (cells/ml × 1000)"), { target: { value: "250" } });
+    expect(await screen.findByText(/above the farm's ceiling of 200/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Record batch" }));
+    await waitFor(() => expect(state.sent).toHaveLength(1));
+    expect(state.sent[0]).toMatchObject({
+      bulk_scc: 250, sample_date: "2026-11-19", shift: "Morning", milk_recording: "MR-1", recordings: ["MR-1", "MR-2"],
+    });
+  });
+
   it("blocks an empty sheet without calling the server", async () => {
     draw();
     await screen.findByLabelText("Record quality batch");
@@ -97,6 +133,7 @@ describe("Record quality batch", () => {
   it("previews Fail as aflatoxin is typed, then records the sheet with the default buyer", async () => {
     draw();
     await screen.findByLabelText("Record quality batch");
+    await screen.findByLabelText("Step 1: pick the batch");
     fireEvent.change(screen.getByLabelText("Aflatoxin M1 (ppt)"), { target: { value: "67" } });
     fireEvent.change(screen.getByLabelText("pH"), { target: { value: "6,62" } });
     fireEvent.change(screen.getByLabelText("Freezing point (°C)"), { target: { value: "-0.548" } });

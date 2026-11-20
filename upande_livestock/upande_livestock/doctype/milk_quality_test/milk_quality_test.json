@@ -25,6 +25,7 @@
   "specific_gravity",
   "protein_percent",
   "butterfat_percent",
+  "bulk_scc",
   "sb_tests",
   "resazurin_score",
   "resazurin_result",
@@ -165,6 +166,13 @@
    "fieldtype": "Float",
    "label": "Butterfat (%)",
    "precision": "2"
+  },
+  {
+   "fieldname": "bulk_scc",
+   "fieldtype": "Float",
+   "label": "Bulk SCC (cells/ml × 1000)",
+   "precision": "1",
+   "description": "Bulk tank somatic cell count. Written back to the milk recordings of the batch so the SCC ceiling alert keeps working."
   },
   {
    "fieldname": "sb_tests",

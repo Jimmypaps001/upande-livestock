@@ -90,3 +90,31 @@ def stamp_pending(doc) -> None:
 	want = 1 if is_outstanding(doc) else 0
 	if int(doc.get("custom_quality_pending") or 0) != want:
 		doc.db_set("custom_quality_pending", want, update_modified=False)
+
+
+def write_back(recordings, values: dict, lab_date) -> list:
+	"""Put a quality test's figures onto the Milk Recording(s) it covers.
+
+	`values` maps Milk Recording field -> figure (bulk_scc, fat_percent,
+	protein_percent); blanks are skipped so a test never wipes a figure it did
+	not measure. Cancelled and missing recordings are skipped. Returns the names
+	written. Same db_set route as record_milk_quality, so the pending flag
+	clears the same way.
+	"""
+	from frappe.utils import today
+
+	written = []
+	for name in dict.fromkeys(recordings or ()):
+		if not frappe.db.exists("Milk Recording", name):
+			continue
+		doc = frappe.get_doc("Milk Recording", name)
+		if doc.docstatus == 2:
+			continue
+		for field in LAB_FIELDS:
+			if flt(values.get(field)) > 0:
+				doc.db_set(field, flt(values[field]), update_modified=False)
+		doc.db_set("lab_test_date", lab_date or today(), update_modified=False)
+		doc.reload()
+		stamp_pending(doc)
+		written.append(name)
+	return written

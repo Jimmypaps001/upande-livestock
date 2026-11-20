@@ -35,19 +35,20 @@ def shift_of(milking_time) -> str:
 	return SHIFTS[2]
 
 
-def group_batches(rows, tested=None) -> list:
+def group_batches(rows, tested=None, pending=None) -> list:
 	"""Group recording rows into batches, newest first.
 
 	Each row needs name, herd, recording_date, milking_time and net_yield_kg.
 	`tested` is the set of recording names that already carry a quality test."""
 	tested = set(tested or ())
+	pending = set(pending or ())
 	batches = {}
 	for r in rows:
 		date = str(r.get("recording_date"))
 		shift = shift_of(r.get("milking_time"))
 		b = batches.setdefault(
 			(date, shift),
-			{"date": date, "shift": shift, "total_kg": 0.0, "herds": [], "recordings": [], "tested": False},
+			{"date": date, "shift": shift, "total_kg": 0.0, "herds": [], "recordings": [], "tested": False, "pending": False},
 		)
 		b["total_kg"] += float(r.get("net_yield_kg") or 0)
 		if r.get("herd") and r["herd"] not in b["herds"]:
@@ -55,6 +56,8 @@ def group_batches(rows, tested=None) -> list:
 		b["recordings"].append({"name": r["name"], "herd": r.get("herd"), "net_yield_kg": float(r.get("net_yield_kg") or 0)})
 		if r["name"] in tested:
 			b["tested"] = True
+		if r["name"] in pending:
+			b["pending"] = True  # a recording of it still awaits a lab result
 	out = []
 	for b in batches.values():
 		b["total_kg"] = round(b["total_kg"], 2)
@@ -63,7 +66,22 @@ def group_batches(rows, tested=None) -> list:
 		b["key"] = f"{b['date']}|{b['shift']}"
 		out.append(b)
 	out.sort(key=lambda b: (b["date"], SHIFTS.index(b["shift"])), reverse=True)
+	out.sort(key=lambda b: not b["pending"])  # stable: pending first, newest first within each group
 	return out
+
+
+def batch_recordings(date, shift, include=None) -> list:
+	"""Names of the submitted Milk Recordings of one date + shift, plus `include`."""
+	rows = frappe.get_all(
+		"Milk Recording",
+		filters={"docstatus": 1, "recording_date": date},
+		fields=["name", "milking_time"],
+	)
+	names = [r["name"] for r in rows if shift_of(r.get("milking_time")) == shift] if shift else []
+	for n in include or ():
+		if n and n not in names:
+			names.append(n)
+	return names
 
 
 @frappe.whitelist()
@@ -71,7 +89,8 @@ def milk_batches(date_from=None, date_to=None):
 	"""Milked batches (date + shift) between two dates, default the last 14 days.
 
 	Each: key, date, shift, total_kg, herds, recordings, milk_recording (the one a
-	test links to), tested (a quality test already exists against one of them)."""
+	test links to), tested (a quality test already exists against one of them), pending (a recording
+	still awaits a lab result; pending batches come first)."""
 
 	def go():
 		guard_read(DT)
@@ -80,7 +99,7 @@ def milk_batches(date_from=None, date_to=None):
 		rows = frappe.get_all(
 			"Milk Recording",
 			filters={"docstatus": 1, "recording_date": ["between", [frm, to]]},
-			fields=["name", "herd", "recording_date", "milking_time", "net_yield_kg"],
+			fields=["name", "herd", "recording_date", "milking_time", "net_yield_kg", "custom_quality_pending"],
 			order_by="recording_date desc, milking_time desc",
 			limit=cint(500),
 		)
@@ -90,6 +109,7 @@ def milk_batches(date_from=None, date_to=None):
 			if names
 			else set()
 		)
-		return {"ok": True, "from": str(frm), "to": str(to), "batches": group_batches(rows, tested)}
+		pending = {r["name"] for r in rows if r.get("custom_quality_pending")}
+		return {"ok": True, "from": str(frm), "to": str(to), "batches": group_batches(rows, tested, pending)}
 
 	return run(go, "livestock milk_batches failed")

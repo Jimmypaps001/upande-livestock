@@ -8,6 +8,8 @@ import frappe
 
 from upande_livestock.serverscripts.common.envelope import as_dict, guard, run
 from upande_livestock.serverscripts.common import milk_quality_test as mq
+from upande_livestock.serverscripts.common import quality
+from upande_livestock.serverscripts.quality.milk_batches import batch_recordings
 
 
 @frappe.whitelist()
@@ -44,6 +46,29 @@ def record_quality_test(payload):
 		doc.lab_slip = (d.get("lab_slip") or "").strip() or None
 		doc.client_ref = ref or None
 		doc.insert()
-		return _full(doc.name)
+
+		# The one quality form also feeds the old Milk Recording lab fields, so the
+		# pending list, the SCC ceiling alert and the reports reading them keep working.
+		# Every recording of the batch (date + shift across herds) gets the figures.
+		listed = d.get("recordings")
+		if isinstance(listed, str):
+			listed = [x.strip() for x in listed.split(",")]
+		targets = list(listed or []) if listed else batch_recordings(
+			doc.sample_date, doc.shift, include=[doc.milk_recording]
+		)
+		if doc.milk_recording and doc.milk_recording not in targets:
+			targets.append(doc.milk_recording)
+		written = quality.write_back(
+			targets,
+			{
+				"bulk_scc": doc.bulk_scc,
+				"fat_percent": doc.butterfat_percent,
+				"protein_percent": doc.protein_percent,
+			},
+			doc.sample_date,
+		)
+		out = _full(doc.name)
+		out["recordings_updated"] = written
+		return out
 
 	return run(go, "livestock record_quality_test failed")
