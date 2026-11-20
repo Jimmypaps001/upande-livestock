@@ -44,6 +44,8 @@ export default defineConfig({
       allow: [
         searchForWorkspaceRoot(process.cwd()),
         path.resolve(__dirname, "../upande_livestock/public/images/silhouettes"),
+        // The Settings coverage test reads the Livestock Settings doctype JSON.
+        path.resolve(__dirname, "../upande_livestock/upande_livestock/doctype/livestock_settings"),
       ],
     },
     proxy: {

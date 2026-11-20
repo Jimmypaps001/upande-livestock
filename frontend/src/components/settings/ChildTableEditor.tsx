@@ -1,14 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
-import { ArrowDown, ArrowUp, Plus, RotateCcw, Save, X } from "lucide-react";
+import { useMemo } from "react";
+import { ArrowDown, ArrowUp, Plus, RotateCcw, X } from "lucide-react";
 import { LinkPicker } from "@/components/settings/LinkPicker";
-import { useToast } from "@/components/Toast";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Picker } from "@/components/ui/picker";
-import { isError } from "@/lib/frappe";
 import {
   NUMERIC_FIELDTYPES,
-  saveSettingsTable,
   type SettingsTable,
   type SettingsTableRow,
 } from "@/lib/settings";
@@ -36,65 +32,45 @@ import {
  */
 export function ChildTableEditor({
   table,
+  rows,
+  onChange,
   canWrite,
-  onSaved,
 }: {
   table: SettingsTable;
+  /** The rows as edited — the page owns them and saves them with everything
+   *  else, in the one save call. */
+  rows: SettingsTableRow[];
+  onChange: (rows: SettingsTableRow[]) => void;
   canWrite: boolean;
-  onSaved?: () => void;
 }) {
-  const [rows, setRows] = useState<SettingsTableRow[]>(table.rows);
-  const [busy, setBusy] = useState(false);
-  const toast = useToast();
-
-  // The server's answer is the truth; a reload behind this component replaces
-  // what is being edited rather than merging into it.
-  useEffect(() => {
-    setRows(table.rows);
-  }, [table.rows]);
-
-  const dirty = useMemo(
-    () => JSON.stringify(strip(rows)) !== JSON.stringify(strip(table.rows)),
-    [rows, table.rows],
-  );
+  const dirty = useMemo(() => tableDirty(rows, table.rows), [rows, table.rows]);
 
   const missing = rows.some((r) =>
     table.columns.some((c) => c.reqd && !String(r[c.fieldname] ?? "").trim()),
   );
 
   function set(i: number, fieldname: string, value: unknown) {
-    setRows((s) => s.map((r, j) => (j === i ? { ...r, [fieldname]: value } : r)));
+    onChange(rows.map((r, j) => (j === i ? { ...r, [fieldname]: value } : r)));
   }
 
   function move(i: number, by: number) {
-    setRows((s) => {
-      const next = [...s];
-      const to = i + by;
-      if (to < 0 || to >= next.length) return s;
-      [next[i], next[to]] = [next[to], next[i]];
-      return next;
-    });
+    const next = [...rows];
+    const to = i + by;
+    if (to < 0 || to >= next.length) return;
+    [next[i], next[to]] = [next[to], next[i]];
+    onChange(next);
   }
 
-  async function save() {
-    setBusy(true);
-    const r = await saveSettingsTable(table.fieldname, rows);
-    setBusy(false);
-    if (isError(r)) {
-      toast(r.error, "error");
-      return;
-    }
-    setRows(r.rows);
-    toast(
-      r.added || r.removed
-        ? `${table.label}: ${r.added} added, ${r.removed} removed.`
-        : `${table.label} saved.`,
+  const setRows = (f: (s: SettingsTableRow[]) => SettingsTableRow[]) => onChange(f(rows));
+
+  if (table.fieldtype === "Table MultiSelect") {
+    return (
+      <MultiSelectEditor table={table} rows={rows} canWrite={canWrite} onChange={onChange} />
     );
-    onSaved?.();
   }
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-2" data-fieldname={table.fieldname}>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h4 className="text-[13px] font-semibold text-[var(--sd-ink)]">{table.label}</h4>
         <span className="text-[11px] text-[var(--sd-quiet)]">
@@ -188,14 +164,10 @@ export function ChildTableEditor({
             <Plus className="h-3.5 w-3.5" strokeWidth={2.5} />
             Add a row
           </button>
-          <Button size="sm" onClick={save} disabled={!dirty || busy || missing}>
-            <Save className="mr-1.5 h-3.5 w-3.5" />
-            {busy ? "Saving…" : "Save this list"}
-          </Button>
           {dirty && (
             <button
               type="button"
-              onClick={() => setRows(table.rows)}
+              onClick={() => onChange(table.rows)}
               className="inline-flex items-center gap-1.5 text-[12px] text-[var(--sd-muted)] transition-colors hover:text-[var(--sd-ink)]"
             >
               <RotateCcw className="h-3.5 w-3.5" />
@@ -207,6 +179,66 @@ export function ChildTableEditor({
               A row is missing something it needs.
             </span>
           )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Whether the edited rows differ from what the server last said. */
+export function tableDirty(rows: SettingsTableRow[], stored: SettingsTableRow[]): boolean {
+  return JSON.stringify(strip(rows)) !== JSON.stringify(strip(stored));
+}
+
+/** A Table MultiSelect: one Link column, shown as chips with a picker to add. */
+function MultiSelectEditor({
+  table,
+  rows,
+  canWrite,
+  onChange,
+}: {
+  table: SettingsTable;
+  rows: SettingsTableRow[];
+  canWrite: boolean;
+  onChange: (rows: SettingsTableRow[]) => void;
+}) {
+  const column = table.columns.find((c) => c.fieldtype === "Link") ?? table.columns[0];
+  return (
+    <div className="flex flex-col gap-2" data-fieldname={table.fieldname}>
+      <h4 className="text-[13px] font-semibold text-[var(--sd-ink)]">{table.label}</h4>
+      {table.description && (
+        <p className="text-[11px] leading-relaxed text-[var(--sd-quiet)]">{table.description}</p>
+      )}
+      <div className="flex flex-wrap gap-1.5">
+        {rows.map((r, i) => (
+          <span
+            key={String(r.name ?? `new-${i}`)}
+            className="inline-flex items-center gap-1 rounded-[var(--sd-radius-pill)] bg-[var(--sd-bg-soft)] px-2.5 py-1 text-[12px]"
+          >
+            {String(r[column.fieldname] ?? "")}
+            {canWrite && (
+              <button
+                type="button"
+                aria-label={`Remove ${String(r[column.fieldname] ?? "")}`}
+                onClick={() => onChange(rows.filter((_, j) => j !== i))}
+              >
+                <X className="h-3 w-3" />
+              </button>
+            )}
+          </span>
+        ))}
+        {!rows.length && <span className="text-[12px] text-[var(--sd-quiet)]">Nothing chosen.</span>}
+      </div>
+      {canWrite && column.fieldtype === "Link" && (
+        <div className="max-w-xs">
+          <LinkPicker
+            doctype={column.options || ""}
+            value={null}
+            onChange={(v) => {
+              if (!v || rows.some((r) => r[column.fieldname] === v)) return;
+              onChange([...rows, { [column.fieldname]: v }]);
+            }}
+          />
         </div>
       )}
     </div>
@@ -267,13 +299,14 @@ function Cell({
     );
   }
   const numeric = NUMERIC_FIELDTYPES.has(column.fieldtype);
+  const kind = { Date: "date", Time: "time", Datetime: "datetime-local" }[column.fieldtype];
   return (
     <Input
       aria-label={column.label}
-      type={numeric ? "number" : "text"}
+      type={numeric ? "number" : (kind ?? "text")}
       step={column.fieldtype === "Int" ? 1 : "any"}
       value={value == null ? "" : String(value)}
-      disabled={disabled}
+      disabled={disabled || !!column.read_only}
       onChange={(e) => onChange(e.target.value)}
       className={numeric ? "w-28 text-right tabular-nums" : "min-w-[140px]"}
     />

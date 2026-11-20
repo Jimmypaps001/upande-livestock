@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Loader2, ShieldAlert } from "lucide-react";
 import { AppreciationRun } from "@/components/settings/AppreciationRun";
 import { BackdatingSetting } from "@/components/settings/BackdatingSetting";
-import { ChildTableEditor } from "@/components/settings/ChildTableEditor";
+import { ChildTableEditor, tableDirty } from "@/components/settings/ChildTableEditor";
 import { SettingField } from "@/components/settings/SettingField";
 import { EventsCard } from "@/components/settings/EventsCard";
 import { AmberNotice, Notice } from "@/components/feeding/Notice";
@@ -16,6 +16,8 @@ import {
   BACKDATING_FIELD,
   allFields,
   changePayload,
+  isEditable,
+  isMandatory,
   isVisible,
   livestockSettings,
   pendingChanges,
@@ -24,6 +26,7 @@ import {
   zeroWarnings,
   type LivestockSettingsDoc,
   type SettingsSection,
+  type SettingsTableRow,
   type SettingsValue,
 } from "@/lib/settings";
 
@@ -49,6 +52,8 @@ const EVENTS_TAB = "__events";
 export function Settings() {
   const [doc, setDoc] = useState<LivestockSettingsDoc | null>(null);
   const [draft, setDraft] = useState<Record<string, SettingsValue>>({});
+  /** Edited lists, by table fieldname. Saved with the scalars, in one call. */
+  const [tableDraft, setTableDraft] = useState<Record<string, SettingsTableRow[]>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   /** Whatever the server last said. Never reworded. */
@@ -66,6 +71,7 @@ export function Settings() {
     setFailure(null);
     setDoc(result);
     setDraft({});
+    setTableDraft({});
   }, []);
 
   useEffect(() => {
@@ -78,8 +84,18 @@ export function Settings() {
     () => pendingChanges(fields, values, draft),
     [fields, values, draft],
   );
+  const dirtyTables = useMemo(
+    () =>
+      Object.keys(tableDraft).filter((name) => {
+        const table = doc?.tables.find((t) => t.fieldname === name);
+        return table && tableDirty(tableDraft[name], table.rows);
+      }),
+    [doc, tableDraft],
+  );
+  const unsaved = changes.length + dirtyTables.length;
   const zeros = useMemo(() => zeroWarnings(fields, values, draft), [fields, values, draft]);
-  const readOnly = !doc?.can_write;
+  // Nothing at all is writable: no full write and no per-field grant.
+  const readOnly = !doc?.can_write && !(doc?.writable && doc.writable.length > 0);
 
   function edit(fieldname: string, next: SettingsValue) {
     setSaved(null);
@@ -87,11 +103,13 @@ export function Settings() {
   }
 
   async function save() {
-    if (!changes.length) return;
+    if (!unsaved) return;
     setSaving(true);
     setFailure(null);
     setSaved(null);
-    const result = await saveLivestockSettings(changePayload(changes));
+    const lists: Record<string, SettingsTableRow[]> = {};
+    for (const name of dirtyTables) lists[name] = tableDraft[name];
+    const result = await saveLivestockSettings(changePayload(changes), lists);
     setSaving(false);
     if (isError(result)) {
       // The server's words, unchanged — it names the field and says why.
@@ -99,8 +117,19 @@ export function Settings() {
       return;
     }
     setSaved(Object.keys(result.changed || {}));
-    setDoc((current) => (current ? { ...current, values: result.values } : current));
+    setDoc((current) =>
+      current
+        ? {
+            ...current,
+            values: result.values,
+            tables: current.tables.map((t) =>
+              result.tables?.[t.fieldname] ? { ...t, rows: result.tables[t.fieldname].rows } : t,
+            ),
+          }
+        : current,
+    );
     setDraft({});
+    setTableDraft({});
   }
 
   return (
@@ -174,7 +203,7 @@ export function Settings() {
               not on this doctype, so the tab is the page's own. */}
           <TabsContent value={EVENTS_TAB}>
             <EventsCard
-              canWrite={!readOnly}
+              canWrite={!!doc.can_write}
               fields={fields}
               values={values}
               onSettingsSaved={(next) =>
@@ -194,7 +223,11 @@ export function Settings() {
                     draft={draft}
                     onEdit={edit}
                     readOnly={readOnly}
-                    onTableSaved={load}
+                    tableDraft={tableDraft}
+                    onTableEdit={(name, rows) => {
+                      setSaved(null);
+                      setTableDraft((d) => ({ ...d, [name]: rows }));
+                    }}
                   />
                 ))}
               </div>
@@ -208,34 +241,41 @@ export function Settings() {
           <div className="flex flex-col gap-3">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <span className="text-[13px] font-medium text-[var(--sd-ink)]">
-                {changes.length === 0
+                {unsaved === 0
                   ? "No unsaved changes"
-                  : `${changes.length} unsaved ${changes.length === 1 ? "change" : "changes"}`}
+                  : `${unsaved} unsaved ${unsaved === 1 ? "change" : "changes"}`}
               </span>
               <div className="flex items-center gap-2">
                 <Button
                   variant="outline"
                   size="sm"
-                  disabled={changes.length === 0 || saving}
+                  disabled={unsaved === 0 || saving}
                   onClick={() => {
                     setDraft({});
+                    setTableDraft({});
                     setSaved(null);
                   }}
                 >
                   Discard
                 </Button>
-                <Button size="sm" disabled={changes.length === 0 || saving} onClick={save}>
+                <Button size="sm" disabled={unsaved === 0 || saving} onClick={save}>
                   {saving
                     ? "Saving…"
-                    : `Save ${changes.length || ""} ${
-                        changes.length === 1 ? "change" : "changes"
-                      }`.trim()}
+                    : `Save ${unsaved || ""} ${unsaved === 1 ? "change" : "changes"}`.trim()}
                 </Button>
               </div>
             </div>
 
-            {changes.length > 0 && (
+            {unsaved > 0 && (
               <ul className="flex flex-col gap-1 text-[12px] text-[var(--sd-muted)]">
+                {dirtyTables.map((name) => (
+                  <li key={name} className="flex gap-1.5">
+                    <span className="font-medium text-[var(--sd-ink)]">
+                      {doc?.tables.find((t) => t.fieldname === name)?.label ?? name}
+                    </span>
+                    <span>list edited</span>
+                  </li>
+                ))}
                 {changes.map((change) => (
                   <li key={change.field.fieldname} className="flex flex-wrap items-center gap-1.5">
                     {change.field.fieldname === BACKDATING_FIELD && (
@@ -266,18 +306,20 @@ function SectionCard({
   draft,
   onEdit,
   readOnly,
-  onTableSaved,
+  tableDraft,
+  onTableEdit,
 }: {
   section: SettingsSection;
   doc: LivestockSettingsDoc;
   draft: Record<string, SettingsValue>;
   onEdit: (fieldname: string, next: SettingsValue) => void;
   readOnly: boolean;
-  /** A list saves on its own, so the page re-reads rather than holding a copy
-   *  that the next scalar save would write back over. */
-  onTableSaved: () => void;
+  tableDraft: Record<string, SettingsTableRow[]>;
+  onTableEdit: (fieldname: string, rows: SettingsTableRow[]) => void;
 }) {
-  const tables = doc.tables.filter((t) => section.tables.includes(t.fieldname));
+  const tables = doc.tables.filter(
+    (t) => section.tables.includes(t.fieldname) && isVisible(t, doc.values, draft),
+  );
   const visible = section.fields.filter((f) => isVisible(f, doc.values, draft));
   if (!visible.length && !tables.length) return null;
 
@@ -304,7 +346,8 @@ function SectionCard({
                     : (doc.values[field.fieldname] ?? null)
                 }
                 onChange={(next) => onEdit(field.fieldname, next)}
-                disabled={readOnly}
+                disabled={!isEditable(field, doc, doc.values, draft)}
+                required={isMandatory(field, doc.values, draft)}
               />
             ))}
           </div>
@@ -320,7 +363,7 @@ function SectionCard({
                 : (doc.values[field.fieldname] ?? null)
             }
             onChange={(next) => onEdit(field.fieldname, next)}
-            disabled={readOnly}
+            disabled={!isEditable(field, doc, doc.values, draft)}
           />
         ))}
 
@@ -330,12 +373,13 @@ function SectionCard({
           <ChildTableEditor
             key={table.fieldname}
             table={table}
-            canWrite={!readOnly}
-            onSaved={onTableSaved}
+            rows={tableDraft[table.fieldname] ?? table.rows}
+            onChange={(rows) => onTableEdit(table.fieldname, rows)}
+            canWrite={isEditable({ fieldname: table.fieldname, read_only: table.read_only }, doc, doc.values, draft)}
           />
         ))}
 
-        {section.fieldname === "sb_appreciation" && <AppreciationRun canRun={!readOnly} />}
+        {section.fieldname === "sb_appreciation" && <AppreciationRun canRun={doc.can_write} />}
       </CardContent>
     </Card>
   );

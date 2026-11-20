@@ -34,7 +34,7 @@ export function BackdatingSetting({
   const on = Number(value ?? 0) === 1;
 
   return (
-    <div className="flex flex-col gap-3 rounded-[var(--sd-radius-lg)] border border-[var(--sd-amber-line)] bg-[var(--sd-amber-bg)] px-4 py-4">
+    <div data-fieldname={field.fieldname} className="flex flex-col gap-3 rounded-[var(--sd-radius-lg)] border border-[var(--sd-amber-line)] bg-[var(--sd-amber-bg)] px-4 py-4">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="flex min-w-0 flex-col gap-1">
           <span className="flex items-center gap-2 text-[13px] font-semibold text-[var(--sd-amber)]">

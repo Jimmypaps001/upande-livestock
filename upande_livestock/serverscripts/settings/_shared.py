@@ -82,8 +82,60 @@ def table_docfields():
 
 
 def editable_fieldnames() -> frozenset:
-	"""The only fieldnames a write is allowed to name."""
-	return frozenset(df.fieldname for df in scalar_docfields())
+	"""The only fieldnames a write is allowed to name.
+
+	Read-only fields are shown, never written: the page cannot be a way round a
+	field the doctype says only the system sets.
+	"""
+	return frozenset(df.fieldname for df in scalar_docfields() if not df.read_only)
+
+
+# Who may change what. Livestock Manager and System Manager hold write on the
+# doctype and may change everything. An Accounts Manager is not a livestock
+# role, but the accounts, cost centres and insurance mapping are theirs to set —
+# so they may write the fields on the Accounts tab and nothing else.
+ACCOUNTS_ROLE = "Accounts Manager"
+ACCOUNTS_TAB = "tab_accounts"
+
+
+def accounts_fieldnames() -> frozenset:
+	"""Every field (scalar or list) on the Accounts & Insurance tab.
+
+	Read off the layout, so a field somebody adds to that tab — the insurance
+	flow's, say — becomes the Accounts Manager's with nothing to change here.
+	"""
+	names = set()
+	for tab in layout():
+		if tab["fieldname"] != ACCOUNTS_TAB:
+			continue
+		for section in tab["sections"]:
+			names.update(f["fieldname"] for f in section["fields"])
+			names.update(section["tables"])
+	return frozenset(names)
+
+
+def writable_fieldnames() -> frozenset:
+	"""What this user may write: all of it, the accounts tab, or nothing."""
+	if frappe.has_permission(DOCTYPE, "write"):
+		return frozenset(df.fieldname for df in frappe.get_meta(DOCTYPE).fields
+			if df.fieldtype not in LAYOUT_FIELDTYPES and df.fieldtype not in DISPLAY_FIELDTYPES
+			and not df.read_only)
+	if ACCOUNTS_ROLE in frappe.get_roles():
+		return accounts_fieldnames()
+	return frozenset()
+
+
+def guard_write(names) -> None:
+	"""Throw unless the user may write every one of `names`."""
+	allowed = writable_fieldnames()
+	if not allowed:
+		frappe.throw(_("You are not permitted to change {0}.").format(DOCTYPE), frappe.PermissionError)
+	refused = sorted(set(names) - allowed)
+	if refused:
+		frappe.throw(
+			_("You are not permitted to change {0}.").format(", ".join(refused)),
+			frappe.PermissionError,
+		)
 
 
 def docfield(fieldname):
@@ -175,6 +227,17 @@ def coerce_for_write(df, value):
 			)
 		return name
 
+	if df.fieldtype in ("Date", "Time", "Datetime"):
+		if value in (None, ""):
+			return None
+		try:
+			from frappe.utils import get_datetime, get_time, getdate
+
+			{"Date": getdate, "Time": get_time, "Datetime": get_datetime}[df.fieldtype](value)
+		except Exception:
+			frappe.throw(_("{0} is not a valid {1} for {2}.").format(value, df.fieldtype.lower(), label))
+		return str(value).strip()
+
 	if df.fieldtype == "Select":
 		choices = [c for c in (df.options or "").split("\n")]
 		name = "" if value is None else str(value)
@@ -244,7 +307,11 @@ def describe(df) -> dict:
 		"description": df.description,
 		"default": df.default,
 		"depends_on": df.depends_on,
+		"mandatory_depends_on": df.mandatory_depends_on,
+		"read_only_depends_on": df.read_only_depends_on,
 		"reqd": bool(df.reqd),
+		"read_only": bool(df.read_only),
+		"hidden": bool(df.hidden),
 		# What a 0 in this box would mean. See zero_rule.
 		"zero": zero_rule(df.fieldname),
 		# True where a wrong value posts stock or money somewhere else rather
@@ -319,6 +386,9 @@ def tables() -> list:
 		out.append(
 			{
 				"fieldname": df.fieldname,
+				"fieldtype": df.fieldtype,
+				"depends_on": df.depends_on,
+				"read_only": bool(df.read_only),
 				"label": df.label,
 				"description": df.description,
 				"doctype": df.options,
@@ -327,3 +397,72 @@ def tables() -> list:
 			}
 		)
 	return out
+
+
+def write_table(df, sent):
+	"""Replace one child table's rows. Shared by the one save endpoint and the
+	older single-table one, so the two cannot drift.
+
+	Coerces and checks the whole list before writing any of it, keeps the names
+	of rows that survive, and never saves the parent (see
+	`save_livestock_settings`). Returns `(added, removed)`.
+	"""
+	columns = table_columns(df)
+	if not isinstance(sent, list):
+		frappe.throw(_("The rows have to be a list."))
+
+	wanted = []
+	seen = set()
+	for position, row in enumerate(sent, start=1):
+		if not isinstance(row, dict):
+			frappe.throw(_("Row {0} is not a set of values.").format(position))
+		fields = {}
+		for cdf in columns:
+			value = coerce_for_write(cdf, row.get(cdf.fieldname))
+			if cdf.reqd and value in (None, ""):
+				frappe.throw(
+					_("Row {0} has no {1}.").format(position, cdf.label or frappe.unscrub(cdf.fieldname))
+				)
+			fields[cdf.fieldname] = value
+		key = _table_key(columns, fields)
+		if key is not None:
+			# The same store listed twice counts its feed twice.
+			if key in seen:
+				frappe.throw(_("Row {0} is already on the list.").format(position))
+			seen.add(key)
+		wanted.append({"name": (row.get("name") or "").strip() or None, "idx": position, "fields": fields})
+
+	had = {r["name"]: r for r in table_rows(df)}
+	keeping = {w["name"] for w in wanted if w["name"]}
+	unknown = sorted(keeping - set(had))
+	if unknown:
+		frappe.throw(_("Row {0} is not on this list any more — reload the page.").format(unknown[0]))
+
+	removed = [name for name in had if name not in keeping]
+	for name in removed:
+		frappe.delete_doc(df.options, name, force=True, ignore_permissions=True)
+
+	added = 0
+	for want in wanted:
+		if want["name"]:
+			frappe.db.set_value(df.options, want["name"], {**want["fields"], "idx": want["idx"]})
+			continue
+		child = frappe.new_doc(df.options)
+		child.update(want["fields"])
+		child.parent = DOCTYPE
+		child.parenttype = DOCTYPE
+		child.parentfield = df.fieldname
+		child.idx = want["idx"]
+		child.insert(ignore_permissions=True)
+		added += 1
+
+	frappe.clear_document_cache(DOCTYPE, DOCTYPE)
+	return added, len(removed)
+
+
+def _table_key(columns, fields):
+	"""The first Link column makes a row the same row as another, or None."""
+	for cdf in columns:
+		if cdf.fieldtype == "Link":
+			return fields.get(cdf.fieldname)
+	return None
