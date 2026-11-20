@@ -35,8 +35,12 @@ class LivestockSire(Document):
 		self.check_unique_code()
 		if self.sire_type == "Semen":
 			self.animal = None
+			from upande_livestock.serverscripts.common.sire_items import fetch_supplier
+			# Read-only: always the straw Item's supplier, so it follows the item.
+			self.supplier = fetch_supplier(self.semen_item) if self.semen_item else None
 		elif self.sire_type == "Live bull":
 			self.semen_item = None
+			self.supplier = None
 			self.sexed = 0
 
 	def check_unique_code(self):

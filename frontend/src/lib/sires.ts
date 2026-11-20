@@ -52,7 +52,7 @@ export interface StrawItem {
 
 /** The Items a sire's straw can be, and the one his name or code points at. */
 export const getSireItems = (sire_name: string, sire_code: string, current = "") =>
-  call<{ items: StrawItem[]; suggested: StrawItem | null; group: string }>(`${NS}.sire_items.sire_items`, {
+  call<{ items: StrawItem[]; suggested: StrawItem | null; group: string; breeds?: string[]; supplier?: string | null }>(`${NS}.sire_items.sire_items`, {
     payload: { sire_name, sire_code, current },
   });
 

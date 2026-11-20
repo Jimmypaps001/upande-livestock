@@ -209,3 +209,6 @@ upande_livestock.patches.default_bull_purpose
 
 # Losses: the example loss scenarios and the "sale waits for" default.
 upande_livestock.patches.seed_loss_scenarios
+
+# Sires: breed matched to Breed; supplier fetched from the straw Item.
+upande_livestock.patches.sire_breed_supplier_links

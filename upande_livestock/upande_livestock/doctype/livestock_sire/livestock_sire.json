@@ -96,9 +96,13 @@
    "fieldtype": "Column Break"
   },
   {
+   "depends_on": "eval:doc.sire_type=='Semen'",
+   "description": "Fetched from the straw Item: its default supplier, else its supplier table, else the supplier of its latest purchase.",
    "fieldname": "supplier",
-   "fieldtype": "Data",
-   "label": "Supplier / AI Company"
+   "fieldtype": "Link",
+   "label": "Supplier / AI Company",
+   "options": "Supplier",
+   "read_only": 1
   },
   {
    "default": "0",

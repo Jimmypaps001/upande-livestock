@@ -55,4 +55,17 @@ describe("Sires page", () => {
     expect(sireProblem({ ...base, sire_name: "" })).toMatch(/name/);
     expect(sireProblem({ ...base, sire_type: "Semen" })).toBeNull();
   });
+
+  it("breed is picked from the Breed list; supplier is shown fetched, not typed", async () => {
+    call.mockImplementation(async (m?: string) =>
+      (m ?? "").includes("sire_items")
+        ? { ok: true, items: [], suggested: null, group: "Dairy Others", breeds: ["Holstein Friesian", "Jersey"], supplier: "Genus ABS" }
+        : { ok: true, sires: [row()] });
+    render(<Sires />);
+    fireEvent.click(await screen.findByLabelText("Edit Dolmen"));
+    await waitFor(() => expect(screen.getByText("Genus ABS")).toBeTruthy());
+    expect(screen.queryByLabelText("Supplier")).toBeNull();
+    fireEvent.click(screen.getByLabelText("Breed"));
+    expect(await screen.findByRole("option", { name: "Jersey" })).toBeTruthy();
+  });
 });

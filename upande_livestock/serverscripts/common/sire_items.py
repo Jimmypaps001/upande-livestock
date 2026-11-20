@@ -34,7 +34,8 @@ def candidates(q=None, sire_name=None, sire_code=None, current=None):
 		if row:
 			items = [{"value": row.name, "item_name": row.item_name, "uom": row.stock_uom, "group": row.item_group,
 			          "label": row.item_name if row.name == row.item_name else f"{row.item_name} · {row.name}"}] + items
-	return {"items": items, "suggested": suggested, "group": LS.straw_group()}
+	return {"items": items, "suggested": suggested, "group": LS.straw_group(), "breeds": breed_names(),
+	        "supplier": fetch_supplier(current) if current else None}
 
 
 def make_item(sire_name, sire_code=None):
@@ -55,3 +56,38 @@ def make_item(sire_name, sire_code=None):
 	                      "maintain_stock": 1, "include_item_in_manufacturing": 0})
 	doc.insert(ignore_permissions=True)
 	return doc.name
+
+
+def fetch_supplier(item_code, company=None):
+	"""The supplier of a straw Item, or None. In order: the Item's default supplier
+	(Item Default, this company's row first), its Item Supplier table, then the
+	supplier of the latest submitted Purchase Receipt or Purchase Invoice for it."""
+	if not item_code:
+		return None
+	if company is None:
+		from upande_livestock.serverscripts.common.company import default_company
+		company = default_company()
+	rows = frappe.get_all("Item Default", filters={"parent": item_code, "parenttype": "Item"},
+	                      fields=["company", "default_supplier"], order_by="idx")
+	rows = [r for r in rows if r.default_supplier]
+	rows.sort(key=lambda r: r.company != company)
+	if rows:
+		return rows[0].default_supplier
+	row = frappe.get_all("Item Supplier", filters={"parent": item_code, "parenttype": "Item"},
+	                     fields=["supplier"], order_by="idx", limit=1)
+	if row and row[0].supplier:
+		return row[0].supplier
+	best = None
+	for parent_dt, child_dt in (("Purchase Receipt", "Purchase Receipt Item"),
+	                            ("Purchase Invoice", "Purchase Invoice Item")):
+		hit = frappe.db.sql(
+			f"select p.supplier, p.posting_date, p.creation from `tab{parent_dt}` p join `tab{child_dt}` c "
+			"on c.parent = p.name where c.item_code=%s and p.docstatus=1 and ifnull(p.supplier,'')!='' "
+			"order by p.posting_date desc, p.creation desc limit 1", (item_code,), as_dict=True)
+		if hit and (best is None or (hit[0].posting_date, hit[0].creation) > (best.posting_date, best.creation)):
+			best = hit[0]
+	return best.supplier if best else None
+
+
+def breed_names():
+	return frappe.get_all("Breed", pluck="name", order_by="name asc", limit_page_length=500)

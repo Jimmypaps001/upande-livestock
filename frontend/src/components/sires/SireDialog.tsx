@@ -51,6 +51,8 @@ export function SireDialog({
   }, [open, sire, initialName]);
 
   const [straws, setStraws] = useState<StrawItem[]>([]);
+  const [breeds, setBreeds] = useState<string[]>([]);
+  const [supplier, setSupplier] = useState<string | null>(null);
   const [suggested, setSuggested] = useState<StrawItem | null>(null);
   const [making, setMaking] = useState(false);
   const [bulls, setBulls] = useState<AnimalSummary[]>([]);
@@ -64,13 +66,15 @@ export function SireDialog({
 
   // The straws on offer, and the one this name or code points at.
   useEffect(() => {
-    if (!open || v.sire_type !== "Semen") return;
+    if (!open) return;
     let live = true;
     const t = setTimeout(async () => {
       const r = await getSireItems(v.sire_name, v.sire_code, v.semen_item);
       if (!live || isError(r)) return;
       setStraws(r.items ?? []);
       setSuggested(r.suggested ?? null);
+      setBreeds(r.breeds ?? []);
+      setSupplier(r.supplier ?? null);
     }, 250);
     return () => {
       live = false;
@@ -187,8 +191,25 @@ export function SireDialog({
               />
             </div>
           )}
-          {text("sire-breed", "Breed", "breed")}
-          {text("sire-supplier", "Supplier", "supplier")}
+          <div className="grid gap-1">
+            <Label htmlFor="sire-breed">Breed</Label>
+            <SearchPicker
+              id="sire-breed"
+              label="Breed"
+              value={v.breed ?? ""}
+              onChange={(next) => set({ breed: next })}
+              options={breeds.map((b) => ({ value: b, label: b }))}
+              placeholder="Search the breeds…"
+            />
+          </div>
+          {v.sire_type === "Semen" && (
+            <div className="grid gap-1">
+              <Label>Supplier</Label>
+              <p className="h-9 rounded-md border border-input bg-[var(--sd-bg-soft)] px-3 py-2 text-sm text-[var(--sd-muted)]">
+                {(v.semen_item ? supplier : null) || "Taken from the straw item"}
+              </p>
+            </div>
+          )}
           {check("sire-sexed", "Sexed semen", "sexed")}
           {check("sire-active", "Active (offered on the Service form)", "active")}
         </div>
