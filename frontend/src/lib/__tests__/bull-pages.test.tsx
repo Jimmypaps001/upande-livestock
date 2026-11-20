@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AnimalSearch } from "@/components/animals/AnimalSearch";
 import { BullPanel } from "@/components/animals/BullPanel";
-import { burdenMarker, money, verdict, type BullEconomics } from "@/lib/bulls";
+import { burdenMarker, money, rowLine, verdict, type BullEconomics } from "@/lib/bulls";
 import type { AnimalSummary } from "@/lib/animals";
 
 const econ = (over: Partial<BullEconomics> = {}): BullEconomics => ({
@@ -46,6 +46,18 @@ describe("bull wording", () => {
     const v = verdict(econ({ net: null, value: { amount: null, source: null, as_of: null } }));
     expect(v.text).toContain("no value");
     expect(v.loss).toBe(false);
+  });
+});
+
+describe("the list row line", () => {
+  it("says each figure once", () => {
+    const t = rowLine(econ()).text;
+    expect(t.match(/Feed/g)).toHaveLength(1);
+    expect(t).toContain("Burden since 2026-11-01");
+  });
+  it("gives a bull with no value a line too", () => {
+    const l = rowLine(econ({ net: null, burden_since: null, value: { amount: null, source: null, as_of: null } }));
+    expect(l.text).toMatch(/^Feed .* · no value$/);
   });
 });
 

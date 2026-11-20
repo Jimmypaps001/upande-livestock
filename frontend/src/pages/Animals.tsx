@@ -66,16 +66,20 @@ export function Animals() {
   const [failure, setFailure] = useState<string | null>(null);
   const [bulls, setBulls] = useState<Record<string, BullEconomics>>({});
   const bullsAsked = useRef(false);
+  const herdRef = useRef<AnimalSummary[]>([]);
+  herdRef.current = herd;
 
   // A bull is asked about once for the whole list, and only when a bull is on
   // screen: the figures walk every herd's feed days, which a cow's page never needs.
   const loadBulls = useCallback(() => {
-    if (bullsAsked.current) return;
+    if (bullsAsked.current || !herdRef.current.length) return;
     bullsAsked.current = true;
     void getBullEconomicsGuarded();
-  }, []);
+  }, [herd.length]);
   async function getBullEconomicsGuarded() {
-    const r = await getBullEconomicsBulk();
+    const r = await getBullEconomicsBulk(
+      herdRef.current.filter((a) => a.sex === "Male").map((a) => a.id),
+    );
     if (isError(r)) bullsAsked.current = false;
     else setBulls(r.bulls);
   }

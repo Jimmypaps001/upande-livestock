@@ -38,10 +38,11 @@ export function getBullEconomics(animal: string): Promise<Envelope<BullEconomics
   return call<BullEconomics>(`${ECON}.bull_economics`, { payload: { animal } });
 }
 
-export function getBullEconomicsBulk(): Promise<
+/** Every bull named, retired or not; with no names the server answers for bulls still on the farm. */
+export function getBullEconomicsBulk(animals?: string[]): Promise<
   Envelope<{ purpose: BullPurpose; bulls: Record<string, BullEconomics> }>
 > {
-  return call(`${ECON}.bull_economics_bulk`, {});
+  return call(`${ECON}.bull_economics_bulk`, animals ? { payload: { animals } } : {});
 }
 
 export function money(n: number | null | undefined, currency = "KES"): string {
@@ -59,4 +60,14 @@ export function burdenMarker(e: Pick<BullEconomics, "burden_since">): string | n
 export function verdict(e: BullEconomics): { text: string; loss: boolean } {
   if (e.net == null) return { text: `Feed ${money(e.feed.cost, e.currency)} · no value`, loss: false };
   return { text: `Net ${money(e.net, e.currency)}`, loss: e.net < 0 };
+}
+
+/** One compact line for a list row: feed, value and net said once; "Burden since" only when it applies. */
+export function rowLine(e: BullEconomics): { text: string; loss: boolean } {
+  const parts = [`Feed ${money(e.feed.cost, e.currency)}`];
+  if (e.value.amount == null) parts.push("no value");
+  else parts.push(`Value ${money(e.value.amount, e.currency)}`);
+  if (e.net != null) parts.push(`Net ${money(e.net, e.currency)}`);
+  if (e.burden_since) parts.push(`Burden since ${e.burden_since}`);
+  return { text: parts.join(" · "), loss: e.net != null && e.net < 0 };
 }

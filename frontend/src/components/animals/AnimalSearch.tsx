@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ChevronRight, ChevronsDownUp, ChevronsUpDown, Search, X } from "lucide-react";
 import { STAGES, ageFrom, matchesSex, type AnimalSummary, type SexFilter } from "@/lib/animals";
 import { SilhouetteFrame } from "@/components/animals/AnimalSilhouette";
-import { money, verdict, type BullEconomics } from "@/lib/bulls";
+import { rowLine, type BullEconomics } from "@/lib/bulls";
 import { Input } from "@/components/ui/input";
 import { Picker } from "@/components/ui/picker";
 import { cn } from "@/lib/utils";
@@ -367,14 +367,13 @@ export function AnimalSearch({
   function burden(a: AnimalSummary) {
     const e = a.sex === "Male" ? bulls?.[a.id] : undefined;
     if (!e || !(a.id === selectedId || sex === "bulls")) return null;
-    const v = verdict(e);
+    const v = rowLine(e);
     return (
       <span
         data-testid="bull-burden"
-        className={cn("truncate text-[11px] tabular-nums", v.loss ? "text-[var(--sd-sev-critical)]" : "text-[var(--sd-muted)]")}
+        className={cn("text-[11px] leading-snug tabular-nums", v.loss ? "text-[var(--sd-sev-critical)]" : "text-[var(--sd-muted)]")}
       >
-        Feed {money(e.feed.cost, e.currency)} · Value {money(e.value.amount, e.currency)} · {v.text}
-        {e.burden_since ? ` · Burden since ${e.burden_since}` : ""}
+        {v.text}
       </span>
     );
   }

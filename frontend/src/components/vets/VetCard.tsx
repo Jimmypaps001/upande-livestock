@@ -11,7 +11,7 @@ const n = (v: number | null | undefined, unit = "") =>
 function Kpi({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
     <div className="flex min-w-0 flex-col gap-0.5 px-3 py-2.5">
-      <span className="text-[10px] font-medium uppercase tracking-[0.12em] text-[var(--sd-quiet)]">{label}</span>
+      <span className="truncate text-[10px] font-medium uppercase tracking-[0.12em] text-[var(--sd-quiet)]">{label}</span>
       <span
         className={cn(
           "text-[22px] font-semibold leading-none tracking-[-0.02em] tabular-nums",
@@ -20,7 +20,7 @@ function Kpi({ label, value, hint }: { label: string; value: string; hint?: stri
       >
         {value}
       </span>
-      <span className="min-h-[14px] text-[10.5px] text-[var(--sd-quiet)]">{hint || ""}</span>
+      <span className="min-h-[14px] truncate text-[10.5px] text-[var(--sd-quiet)]">{hint || ""}</span>
     </div>
   );
 }
@@ -74,7 +74,7 @@ export function VetCard({ vet }: { vet: VetRow }) {
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-y-1 rounded-[var(--sd-radius-lg)] bg-[var(--sd-bg-soft)] px-1 py-1 shadow-[var(--sd-shadow-inset)]">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(128px,1fr))] gap-y-1 rounded-[var(--sd-radius-lg)] bg-[var(--sd-bg-soft)] px-1 py-1 shadow-[var(--sd-shadow-inset)]">
         <Kpi label="Cases opened" value={n(k.cases_opened)} hint={`${n(k.cases_open_now)} open now`} />
         <Kpi label="Cases closed" value={n(k.cases_closed)} />
         <Kpi label="Treatments" value={n(k.treatments)} />
@@ -83,7 +83,7 @@ export function VetCard({ vet }: { vet: VetRow }) {
         <Kpi label="PDs done" value={n(k.pds_done)} />
       </div>
 
-      <dl className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-[12.5px]">
+      <dl className="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-x-4 gap-y-1.5 text-[12.5px]">
         <Row label="Pregnancy rate" value={n(k.pregnancy_rate, "%")} hint={k.inseminations ? `${k.services_confirmed} of ${k.inseminations}${k.services_pending ? `, ${k.services_pending} pending` : ""}` : undefined} />
         <Row label="Days to close" value={n(k.avg_days_to_close)} />
         <Row label="Drug cost" value={n(k.drug_cost)} />

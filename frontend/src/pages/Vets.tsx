@@ -119,13 +119,13 @@ export function Vets() {
       </div>
 
       {!data && loading ? (
-        <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3" aria-busy>
+        <div className="grid min-w-0 gap-4 grid-cols-[repeat(auto-fill,minmax(min(100%,380px),1fr))]" aria-busy>
           {[0, 1, 2].map((i) => (
             <div key={i} className="h-[330px] animate-pulse rounded-[var(--sd-radius-card)] bg-[var(--sd-bg-soft)]" />
           ))}
         </div>
       ) : shown.length ? (
-        <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
+        <div className="grid min-w-0 gap-4 grid-cols-[repeat(auto-fill,minmax(min(100%,380px),1fr))]">
           {shown.map((v) => (
             <VetCard key={v.vet} vet={v} />
           ))}
