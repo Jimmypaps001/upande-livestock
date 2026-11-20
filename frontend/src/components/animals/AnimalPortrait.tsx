@@ -1,4 +1,5 @@
-import { STAGES, ageFrom, initialsOf, type AnimalProfile } from "@/lib/animals";
+import { STAGES, ageFrom, type AnimalProfile } from "@/lib/animals";
+import { SilhouetteFrame } from "@/components/animals/AnimalSilhouette";
 import { CoverBadge } from "@/components/animals/CoverBadge";
 import { cn } from "@/lib/utils";
 
@@ -12,6 +13,8 @@ import { cn } from "@/lib/utils";
  * rather than a gap.
  */
 export function AnimalPortrait({ animal }: { animal: AnimalProfile }) {
+  // The date of her latest weighing, from the timeline (the profile lists every weighing).
+  const lastWeighed = [...(animal.milestones ?? [])].reverse().find((m) => m.kind === "weight")?.on ?? null;
   const stage = STAGES[animal.stage];
   return (
     <div className="flex flex-col gap-4">
@@ -24,26 +27,22 @@ export function AnimalPortrait({ animal }: { animal: AnimalProfile }) {
         {animal.photo ? (
           <img
             src={animal.photo}
+            decoding="async"
             alt={`${animal.name}, ${animal.id}`}
             className="h-full w-full object-cover"
           />
         ) : (
-          // Her initials, not an apology. Most of this herd has no photograph
-          // and probably never will; a panel that said so on every animal would
-          // be reporting the same absence three hundred times. Set in the
-          // stage's own colour so the frame still identifies her at a glance.
-          <div
-            className="flex h-full w-full items-center justify-center"
-            style={{ background: `color-mix(in srgb, ${stage.tone} 16%, var(--sd-bg-soft))` }}
-            aria-label={`${animal.name} — no photograph`}
-          >
-            <span
-              className="select-none text-[64px] font-semibold leading-none tracking-[-0.04em]"
-              style={{ color: `color-mix(in srgb, ${stage.tone} 72%, var(--sd-ink))` }}
-            >
-              {initialsOf(animal.name, animal.id)}
-            </span>
-          </div>
+          // A silhouette picked by species, age, sex and stage (and a pose by her
+          // number), not an apology. Most of this herd has no photograph and
+          // probably never will; a panel that said so on every animal would be
+          // reporting the same absence three hundred times. Set in the stage's
+          // own colour so the frame still identifies her at a glance.
+          <SilhouetteFrame
+            animal={animal}
+            tone={stage.tone}
+            className="h-full w-full pb-[18%]"
+            label={`${animal.name} — no photograph; ${stage.label.toLowerCase()} ${animal.sex === "Male" ? "male" : "female"}`}
+          />
         )}
 
         {/* The number, on the picture. It is what she is called on paper, in the
@@ -77,9 +76,10 @@ export function AnimalPortrait({ animal }: { animal: AnimalProfile }) {
         <Fact label="Age" value={ageFrom(animal.bornOn)} />
         <Fact label="Breed" value={animal.breed || "—"} />
         <Fact label="Herd" value={animal.herd} />
-        <Fact label="Sex" value={animal.sex} />
+        <Fact label="Sex" value={animal.sex || "—"} />
         <Fact label="Dam" value={animal.dam || "—"} />
         <Fact label="Sire" value={animal.sire || "—"} />
+        <Fact label="Last weighed" value={lastWeighed ?? "—"} />
       </dl>
     </div>
   );
