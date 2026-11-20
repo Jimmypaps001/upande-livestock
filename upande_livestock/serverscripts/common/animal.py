@@ -137,7 +137,7 @@ def recompute_herd_count(herd):
 
 
 def create_calf(dam, tag_number, sex, event_date, birth_weight=None, burn_name=None, herd=None,
-                breed=None, health_status=None, vet_remarks=None, photo=None, sire=None):
+                breed=None, health_status=None, vet_remarks=None, photo=None, sire=None, sire_link=None):
 	"""Insert a newborn Animal and return its name.
 
 	Throws on a duplicate tag before writing anything, so a mistyped tag cannot
@@ -196,6 +196,8 @@ def create_calf(dam, tag_number, sex, event_date, birth_weight=None, burn_name=N
 		calf.image = photo
 	if (sire or "").strip():
 		calf.sire_name = sire.strip()
+	if sire_link:
+		calf.sire_link = sire_link
 	calf.insert(ignore_permissions=True)
 
 	recompute_herd_count(target_herd)

@@ -66,6 +66,7 @@ def record_calf_births(payload):
 				birth.dam = dam_name
 				birth.related_calving = calving.name
 				birth.sire = calving.sire
+				birth.sire_link = calving.get("sire_link")
 				birth.is_stillborn = 1 if stillborn else 0
 				# A calving's births follow the Calving switch, which was checked
 				# when the calving was recorded: a calf is not refused for Birth.

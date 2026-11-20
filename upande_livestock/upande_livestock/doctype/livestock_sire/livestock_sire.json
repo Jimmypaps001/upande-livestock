@@ -1,0 +1,139 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-11-20 09:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "sire_name",
+  "sire_code",
+  "display_name",
+  "column_break_1",
+  "sire_type",
+  "breed",
+  "active",
+  "section_break_2",
+  "semen_item",
+  "animal",
+  "column_break_2",
+  "supplier",
+  "sexed",
+  "section_break_3",
+  "notes"
+ ],
+ "fields": [
+  {
+   "fieldname": "sire_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Sire Name",
+   "reqd": 1
+  },
+  {
+   "description": "The bull's registration / herdbook code, e.g. NL734970583. Names the record when present.",
+   "fieldname": "sire_code",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Sire Code",
+   "unique": 1
+  },
+  {
+   "fieldname": "display_name",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Display Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Semen",
+   "fieldname": "sire_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Type",
+   "options": "Semen\nLive bull",
+   "reqd": 1
+  },
+  {
+   "fieldname": "breed",
+   "fieldtype": "Link",
+   "label": "Breed",
+   "options": "Breed"
+  },
+  {
+   "default": "1",
+   "fieldname": "active",
+   "fieldtype": "Check",
+   "in_standard_filter": 1,
+   "label": "Active"
+  },
+  {
+   "fieldname": "section_break_2",
+   "fieldtype": "Section Break"
+  },
+  {
+   "depends_on": "eval:doc.sire_type=='Semen'",
+   "description": "The semen straw Item. A Service that uses this straw is recorded against this sire.",
+   "fieldname": "semen_item",
+   "fieldtype": "Link",
+   "label": "Semen Straw (Item)",
+   "options": "Item"
+  },
+  {
+   "depends_on": "eval:doc.sire_type=='Live bull'",
+   "fieldname": "animal",
+   "fieldtype": "Link",
+   "label": "Bull (Animal)",
+   "options": "Animal"
+  },
+  {
+   "fieldname": "column_break_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "supplier",
+   "fieldtype": "Data",
+   "label": "Supplier / AI Company"
+  },
+  {
+   "default": "0",
+   "depends_on": "eval:doc.sire_type=='Semen'",
+   "fieldname": "sexed",
+   "fieldtype": "Check",
+   "label": "Sexed Semen"
+  },
+  {
+   "fieldname": "section_break_3",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Small Text",
+   "label": "Notes"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-11-20 09:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Upande Livestock",
+ "name": "Livestock Sire",
+ "owner": "Administrator",
+ "permissions": [
+  {"create": 1, "delete": 1, "email": 1, "export": 1, "print": 1, "read": 1, "report": 1, "role": "System Manager", "share": 1, "write": 1},
+  {"create": 1, "delete": 1, "email": 1, "export": 1, "print": 1, "read": 1, "report": 1, "role": "Livestock Manager", "share": 1, "write": 1},
+  {"create": 1, "print": 1, "read": 1, "report": 1, "role": "Livestock Breeder", "write": 1}
+ ],
+ "row_format": "Dynamic",
+ "search_fields": "sire_name,sire_code",
+ "show_title_field_in_link": 1,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "display_name"
+}

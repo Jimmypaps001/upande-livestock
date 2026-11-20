@@ -21,6 +21,7 @@
   "tab_service",
   "sb_service",
   "sire",
+  "sire_link",
   "semen_item",
   "semen_qty",
   "semen_warehouse",
@@ -186,6 +187,14 @@
    "fieldname": "sire",
    "fieldtype": "Data",
    "label": "Sire"
+  },
+  {
+   "description": "The bull as a Livestock Sire record (name and code). Filled from the straw on a Service.",
+   "fieldname": "sire_link",
+   "fieldtype": "Link",
+   "label": "Sire (record)",
+   "options": "Livestock Sire",
+   "depends_on": "eval:['Service','Calving','Birth'].includes(doc.event_type)"
   },
   {
    "fieldname": "service_type",
@@ -583,7 +592,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-11-20 12:00:00.000000",
+ "modified": "2026-11-20 09:00:00.000000",
  "modified_by": "Administrator",
  "module": "Upande Livestock",
  "name": "Livestock Event",

@@ -7,6 +7,7 @@ from frappe.utils import flt, today
 from upande_livestock.serverscripts.common.envelope import as_dict, guard, run
 from upande_livestock.serverscripts.common.event_items import consumes_items
 from upande_livestock.serverscripts.common.events import new_livestock_event
+from upande_livestock.serverscripts.common.livestock_sire import find as find_sire, label_of
 from upande_livestock.serverscripts.husbandry._shared import append_items
 
 
@@ -30,6 +31,11 @@ def create_service_event(payload):
 		doc.service_type = d.get("service_type")
 		doc.service_date = d.get("service_date") or today()
 		doc.sire = d.get("sire")
+		# A sire picked from Livestock Sire (its name, or its "Name · Code" label)
+		# is linked; the text stays beside it.
+		doc.sire_link = d.get("sire_link") or find_sire(doc.sire)
+		if doc.sire_link and not (doc.sire or "").strip():
+			doc.sire = label_of(doc.sire_link)
 		if consumes_items("Service"):
 			# Service posts stock: the straw goes through the items table like
 			# every other event's items. A caller still sending only the old

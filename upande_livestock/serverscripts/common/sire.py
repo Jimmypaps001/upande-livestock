@@ -10,6 +10,7 @@ resolver in a module both can import covers every write path at once.
 import frappe
 
 from upande_livestock.serverscripts.common import event_items
+from upande_livestock.serverscripts.common import livestock_sire as LS
 
 
 def _item_name(code):
@@ -91,6 +92,9 @@ def sire_of(svc):
 
 	Total: never None, never an exception. The straw's ITEM NAME, not its code.
 	"""
+	linked = LS.label_of(svc.get("sire_link"))
+	if linked:
+		return linked
 	typed = (svc.get("sire") or "").strip()
 	if typed:
 		return _item_name(typed) or typed
@@ -100,4 +104,16 @@ def sire_of(svc):
 	straw = straw or svc.get("semen_item")
 	if not straw and not groups:
 		straw = _straw_actually_issued(svc)
-	return _item_name(straw) if straw else ""
+	return (LS.label_of(LS.for_item(straw)) or _item_name(straw)) if straw else ""
+
+
+def straw_of(svc):
+	"""The straw's Item code on a Service (items table, then `semen_item`), or None."""
+	groups = event_items.groups_for_event("Service")
+	straw = _straw_on_the_table(svc, groups) if groups else None
+	return straw or svc.get("semen_item") or None
+
+
+def sire_link_of(svc):
+	"""The Livestock Sire behind a service: the one chosen, else the straw's, else None."""
+	return svc.get("sire_link") or LS.for_item(straw_of(svc)) or None

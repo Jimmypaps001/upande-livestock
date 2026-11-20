@@ -31,6 +31,7 @@
   "cb_parentage",
   "dam",
   "sire_name",
+  "sire_link",
   "tab_herd",
   "sb_placement",
   "current_herd",
@@ -196,6 +197,12 @@
    "fieldname": "sire_name",
    "fieldtype": "Data",
    "label": "Sire Name"
+  },
+  {
+   "fieldname": "sire_link",
+   "fieldtype": "Link",
+   "label": "Sire (record)",
+   "options": "Livestock Sire"
   },
   {
    "fieldname": "tab_herd",
@@ -426,7 +433,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-11-20 12:00:00.000000",
+ "modified": "2026-11-20 09:00:00.000000",
  "modified_by": "Administrator",
  "module": "Upande Livestock",
  "name": "Animal",

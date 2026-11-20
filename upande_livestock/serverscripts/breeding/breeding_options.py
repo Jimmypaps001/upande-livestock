@@ -4,6 +4,7 @@ Read-guarded on Animal."""
 
 import frappe
 
+from upande_livestock.serverscripts.breeding.sire_options import options as sire_options
 from upande_livestock.serverscripts.common import herd_movement
 from upande_livestock.serverscripts.common import stock as livestock_stock
 from upande_livestock.serverscripts.common.choices import (
@@ -28,16 +29,23 @@ def breeding_options():
 		# in the offer list is an invitation to record a service that biology
 		# rules out.
 		animals = [a for a in active_animals() if herd_movement.is_servable(a.name)]
-		sires = sorted(
+		# The farm's bulls first, each with its code ("Dolmen · NL734970583"); a
+		# sire typed on an old Service that is not a record yet follows, so the
+		# list never loses a name. The service form sends the label back and the
+		# server links it.
+		bulls = sire_options()
+		sires = [b["label"] for b in bulls]
+		have = {s.lower() for s in sires}
+		sires += sorted(
 			{
 				r.sire
 				for r in frappe.get_all(
 					"Livestock Event",
-					filters=[["sire", "is", "set"]],
+					filters=[["sire", "is", "set"], ["sire_link", "is", "not set"]],
 					fields=["sire"],
 					limit_page_length=500,
 				)
-				if r.sire
+				if r.sire and r.sire.lower() not in have
 			}
 		)
 		# Read once: inside the comprehension's filter it re-ran per animal.
@@ -62,6 +70,7 @@ def breeding_options():
 			"diagnosis_results": select_options("Livestock Event", "diagnosis_result")
 			or ["Confirmed", "Not Pregnant", "Aborted"],
 			"sires": sires,
+			"sire_options": bulls,
 			# Service's own rule (Settings → Stock): its item groups, searched in
 			# every store of the company, its Default Store first. Each choice
 			# carries its `warehouse` and `locations`, so the form offers the

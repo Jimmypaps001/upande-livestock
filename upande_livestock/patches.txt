@@ -197,3 +197,9 @@ upande_livestock.patches.seed_calf_asset_settings
 # Feed types: Kaitet feeds from the Day sheet. System and Day sheet on, Manual configuration off,
 # on desk and phone. Written only where nothing is stored, so a choice already made is kept.
 upande_livestock.patches.default_feed_types
+
+# Bulls become records: a Livestock Sire for every distinct typed sire (a registration code split off
+# NL734970583 / 14HO14768 style, spelling variants merged), and the Services, Calvings, Births and
+# calves that carry the text are linked. The text is left alone. Same routine as the manager's
+# match_sires tool, safe to run again.
+upande_livestock.patches.create_livestock_sires

@@ -12,6 +12,7 @@ from frappe.tests import IntegrationTestCase
 from frappe.utils import add_days, today
 
 from upande_livestock.serverscripts.animals.animal_profile import animal_profile
+from upande_livestock.serverscripts.common import livestock_sire
 from upande_livestock.serverscripts.tests.test_operations import _employee, _make_cow, _purge, _purge_events_for
 
 COW = "ZZ SERVED COW"
@@ -45,8 +46,11 @@ class TestInseminationOnTheProfile(IntegrationTestCase):
 		got = animal_profile({"animal": COW})
 		self.assertFalse(got.get("error"), got)
 		served = [m for m in got["milestones"] if m["kind"] == "service"]
-		self.assertEqual([m["detail"] for m in served], ["A.I. · by STORMER", "A.I. · by STEADY P RF"])
-		self.assertEqual(got["lastService"]["sire"], "STEADY P RF")
+		# A bull that is a Livestock Sire shows as its record does (with the code).
+		shown = lambda t: livestock_sire.label_of(livestock_sire.find(t)) or t
+		self.assertEqual([m["detail"] for m in served],
+		                 [f"A.I. · by {shown('STORMER')}", f"A.I. · by {shown('STEADY P RF')}"])
+		self.assertEqual(got["lastService"]["sire"], shown("STEADY P RF"))
 		self.assertEqual(got["lastService"]["on"], add_days(today(), -2))
 		self.assertEqual(got["lastService"]["type"], "A.I.")
 

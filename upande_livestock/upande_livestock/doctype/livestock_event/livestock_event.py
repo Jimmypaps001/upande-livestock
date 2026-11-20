@@ -27,7 +27,9 @@ from upande_livestock.serverscripts.common import cost_center as livestock_cost_
 from upande_livestock.serverscripts.common.animal import create_calf
 from upande_livestock.serverscripts.common.guards import check_guards
 from upande_livestock.serverscripts.common.notice import heading
-from upande_livestock.serverscripts.common.sire import sire_of
+from upande_livestock.serverscripts.common import livestock_sire as _LS
+from upande_livestock.serverscripts.common.sire import sire_link_of, sire_of
+from upande_livestock.serverscripts.common.sire import straw_of as sire_straw_of
 from upande_livestock.serverscripts.common.timings import get_timing
 
 # The headings the reminders this controller raises carry. An icon here because
@@ -324,6 +326,40 @@ class LivestockEvent(Document):
 		move.insert(ignore_permissions=True)
 		move.submit()
 
+	def _settle_sire_link(self):
+		"""A Service names its bull through the Livestock Sire record.
+
+		A straw that belongs to a Livestock Sire fills the sire; a typed sire that
+		is a Livestock Sire's label or code is linked; a chosen sire fills the text
+		(with its code) when none was typed. Free text that matches nothing stays.
+		"""
+		if not self.get("sire_link"):
+			if (self.get("sire") or "").strip():
+				self.sire_link = _LS.find(self.sire)
+			if not self.get("sire_link"):
+				self.sire_link = _LS.for_item(sire_straw_of(self))
+		if self.get("sire_link") and not (self.get("sire") or "").strip():
+			self.sire = _LS.label_of(self.sire_link)
+
+	def _calf_sire_link(self):
+		"""The Livestock Sire for this birth's calf, by the same order as _calf_sire."""
+		if self.get("sire_link"):
+			return self.sire_link
+		if not self.get("related_calving"):
+			return None
+		calving = frappe.db.get_value(
+			"Livestock Event", self.related_calving, ["sire_link", "custom_related_pregnancy"], as_dict=True
+		)
+		if not calving:
+			return None
+		if calving.sire_link:
+			return calving.sire_link
+		if calving.custom_related_pregnancy and frappe.db.exists(
+			"Livestock Event", calving.custom_related_pregnancy
+		):
+			return sire_link_of(frappe.get_doc("Livestock Event", calving.custom_related_pregnancy))
+		return None
+
 	def _calf_sire(self):
 		"""The bull behind this birth's calf, or "" when nobody can say.
 
@@ -333,6 +369,9 @@ class LivestockEvent(Document):
 		typed = (self.get("sire") or "").strip()
 		if typed:
 			return typed
+		linked = _LS.label_of(self.get("sire_link"))
+		if linked:
+			return linked
 		if not self.get("related_calving"):
 			return ""
 		calving = frappe.db.get_value(
@@ -359,7 +398,10 @@ class LivestockEvent(Document):
 			return
 		sire = self._calf_sire()
 		if sire:
-			frappe.db.set_value("Animal", self.animal, "sire_name", sire, update_modified=False)
+			frappe.db.set_value(
+				"Animal", self.animal,
+				{"sire_name": sire, "sire_link": self._calf_sire_link()}, update_modified=False,
+			)
 
 	def create_calf_if_needed(self):
 		"""For a Birth event with no animal yet, create the calf and point at it.
@@ -395,6 +437,7 @@ class LivestockEvent(Document):
 			vet_remarks=self.get("calf_vet_remarks") or None,
 			photo=self.get("calf_photo") or None,
 			sire=self._calf_sire() or None,
+			sire_link=self._calf_sire_link(),
 		)
 
 	def before_insert(self):
@@ -730,6 +773,8 @@ class LivestockEvent(Document):
 		# ============================================================
 
 		if self.event_type == "Service":
+			self._settle_sire_link()
+
 			# Rule 1: No second service without feedback on first service.
 			# AS OF THIS SERVICE'S DATE: only a Service dated on or before it can be the
 			# one still waiting for an answer. A Service dated later is history that
@@ -983,6 +1028,10 @@ class LivestockEvent(Document):
 			# it. A sire somebody typed stays.
 			if not (self.sire or "").strip():
 				self.sire = sire_of(service)
+			if not self.get("sire_link"):
+				self.sire_link = (
+					_LS.find(self.sire) if (self.sire or "").strip() else None
+				) or sire_link_of(service)
 
 			if service.service_date:
 				gestation_days = frappe.utils.date_diff(self.event_date, service.service_date)

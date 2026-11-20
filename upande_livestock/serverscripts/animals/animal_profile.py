@@ -26,7 +26,7 @@ from itertools import pairwise
 import frappe
 from frappe.utils import add_days, date_diff, flt, getdate, today
 
-from upande_livestock.serverscripts.common import animal_stage, asset_cover, thumbs
+from upande_livestock.serverscripts.common import animal_stage, asset_cover, livestock_sire, thumbs
 from upande_livestock.serverscripts.common.envelope import as_dict, guard_read, run
 
 RETIRED = animal_stage.RETIRED
@@ -62,7 +62,7 @@ def animal_profile(payload=None):
 		a = frappe.db.get_value(
 			"Animal", name,
 			["name", "burn_name", "sex", "current_herd", "breed", "date_of_birth", "dob_basis",
-			 "status", "disabled", "image", "dam", "sire_name", "repro_status", "species"],
+			 "status", "disabled", "image", "dam", "sire_name", "sire_link", "repro_status", "species"],
 			as_dict=True)
 		if not a:
 			frappe.throw(frappe._("{0} is not an animal on this farm.").format(name))
@@ -71,7 +71,7 @@ def animal_profile(payload=None):
 			"Livestock Event",
 			filters={"animal": name, "docstatus": 1},
 			fields=["name", "event_type", "event_date", "current_herd", "new_herd",
-			        "service_type", "sire", "semen_item", "diagnosis_result", "expected_calving_date",
+			        "service_type", "sire", "sire_link", "semen_item", "diagnosis_result", "expected_calving_date",
 			        "custom_calving_outcome", "abortion_cause", "remarks", "date_basis"],
 			order_by="event_date asc, creation asc",
 		)
@@ -98,7 +98,8 @@ def animal_profile(payload=None):
 			"cover": cover["state"],
 			"coverDetail": cover,
 			"dam": a.dam,
-			"sire": a.sire_name,
+			# With its code when the sire is a record ("Dolmen · NL734970583").
+			"sire": livestock_sire.label_of(a.get("sire_link")) or a.sire_name,
 			"lastCalving": last_calving,
 			"lastService": _last_service(events),
 			"expectedCalving": expected,
@@ -184,6 +185,9 @@ def _sire_of(e, items):
 	when the straw was issued from the store. THE TEXT WAS NEVER READ HERE, which
 	is why an animal's page showed an A.I. with no bull and no date of its own.
 	"""
+	linked = livestock_sire.label_of(e.get("sire_link"))
+	if linked:
+		return linked
 	text = (e.sire or "").strip()
 	if text:
 		return text
