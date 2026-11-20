@@ -1,4 +1,5 @@
 import { call, type Envelope } from "@/lib/frappe";
+import type { FeedSession, SessionChoice, SessionState } from "@/lib/feed-sessions";
 
 /* ── A herd's feed day: the recipe is the plan, what was fed is the actual ──
    Wire shapes of serverscripts/feeding/feed_actuals.py and
@@ -24,7 +25,7 @@ export type HerdDay = {
   record: string | null;
   bom: string;
   head_count: number;
-  status: "Planned" | "Amended" | "Waiting for stock" | "Manufactured";
+  status: "Planned" | "Amended" | "Half fed" | "Waiting for stock" | "Manufactured";
   amended: boolean;
   planned_kg: number;
   actual_kg: number;
@@ -34,6 +35,9 @@ export type HerdDay = {
   components: DayComponent[];
   draft_entries: string[];
   remarks: string | null;
+  /** Full / half-day sessions fed so far; absent on an older server. */
+  session?: SessionState;
+  fed_kg?: number;
   pending?: boolean;
   waiting_for?: string | null;
 };
@@ -102,6 +106,9 @@ export type DailyFeedReport = {
     actual_kg: number;
     amended: boolean;
     draft_entries: string[];
+    day_state?: SessionState["state"];
+    fed_fraction?: number;
+    sessions?: FeedSession[];
     components: Array<{
       item_code: string;
       item_name: string;
@@ -146,11 +153,16 @@ export function manufactureFeedActuals(
   herd: string,
   date: string,
   employee?: string,
+  /** Full day, or the next half of the day; a manager's `override` feeds more than a day. */
+  feedSession: SessionChoice = "Full",
+  override = false,
 ): Promise<Envelope<HerdDay>> {
   return call(`${BASE}feed_actuals.manufacture_feed_actuals`, {
     herd,
     date,
     employee: employee || undefined,
+    feed_session: feedSession,
+    override: override ? 1 : undefined,
   });
 }
 

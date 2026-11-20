@@ -26,7 +26,9 @@ export type AlertKind =
   // stops every herd that eats it, so it names an `item` where the rest name
   // an `animal`.
   | "Concentrate Low"
-  | "Concentrate Out";
+  | "Concentrate Out"
+  // A herd fed half a day: the second session is owed.
+  | "Feed Session Due";
 
 export interface LivestockNotification {
   name: string;

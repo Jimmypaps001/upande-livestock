@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { Loader2, Undo2, X } from "lucide-react";
 import { Notice } from "@/components/feeding/Notice";
+import { SessionControl } from "@/components/feeding/SessionControl";
+import { SessionChips, StateChip } from "@/components/feeding/SessionChips";
 import { useToast } from "@/components/Toast";
 import { DatePicker } from "@/components/DatePicker";
 import { Button } from "@/components/ui/button";
@@ -27,6 +29,14 @@ import {
   type AnimalIntake,
   type HerdDay,
 } from "@/lib/feed-actuals";
+import {
+  choiceLabel,
+  defaultChoice,
+  needsOverride,
+  overrideSentence,
+  secondSessionDue,
+  type SessionChoice,
+} from "@/lib/feed-sessions";
 import { fmt, num, todayISO } from "@/lib/utils";
 
 /** One component line: the plan beside what was fed, per herd and per animal. */
@@ -201,11 +211,24 @@ function HerdDayCard({
   const [message, setMessage] = useState<string | null>(null);
   const toast = useToast();
   const mixed = day.status === "Manufactured" || day.status === "Waiting for stock";
+  const sess = day.session;
+  const [choice, setChoice] = useState<SessionChoice>(defaultChoice(sess));
 
   async function mix() {
+    // More than a day (a full day after a half, a third session) is a manager's
+    // confirmed override; anyone else gets the server's refusal.
+    let override = false;
+    if (needsOverride(choice, sess)) {
+      if (!sess?.can_override) {
+        setMessage(`${sess?.label ?? "This herd"} is already fed. Only a manager can feed more than a full day.`);
+        return;
+      }
+      if (!window.confirm(`${overrideSentence(choice, sess)} Feed it anyway?`)) return;
+      override = true;
+    }
     setBusy(true);
     setMessage(null);
-    const r = await manufactureFeedActuals(day.herd, day.date, employee);
+    const r = await manufactureFeedActuals(day.herd, day.date, employee, choice, override);
     setBusy(false);
     if (isError(r)) {
       setMessage(r.error);
@@ -214,7 +237,7 @@ function HerdDayCard({
     toast(
       r.pending
         ? `Recorded what ${day.herd_name} was fed. The stock is short, so it waits as a draft dated ${day.date}.`
-        : `Mixed and issued what ${day.herd_name} was fed.`,
+        : `Mixed and issued what ${day.herd_name} was fed (${choiceLabel(choice, sess).toLowerCase()}).`,
       "ok",
     );
     onChanged();
@@ -251,6 +274,7 @@ function HerdDayCard({
           <span className="rounded-full bg-[var(--sd-line)] px-2 py-0.5 text-[11px] font-medium">
             {day.status}
           </span>
+          <StateChip session={sess} />
         </CardTitle>
         <CardDescription>
           {day.head_count} head. Planned {fmt(day.planned_kg)} kg, fed {fmt(day.actual_kg)} kg
@@ -261,6 +285,12 @@ function HerdDayCard({
       <CardContent className="flex flex-col gap-4">
         {message && <Notice tone="error">{message}</Notice>}
         {blocked && <Notice tone="info">{blocked}</Notice>}
+        {secondSessionDue(sess) && (
+          <Notice tone="info">
+            Second session due: {day.herd_name} was fed half a day. Feed the other half.
+          </Notice>
+        )}
+        <SessionChips sessions={sess?.sessions} />
         {day.draft_entries.length > 0 && (
           <Notice tone="info">
             Waiting for stock: {day.draft_entries.join(", ")} stays a draft dated {day.date} until
@@ -272,16 +302,19 @@ function HerdDayCard({
           <Button variant="outline" disabled={mixed || !!blocked} onClick={() => setAmending(true)}>
             Amend
           </Button>
-          {day.record && !mixed && (
+          {day.record && !mixed && !secondSessionDue(sess) && (
             <Button variant="outline" disabled={busy || !!blocked} onClick={reset}>
               Reset to recipe
             </Button>
           )}
           {canMix() && (
-            <Button disabled={mixed || busy || !!blocked} onClick={mix}>
-              {busy && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
-              Mix and issue what was fed
-            </Button>
+            <>
+              <SessionControl value={choice} onChange={setChoice} state={sess} disabled={busy} />
+              <Button disabled={(mixed && !sess?.can_override) || busy || !!blocked} onClick={mix}>
+                {busy && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
+                Mix and issue what was fed: {choiceLabel(choice, sess).toLowerCase()}
+              </Button>
+            </>
           )}
           <Button variant="ghost" onClick={showAnimals}>
             {intake ? "Hide animals" : "Per animal"}
@@ -376,7 +409,7 @@ export function FeedDay({
       {days?.length === 0 && <Notice tone="info">No herd has a ration to feed.</Notice>}
       {days?.map((d) => (
         <HerdDayCard
-          key={`${d.herd}-${d.date}-${d.status}-${d.actual_kg}`}
+          key={`${d.herd}-${d.date}-${d.status}-${d.actual_kg}-${d.session?.fed_fraction ?? 0}`}
           day={d}
           onChanged={load}
           employee={employee}

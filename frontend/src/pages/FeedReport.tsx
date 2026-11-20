@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { Figure, FigureRow } from "@/components/Figure";
 import { Notice } from "@/components/feeding/Notice";
+import { SessionChips } from "@/components/feeding/SessionChips";
 import { DatePicker } from "@/components/DatePicker";
 import { Page, PageHeading } from "@/components/PageShell";
 import { ScrollTable, STICKY_HEAD } from "@/components/ScrollTable";
@@ -120,7 +121,9 @@ export function FeedReport() {
                       {h.head_count} head. Planned {fmt(h.planned_kg)} kg, fed {fmt(h.actual_kg)} kg
                       {h.amended ? ", amended" : ""}.
                       {h.draft_entries.length > 0 ? ` Waiting for stock: ${h.draft_entries.join(", ")}.` : ""}
+                      {h.day_state === "half_fed" ? " Half fed: the second session is due." : ""}
                     </CardDescription>
+                    <SessionChips sessions={h.sessions} />
                   </CardHeader>
                   <CardContent className="overflow-x-auto">
                     <table className="w-full text-[13px]">

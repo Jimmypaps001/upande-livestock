@@ -4,7 +4,16 @@ import { FeedDay } from "@/components/feeding/FeedDay";
 import { DayStatus } from "@/components/feeding/DayStatus";
 import { ManualConfig } from "@/components/feeding/ManualConfig";
 import { Mark, Notice, Pill } from "@/components/feeding/Notice";
-import { PortionSwitch } from "@/components/feeding/PortionSwitch";
+import { SessionControl } from "@/components/feeding/SessionControl";
+import { StateChip } from "@/components/feeding/SessionChips";
+import {
+  choiceLabel,
+  defaultChoice,
+  needsOverride,
+  overrideSentence,
+  secondSessionDue,
+  type SessionChoice,
+} from "@/lib/feed-sessions";
 import { PostingDate } from "@/components/feeding/PostingDate";
 import { RecipePicker, recipeLabel } from "@/components/feeding/RecipePicker";
 import { RequirementTable, shortLines } from "@/components/feeding/RequirementTable";
@@ -173,7 +182,11 @@ export function Feeding() {
       // offers: the server may answer 0.37 for a herd already part-fed, and
       // this screen never shows a decimal.
       const suggested = dayStatus?.suggested_portion ?? 1;
-      setPortion(suggested > 0 && suggested <= 0.5 ? 0.5 : 1);
+      setPortion(
+        dayStatus?.session
+          ? defaultChoice(dayStatus.session) === "Half" ? 0.5 : 1
+          : suggested > 0 && suggested <= 0.5 ? 0.5 : 1,
+      );
 
       // The recipe list refreshes on every load (e.g. a fresh tune just
       // minted shows up next time), but only a herd switch — never a mere
@@ -298,6 +311,18 @@ export function Feeding() {
 
   async function mixAndFeed() {
     if (!program) return;
+    // More than a day is a manager's confirmed override; others get the refusal.
+    const choice: SessionChoice = portion === 1 ? "Full" : "Half";
+    const sess = day?.session;
+    let override = false;
+    if (needsOverride(choice, sess)) {
+      if (!sess?.can_override) {
+        toast(`${sess?.label ?? "This herd"} is already fed. Only a manager can feed more than a full day.`, "error");
+        return;
+      }
+      if (!window.confirm(`${overrideSentence(choice, sess)} Feed it anyway?`)) return;
+      override = true;
+    }
     setMixing(true);
     // The System tab always runs through manufactureFeed, standing ration or
     // a previously-used recipe alike — bom_no carries the picker's choice,
@@ -309,6 +334,8 @@ export function Feeding() {
       batch_by_item: Object.keys(lineBatch).length ? JSON.stringify(lineBatch) : undefined,
       herd: program.herd,
       portion,
+      feed_session: choice,
+      override: override || undefined,
       posting_date: effectiveDate,
       bom_no: selectedBom || undefined,
       employee: who.operator || undefined,
@@ -572,13 +599,25 @@ export function Feeding() {
                   )}
                 </p>
 
+                {secondSessionDue(day?.session) && (
+                  <Notice tone="info">
+                    Second session due: {program.herd_label || program.herd} was fed half a day.
+                    Feed the other half ({choiceLabel("Half", day?.session).toLowerCase()}).
+                  </Notice>
+                )}
                 <DayStatus day={day} />
 
                 <div className="flex flex-col gap-4 rounded-[var(--sd-radius-lg)] border border-[var(--sd-line)] px-4 py-4">
                   <div className="flex flex-wrap items-end justify-between gap-5">
                     <div className="flex w-full max-w-xs flex-col gap-2">
                       <Label className="text-[var(--sd-muted)]">This run</Label>
-                      <PortionSwitch portion={portion} onChange={setPortion} />
+                      <SessionControl
+                        value={portion === 1 ? "Full" : "Half"}
+                        onChange={(c) => setPortion(c === "Full" ? 1 : 0.5)}
+                        state={day?.session}
+                        disabled={mixing}
+                      />
+                      <StateChip session={day?.session} />
                     </div>
                     <div className="flex flex-col gap-1">
                       <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-[var(--sd-quiet)]">

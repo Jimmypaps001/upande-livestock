@@ -1,3 +1,4 @@
+import type { SessionChoice, SessionState } from "@/lib/feed-sessions";
 import { fmt } from "@/lib/utils";
 import { call, type Envelope } from "@/lib/frappe";
 
@@ -91,6 +92,8 @@ export type FeedDayStatus = {
   issued_kg: number;
   remaining_kg: number;
   complete: boolean;
+  /** Not fed / Half fed / Fully fed, and what may be chosen next. */
+  session?: SessionState;
 };
 
 export type FeedRunResult = {
@@ -257,6 +260,10 @@ export function feedDayStatus(herd: string): Promise<Envelope<FeedDayStatus>> {
 export function manufactureFeed(args: {
   herd: string;
   portion: number;
+  /** Full day, or the next half of the day (the server numbers it). */
+  feed_session?: SessionChoice;
+  /** A manager feeding more than a day. */
+  override?: boolean;
   posting_date: string;
   bom_no?: string;
   /** The store the ingredients come out of, and the one the batch is issued
