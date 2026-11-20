@@ -1,3 +1,4 @@
+import { CoverBadge } from "@/components/animals/CoverBadge";
 import { useMemo, useState } from "react";
 import { ChevronRight, Search, X } from "lucide-react";
 import { STAGES, ageFrom, type AnimalSummary } from "@/lib/animals";
@@ -228,6 +229,7 @@ export function AnimalSearch({
                     <span className="shrink-0 text-[11px] tabular-nums text-[var(--sd-quiet)]">
                       {a.id}
                     </span>
+                    <CoverBadge state={a.cover} />
                   </span>
                   <span className="truncate text-[11.5px] text-[var(--sd-muted)]">
                     {a.herd}
@@ -277,6 +279,7 @@ export function AnimalSearch({
             <span className="shrink-0 text-[11px] tabular-nums text-[var(--sd-quiet)]">
               {a.id}
             </span>
+            <CoverBadge state={a.cover} />
           </span>
           <span className="truncate text-[11.5px] text-[var(--sd-muted)]">{a.herd}</span>
         </span>

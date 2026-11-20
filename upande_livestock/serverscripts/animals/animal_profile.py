@@ -26,7 +26,7 @@ from itertools import pairwise
 import frappe
 from frappe.utils import add_days, date_diff, flt, getdate, today
 
-from upande_livestock.serverscripts.common import animal_stage
+from upande_livestock.serverscripts.common import animal_stage, asset_cover
 from upande_livestock.serverscripts.common.envelope import as_dict, guard_read, run
 
 RETIRED = animal_stage.RETIRED
@@ -80,6 +80,7 @@ def animal_profile(payload=None):
 		expected = _expected_calving(events)
 		cycle = _cycle(a, events, last_calving, expected)
 
+		cover = asset_cover.cover_for_animal(name)
 		return {
 			"ok": True,
 			"id": a.name,
@@ -91,6 +92,8 @@ def animal_profile(payload=None):
 			"status": a.status,
 			"stage": cycle["stage"],
 			"photo": a.image,
+			"cover": cover["state"],
+			"coverDetail": cover,
 			"dam": a.dam,
 			"sire": a.sire_name,
 			"lastCalving": last_calving,

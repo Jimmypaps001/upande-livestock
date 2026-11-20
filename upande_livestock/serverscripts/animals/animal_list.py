@@ -17,6 +17,7 @@ Read-guarded on Animal.
 
 import frappe
 
+from upande_livestock.serverscripts.common.asset_cover import covers_for_animals
 from upande_livestock.serverscripts.common.envelope import guard_read, run
 
 RETIRED = ("Dead", "Deceased", "Sold", "Culled", "Disposed", "Transferred Out")
@@ -33,6 +34,7 @@ def animal_list():
 			order_by="name asc",
 			limit_page_length=0,
 		)
+		cover = covers_for_animals([r.name for r in rows])
 		return {
 			"ok": True,
 			"animals": [
@@ -49,6 +51,7 @@ def animal_list():
 					# can answer cheaply and the page needs to colour a row.
 					"stage": "retired" if (r.disabled or r.status in RETIRED) else "open",
 					"photo": r.image,
+					"cover": cover.get(r.name, "none"),
 				}
 				for r in rows
 			],

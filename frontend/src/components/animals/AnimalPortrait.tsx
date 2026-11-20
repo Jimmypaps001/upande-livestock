@@ -1,4 +1,5 @@
 import { STAGES, ageFrom, initialsOf, type AnimalProfile } from "@/lib/animals";
+import { CoverBadge } from "@/components/animals/CoverBadge";
 import { cn } from "@/lib/utils";
 
 /**
@@ -61,6 +62,15 @@ export function AnimalPortrait({ animal }: { animal: AnimalProfile }) {
             {stage.label}
           </span>
         </div>
+      </div>
+
+      <div className="flex items-center gap-2 text-[12px] text-[var(--sd-muted)]">
+        <CoverBadge state={animal.cover} detail info={animal.coverDetail} />
+        {animal.coverDetail?.end && animal.cover !== "none" && (
+          <span>
+            {animal.cover === "expired" ? "ended" : "until"} {animal.coverDetail.end}
+          </span>
+        )}
       </div>
 
       <dl className="grid grid-cols-2 gap-x-4 gap-y-3">

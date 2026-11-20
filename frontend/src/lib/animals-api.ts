@@ -6,7 +6,7 @@
  * together would make the page as slow as its slowest cow.
  */
 import { call, type Envelope } from "@/lib/frappe";
-import type { AnimalProfile, AnimalSummary } from "@/lib/animals";
+import type { AnimalProfile, AnimalSummary, CoverDetail } from "@/lib/animals";
 
 const MARK = "upande_livestock.serverscripts.animals.mark_cull_review.mark_cull_review";
 const LIST = "upande_livestock.serverscripts.animals.animal_list.animal_list";
@@ -25,6 +25,40 @@ export function getAnimals(): Promise<Envelope<{ animals: AnimalSummary[] }>> {
 
 export function getAnimalProfile(animal: string): Promise<Envelope<AnimalProfile>> {
   return call<AnimalProfile>(PROFILE, { payload: { animal } });
+}
+
+const COVER = "upande_livestock.serverscripts.animals.animal_cover";
+
+export interface CoverPolicy {
+  name: string;
+  policy_number: string | null;
+  policy_type: string;
+  insurer_name: string | null;
+  start_date: string;
+  end_date: string;
+}
+
+export function getAnimalCover(animal: string) {
+  return call<CoverDetail>(`${COVER}.animal_cover`, { payload: { animal } });
+}
+
+export function getCoverPolicies(animal: string) {
+  return call<{ available: boolean; policies: CoverPolicy[] }>(`${COVER}.cover_policies`, {
+    payload: { animal },
+  });
+}
+
+/** Add her Asset to a running Upande Asset policy; Upande Asset decides who may. */
+export function insureAnimal(p: {
+  animal: string;
+  policy: string;
+  sum_insured?: number;
+  effective_date?: string;
+  endorsement_no?: string;
+}) {
+  return call<{ asset: string; status?: string; endorsement_group?: string }>(`${COVER}.insure_animal`, {
+    payload: p,
+  });
 }
 
 export interface HerdBenchmarks {

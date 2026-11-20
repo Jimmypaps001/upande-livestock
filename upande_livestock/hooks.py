@@ -34,7 +34,7 @@ on_session_creation = ["upande_livestock.serverscripts.common.heal.clear_stale_d
 # Apps
 # ------------------
 
-# required_apps = []
+required_apps = ["upande_asset"]
 
 # Each item in the list will be shown as an app in the apps page
 # add_to_apps_screen = [

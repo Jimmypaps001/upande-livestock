@@ -6,6 +6,15 @@ import frappe
 from frappe import _
 
 
+def make_asset_sales_invoice(asset, item_code, company):
+	"""ERPNext's `make_sales_invoice` for one head. Its arguments differ by release
+	(`sell_qty` was added in 16.x), so quantity is passed only if it is accepted."""
+	from erpnext.assets.doctype.asset.asset import make_sales_invoice
+
+	try:
+		return make_sales_invoice(asset=asset, item_code=item_code, company=company, sell_qty=1)
+	except TypeError:
+		return make_sales_invoice(asset=asset, item_code=item_code, company=company)
 
 def _sell_livestock_asset(
 	animal=None,
@@ -47,111 +56,41 @@ def _sell_livestock_asset(
 		frappe.throw("Asset is already " + asset.status)
 
 	company = asset.company
+	company_currency = frappe.get_cached_value("Company", company, "default_currency") or "KES"
 
-	company_doc = frappe.get_doc("Company", company)
-	company_currency = company_doc.default_currency or "KES"
-	default_receivable = company_doc.default_receivable_account
-	default_expense = company_doc.default_expense_account
-	default_cost_center = company_doc.cost_center
-	default_income = company_doc.default_income_account
-
-	asset_category = asset.asset_category
-	category_fixed_asset_account = None
-
-	if asset_category:
-		cat_doc = frappe.get_doc("Asset Category", asset_category)
-		for row in cat_doc.accounts:
-			if row.company_name == company:
-				category_fixed_asset_account = row.fixed_asset_account
-				break
-
-	disposal_account = None
-	try:
-		disposal_account = frappe.get_cached_value("Company", company, "disposal_account")
-	except Exception:
-		pass
-
-	if not disposal_account:
-		try:
-			disposal_account = frappe.get_cached_value("Company", company, "gain_loss_on_asset_disposal")
-		except Exception:
-			pass
-
-	if not disposal_account:
-		disposal_account = category_fixed_asset_account or default_income
-
-	income_account = disposal_account or default_income
-	expense_account = default_expense
-	cost_center = asset.cost_center or default_cost_center
-	debit_to = default_receivable
-
-	default_price_list = frappe.db.get_value("Selling Settings", None, "selling_price_list") or ""
-	price_list_currency = company_currency
-	plc_conversion_rate = 1
-
-	if default_price_list:
-		pl_currency = frappe.db.get_value("Price List", default_price_list, "currency")
-		if pl_currency:
-			price_list_currency = pl_currency
-			if pl_currency != company_currency:
-				try:
-					plc_conversion_rate = (
-						frappe.db.get_value(
-							"Currency Exchange",
-							{"from_currency": pl_currency, "to_currency": company_currency},
-							"exchange_rate",
-							order_by="date desc",
-						)
-						or 1
-					)
-				except Exception:
-					plc_conversion_rate = 1
-
-	si = frappe.get_doc(
-		{
-			"doctype": "Sales Invoice",
-			"customer": customer,
-			"company": company,
-			# Without set_posting_time ERPNext resets posting_date to today on
-			# insert, and the due date (the disposal date) then falls before it:
-			# "Due Date cannot be before Posting Date". A cull approved a day
-			# after it was raised never got its invoice.
-			"set_posting_time": 1,
-			"posting_date": posting_date,
-			"due_date": posting_date,
-			"naming_series": "SINV-.YYYY.-",
-			"currency": company_currency,
-			"conversion_rate": 1,
-			"selling_price_list": default_price_list,
-			"price_list_currency": price_list_currency,
-			"plc_conversion_rate": plc_conversion_rate,
-			"debit_to": debit_to,
-			"update_stock": 0,
-			"custom_farm": farm,
-			"custom_business_unit": business_unit,
-			"remarks": "Livestock sale - " + asset_name,
-			"items": [
-				{
-					"item_code": asset.item_code or "herd",
-					"item_name": asset.item_name or asset.asset_name or "herd",
-					"description": "Livestock sale: " + (asset.asset_name or asset_name),
-					"item_group": "Assets",
-					"stock_uom": "Nos",
-					"uom": "Nos",
-					"conversion_factor": 1,
-					"qty": 1,
-					"rate": selling_amount,
-					"price_list_rate": selling_amount,
-					"discount_percentage": 0,
-					"income_account": income_account,
-					"expense_account": expense_account,
-					"is_fixed_asset": 1,
-					"asset": asset_name,
-					"cost_center": cost_center,
-				}
-			],
-		}
-	)
+	# ERPNext's own builder: it puts the asset on the invoice as a fixed-asset row,
+	# takes the company's disposal account and depreciation cost centre, and copies
+	# the Asset's accounting dimensions. Submitting the invoice is what sells the
+	# Asset (status Sold) and books the gain or loss against the disposal account.
+	# This used to be a hand-built invoice that guessed every account itself.
+	si = make_asset_sales_invoice(asset_name, asset.item_code or "herd", company)
+	si.customer = customer
+	si.currency = company_currency
+	si.conversion_rate = 1
+	# Without set_posting_time ERPNext resets posting_date to today on
+	# insert, and the due date (the disposal date) then falls before it:
+	# "Due Date cannot be before Posting Date". A cull approved a day
+	# after it was raised never got its invoice.
+	si.set_posting_time = 1
+	si.posting_date = posting_date
+	si.due_date = posting_date
+	si.update_stock = 0
+	price_list = frappe.db.get_single_value("Selling Settings", "selling_price_list")
+	if price_list:
+		si.selling_price_list = price_list
+		si.price_list_currency = frappe.db.get_value("Price List", price_list, "currency") or company_currency
+		si.plc_conversion_rate = 1
+	si.remarks = "Livestock sale - " + asset_name
+	if farm and si.meta.has_field("custom_farm"):
+		si.custom_farm = farm
+	if business_unit and si.meta.has_field("custom_business_unit"):
+		si.custom_business_unit = business_unit
+	row = si.items[0]
+	row.qty = 1
+	row.rate = selling_amount
+	row.price_list_rate = selling_amount
+	row.discount_percentage = 0
+	row.description = "Livestock sale: " + (asset.asset_name or asset_name)
 
 	si.flags.ignore_pricing_rule = True
 	si.flags.ignore_permissions = True

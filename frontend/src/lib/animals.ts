@@ -74,6 +74,33 @@ export interface AnimalKpis {
   treatments: number;
 }
 
+/** Insurance cover, from Upande Asset. `none` = capitalised but not covered;
+ * `no_asset` = not on the fixed-asset register; `unavailable` = no insurance module. */
+export type CoverState = "insured" | "expiring" | "expired" | "none" | "no_asset" | "unavailable";
+
+export interface CoverDetail {
+  state: CoverState;
+  asset?: string | null;
+  policy: string | null;
+  policyNumber: string | null;
+  insurer: string | null;
+  sumInsured: number | null;
+  start: string | null;
+  end: string | null;
+  daysLeft: number | null;
+}
+
+/** What the badge says; null where there is nothing worth a badge. */
+export function coverLabel(state: CoverState | undefined, detail = false): string | null {
+  switch (state) {
+    case "insured": return "Insured";
+    case "expiring": return "Cover expiring";
+    case "expired": return "Cover expired";
+    case "none": return detail ? "No cover" : null;
+    default: return null;
+  }
+}
+
 export interface AnimalSummary {
   id: string;
   name: string;
@@ -84,9 +111,11 @@ export interface AnimalSummary {
   status: string;
   stage: CycleStage;
   photo: string | null;
+  cover?: CoverState;
 }
 
 export interface AnimalProfile extends AnimalSummary {
+  coverDetail?: CoverDetail;
   dam: string | null;
   sire: string | null;
   lastCalving: string | null;
