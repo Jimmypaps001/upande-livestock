@@ -20,6 +20,10 @@ const POST = `${NS}.post_cull.post_cull`;
 const MORTALITY = `${NS}.record_mortality.record_mortality`;
 const SETTLE = `${NS}.settle_insurance_claim.settle_insurance_claim`;
 const CANDIDATES = `${NS}.cull_candidates.cull_candidates`;
+const DISPOSAL = "upande_livestock.serverscripts.disposal";
+const BUYER_SEARCH = `${DISPOSAL}.buyer_search.buyer_search`;
+const CREATE_BUYER = `${DISPOSAL}.create_buyer.create_buyer`;
+const SALE_TERMS = `${DISPOSAL}.sale_terms.sale_terms`;
 
 export type Flow = "Sale" | "Disposal" | "Mortality" | "Gift";
 export type ReviewStatus =
@@ -93,6 +97,13 @@ export interface CullCase {
   vet_on: string | null;
   sale_price: number;
   buyer_name: string | null;
+  /** The Customer the sale is invoiced to, once the approval has chosen one. */
+  customer?: string | null;
+  price_basis?: PriceBasis | null;
+  weight_kg?: number | null;
+  rate?: number | null;
+  payment_terms?: string | null;
+  mode_of_payment?: string | null;
   /** How to reach them. Written by raise/approve, and read back here so the
    *  approval panel can show what the case already holds. */
   buyer_contact: string | null;
@@ -219,11 +230,117 @@ export function vetVerdict(caseName: string, verdict: Verdict, notes?: string, v
   });
 }
 
+export type PriceBasis = "Per head" | "Per kg";
+
+/** What the sale form settles; the server works out the rest and refuses an incomplete sale. */
+export interface SaleDraft {
+  customer: string;
+  price_basis: PriceBasis;
+  sale_price: string;
+  rate: string;
+  weight_kg: string;
+  payment_terms: string;
+  mode_of_payment: string;
+}
+
+export const BLANK_SALE: SaleDraft = {
+  customer: "", price_basis: "Per head", sale_price: "", rate: "", weight_kg: "", payment_terms: "", mode_of_payment: "",
+};
+
+export interface Buyer {
+  name: string;
+  customer_name: string;
+  customer_type: string;
+  tax_id: string | null;
+  mobile_no: string | null;
+  payment_terms: string | null;
+}
+
+export interface BuyerCard extends Buyer {
+  email_id: string | null;
+  customer_group: string | null;
+  territory: string | null;
+  default_currency: string | null;
+  default_price_list: string | null;
+  address: string;
+  receivable: string | null;
+  disabled: number;
+}
+
+export interface SaleLine {
+  item_code: string;
+  item_name: string;
+  asset: string | null;
+  qty: number;
+  uom: string;
+  rate: number;
+  amount: number;
+  income_account: string;
+  cost_center: string;
+}
+
+export interface SalePreview {
+  customer: BuyerCard | null;
+  terms: {
+    company: string; currency: string; price_list: string | null; payment_terms: string | null; due_date: string;
+    mode_of_payment: string | null; payment_type_code: string; cost_center: string | null; farm: string | null;
+    business_unit: string | null; taxes_template: string | null; debit_to: string | null; amount: number;
+    price_basis: PriceBasis; rate: number | null; weight_kg: number | null;
+  };
+  missing: string[];
+  notes: string[];
+  lines: SaleLine[];
+  taxes: { description: string; rate: number; amount: number }[];
+  net_total?: number;
+  grand_total?: number;
+  tax_label?: string;
+  weight_kg: number | null;
+  options: { payment_terms: string[]; modes_of_payment: string[] };
+}
+
+/** The draft's terms as the endpoints take them: numbers as numbers, blanks left out. */
+export function saleTerms(d: SaleDraft) {
+  const n = (v: string) => (v.trim() && Number.isFinite(Number(v)) ? Number(v) : undefined);
+  return {
+    customer: d.customer || undefined,
+    price_basis: d.price_basis,
+    sale_price: d.price_basis === "Per head" ? n(d.sale_price) : undefined,
+    rate: d.price_basis === "Per kg" ? n(d.rate) : undefined,
+    weight_kg: n(d.weight_kg),
+    payment_terms: d.payment_terms || undefined,
+    mode_of_payment: d.mode_of_payment || undefined,
+  };
+}
+
+export function buyerSearch(term: string) {
+  return call<{ buyers: Buyer[] }>(BUYER_SEARCH, { payload: { term } });
+}
+
+export function createBuyer(input: {
+  customer_name: string;
+  phone: string;
+  tax_id?: string;
+  email?: string;
+  customer_type?: string;
+  payment_terms?: string;
+}) {
+  return call<{ name: string; existing: boolean }>(CREATE_BUYER, { payload: input });
+}
+
+export function getSalePreview(animal: string, d: SaleDraft, postingDate?: string) {
+  return call<SalePreview>(SALE_TERMS, { payload: { animal, posting_date: postingDate, ...saleTerms(d) } });
+}
+
 export function approveCull(caseName: string, terms: {
     sale_price?: number;
     buyer_name?: string;
     buyer_contact?: string;
     customer?: string;
+    price_basis?: PriceBasis;
+    rate?: number;
+    weight_kg?: number;
+    payment_terms?: string;
+    mode_of_payment?: string;
   } = {}) {
   return call<{ name: string; status: ReviewStatus }>(APPROVE, {
     payload: { case: caseName, ...terms },

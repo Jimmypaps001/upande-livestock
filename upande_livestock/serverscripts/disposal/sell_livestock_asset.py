@@ -16,6 +16,45 @@ def make_asset_sales_invoice(asset, item_code, company):
 	except TypeError:
 		return make_sales_invoice(asset=asset, item_code=item_code, company=company)
 
+def build_sale_invoice(animal_name, customer, selling_amount, posting_date, farm=None, business_unit=None, terms=None):
+	"""The draft Sales Invoice for selling this animal, built and not yet saved.
+
+	`terms` is what the sale form settled (sale_invoice.resolve_terms); a caller with
+	none (the loss flow, the REST endpoint) gets the same terms worked out from
+	defaults, so every sale is complete the same way."""
+	from upande_livestock.serverscripts.common import sale_invoice
+
+	animal_doc = frappe.get_doc("Animal", animal_name)
+	asset_name = animal_doc.asset_link
+	if not asset_name:
+		frappe.throw(
+			"Animal " + str(animal_name) + " is not capitalised (no linked Asset); cannot sell as fixed asset."
+		)
+	asset = frappe.get_doc("Asset", asset_name)
+	if asset.docstatus != 1:
+		frappe.throw("Asset must be submitted before selling")
+	if asset.status in ("Cancelled", "Sold", "Scrapped"):
+		frappe.throw("Asset is already " + asset.status)
+
+	if not terms:
+		terms = sale_invoice.resolve_terms(
+			animal_name, customer, selling_amount, posting_date, farm=farm, business_unit=business_unit
+		)
+	else:
+		terms = dict(terms, customer=customer, amount=float(selling_amount), posting_date=str(posting_date))
+	sale_invoice.assert_ready(terms)
+
+	# ERPNext's own builder: it puts the asset on the invoice as a fixed-asset row,
+	# takes the company's disposal account and the Asset's accounting dimensions.
+	# Submitting the invoice is what sells the Asset (status Sold) and books the gain
+	# or loss against the disposal account. sale_invoice.apply_terms then fills the
+	# buyer, terms, receivable, cost centre, farm, business unit, taxes and eTIMS
+	# codes, so Accounts receives a draft that needs nothing typed.
+	si = make_asset_sales_invoice(asset_name, asset.item_code or "herd", terms["company"])
+	sale_invoice.apply_terms(si, terms)
+	return si, asset_name, asset, terms
+
+
 def _sell_livestock_asset(
 	animal=None,
 	asset_name=None,
@@ -24,11 +63,10 @@ def _sell_livestock_asset(
 	posting_date=None,
 	farm=None,
 	business_unit=None,
+	terms=None,
 ):
 	animal_name = animal or asset_name
 	posting_date = posting_date or frappe.utils.today()
-	farm = farm or ""
-	business_unit = business_unit or ""
 
 	if not animal_name:
 		frappe.throw("animal is required")
@@ -38,59 +76,9 @@ def _sell_livestock_asset(
 		frappe.throw("selling_amount is required")
 
 	selling_amount = float(selling_amount)
-
-	animal_doc = frappe.get_doc("Animal", animal_name)
-	asset_name = animal_doc.asset_link
-	if not asset_name:
-		frappe.throw(
-			"Animal "
-			+ str(animal_name)
-			+ " is not capitalised (no linked Asset); cannot sell as fixed asset."
-		)
-	asset = frappe.get_doc("Asset", asset_name)
-
-	if asset.docstatus != 1:
-		frappe.throw("Asset must be submitted before selling")
-
-	if asset.status in ("Cancelled", "Sold", "Scrapped"):
-		frappe.throw("Asset is already " + asset.status)
-
-	company = asset.company
-	company_currency = frappe.get_cached_value("Company", company, "default_currency") or "KES"
-
-	# ERPNext's own builder: it puts the asset on the invoice as a fixed-asset row,
-	# takes the company's disposal account and depreciation cost centre, and copies
-	# the Asset's accounting dimensions. Submitting the invoice is what sells the
-	# Asset (status Sold) and books the gain or loss against the disposal account.
-	# This used to be a hand-built invoice that guessed every account itself.
-	si = make_asset_sales_invoice(asset_name, asset.item_code or "herd", company)
-	si.customer = customer
-	si.currency = company_currency
-	si.conversion_rate = 1
-	# Without set_posting_time ERPNext resets posting_date to today on
-	# insert, and the due date (the disposal date) then falls before it:
-	# "Due Date cannot be before Posting Date". A cull approved a day
-	# after it was raised never got its invoice.
-	si.set_posting_time = 1
-	si.posting_date = posting_date
-	si.due_date = posting_date
-	si.update_stock = 0
-	price_list = frappe.db.get_single_value("Selling Settings", "selling_price_list")
-	if price_list:
-		si.selling_price_list = price_list
-		si.price_list_currency = frappe.db.get_value("Price List", price_list, "currency") or company_currency
-		si.plc_conversion_rate = 1
-	si.remarks = "Livestock sale - " + asset_name
-	if farm and si.meta.has_field("custom_farm"):
-		si.custom_farm = farm
-	if business_unit and si.meta.has_field("custom_business_unit"):
-		si.custom_business_unit = business_unit
-	row = si.items[0]
-	row.qty = 1
-	row.rate = selling_amount
-	row.price_list_rate = selling_amount
-	row.discount_percentage = 0
-	row.description = "Livestock sale: " + (asset.asset_name or asset_name)
+	si, asset_name, asset, terms = build_sale_invoice(
+		animal_name, customer, selling_amount, posting_date, farm, business_unit, terms
+	)
 
 	si.flags.ignore_pricing_rule = True
 	si.flags.ignore_permissions = True

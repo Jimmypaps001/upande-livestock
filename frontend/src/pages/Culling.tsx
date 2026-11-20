@@ -25,9 +25,13 @@ import { can } from "@/lib/can";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/Toast";
 import { isError } from "@/lib/frappe";
+import { SaleTerms } from "@/components/culling/SaleTerms";
 import {
   approveCull,
   asSummaries,
+  BLANK_SALE,
+  saleTerms,
+  type SaleDraft,
   getCullBoard,
   postCull,
   rejectCull,
@@ -73,9 +77,9 @@ export function Culling() {
   const [term, setTerm] = useState("");
   const toast = useToast();
   const [notes, setNotes] = useState("");
-  const [price, setPrice] = useState("");
-  const [buyer, setBuyer] = useState("");
-  const [buyerContact, setBuyerContact] = useState("");
+  // The sale's terms (buyer, price, payment terms) and whether the invoice they
+  // make would save; the Approve button waits on the second.
+  const [sale, setSale] = useState<SaleDraft>(BLANK_SALE);
   const who = useOperator();
 
   const load = useCallback(async () => {
@@ -117,9 +121,16 @@ export function Culling() {
 
   useEffect(() => {
     setNotes("");
-    setPrice(chosen?.sale_price ? String(chosen.sale_price) : "");
-    setBuyer(chosen?.buyer_name ?? "");
-    setBuyerContact(chosen?.buyer_contact ?? "");
+    setSale({
+      ...BLANK_SALE,
+      customer: chosen?.customer ?? "",
+      sale_price: chosen?.sale_price ? String(chosen.sale_price) : "",
+      price_basis: chosen?.price_basis ?? "Per head",
+      rate: chosen?.rate ? String(chosen.rate) : "",
+      weight_kg: chosen?.weight_kg ? String(chosen.weight_kg) : "",
+      payment_terms: chosen?.payment_terms ?? "",
+      mode_of_payment: chosen?.mode_of_payment ?? "",
+    });
   }, [chosen?.name]);
 
   async function act(fn: () => Promise<{ error?: string } | Record<string, unknown>>, said: string) {
@@ -271,12 +282,8 @@ export function Culling() {
                     busy={busy}
                     notes={notes}
                     setNotes={setNotes}
-                    price={price}
-                    setPrice={setPrice}
-                    buyer={buyer}
-                    setBuyer={setBuyer}
-                    buyerContact={buyerContact}
-                    setBuyerContact={setBuyerContact}
+                    sale={sale}
+                    setSale={setSale}
                     act={act}
                     who={who}
                   />
@@ -458,17 +465,27 @@ export function Culling() {
  * it, and offering an action the server will refuse is worse than offering
  * none.
  */
+/** What approving a sale sends: the draft, as numbers, blanks dropped. */
+function approvalTerms(d: SaleDraft) {
+  const t = saleTerms(d);
+  return {
+    customer: t.customer,
+    price_basis: t.price_basis,
+    sale_price: t.sale_price,
+    rate: t.rate,
+    weight_kg: t.weight_kg,
+    payment_terms: t.payment_terms,
+    mode_of_payment: t.mode_of_payment,
+  };
+}
+
 function CaseChain({
   c,
   busy,
   notes,
   setNotes,
-  price,
-  setPrice,
-  buyer,
-  setBuyer,
-  buyerContact,
-  setBuyerContact,
+  sale,
+  setSale,
   act,
   who,
 }: {
@@ -476,16 +493,13 @@ function CaseChain({
   busy: boolean;
   notes: string;
   setNotes: (v: string) => void;
-  price: string;
-  setPrice: (v: string) => void;
-  buyer: string;
-  setBuyer: (v: string) => void;
-  buyerContact: string;
-  setBuyerContact: (v: string) => void;
+  sale: SaleDraft;
+  setSale: (v: SaleDraft) => void;
   act: (fn: () => Promise<{ error?: string } | Record<string, unknown>>, said: string) => void;
   who: ReturnType<typeof useOperator>;
 }) {
   const { vets, vet, setVet } = useVetChoice();
+  const [saleReady, setSaleReady] = useState(false);
   const verdicts: readonly Verdict[] =
     c.flow === "Sale" ? (["Fit for sale", "Not fit for sale"] as const) : VERDICTS;
 
@@ -545,34 +559,16 @@ function CaseChain({
 
       {c.status === "Awaiting Approval" && can.write("Livestock Disposal") && (
         <div className="flex flex-col gap-3">
-          {c.flow === "Sale" && (
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="ap-buyer">Buyer</Label>
-                <Input id="ap-buyer" value={buyer} onChange={(e) => setBuyer(e.target.value)} />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                {/* `approve_cull` has always written buyer_contact; only the
-                    name was ever collected, so a sale had no way to reach the
-                    buyer afterwards. */}
-                <Label htmlFor="ap-buyer-contact">Buyer contact / phone</Label>
-                <Input
-                  id="ap-buyer-contact"
-                  value={buyerContact}
-                  onChange={(e) => setBuyerContact(e.target.value)}
-                />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="ap-price">Price</Label>
-                <Input
-                  id="ap-price"
-                  type="number"
-                  min={0}
-                  value={price}
-                  onChange={(e) => setPrice(e.target.value)}
-                />
-              </div>
-              <p className="text-[11.5px] text-[var(--sd-muted)] sm:col-span-2">
+          {c.flow === "Sale" && can.flag("cull_manager") && (
+            <div className="flex flex-col gap-3">
+              <SaleTerms
+                animal={c.animal}
+                postingDate={c.disposal_date}
+                draft={sale}
+                onDraft={setSale}
+                onReady={setSaleReady}
+              />
+              <p className="text-[11.5px] text-[var(--sd-muted)]">
                 The approval is of these terms, not of the idea — so they are settled here
                 rather than at posting.
               </p>
@@ -580,18 +576,14 @@ function CaseChain({
           )}
           <div className="flex flex-wrap gap-2">
             {can.flag("cull_manager") && <Button
-              disabled={busy}
+              disabled={busy || (c.flow === "Sale" && !saleReady)}
               onClick={() =>
                 act(
                   () =>
                     approveCull(
                       c.name,
                       c.flow === "Sale"
-                        ? {
-                            sale_price: price ? Number(price) : undefined,
-                            buyer_name: buyer || undefined,
-                            buyer_contact: buyerContact || undefined,
-                          }
+                        ? approvalTerms(sale)
                         : {},
                     ),
                   "Approved. She can be posted out.",

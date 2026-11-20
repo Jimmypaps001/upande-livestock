@@ -22,6 +22,20 @@
   "customer",
   "buyer_name",
   "buyer_contact",
+  "sb_sale_terms",
+  "sale_company",
+  "sale_price_basis",
+  "sale_weight_kg",
+  "sale_rate",
+  "sale_payment_terms",
+  "sale_due_date",
+  "cb_sale_terms",
+  "sale_mode_of_payment",
+  "sale_debit_to",
+  "sale_cost_center",
+  "sale_farm",
+  "sale_business_unit",
+  "sale_taxes_template",
   "gifted_to",
   "gift_destination",
   "sb_accounting",
@@ -328,13 +342,110 @@
    "fieldtype": "Small Text",
    "label": "Why It Was Refused",
    "read_only": 1
+  },
+  {
+   "fieldname": "sb_sale_terms",
+   "fieldtype": "Section Break",
+   "label": "Sale invoice terms",
+   "depends_on": "eval:doc.disposal_type=='Sold'",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "sale_company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "no_copy": 1
+  },
+  {
+   "fieldname": "sale_price_basis",
+   "fieldtype": "Select",
+   "label": "Price basis",
+   "options": "Per head\nPer kg",
+   "default": "Per head",
+   "no_copy": 1
+  },
+  {
+   "fieldname": "sale_weight_kg",
+   "fieldtype": "Float",
+   "label": "Weight sold at (kg)",
+   "depends_on": "eval:doc.sale_price_basis=='Per kg'",
+   "no_copy": 1
+  },
+  {
+   "fieldname": "sale_rate",
+   "fieldtype": "Currency",
+   "label": "Rate per kg",
+   "depends_on": "eval:doc.sale_price_basis=='Per kg'",
+   "no_copy": 1
+  },
+  {
+   "fieldname": "sale_payment_terms",
+   "fieldtype": "Link",
+   "label": "Payment terms",
+   "options": "Payment Terms Template",
+   "no_copy": 1
+  },
+  {
+   "fieldname": "sale_due_date",
+   "fieldtype": "Date",
+   "label": "Due date",
+   "no_copy": 1
+  },
+  {
+   "fieldname": "cb_sale_terms",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "sale_mode_of_payment",
+   "fieldtype": "Link",
+   "label": "Mode of payment",
+   "options": "Mode of Payment",
+   "description": "Optional. Blank for M-Pesa buyers.",
+   "no_copy": 1
+  },
+  {
+   "fieldname": "sale_debit_to",
+   "fieldtype": "Link",
+   "label": "Debit To (receivable)",
+   "options": "Account",
+   "no_copy": 1
+  },
+  {
+   "fieldname": "sale_cost_center",
+   "fieldtype": "Link",
+   "label": "Cost centre",
+   "options": "Cost Center",
+   "no_copy": 1
+  },
+  {
+   "fieldname": "sale_farm",
+   "fieldtype": "Link",
+   "label": "Farm",
+   "options": "Farm",
+   "no_copy": 1
+  },
+  {
+   "fieldname": "sale_business_unit",
+   "fieldtype": "Link",
+   "label": "Business unit",
+   "options": "Business Unit",
+   "no_copy": 1
+  },
+  {
+   "fieldname": "sale_taxes_template",
+   "fieldtype": "Link",
+   "label": "Sales taxes template",
+   "options": "Sales Taxes and Charges Template",
+   "description": "Blank for no VAT rows.",
+   "no_copy": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-10-05 14:00:00.000000",
+ "modified": "2026-11-20 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Upande Livestock",
  "name": "Livestock Disposal",

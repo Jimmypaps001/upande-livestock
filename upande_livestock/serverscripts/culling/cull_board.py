@@ -43,6 +43,9 @@ def cull_board(payload=None):
 			          d.custom_evidence AS evidence, d.custom_was_productive AS was_productive,
 			          d.custom_death_cause AS death_cause, d.custom_vet_verdict AS vet_verdict,
 			          d.custom_vet_on AS vet_on, d.sale_price, d.buyer_name,
+			          d.customer, d.sale_price_basis AS price_basis, d.sale_weight_kg AS weight_kg,
+			          d.sale_rate AS rate, d.sale_payment_terms AS payment_terms,
+			          d.sale_mode_of_payment AS mode_of_payment,
 			          d.buyer_contact, d.gift_destination, d.gifted_to,
 			          a.current_herd AS herd
 			   FROM `tabLivestock Disposal` d

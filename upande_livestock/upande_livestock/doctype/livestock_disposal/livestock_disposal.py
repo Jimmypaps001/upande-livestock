@@ -20,7 +20,7 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 
-from upande_livestock.serverscripts.common import backdate, culling, loss
+from upande_livestock.serverscripts.common import backdate, culling, loss, sale_invoice
 from upande_livestock.serverscripts.common.animal import recompute_herd_count, retire_animal
 from upande_livestock.serverscripts.disposal.scrap_livestock_asset import (
 	_scrap_livestock_asset,
@@ -61,6 +61,14 @@ class LivestockDisposal(Document):
 			# A buyer typed by name has no Customer to invoice, so the sale used to
 			# post nothing and report success.
 			frappe.throw(_("Choose the Customer the sale is invoiced to."))
+		if self.disposal_type in SALE_TYPES and self.sale_price and self.customer and not self.get("custom_is_backdated"):
+			# The draft invoice must save without Accounts typing anything, so what
+			# it needs is checked now, while the animal can still be kept: after
+			# on_submit she is retired and a failed posting is only a warning.
+			terms = sale_invoice.resolve_terms(
+				self.animal, self.customer, self.sale_price, self.disposal_date, **sale_invoice.from_disposal(self)
+			)
+			sale_invoice.assert_ready(terms)
 
 	def on_submit(self):
 		self.post_asset_disposal()
@@ -114,6 +122,12 @@ class LivestockDisposal(Document):
 			move.flags.ignore_permissions = True
 			move.cancel()
 
+	def invoice_terms(self):
+		"""The terms the approval settled, with anything left blank worked out now."""
+		return sale_invoice.resolve_terms(
+			self.animal, self.customer, self.sale_price, self.disposal_date, **sale_invoice.from_disposal(self)
+		)
+
 	def post_asset_disposal(self):
 		"""Scrap or sell the linked Asset. Warn rather than throw on failure.
 
@@ -157,6 +171,7 @@ class LivestockDisposal(Document):
 					customer=self.customer,
 					selling_amount=self.sale_price,
 					posting_date=self.disposal_date,
+					terms=self.invoice_terms(),
 				)
 				# A sale posts a Sales Invoice, not a Journal Entry. The old
 				# sale_journal_entry field (Link -> Journal Entry) could never hold

@@ -41,6 +41,12 @@ IGNORE_TEST_RECORD_DEPENDENCIES = [
 	"Sales Invoice",
 	"Asset",
 	"Item Group",
+	# Sale-terms links on the Disposal (what the draft invoice is built from).
+	"Payment Terms Template",
+	"Mode of Payment",
+	"Farm",
+	"Business Unit",
+	"Sales Taxes and Charges Template",
 ]
 
 

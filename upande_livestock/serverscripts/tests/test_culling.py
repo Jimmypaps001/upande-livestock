@@ -25,6 +25,7 @@ from upande_livestock.serverscripts.culling.raise_cull import raise_cull
 from upande_livestock.serverscripts.culling.record_mortality import record_mortality
 from upande_livestock.serverscripts.culling.reject_cull import reject_cull
 from upande_livestock.serverscripts.culling.vet_verdict import vet_verdict
+from upande_livestock.serverscripts.disposal.create_buyer import create_buyer
 from upande_livestock.serverscripts.tests.test_operations import (
 	_make_cow,
 	_purge,
@@ -170,6 +171,14 @@ class TestTheVetsVerdictIsFinalOnHealth(IntegrationTestCase):
 		self.assertIn(frappe.session.user, d.custom_vet_notes)
 
 
+def _drop_buyer(name):
+	for c in frappe.get_all("Dynamic Link", filters={"link_doctype": "Customer", "link_name": name,
+	                                                 "parenttype": "Contact"}, pluck="parent"):
+		frappe.delete_doc("Contact", c, force=True, ignore_permissions=True)
+	frappe.delete_doc("Customer", name, force=True, ignore_permissions=True)
+	frappe.db.commit()
+
+
 class TestAnApprovalIsOfTerms(IntegrationTestCase):
 	"""Signing off a sale with no price is signing a blank cheque."""
 
@@ -180,22 +189,28 @@ class TestAnApprovalIsOfTerms(IntegrationTestCase):
 		self.addCleanup(_tidy, self.animal)
 		self.case = raise_cull({"animal": self.animal, "flow": culling.SALE})["name"]
 		vet_verdict({"case": self.case, "verdict": "Fit for sale"})
+		# The buyer of a sale is a Customer the invoice can be raised to, not a name.
+		made = create_buyer({"customer_name": "ZZ Approve Buyer " + frappe.generate_hash(length=5),
+		                     "phone": "0712345678"})
+		self.buyer = made["name"]
+		self.addCleanup(_drop_buyer, self.buyer)
 
 	def test_a_sale_with_no_price_cannot_be_approved(self):
-		got = approve_cull({"case": self.case, "buyer_name": "Juma"})
+		got = approve_cull({"case": self.case, "customer": self.buyer})
 		self.assertIn("price", got.get("error", ""))
 
 	def test_a_sale_with_no_buyer_cannot_be_approved(self):
 		got = approve_cull({"case": self.case, "sale_price": 50000})
-		self.assertIn("buying her", got.get("error", ""))
+		self.assertIn("Choose the buyer", got.get("error", ""))
 
 	def test_the_terms_are_stored_as_approved(self):
-		got = approve_cull({"case": self.case, "sale_price": 62000, "buyer_name": "Juma"})
+		got = approve_cull({"case": self.case, "sale_price": 62000, "customer": self.buyer})
 		self.assertEqual(got["status"], culling.APPROVED)
 		d = frappe.db.get_value(
-			"Livestock Disposal", self.case, ["sale_price", "buyer_name"], as_dict=True)
+			"Livestock Disposal", self.case, ["sale_price", "buyer_name", "customer"], as_dict=True)
 		self.assertEqual(d.sale_price, 62000)
-		self.assertEqual(d.buyer_name, "Juma")
+		self.assertEqual(d.customer, self.buyer)
+		self.assertTrue(d.buyer_name)
 
 	def test_a_refusal_needs_a_reason(self):
 		got = reject_cull({"case": self.case})

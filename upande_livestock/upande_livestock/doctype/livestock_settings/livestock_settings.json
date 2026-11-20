@@ -124,6 +124,7 @@
   "custom_feed_item_group",
   "cb_husbandry_stock",
   "semen_item",
+  "sire_item_group",
   "tab_assets",
   "calf_asset_section",
   "create_calf_asset",
@@ -156,6 +157,7 @@
   "custom_milk_business_unit",
   "custom_disposal_business_unit",
   "custom_animal_sale_item",
+  "custom_sale_taxes_template",
   "sb_account_mapping",
   "custom_animal_asset_account",
   "custom_animal_sale_income_account",
@@ -942,6 +944,14 @@
    "options": "Item"
   },
   {
+   "default": "Dairy Others",
+   "description": "Item group of the semen straws. The Sires page offers its items (and any item named semen) when linking a sire to his straw, and creates a missing straw in it.",
+   "fieldname": "sire_item_group",
+   "fieldtype": "Link",
+   "label": "Sire Straw Item Group",
+   "options": "Item Group"
+  },
+  {
    "fieldname": "tab_assets",
    "fieldtype": "Tab Break",
    "label": "Assets & Appreciation"
@@ -1455,6 +1465,13 @@
    "fieldname": "allow_offline_milking_grace",
    "fieldtype": "Check",
    "label": "Allow offline milkings to sync one day late"
+  },
+  {
+   "fieldname": "custom_sale_taxes_template",
+   "fieldtype": "Link",
+   "label": "Animal Sale Taxes Template",
+   "options": "Sales Taxes and Charges Template",
+   "description": "Taxes on the draft Sales Invoice of an animal sale. Leave blank for none (livestock has been invoiced without VAT rows)."
   }
  ],
  "grid_page_length": 50,
