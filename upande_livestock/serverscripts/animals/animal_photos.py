@@ -24,6 +24,7 @@ import frappe
 from frappe import _
 from frappe.utils import get_fullname
 
+from upande_livestock.serverscripts.common.idempotency import idempotent
 from upande_livestock.serverscripts.common import thumbs
 from upande_livestock.serverscripts.common.envelope import as_dict, guard_read, run
 from upande_livestock.serverscripts.common.guards import require_employee
@@ -216,8 +217,20 @@ def _keep_old_profile(animal):
 		_attach(old, "Animal", animal)
 
 
+def _case_of(client_ref):
+	"""The health case a filed treatment (by its client_ref) opened or added to."""
+	import json
+
+	raw = frappe.db.get_value("Livestock Client Ref", str(client_ref).strip()[:140], "result")
+	try:
+		return (json.loads(raw or "{}") or {}).get("case")
+	except Exception:
+		return None
+
+
 @frappe.whitelist()
-def add_animal_photo(animal=None, file_url=None, context=None, ref=None, caption=None, payload=None):
+@idempotent
+def add_animal_photo(animal=None, file_url=None, context=None, ref=None, caption=None, payload=None, ref_client_ref=None):
 	"""Attach an uploaded picture to the animal for a stated purpose.
 
 	context health_case: `ref` is one of HER cases and it must be open (Open or
@@ -231,6 +244,12 @@ def add_animal_photo(animal=None, file_url=None, context=None, ref=None, caption
 		url = (file_url or d.get("file_url") or "").strip()
 		ctx = context or d.get("context")
 		rf = ref or d.get("ref")
+		# A photo taken with a treatment that was still in the phone's queue does not
+		# know its health case yet; it names the treatment's client_ref and the case is
+		# read from the answer the server kept for it.
+		linked = ref_client_ref or d.get("ref_client_ref")
+		if not rf and linked:
+			rf = _case_of(linked)
 		cap = caption or d.get("caption")
 
 		require_employee("Animal")

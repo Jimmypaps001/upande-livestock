@@ -7,6 +7,7 @@ import frappe
 from frappe import _
 from frappe.utils import flt, today
 
+from upande_livestock.serverscripts.common.idempotency import idempotent
 from upande_livestock.serverscripts.common.company import company_or_throw
 from upande_livestock.serverscripts.common.envelope import as_dict, guard, run
 from upande_livestock.serverscripts.common import vet_fee as vet_fees
@@ -20,6 +21,7 @@ from upande_livestock.serverscripts.common.health_case import (
 
 
 @frappe.whitelist()
+@idempotent
 def treat_animal(payload):
 	"""Record a treatment, opening a file for it if she has none.
 

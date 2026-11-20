@@ -7,12 +7,14 @@ import frappe
 from frappe import _
 from frappe.utils import flt, today
 
+from upande_livestock.serverscripts.common.idempotency import idempotent
 from upande_livestock.serverscripts.common import quality
 from upande_livestock.serverscripts.common.envelope import as_dict, run
 from upande_livestock.serverscripts.common.guards import require_employee
 
 
 @frappe.whitelist()
+@idempotent
 def record_milk_quality(payload):
 	"""Write lab results against a submitted Milk Recording.
 

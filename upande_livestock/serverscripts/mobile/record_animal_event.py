@@ -25,6 +25,7 @@ key does — a phone in the field is still calling it.
 
 import frappe
 
+from upande_livestock.serverscripts.common.idempotency import idempotent
 from upande_livestock.serverscripts.breeding.create_abortion_event import create_abortion_event
 from upande_livestock.serverscripts.breeding.create_drying_off_event import (
 	create_drying_off_event,
@@ -65,6 +66,7 @@ ROUTES = {
 # it its own file here, not to special-case the dispatcher.
 
 @frappe.whitelist()
+@idempotent
 def record_animal_event(payload=None):
 	def go():
 		d = as_dict(payload)

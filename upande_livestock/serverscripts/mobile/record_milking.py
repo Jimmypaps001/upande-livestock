@@ -15,11 +15,13 @@ timestamp that has already crossed a timezone.
 
 import frappe
 
+from upande_livestock.serverscripts.common.idempotency import idempotent
 from upande_livestock.serverscripts.common.envelope import as_dict, run
 from upande_livestock.serverscripts.milking.create_milk_recording import record
 
 
 @frappe.whitelist()
+@idempotent
 def record_milking(payload=None):
 	def go():
 		# from_handset: a milker at the parlour cannot have a bulk tank SCC, so

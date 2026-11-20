@@ -4,12 +4,14 @@ import frappe
 from frappe import _
 from frappe.utils import flt
 
+from upande_livestock.serverscripts.common.idempotency import idempotent
 from upande_livestock.serverscripts.common import backdate
 from upande_livestock.serverscripts.common.envelope import as_dict, guard, run
 from upande_livestock.serverscripts.common.vet import resolve_vet
 
 
 @frappe.whitelist()
+@idempotent
 def record_disposal(payload):
 	"""Retire an animal by creating and submitting a Livestock Disposal.
 

@@ -4,6 +4,7 @@ import frappe
 from frappe import _
 from frappe.utils import flt
 
+from upande_livestock.serverscripts.common.idempotency import idempotent
 from upande_livestock.serverscripts.common.company import company_or_throw
 from upande_livestock.serverscripts.common.employee import employee_or_throw
 from upande_livestock.serverscripts.husbandry._shared import _clean_drug_rows
@@ -21,6 +22,7 @@ ESCALATED = "Escalated to Case"
 
 
 @frappe.whitelist()
+@idempotent
 def create_check_up(payload):
 	"""Record a routine check-up as a Livestock Diagnosis.
 

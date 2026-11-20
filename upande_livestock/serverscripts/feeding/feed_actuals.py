@@ -45,6 +45,7 @@ import frappe
 from frappe import _
 from frappe.utils import flt, getdate, now_datetime, today
 
+from upande_livestock.serverscripts.common.idempotency import idempotent
 from upande_livestock.serverscripts.common import backdate, event_types
 from upande_livestock.serverscripts.common.envelope import guard, guard_read, guard_stock, run
 from upande_livestock.serverscripts.common.employee import acting_employee
@@ -587,6 +588,7 @@ def feed_day_program(date=None, herd=None):
 
 
 @frappe.whitelist()
+@idempotent
 def amend_feed_day(herd, date, components, remarks=None):
 	"""Amend what a herd was actually fed. `components`: `[{item_code, actual_kg}]`;
 	an actual of 0 removes an item that was not used.
@@ -606,6 +608,7 @@ def amend_feed_day(herd, date, components, remarks=None):
 
 
 @frappe.whitelist()
+@idempotent
 def reset_feed_day(herd, date):
 	"""Put a herd's day back to the recipe (drops the amendment). Refused once mixed.
 
@@ -623,6 +626,7 @@ def reset_feed_day(herd, date):
 
 
 @frappe.whitelist()
+@idempotent
 def manufacture_feed_actuals(herd, date=None, employee=None, allow_shortage=False):
 	"""Mix and issue the day's actuals. Short stock leaves a dated draft.
 

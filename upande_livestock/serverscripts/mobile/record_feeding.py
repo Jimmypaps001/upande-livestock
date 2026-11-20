@@ -28,6 +28,7 @@ endpoints instead; that hole is why the engine is no longer whitelisted.
 
 import frappe
 
+from upande_livestock.serverscripts.common.idempotency import idempotent
 from upande_livestock.serverscripts.common import event_types
 from upande_livestock.serverscripts.common.envelope import as_dict, run
 from upande_livestock.serverscripts.feeding.feed_day_status import feed_day_status
@@ -38,6 +39,7 @@ from upande_livestock.serverscripts.feeding.manufacture_feed import manufacture_
 
 
 @frappe.whitelist()
+@idempotent
 def record_feeding(payload=None):
 	def go():
 		d = as_dict(payload)

@@ -16,11 +16,13 @@ SAVEPOINT = "livestock_weight_row"
 #: eyeballed figure from a scale reading.
 ESTIMATE_METHOD = "Visual Estimate"
 
+from upande_livestock.serverscripts.common.idempotency import idempotent
 from upande_livestock.serverscripts.common.envelope import as_dict, guard, run
 from upande_livestock.serverscripts.weights.create_weight_record import record_one
 
 
 @frappe.whitelist()
+@idempotent
 def record_weights(payload):
 	"""Record a weight for each animal named, or for every animal in a herd.
 
