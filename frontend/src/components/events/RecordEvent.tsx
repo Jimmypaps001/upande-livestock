@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Search } from "lucide-react";
 import { DatePicker } from "@/components/DatePicker";
 import { Notice } from "@/components/feeding/Notice";
@@ -86,6 +86,9 @@ export interface FieldSpec {
    *  one names a shelf that does not hold this one. The server orders these
    *  most-stocked first, so the first option is the store to go to. */
   autoPick?: boolean;
+  /** A search field's "+ Add '<typed>'" row (omitted when the user may not add). */
+  onCreate?: (term: string) => void;
+  createLabel?: string;
 }
 
 export interface RecordEventProps<O> {
@@ -125,6 +128,14 @@ export interface RecordEventProps<O> {
    *  Stock) the items table appears on its own, offering the type's in-stock
    *  items from the options payload's `items_by_event` — no per-page wiring. */
   eventType?: string;
+  /** The item code the form's own choices imply (a service's sire brings his straw).
+   *  When it changes it replaces the row it added before: set as the first row with
+   *  qty 1 and the item's own store; `undefined` removes it. Only an item the table
+   *  offers is added. */
+  autoItem?: (options: O, values: Record<string, string>) => string | undefined;
+  /** Values to put on the form once the options have reloaded (a sire just added).
+   *  Applied when `nonce` changes, after the form's own defaults are seeded. */
+  preset?: { nonce: number; values: Record<string, string> };
   /** Offer the vet picker. For events a vet does: check-ups, pregnancy
    *  diagnosis, drying off. The server applies the same default. */
   withVet?: boolean;
@@ -147,6 +158,8 @@ export function RecordEvent<O>({
   operatorOf,
   itemsOf: itemsOfProp,
   eventType,
+  autoItem,
+  preset,
   withVet,
 }: RecordEventProps<O>) {
   const itemsOf =
@@ -207,6 +220,13 @@ export function RecordEvent<O>({
     setValues(seed);
   }, [options, fieldsOf]);
 
+  const presetDone = useRef(0);
+  useEffect(() => {
+    if (!options || !preset || !preset.nonce || presetDone.current === preset.nonce) return;
+    presetDone.current = preset.nonce;
+    setValues((prev) => ({ ...prev, ...preset.values }));
+  }, [options, preset]);
+
   // A dependent select follows its parent. Only ever written when the current
   // value is not on offer, so this cannot fight the operator for the field.
   useEffect(() => {
@@ -222,6 +242,22 @@ export function RecordEvent<O>({
       return next;
     });
   }, [fields]);
+
+  const wanted = options && autoItem ? autoItem(options, values) : undefined;
+  const added = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    if (!options || !autoItem || added.current === wanted) return;
+    const choice = itemsOf?.(options)?.find((c) => c.value === wanted);
+    const prev = added.current;
+    added.current = choice ? wanted : undefined;
+    if (prev === added.current) return;
+    setItemRows((rows) => {
+      const rest = rows.filter((r) => r.item && r.item !== prev);
+      const row = choice ? [{ ...blankRow("1"), item: choice.value, store: choice.warehouse ?? "" }] : [];
+      const next = [...row, ...rest];
+      return next.length ? next : [blankRow()];
+    });
+  }, [wanted, options, autoItem, itemsOf]);
 
   const chosen = animals.find((a) => a.name === picked) || null;
   const results = useMemo(() => {
@@ -280,6 +316,7 @@ export function RecordEvent<O>({
     }
     toast(said(r, picked));
     setPicked(null);
+    added.current = undefined;
     setItemRows([blankRow()]);
     void refresh();
   }
@@ -414,7 +451,7 @@ function Field({
   onChange: (v: string) => void;
 }) {
   const id = `f-${spec.name}`;
-  if ((spec.kind === "select" || spec.kind === "search") && !spec.options?.length) return null;
+  if ((spec.kind === "select" || spec.kind === "search") && !spec.options?.length && !spec.onCreate) return null;
   return (
     <div className={cn("flex flex-col gap-1.5", spec.kind === "notes" && "sm:col-span-2")}>
       <Label htmlFor={id}>{spec.label}</Label>
@@ -426,6 +463,8 @@ function Field({
           options={(spec.options ?? []).map((o) => (typeof o === "string" ? { value: o, label: o } : o))}
           label={spec.label}
           placeholder="Search by name or code"
+          onCreate={spec.onCreate}
+          createLabel={spec.createLabel}
         />
       ) : spec.kind === "select" ? (
         <Picker

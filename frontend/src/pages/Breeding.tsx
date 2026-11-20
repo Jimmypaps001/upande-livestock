@@ -1,6 +1,8 @@
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
+import { SireDialog } from "@/components/sires/SireDialog";
 import { Page, PageHeading } from "@/components/PageShell";
 import { RecordEvent, type FieldSpec } from "@/components/events/RecordEvent";
+import { can } from "@/lib/can";
 import {
   createAbortionEvent,
   createDryingOffEvent,
@@ -37,23 +39,14 @@ import {
  */
 
 export function Service() {
-  const load = useCallback(() => getBreedingOptions(), []);
-  return (
-    <Page>
-      <PageHeading eyebrow="Upande Livestock · Breeding" title="Service">
-        Record an insemination or a natural service. Only cows past the farm's
-        post-calving wait are offered — serving one earlier is a service the
-        calendar cannot answer for.
-      </PageHeading>
-      <RecordEvent<BreedingOptions>
-        eyebrow="Breeding"
-        title="a service"
-        blurb="Cows the farm may serve today."
-        pickLabel="Ready to serve"
-        emptyPick="No cow is ready to serve. They are either too soon after calving or already carrying."
-        load={load}
-        animalsOf={(o) => o.animals}
-        fieldsOf={(o, v): FieldSpec[] => {
+  // A sire added from the picker: the options reload (nonce) and the new sire is selected.
+  const [nonce, setNonce] = useState(0);
+  const [adding, setAdding] = useState<string | null>(null);
+  const [preset, setPreset] = useState<{ nonce: number; values: Record<string, string> }>({ nonce: 0, values: {} });
+  const load = useCallback(() => getBreedingOptions(), [nonce]); // eslint-disable-line react-hooks/exhaustive-deps
+  const mayAdd = can.flag("manage_sires");
+  const fieldsOf = useCallback(
+    (o: BreedingOptions, v: Record<string, string>): FieldSpec[] => {
           // WHICH PATH IS THE MAPPING'S ANSWER, not a release's. The key is
           // ABSENT when Service has no item group mapped (present, possibly
           // empty, when it has one), so absence is what keeps the legacy straw
@@ -104,20 +97,61 @@ export function Service() {
                 label: b.label + (b.type === "Live bull" ? " (live bull)" : "") + (b.sexed ? " (sexed)" : ""),
                 short: b.label,
               })),
-              hint: "Pick the bull. His straw is used when none is chosen below." },
+              hint: sireHint(o, v.sire_link),
+              ...(mayAdd ? { onCreate: (t: string) => setAdding(t), createLabel: "Add sire" } : {}) },
             ...legacyStraw,
             { name: "remarks", label: "Notes", kind: "notes",
               placeholder: "Standing heat at 6am, served at 4pm." },
           ];
+    },
+    [mayAdd],
+  );
+  return (
+    <Page>
+      <SireDialog
+        open={adding !== null}
+        sire={null}
+        initialName={adding ?? ""}
+        onOpenChange={(o) => !o && setAdding(null)}
+        onSaved={(name) => {
+          setPreset((p) => ({ nonce: p.nonce + 1, values: { sire_link: name } }));
+          setNonce((n) => n + 1);
         }}
+      />
+      <PageHeading eyebrow="Upande Livestock · Breeding" title="Service">
+        Record an insemination or a natural service. Only cows past the farm's
+        post-calving wait are offered — serving one earlier is a service the
+        calendar cannot answer for.
+      </PageHeading>
+      <RecordEvent<BreedingOptions>
+        eyebrow="Breeding"
+        title="a service"
+        blurb="Cows the farm may serve today."
+        pickLabel="Ready to serve"
+        emptyPick="No cow is ready to serve. They are either too soon after calving or already carrying."
+        load={load}
+        animalsOf={(o) => o.animals}
+        fieldsOf={fieldsOf}
         operatorOf={(o) => o.employee}
         itemsOf={(o) => o.items_by_event?.["Service"]}
+        preset={preset}
+        autoItem={(o, v) => (o.sire_options ?? []).find((b) => b.name === v.sire_link)?.semen_item || undefined}
         submitLabel="Record the service"
         submit={createServiceEvent}
         said={(r, a) => `${a} served — ${r.name}. The pregnancy check is due on the farm's own interval.`}
       />
     </Page>
   );
+}
+
+/** What sits under the sire picker: his straw is issued by itself; a semen sire with none says so. */
+function sireHint(o: BreedingOptions, link: string | undefined): string {
+  const bull = (o.sire_options ?? []).find((b) => b.name === link);
+  if (bull && bull.type === "Semen" && !bull.semen_item)
+    return can.flag("manage_sires")
+      ? "No straw item linked — set it on the Sires page. This service records without a straw."
+      : "No straw item linked for him. This service records without a straw.";
+  return "Pick the bull. His straw is added to the items below by itself.";
 }
 
 export function Diagnosis() {

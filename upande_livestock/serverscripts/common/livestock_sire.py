@@ -390,6 +390,52 @@ def primary_item(items):
 	return ranked[0][0]
 
 
+def suggest_item(name, code, items):
+	"""Of straw Items [(item_code, item_name)], the one that is this bull's, or None.
+
+	Same reading as the matcher: the code (whatever the studbook prefix says of its
+	number), else the base name, a coded straw not standing against a coded bull
+	of another code. Of several, primary_item's pick."""
+	name, code = tidy(name), canon_code(code or "")
+	hits = []
+	for item_code, item_name in items or []:
+		bull, icode = item_bull(item_name)
+		if not bull:
+			continue
+		if code and icode:
+			ok = code_key(code) == code_key(icode) or (
+				code_tail(code) and code_tail(code) == code_tail(icode) and base_key(bull) == base_key(name))
+		else:
+			ok = bool(base_key(name)) and base_key(bull) == base_key(name)
+		if ok:
+			hits.append((item_code, item_name))
+	return primary_item(hits)
+
+
+def straw_group():
+	"""The item group the farm keeps its straws in (Livestock Settings)."""
+	try:
+		return frappe.db.get_single_value("Livestock Settings", "sire_item_group") or "Dairy Others"
+	except Exception:
+		return "Dairy Others"
+
+
+def straw_candidates(q=None, limit=500):
+	"""[{value, item_name, uom, group}] of Items that can be a sire's straw: in the
+	straw group, or named semen. `q` narrows by any word of the code or name."""
+	group = straw_group()
+	conds = ["i.disabled=0", "(i.item_group=%(group)s or i.item_name like '%%semen%%' or i.item_name like '%%sexed%%')"]
+	args = {"group": group, "limit": int(limit)}
+	for n, w in enumerate((q or "").split()):
+		conds.append(f"(i.item_name like %(w{n})s or i.name like %(w{n})s)")
+		args[f"w{n}"] = f"%{w}%"
+	rows = frappe.db.sql(
+		"select i.name, i.item_name, i.stock_uom, i.item_group from tabItem i where "
+		+ " and ".join(conds) + " order by i.item_name limit %(limit)s", args, as_dict=True)
+	return [{"value": r.name, "item_name": r.item_name, "uom": r.stock_uom, "group": r.item_group,
+	         "label": r.item_name if r.name == r.item_name else f"{r.item_name} · {r.name}"} for r in rows]
+
+
 def match_all(dry_run=True):
 	"""Create Livestock Sires from the distinct typed bulls and straw Items and link the records.
 

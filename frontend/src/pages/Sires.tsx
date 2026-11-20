@@ -47,25 +47,15 @@ export function Sires() {
   const shown = useMemo(() => {
     const q = term.trim().toLowerCase();
     return (rows ?? []).filter(
-      (s) => (type === "All" || s.sire_type === type) && (!q || `${s.sire_name} ${s.code}`.toLowerCase().includes(q)),
+      (s) =>
+        (type === "All" || s.sire_type === type) &&
+        (!q || `${s.sire_name} ${s.code}`.toLowerCase().includes(q)),
     );
   }, [rows, term, type]);
 
   return (
     <Page>
-      <PageHeading
-        eyebrow="Upande Livestock · Breeding"
-        title="Sires"
-        actions={
-          <>
-            <RefreshButton onClick={load} loading={loading} label="the sires" />
-            <Button onClick={() => setEditing("new")}>
-              <Plus className="mr-1.5 h-4 w-4" />
-              Add sire
-            </Button>
-          </>
-        }
-      >
+      <PageHeading eyebrow="Upande Livestock · Breeding" title="Sires">
         The bulls a service can name, by name and code.
       </PageHeading>
 
@@ -77,7 +67,13 @@ export function Sires() {
             Find a sire
           </Label>
           <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--sd-quiet)]" />
-          <Input id="sires-find" value={term} onChange={(e) => setTerm(e.target.value)} placeholder="Name or code" className="pl-8" />
+          <Input
+            id="sires-find"
+            value={term}
+            onChange={(e) => setTerm(e.target.value)}
+            placeholder="Name or code"
+            className="pl-8"
+          />
         </div>
         <div className="flex gap-1.5" role="group" aria-label="Sire type">
           {TYPES.map((t) => (
@@ -88,12 +84,21 @@ export function Sires() {
               onClick={() => setType(t)}
               className={cn(
                 "rounded-full px-3 py-1 text-[12.5px] font-medium ring-1 ring-[var(--sd-line)]",
-                type === t ? "bg-[var(--sd-ink)] text-white" : "text-[var(--sd-muted)] hover:text-[var(--sd-ink)]",
+                type === t
+                  ? "bg-[var(--sd-ink)] text-white"
+                  : "text-[var(--sd-muted)] hover:text-[var(--sd-ink)]",
               )}
             >
               {t}
             </button>
           ))}
+        </div>
+        <div className="ml-auto flex items-center gap-2">
+          <RefreshButton onClick={load} loading={loading} label="the sires" />
+          <Button onClick={() => setEditing("new")}>
+            <Plus className="mr-1.5 h-4 w-4" />
+            Add sire
+          </Button>
         </div>
       </div>
 
@@ -115,14 +120,27 @@ export function Sires() {
                 <tr key={s.name} className="border-t border-[var(--sd-line)]">
                   <td className="px-3 py-2 font-medium">
                     {s.sire_name}
-                    {s.sexed ? <span className="ml-2 rounded-full bg-[var(--sd-bg-soft)] px-2 py-0.5 text-[11px]">sexed</span> : null}
+                    {s.sexed ? (
+                      <span className="ml-2 rounded-full bg-[var(--sd-bg-soft)] px-2 py-0.5 text-[11px]">
+                        sexed
+                      </span>
+                    ) : null}
                   </td>
                   <td className="px-3 py-2">{s.code || "—"}</td>
                   <td className="px-3 py-2">{s.sire_type}</td>
-                  <td className="px-3 py-2">{s.sire_type === "Semen" ? s.semen_item || "—" : s.animal || "—"}</td>
+                  <td className="px-3 py-2">
+                    {s.sire_type === "Semen"
+                      ? s.semen_item_name || s.semen_item || "—"
+                      : s.animal || "—"}
+                  </td>
                   <td className="px-3 py-2">{s.active ? "Active" : "Off"}</td>
                   <td className="px-3 py-2 text-right">
-                    <Button variant="ghost" size="sm" onClick={() => setEditing(s)} aria-label={`Edit ${s.sire_name}`}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setEditing(s)}
+                      aria-label={`Edit ${s.sire_name}`}
+                    >
                       Edit
                     </Button>
                   </td>
@@ -133,7 +151,9 @@ export function Sires() {
         </div>
       ) : rows ? (
         <p className="py-10 text-center text-[13px] text-[var(--sd-muted)]">
-          {rows.length ? "No sire matches." : "No sires yet. Add the first one."}
+          {rows.length
+            ? "No sire matches."
+            : "No sires yet. Add the first one."}
         </p>
       ) : null}
 

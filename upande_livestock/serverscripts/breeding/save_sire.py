@@ -5,7 +5,7 @@ from frappe import _
 
 from upande_livestock.serverscripts.common.envelope import as_dict, run
 
-EDITABLE = ("sire_name", "sire_code", "sire_type", "semen_item", "animal", "sexed", "active")
+EDITABLE = ("sire_name", "sire_code", "sire_type", "semen_item", "animal", "sexed", "active", "breed", "supplier")
 MANAGERS = ("Livestock Manager", "System Manager")
 
 
@@ -21,7 +21,7 @@ def save_sire(payload=None):
 		_assert_manager()
 		d = as_dict(payload)
 		fields = {k: d.get(k) for k in EDITABLE if k in d}
-		for k in ("semen_item", "animal", "sire_code"):
+		for k in ("semen_item", "animal", "sire_code", "breed", "supplier"):
 			if k in fields and not (fields[k] or "").strip():
 				fields[k] = None
 		if d.get("name"):

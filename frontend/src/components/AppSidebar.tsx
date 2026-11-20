@@ -75,7 +75,7 @@ type NavSection = { label: string; items: NavItem[] };
 /** A nav entry whose icon comes from the shared event catalog (lib/event-icons). */
 const TITLE: Partial<Record<View, string>> = {
   heat: "Heat detection",
-  diagnosis: "Pregnancy confirmation (PD)",
+  diagnosis: "Pregnancy diagnosis",
   "check-up": "Check-up",
   "health-case": "Case files",
   quality: "Quality recording",

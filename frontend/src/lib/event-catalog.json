@@ -51,7 +51,7 @@
       "eventType": "Pregnancy Diagnosis",
       "key": "Pregnancy Diagnosis",
       "view": "diagnosis",
-      "label": "Pregnancy confirmation (PD)",
+      "label": "Pregnancy diagnosis",
       "group": "servicing",
       "icon": "ScanHeart"
     },

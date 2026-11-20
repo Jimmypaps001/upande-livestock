@@ -11,7 +11,12 @@ import { can } from "@/lib/can";
 import { AddVetDialog } from "@/components/vets/AddVetDialog";
 import { VetCard } from "@/components/vets/VetCard";
 import { isError } from "@/lib/frappe";
-import { getVetsList, VET_PERIODS, type VetPeriod, type VetsList } from "@/lib/vets";
+import {
+  getVetsList,
+  VET_PERIODS,
+  type VetPeriod,
+  type VetsList,
+} from "@/lib/vets";
 import { cn } from "@/lib/utils";
 
 const TYPES = ["All", "Internal", "External"] as const;
@@ -54,37 +59,18 @@ export function Vets() {
     return (data?.vets ?? []).filter(
       (v) =>
         (type === "All" || v.type === type) &&
-        (!q || [v.vet_name, v.vet, v.practice_name, v.registration_number].some((f) => (f || "").toLowerCase().includes(q))),
+        (!q ||
+          [v.vet_name, v.vet, v.practice_name, v.registration_number].some(
+            (f) => (f || "").toLowerCase().includes(q),
+          )),
     );
   }, [data, term, type]);
 
   return (
     <Page>
-      <PageHeading
-        eyebrow="Upande Livestock · People"
-        title="Vets"
-        actions={
-          <>
-            <div className="w-[170px]">
-              <Picker
-                id="vets-period"
-                label="Period"
-                value={period}
-                onChange={(p) => setPeriod(p as VetPeriod)}
-                options={VET_PERIODS.map((p) => ({ value: p.value, label: p.label }))}
-              />
-            </div>
-            <RefreshButton onClick={load} loading={loading} label="the vets" />
-            {can.create("Livestock Vet") && (
-              <Button onClick={() => setAdding(true)}>
-                <Plus className="mr-1.5 h-4 w-4" />
-                Add vet
-              </Button>
-            )}
-          </>
-        }
-      >
-        Who is treating the herd, and what they did{data ? ` between ${data.from} and ${data.to}` : ""}.
+      <PageHeading eyebrow="Upande Livestock · People" title="Vets">
+        Who is treating the herd, and what they did
+        {data ? ` between ${data.from} and ${data.to}` : ""}.
       </PageHeading>
 
       {failure && <Notice tone="error">{failure}</Notice>}
@@ -112,19 +98,48 @@ export function Vets() {
               onClick={() => setType(t)}
               className={cn(
                 "rounded-full px-3 py-1 text-[12.5px] font-medium ring-1 ring-[var(--sd-line)]",
-                type === t ? "bg-[var(--sd-ink)] text-white" : "text-[var(--sd-muted)] hover:text-[var(--sd-ink)]",
+                type === t
+                  ? "bg-[var(--sd-ink)] text-white"
+                  : "text-[var(--sd-muted)] hover:text-[var(--sd-ink)]",
               )}
             >
               {t}
             </button>
           ))}
         </div>
+        <div className="ml-auto flex flex-wrap items-center gap-2">
+          <div className="w-[170px]">
+            <Picker
+              id="vets-period"
+              label="Period"
+              value={period}
+              onChange={(p) => setPeriod(p as VetPeriod)}
+              options={VET_PERIODS.map((p) => ({
+                value: p.value,
+                label: p.label,
+              }))}
+            />
+          </div>
+          <RefreshButton onClick={load} loading={loading} label="the vets" />
+          {can.create("Livestock Vet") && (
+            <Button onClick={() => setAdding(true)}>
+              <Plus className="mr-1.5 h-4 w-4" />
+              Add vet
+            </Button>
+          )}
+        </div>
       </div>
 
       {!data && loading ? (
-        <div className="grid min-w-0 gap-4 grid-cols-[repeat(auto-fill,minmax(min(100%,380px),1fr))]" aria-busy>
+        <div
+          className="grid min-w-0 gap-4 grid-cols-[repeat(auto-fill,minmax(min(100%,380px),1fr))]"
+          aria-busy
+        >
           {[0, 1, 2].map((i) => (
-            <div key={i} className="h-[330px] animate-pulse rounded-[var(--sd-radius-card)] bg-[var(--sd-bg-soft)]" />
+            <div
+              key={i}
+              className="h-[330px] animate-pulse rounded-[var(--sd-radius-card)] bg-[var(--sd-bg-soft)]"
+            />
           ))}
         </div>
       ) : shown.length ? (
@@ -135,11 +150,21 @@ export function Vets() {
         </div>
       ) : data ? (
         <p className="py-10 text-center text-[13px] text-[var(--sd-muted)]">
-          {data.vets.length ? "No vet matches." : can.create("Livestock Vet") ? "No vets yet. Add the first one." : "No vets yet."}
+          {data.vets.length
+            ? "No vet matches."
+            : can.create("Livestock Vet")
+              ? "No vets yet. Add the first one."
+              : "No vets yet."}
         </p>
       ) : null}
 
-      {can.create("Livestock Vet") && <AddVetDialog open={adding} onOpenChange={setAdding} onAdded={() => void load()} />}
+      {can.create("Livestock Vet") && (
+        <AddVetDialog
+          open={adding}
+          onOpenChange={setAdding}
+          onAdded={() => void load()}
+        />
+      )}
     </Page>
   );
 }

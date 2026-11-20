@@ -195,7 +195,7 @@ describe("sidebar event order", () => {
     const i = labels.indexOf("Servicing");
     expect(labels.slice(i, i + 3)).toEqual(["Servicing", "Health", "Quality"]);
     const text = container.textContent || "";
-    const order = ["Heat detection", "Service", "Pregnancy confirmation (PD)", "Abortion", "Calving",
+    const order = ["Heat detection", "Service", "Pregnancy diagnosis", "Abortion", "Calving",
       "Check-up", "Case files", "Treatment", "Quality recording"].map((t) => text.indexOf(t));
     expect(order.every((n) => n >= 0)).toBe(true);
     expect([...order].sort((a, b) => a - b)).toEqual(order);
@@ -215,7 +215,7 @@ describe("sidebar brand and fit", () => {
     const scroll = container.querySelector('[data-slot="scroll-area"]') as HTMLElement;
     expect(scroll.className).toContain("[&>[data-radix-scroll-area-viewport]>div]:!block");
     const label = [...container.querySelectorAll('[data-sidebar="menu-button"] span')].find(
-      (s) => s.textContent === "Pregnancy confirmation (PD)",
+      (s) => s.textContent === "Pregnancy diagnosis",
     ) as HTMLElement;
     expect(label.className).toContain("!whitespace-normal");
     expect(label.className).toContain("!overflow-visible");

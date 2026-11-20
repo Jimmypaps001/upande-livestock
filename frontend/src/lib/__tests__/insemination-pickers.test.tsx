@@ -256,4 +256,37 @@ describe("the insemination pickers", () => {
     expect(screen.queryByLabelText("Item")).toBeNull();
     expect(screen.queryByText(/Nothing mapped to this event is in stock right now/)).toBeNull();
   });
+
+  describe("a sire brings his straw", () => {
+    beforeEach(() => {
+      window.LIVESTOCK = { bootstrap: { roles: ["Livestock Manager"] } };
+      breeding.items_by_event = { Service: straws };
+    });
+
+    it("adds the sire's straw row by itself, and replaces it when the sire changes", async () => {
+      await pickTheCow();
+      fireEvent.click(screen.getByLabelText("Sire"));
+      fireEvent.click(await screen.findByText(/Dolmen · NL900000001/));
+      await waitFor(() => expect(screen.getAllByText(/Semen Chico/).length).toBeGreaterThan(0));
+      // a live bull has no straw: the row he left goes
+      fireEvent.click(screen.getByLabelText("Sire"));
+      fireEvent.click(await screen.findByText(/^Mazira/));
+      await waitFor(() => expect(screen.queryByText("Semen Chico")).toBeNull());
+    });
+
+    it("offers + Add sire in the picker to a manager, with what was typed", async () => {
+      await pickTheCow();
+      fireEvent.click(screen.getByLabelText("Sire"));
+      fireEvent.change(await screen.findByPlaceholderText(/Type to search/), { target: { value: "Zorro" } });
+      expect((await screen.findByTestId("picker-create")).textContent).toMatch(/Add sire.*Zorro/);
+    });
+
+    it("hides the add row from a user who may not add sires", async () => {
+      window.LIVESTOCK = { bootstrap: { roles: ["Livestock User"] } };
+      await pickTheCow();
+      fireEvent.click(screen.getByLabelText("Sire"));
+      await screen.findByPlaceholderText(/Type to search/);
+      expect(screen.queryByTestId("picker-create")).toBeNull();
+    });
+  });
 });

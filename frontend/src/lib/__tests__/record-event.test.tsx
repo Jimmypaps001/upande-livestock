@@ -141,6 +141,8 @@ describe("the record-an-event scaffold", () => {
     call.mockImplementation(async (method?: string) =>
       (method || "").includes("create_") ? { ok: true, name: "X" } : { ...breeding, sires: [] },
     );
+    // (a user who may add sires is offered the picker anyway, for "+ Add sire")
+    window.LIVESTOCK = { bootstrap: { roles: ["Livestock User"] } };
     draw(Service);
     await waitFor(() => expect(screen.getByText("APIJA (A039/26)")).toBeTruthy());
     fireEvent.click(screen.getByText("APIJA (A039/26)"));

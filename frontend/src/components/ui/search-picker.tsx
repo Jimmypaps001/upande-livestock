@@ -29,6 +29,8 @@ export function SearchPicker({
   id,
   label,
   className,
+  onCreate,
+  createLabel = "Add",
 }: {
   value: string;
   onChange: (next: string) => void;
@@ -37,6 +39,9 @@ export function SearchPicker({
   id?: string;
   label?: string;
   className?: string;
+  /** Shown as the last row, "+ Add 'typed'", like a Link field's "+ Create a new…". */
+  onCreate?: (term: string) => void;
+  createLabel?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [term, setTerm] = useState("");
@@ -114,6 +119,16 @@ export function SearchPicker({
               {o.label}
             </button>
           ))}
+          {onCreate && (
+            <button
+              type="button"
+              data-testid="picker-create"
+              onClick={() => { const t = term.trim(); setOpen(false); setTerm(""); onCreate(t); }}
+              className="mt-1 flex w-full rounded-md border-t border-[var(--sd-line)] px-2 py-2 text-left text-[13px] font-medium text-[var(--sd-ink)] hover:bg-[var(--sd-bg-soft)]"
+            >
+              + {createLabel}{term.trim() ? ` “${term.trim()}”` : ""}
+            </button>
+          )}
           {options.length > matches.length && !term && (
             <p className="px-2 pt-1 text-[11px] text-[var(--sd-quiet)]">Type to find the rest.</p>
           )}
