@@ -48,6 +48,7 @@ def animals_since(since=None):
 		or_filters = None
 		if since_ts:
 			moved = sorted(animal_stage.moved_since(since_ts))
+			moved = sorted(set(moved) | set(_weighed_since(since_ts)))
 			or_filters = [["modified", ">", since_ts]]
 			if moved:
 				or_filters.append(["name", "in", moved])
@@ -63,6 +64,7 @@ def animals_since(since=None):
 		)
 
 		stages = animal_stage.stages_for(rows)
+		weighed_on = _last_weight_dates()
 
 		removed = []
 		if since_ts:
@@ -103,6 +105,7 @@ def animals_since(since=None):
 					"sire": r.sire_name,
 					"parity": r.parity,
 					"last_weight_kg": r.last_weight_kg,
+					"last_weight_date": weighed_on.get(r.name),
 					"modified": r.modified,
 				}
 				for r in rows
@@ -111,3 +114,25 @@ def animals_since(since=None):
 		}
 
 	return run(go, "livestock mobile animals_since failed")
+
+
+def _weighed_since(since_ts):
+	"""Animals with a weight record saved, submitted or cancelled after `since_ts`
+	(a weighing writes Animal.last_weight_kg without touching `modified`)."""
+	return frappe.db.sql_list(
+		"""select distinct animal from `tabLivestock Weight Record`
+		where modified > %s and animal is not null""",
+		(since_ts,),
+	)
+
+
+def _last_weight_dates():
+	"""{animal: date of her latest submitted weighing}, in one grouped query."""
+	return {
+		animal: str(day)
+		for animal, day in frappe.db.sql(
+			"""select animal, max(weight_date) from `tabLivestock Weight Record`
+			where docstatus = 1 and animal is not null group by animal"""
+		)
+		if day
+	}
