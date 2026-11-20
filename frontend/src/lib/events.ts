@@ -253,6 +253,8 @@ export interface EventRow {
   event_type: string | null;
   event_date: string | null;
   service_type?: string | null;
+  /** Entered after the day it describes. */
+  custom_is_backdated?: number | boolean | null;
 }
 
 export interface EventsView {
