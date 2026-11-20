@@ -5,6 +5,7 @@ import { Figure, FigureRow } from "@/components/Figure";
 import { Notice } from "@/components/feeding/Notice";
 import { QualityBatch } from "@/components/quality/QualityBatch";
 import { STICKY_HEAD, ScrollTable } from "@/components/ScrollTable";
+import { QualityTrendCard } from "@/components/milking/MilkCharts";
 import { Page, PageHeading } from "@/components/PageShell";
 import { RefreshButton } from "@/components/RefreshButton";
 import { Button } from "@/components/ui/button";
@@ -116,6 +117,8 @@ export function Quality() {
       </PageHeading>
 
       {failure && <Notice tone="error">{failure}</Notice>}
+
+      <QualityTrendCard />
 
       {data && (
         <Notice tone="info">

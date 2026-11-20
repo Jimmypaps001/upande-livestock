@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { Mark, Notice } from "@/components/feeding/Notice";
+import { QualityTrendCard, YieldByHerdCard } from "@/components/milking/MilkCharts";
 import { PostingDate } from "@/components/feeding/PostingDate";
 import { Figure, FigureRow } from "@/components/Figure";
 import { Page, PageHeading } from "@/components/PageShell";
@@ -497,6 +498,9 @@ export function Milking() {
           )}
         </CardContent>
       </Card>
+
+      <YieldByHerdCard />
+      <QualityTrendCard />
     </Page>
   );
 }
