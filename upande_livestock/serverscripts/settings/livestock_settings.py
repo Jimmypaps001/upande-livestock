@@ -31,7 +31,13 @@ is offered at all: `can_write` says whether saving is even worth showing.
 import frappe
 
 from upande_livestock.serverscripts.common.envelope import guard_read, run
-from upande_livestock.serverscripts.settings._shared import DOCTYPE, layout, tables, values
+from upande_livestock.serverscripts.settings._shared import (
+	DOCTYPE,
+	layout,
+	tables,
+	writable_fieldnames,
+	values,
+)
 
 
 @frappe.whitelist()
@@ -50,6 +56,9 @@ def livestock_settings():
 			# by it. The page shows the settings either way and only offers Save
 			# when this is true — the endpoint refuses regardless.
 			"can_write": bool(frappe.has_permission(DOCTYPE, "write")),
+			# Finer than can_write: an Accounts Manager may change the Accounts
+			# & Insurance tab and nothing else, so the page enables per field.
+			"writable": sorted(writable_fieldnames()),
 		}
 
 	return run(go, "livestock livestock_settings failed")

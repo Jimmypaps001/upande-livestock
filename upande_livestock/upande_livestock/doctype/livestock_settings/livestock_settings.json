@@ -30,14 +30,35 @@
   "gestation_short_warning_days",
   "gestation_long_warning_days",
   "default_calf_herd",
-  "calf_asset_section",
-  "create_calf_asset",
-  "calf_asset_item",
-  "calf_asset_category",
-  "calf_asset_column",
-  "calf_asset_location",
-  "calf_asset_value",
-  "calf_asset_naming_series",
+  "sb_first_pregnancy",
+  "incalf_heifer_herd",
+  "cb_first_pregnancy",
+  "heifer_dry_off_before_calving_days",
+  "tab_herd_movement",
+  "sb_calf_intake",
+  "female_calf_herd",
+  "cb_calf_intake",
+  "male_calf_herd",
+  "sb_growth_ladder",
+  "growth_ladder",
+  "sb_lactation",
+  "milking_herds",
+  "heifer_herds",
+  "in_calf_herds",
+  "calf_herds",
+  "high_yield_herd",
+  "post_calving_herd",
+  "high_yield_days_from_conception",
+  "max_open_days",
+  "cb_lactation",
+  "low_yield_herd",
+  "low_yield_days",
+  "sb_steamers",
+  "drying_off_herd",
+  "steamer_herd",
+  "steamer_days_from_heifers",
+  "cb_steamers",
+  "steamer_days_from_lactation",
   "husbandry_tab",
   "vaccination_section",
   "min_vaccination_interval_days",
@@ -51,14 +72,12 @@
   "weighbridge_available",
   "hoof_section",
   "min_hoof_trimming_interval_days",
-  "tab_dairy",
-  "custom_dairy_section",
-  "custom_feed_wip_warehouse",
-  "custom_milk_item",
-  "custom_milking_stock_entry_type",
-  "custom_dairy_col",
-  "custom_milk_target_warehouse",
-  "custom_milk_discard_warehouse",
+  "tab_health",
+  "sb_health_cases",
+  "health_case_concern_days",
+  "cb_health_cases",
+  "health_case_stale_days",
+  "tab_feeding",
   "sb_feed_types",
   "feed_system_desk",
   "feed_system_phone",
@@ -72,8 +91,58 @@
   "feed_source_warehouses",
   "sb_concentrates",
   "bought_in_concentrates",
+  "tab_dairy",
+  "sb_milk_quality",
+  "custom_milk_quality_capture",
+  "custom_quality_required_at_milking",
+  "cb_milk_quality",
+  "custom_quality_required_in_lab",
+  "custom_quality_scc_ceiling",
+  "custom_quality_aflatoxin_limit_ppt",
+  "custom_quality_antibiotics_fail",
+  "custom_quality_resazurin_min_score",
+  "custom_concentrate_cover_days",
+  "sb_backdating",
+  "custom_backdating_open",
+  "sb_milk_price",
+  "custom_default_milk_price",
+  "custom_milk_price_per_kg",
+  "cb_milk_price",
+  "custom_colostrum_item",
+  "custom_colostrum_warehouse",
+  "tab_stock",
+  "stock_rules_note",
+  "custom_dairy_section",
+  "custom_feed_wip_warehouse",
+  "custom_milk_item",
+  "custom_milking_stock_entry_type",
+  "custom_dairy_col",
+  "custom_milk_target_warehouse",
+  "custom_milk_discard_warehouse",
+  "sb_husbandry_stock",
+  "custom_feed_item_group",
+  "cb_husbandry_stock",
+  "semen_item",
+  "tab_assets",
+  "calf_asset_section",
+  "create_calf_asset",
+  "calf_asset_item",
+  "calf_asset_category",
+  "calf_asset_column",
+  "calf_asset_location",
+  "calf_asset_value",
+  "calf_asset_naming_series",
+  "sb_appreciation",
+  "appreciation_enabled",
+  "appreciation_account",
+  "appreciation_min_change",
+  "appreciation_allow_decrease",
+  "cb_appreciation",
+  "appreciation_frequency",
+  "appreciation_hour",
+  "appreciation_matrix",
+  "tab_accounts",
   "sb_accounting",
-  "sale_invoice_alert_roles",
   "custom_default_company",
   "custom_default_credit_account",
   "custom_concentrate_cost_center",
@@ -99,32 +168,7 @@
   "custom_insurance_income_account",
   "cb_insurance",
   "custom_default_payout_percent",
-  "sb_milk_price",
-  "custom_default_milk_price",
-  "custom_milk_price_per_kg",
-  "cb_milk_price",
-  "custom_colostrum_item",
-  "custom_colostrum_warehouse",
-  "sb_appreciation",
-  "appreciation_enabled",
-  "appreciation_account",
-  "appreciation_min_change",
-  "appreciation_allow_decrease",
-  "cb_appreciation",
-  "appreciation_frequency",
-  "appreciation_hour",
-  "appreciation_matrix",
-  "tab_stock",
-  "stock_rules_note",
-  "sb_husbandry_stock",
-  "custom_feed_item_group",
-  "cb_husbandry_stock",
-  "semen_item",
-  "tab_herd_movement",
-  "sb_calf_intake",
-  "female_calf_herd",
-  "cb_calf_intake",
-  "male_calf_herd",
+  "tab_bulls",
   "sb_bull_cull",
   "cull_bulls_after_birth",
   "bull_cull_max_days",
@@ -134,43 +178,6 @@
   "bull_purpose",
   "cb_bull_purpose",
   "bull_price_per_kg",
-  "sb_growth_ladder",
-  "growth_ladder",
-  "sb_first_pregnancy",
-  "incalf_heifer_herd",
-  "cb_first_pregnancy",
-  "heifer_dry_off_before_calving_days",
-  "sb_lactation",
-  "milking_herds",
-  "heifer_herds",
-  "in_calf_herds",
-  "calf_herds",
-  "high_yield_herd",
-  "post_calving_herd",
-  "high_yield_days_from_conception",
-  "max_open_days",
-  "cb_lactation",
-  "low_yield_herd",
-  "low_yield_days",
-  "sb_steamers",
-  "drying_off_herd",
-  "steamer_herd",
-  "steamer_days_from_heifers",
-  "cb_steamers",
-  "steamer_days_from_lactation",
-  "sb_backdating",
-  "custom_backdating_open",
-  "allow_offline_milking_grace",
-  "sb_milk_quality",
-  "custom_milk_quality_capture",
-  "custom_quality_required_at_milking",
-  "cb_milk_quality",
-  "custom_quality_required_in_lab",
-  "custom_quality_scc_ceiling",
-  "custom_quality_aflatoxin_limit_ppt",
-  "custom_quality_antibiotics_fail",
-  "custom_quality_resazurin_min_score",
-  "custom_concentrate_cover_days",
   "tab_targets",
   "sb_production_targets",
   "custom_target_prod_group1",
@@ -199,17 +206,18 @@
   "cb_calf_feeding",
   "custom_weaning_start_day",
   "custom_weaning_complete_day",
-  "tab_health",
-  "sb_health_cases",
-  "health_case_concern_days",
-  "cb_health_cases",
-  "health_case_stale_days"
+  "tab_notifications",
+  "sb_notifications",
+  "sale_invoice_alert_roles",
+  "tab_mobile",
+  "sb_mobile",
+  "allow_offline_milking_grace"
  ],
  "fields": [
   {
    "fieldname": "general_tab",
    "fieldtype": "Tab Break",
-   "label": "General"
+   "label": "Breeding"
   },
   {
    "fieldname": "birth_section",
@@ -354,316 +362,28 @@
    "options": "Herds"
   },
   {
-   "fieldname": "calf_asset_section",
+   "description": "Where a served heifer waits out her first pregnancy. She gives no milk yet, which is why this herd is separate from the lactation groups.",
+   "fieldname": "sb_first_pregnancy",
    "fieldtype": "Section Break",
-   "label": "Calf asset",
-   "description": "Each calf born on the farm is put on the fixed-asset register when its birth is recorded."
+   "label": "C · First Pregnancy"
   },
   {
-   "default": "1",
-   "fieldname": "create_calf_asset",
-   "fieldtype": "Check",
-   "label": "Create an asset for each calf born"
-  },
-  {
-   "fieldname": "calf_asset_item",
+   "description": "Entered on a CONFIRMED pregnancy, never on the service alone.",
+   "fieldname": "incalf_heifer_herd",
    "fieldtype": "Link",
-   "label": "Calf Asset Item",
-   "options": "Item",
-   "description": "The fixed-asset item the farm's herd is booked under (herd)."
+   "label": "Incalf Heifer Herd",
+   "options": "Herds"
   },
   {
-   "fieldname": "calf_asset_category",
-   "fieldtype": "Link",
-   "label": "Calf Asset Category",
-   "options": "Asset Category"
-  },
-  {
-   "fieldname": "calf_asset_column",
+   "fieldname": "cb_first_pregnancy",
    "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "calf_asset_location",
-   "fieldtype": "Link",
-   "label": "Calf Asset Location",
-   "options": "Location"
-  },
-  {
-   "default": "5000",
-   "fieldname": "calf_asset_value",
-   "fieldtype": "Currency",
-   "label": "Calf Asset Value"
-  },
-  {
-   "default": "ACC-ASS-.YYYY.-",
-   "fieldname": "calf_asset_naming_series",
-   "fieldtype": "Data",
-   "label": "Calf Asset Naming Series"
-  },
-  {
-   "fieldname": "husbandry_tab",
-   "fieldtype": "Tab Break",
-   "label": "Husbandry Rules"
-  },
-  {
-   "fieldname": "vaccination_section",
-   "fieldtype": "Section Break",
-   "label": "Vaccination & Deworming"
-  },
-  {
-   "default": "21",
-   "description": "Minimum days between identical vaccinations for the same animal.",
-   "fieldname": "min_vaccination_interval_days",
-   "fieldtype": "Int",
-   "label": "Min Vaccination Interval (Days)"
   },
   {
    "default": "90",
-   "description": "Minimum days between deworming events for the same animal.",
-   "fieldname": "min_deworming_interval_days",
+   "description": "3 months for a first pregnancy. Counted back from the calving date, which is the service date plus Gestation Period (General tab).",
+   "fieldname": "heifer_dry_off_before_calving_days",
    "fieldtype": "Int",
-   "label": "Min Deworming Interval (Days)"
-  },
-  {
-   "fieldname": "column_break_husbandry",
-   "fieldtype": "Column Break"
-  },
-  {
-   "default": "1",
-   "description": "Minimum age for dehorning. Usually done on young calves.",
-   "fieldname": "min_dehorning_age_months",
-   "fieldtype": "Int",
-   "label": "Min Dehorning Age (Months)"
-  },
-  {
-   "default": "6",
-   "description": "Maximum recommended age for dehorning.",
-   "fieldname": "max_dehorning_age_months",
-   "fieldtype": "Int",
-   "label": "Max Dehorning Age (Months)"
-  },
-  {
-   "fieldname": "weight_section",
-   "fieldtype": "Section Break",
-   "label": "Weight Recording"
-  },
-  {
-   "default": "7",
-   "description": "Minimum days between weight recordings for the same animal.",
-   "fieldname": "min_weight_recording_interval_days",
-   "fieldtype": "Int",
-   "label": "Min Weight Recording Interval (Days)"
-  },
-  {
-   "default": "Platform Scale",
-   "description": "The method the Weights screens (web and mobile) start on.",
-   "fieldname": "default_weight_method",
-   "fieldtype": "Select",
-   "label": "Weighing Method Default",
-   "options": "Weighbridge\nPlatform Scale\nHeart Girth Tape\nVisual Estimate"
-  },
-  {
-   "default": "1",
-   "description": "Untick when the farm has no weighbridge: the Weights screens stop offering it as a method.",
-   "fieldname": "weighbridge_available",
-   "fieldtype": "Check",
-   "label": "Weighbridge Available"
-  },
-  {
-   "fieldname": "hoof_section",
-   "fieldtype": "Section Break",
-   "label": "Hoof Trimming"
-  },
-  {
-   "default": "90",
-   "description": "Minimum days between hoof trimming for the same animal.",
-   "fieldname": "min_hoof_trimming_interval_days",
-   "fieldtype": "Int",
-   "label": "Min Hoof Trimming Interval (Days)"
-  },
-  {
-   "fieldname": "tab_dairy",
-   "fieldtype": "Tab Break",
-   "label": "Dairy & Accounts"
-  },
-  {
-   "fieldname": "custom_dairy_section",
-   "fieldtype": "Section Break",
-   "label": "Feed & Milk Stock"
-  },
-  {
-   "description": "Store where manufactured feed (TMR) is produced and held.",
-   "fieldname": "custom_feed_wip_warehouse",
-   "fieldtype": "Link",
-   "label": "Feed WIP / Store Warehouse",
-   "options": "Warehouse"
-  },
-  {
-   "description": "Stock item representing raw milk.",
-   "fieldname": "custom_milk_item",
-   "fieldtype": "Link",
-   "label": "Milk Item",
-   "options": "Item"
-  },
-  {
-   "default": "Milking",
-   "fieldname": "custom_milking_stock_entry_type",
-   "fieldtype": "Link",
-   "label": "Milking Stock Entry Type",
-   "options": "Stock Entry Type"
-  },
-  {
-   "fieldname": "custom_dairy_col",
-   "fieldtype": "Column Break"
-  },
-  {
-   "description": "Warehouse net sellable milk is posted into.",
-   "fieldname": "custom_milk_target_warehouse",
-   "fieldtype": "Link",
-   "label": "Milk Target Warehouse",
-   "options": "Warehouse"
-  },
-  {
-   "description": "Warehouse discarded/withheld milk is posted into.",
-   "fieldname": "custom_milk_discard_warehouse",
-   "fieldtype": "Link",
-   "label": "Milk Discard Warehouse",
-   "options": "Warehouse"
-  },
-  {
-   "description": "Choose which ways of feeding appear on the desk and on the phone. A way that is switched off on both is refused by the server too. Kaitet feeds from the Day sheet: Manual configuration is off unless you turn it on.",
-   "fieldname": "sb_feed_types",
-   "fieldtype": "Section Break",
-   "label": "Feed types"
-  },
-  {
-   "default": "1",
-   "fieldname": "feed_system_desk",
-   "fieldtype": "Check",
-   "label": "System: show on desk"
-  },
-  {
-   "default": "1",
-   "fieldname": "feed_system_phone",
-   "fieldtype": "Check",
-   "label": "System: show on phone"
-  },
-  {
-   "fieldname": "cb_feed_types_1",
-   "fieldtype": "Column Break"
-  },
-  {
-   "default": "0",
-   "fieldname": "feed_manual_desk",
-   "fieldtype": "Check",
-   "label": "Manual configuration: show on desk"
-  },
-  {
-   "default": "0",
-   "fieldname": "feed_manual_phone",
-   "fieldtype": "Check",
-   "label": "Manual configuration: show on phone"
-  },
-  {
-   "fieldname": "cb_feed_types_2",
-   "fieldtype": "Column Break"
-  },
-  {
-   "default": "1",
-   "fieldname": "feed_day_sheet_desk",
-   "fieldtype": "Check",
-   "label": "Day sheet: show on desk"
-  },
-  {
-   "default": "1",
-   "fieldname": "feed_day_sheet_phone",
-   "fieldtype": "Check",
-   "label": "Day sheet: show on phone"
-  },
-  {
-   "fieldname": "sb_feed_sources",
-   "fieldtype": "Section Break",
-   "label": "Feed Source Warehouses"
-  },
-  {
-   "description": "Warehouses feed inputs may be drawn from, in search order. The first row that can cover a line in full is the one the Work Order transfers from. The Feed WIP / Store Warehouse above is always tried last.",
-   "fieldname": "feed_source_warehouses",
-   "fieldtype": "Table",
-   "label": "Feed Source Warehouses",
-   "options": "Livestock Feed Warehouse"
-  },
-  {
-   "fieldname": "sb_concentrates",
-   "fieldtype": "Section Break",
-   "label": "Bought-in Concentrates"
-  },
-  {
-   "description": "Concentrates the farm buys ready-packed. A concentrate that is mixed on the farm is recognised by its BOM and does not belong here — list only the ones that arrive already made, so the feeding programme flags them as concentrate rather than plain raw material.",
-   "fieldname": "bought_in_concentrates",
-   "fieldtype": "Table",
-   "label": "Bought-in Concentrates",
-   "options": "Livestock Bought In Concentrate"
-  },
-  {
-   "fieldname": "sb_husbandry_stock",
-   "fieldtype": "Section Break",
-   "label": "Stock Defaults"
-  },
-  {
-   "description": "The item group this farm keeps its feed in — raw materials, mixed concentrate and bought-in alike. The Stock page shows this group and nothing else, and a new ration or concentrate is created in it. Left blank it uses “DAIRY”.",
-   "fieldname": "custom_feed_item_group",
-   "fieldtype": "Link",
-   "label": "Feed Item Group",
-   "options": "Item Group"
-  },
-  {
-   "fieldname": "cb_husbandry_stock",
-   "fieldtype": "Column Break"
-  },
-  {
-   "description": "Default straw item for a Service when none is chosen on the event.",
-   "fieldname": "semen_item",
-   "fieldtype": "Link",
-   "label": "Default Semen Item",
-   "options": "Item"
-  },
-  {
-   "fieldname": "sb_accounting",
-   "fieldtype": "Section Break",
-   "label": "Accounting"
-  },
-  {
-   "default": "Accounts Manager, Accounts User",
-   "description": "Users with these roles (comma separated) are emailed, and get a bell notice, when a sale creates a draft Sales Invoice to submit.",
-   "fieldname": "sale_invoice_alert_roles",
-   "fieldtype": "Small Text",
-   "label": "Sale invoice alert roles"
-  },
-  {
-   "fieldname": "custom_default_company",
-   "fieldtype": "Link",
-   "label": "Default Company (Livestock JE)",
-   "options": "Company"
-  },
-  {
-   "fieldname": "custom_default_credit_account",
-   "fieldtype": "Link",
-   "label": "Default Credit Account (Livestock JE)",
-   "options": "Account"
-  },
-  {
-   "description": "Where a CONCENTRATE mix books to. A mix has no herd — it is made for the store and eaten by several herds — so the herd's own cost centre cannot answer for it. Left blank it falls to the per-company row below, which is the answer for everything herdless.",
-   "fieldname": "custom_concentrate_cost_center",
-   "fieldtype": "Link",
-   "label": "Concentrate Cost Center",
-   "options": "Cost Center"
-  },
-  {
-   "description": "Charged for feed, milk, drug and husbandry stock movements when the herd names no cost centre of its own. One row per company — the dairy and the flower side do not share a centre. ERPNext refuses a stock entry outright when the item's expense account is a P&amp;L one and no cost centre can be found.",
-   "fieldname": "custom_company_cost_centers",
-   "fieldtype": "Table",
-   "label": "Default Cost Centres by Company",
-   "options": "Livestock Cost Center Default"
+   "label": "Leaves for Steamers (days before calving)"
   },
   {
    "fieldname": "tab_herd_movement",
@@ -695,61 +415,6 @@
    "options": "Herds"
   },
   {
-   "fieldname": "sb_bull_cull",
-   "fieldtype": "Section Break",
-   "label": "Bull Culling"
-  },
-  {
-   "default": "0",
-   "description": "Some farms sell a bull calf almost as soon as it is born. Tick this and the system will warn before the window closes.",
-   "fieldname": "cull_bulls_after_birth",
-   "fieldtype": "Check",
-   "label": "Cull Bulls After Birth"
-  },
-  {
-   "default": "14",
-   "depends_on": "cull_bulls_after_birth",
-   "description": "Longest a bull calf should remain before it is sold.",
-   "fieldname": "bull_cull_max_days",
-   "fieldtype": "Int",
-   "label": "Maximum Days on Farm"
-  },
-  {
-   "fieldname": "cb_bull_cull",
-   "fieldtype": "Column Break"
-  },
-  {
-   "default": "75",
-   "depends_on": "cull_bulls_after_birth",
-   "description": "At 75% of 14 days the warning fires on day 10.5.",
-   "fieldname": "bull_cull_warn_percent",
-   "fieldtype": "Percent",
-   "label": "Warn At (% of window)"
-  },
-  {
-   "fieldname": "sb_bull_purpose",
-   "fieldtype": "Section Break",
-   "label": "Bull Purpose"
-  },
-  {
-   "default": "Cull for sale at birth",
-   "description": "Why the farm keeps its bulls. 'Cull for sale at birth': sold as soon as born, there is no natural service, so every day a bull stays is cost. 'Fattening': grown out for beef. 'Breeding': kept as a sire.",
-   "fieldname": "bull_purpose",
-   "fieldtype": "Select",
-   "label": "Bull Purpose",
-   "options": "Cull for sale at birth\nFattening\nBreeding"
-  },
-  {
-   "fieldname": "cb_bull_purpose",
-   "fieldtype": "Column Break"
-  },
-  {
-   "description": "Used to value a bull that has no Asset: this price times his last weight. Leave empty to show no value for those bulls.",
-   "fieldname": "bull_price_per_kg",
-   "fieldtype": "Currency",
-   "label": "Bull Price per kg"
-  },
-  {
    "description": "The herds a heifer climbs before she is old enough to serve, in order. The first row is where female calves land; the last should be marked 'exits on service'.",
    "fieldname": "sb_growth_ladder",
    "fieldtype": "Section Break",
@@ -762,34 +427,38 @@
    "options": "Herd Growth Stage"
   },
   {
-   "description": "Where a served heifer waits out her first pregnancy. She gives no milk yet, which is why this herd is separate from the lactation groups.",
-   "fieldname": "sb_first_pregnancy",
-   "fieldtype": "Section Break",
-   "label": "C · First Pregnancy"
-  },
-  {
-   "description": "Entered on a CONFIRMED pregnancy, never on the service alone.",
-   "fieldname": "incalf_heifer_herd",
-   "fieldtype": "Link",
-   "label": "Incalf Heifer Herd",
-   "options": "Herds"
-  },
-  {
-   "fieldname": "cb_first_pregnancy",
-   "fieldtype": "Column Break"
-  },
-  {
-   "default": "90",
-   "description": "3 months for a first pregnancy. Counted back from the calving date, which is the service date plus Gestation Period (General tab).",
-   "fieldname": "heifer_dry_off_before_calving_days",
-   "fieldtype": "Int",
-   "label": "Leaves for Steamers (days before calving)"
-  },
-  {
    "description": "After her first calving a cow never returns to the growth ladder. She cycles between these herds for the rest of her productive life.",
    "fieldname": "sb_lactation",
    "fieldtype": "Section Break",
    "label": "D · Lactation Cycle"
+  },
+  {
+   "fieldname": "milking_herds",
+   "fieldtype": "Table",
+   "label": "Milking Herds",
+   "options": "Livestock Milking Herd",
+   "description": "The herds that are milked. The milking screens offer these herds and their cows, and the mobile app marks them as milking herds."
+  },
+  {
+   "fieldname": "heifer_herds",
+   "fieldtype": "Table",
+   "label": "Heifer herds",
+   "options": "Livestock Heifer Herd",
+   "description": "The herds that hold heifers (for example the service heifers). The mobile app's Heifers filter shows the animals in these herds."
+  },
+  {
+   "fieldname": "in_calf_herds",
+   "fieldtype": "Table",
+   "label": "In-calf herds",
+   "options": "Livestock In-calf Herd",
+   "description": "The herds where in-calf animals go (for example the bullying heifers and the steamers). The mobile app's In-calf filter shows only the animals in these herds."
+  },
+  {
+   "fieldname": "calf_herds",
+   "fieldtype": "Table",
+   "label": "Calf herds",
+   "options": "Livestock Calf Herd",
+   "description": "The calf groups (for example the bull calves, 0-2 and 2-4). The mobile app's Calves filter shows the animals in these herds."
   },
   {
    "fieldname": "high_yield_herd",
@@ -873,23 +542,198 @@
    "label": "Dry Days · arriving from Low Yield"
   },
   {
-   "fieldname": "sb_backdating",
+   "fieldname": "husbandry_tab",
+   "fieldtype": "Tab Break",
+   "label": "Husbandry Rules"
+  },
+  {
+   "fieldname": "vaccination_section",
    "fieldtype": "Section Break",
-   "label": "Backdating"
+   "label": "Vaccination & Deworming"
+  },
+  {
+   "default": "21",
+   "description": "Minimum days between identical vaccinations for the same animal.",
+   "fieldname": "min_vaccination_interval_days",
+   "fieldtype": "Int",
+   "label": "Min Vaccination Interval (Days)"
+  },
+  {
+   "default": "90",
+   "description": "Minimum days between deworming events for the same animal.",
+   "fieldname": "min_deworming_interval_days",
+   "fieldtype": "Int",
+   "label": "Min Deworming Interval (Days)"
+  },
+  {
+   "fieldname": "column_break_husbandry",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "1",
+   "description": "Minimum age for dehorning. Usually done on young calves.",
+   "fieldname": "min_dehorning_age_months",
+   "fieldtype": "Int",
+   "label": "Min Dehorning Age (Months)"
+  },
+  {
+   "default": "6",
+   "description": "Maximum recommended age for dehorning.",
+   "fieldname": "max_dehorning_age_months",
+   "fieldtype": "Int",
+   "label": "Max Dehorning Age (Months)"
+  },
+  {
+   "fieldname": "weight_section",
+   "fieldtype": "Section Break",
+   "label": "Weight Recording"
+  },
+  {
+   "default": "7",
+   "description": "Minimum days between weight recordings for the same animal.",
+   "fieldname": "min_weight_recording_interval_days",
+   "fieldtype": "Int",
+   "label": "Min Weight Recording Interval (Days)"
+  },
+  {
+   "default": "Platform Scale",
+   "description": "The method the Weights screens (web and mobile) start on.",
+   "fieldname": "default_weight_method",
+   "fieldtype": "Select",
+   "label": "Weighing Method Default",
+   "options": "Weighbridge\nPlatform Scale\nHeart Girth Tape\nVisual Estimate"
+  },
+  {
+   "default": "1",
+   "description": "Untick when the farm has no weighbridge: the Weights screens stop offering it as a method.",
+   "fieldname": "weighbridge_available",
+   "fieldtype": "Check",
+   "label": "Weighbridge Available"
+  },
+  {
+   "fieldname": "hoof_section",
+   "fieldtype": "Section Break",
+   "label": "Hoof Trimming"
+  },
+  {
+   "default": "90",
+   "description": "Minimum days between hoof trimming for the same animal.",
+   "fieldname": "min_hoof_trimming_interval_days",
+   "fieldtype": "Int",
+   "label": "Min Hoof Trimming Interval (Days)"
+  },
+  {
+   "fieldname": "tab_health",
+   "fieldtype": "Tab Break",
+   "label": "Health"
+  },
+  {
+   "fieldname": "sb_health_cases",
+   "fieldtype": "Section Break",
+   "label": "Health Cases",
+   "description": "A case is a file, and a file left open is a cow nobody has closed the book on."
+  },
+  {
+   "fieldname": "health_case_concern_days",
+   "fieldtype": "Int",
+   "label": "Concern After (days open)",
+   "default": "21",
+   "description": "How long a health case may stay open before the farm wants to know about it. A cow three weeks under treatment is either not recovering or her file was never closed, and both are worth seeing. 0 turns the check off."
+  },
+  {
+   "fieldname": "cb_health_cases",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "health_case_stale_days",
+   "fieldtype": "Int",
+   "label": "Untouched For (days)",
+   "default": "7",
+   "description": "An open case with no treatment recorded for this long is stale — nobody has written anything down, whatever is or is not happening in the shed. 0 turns the check off."
+  },
+  {
+   "fieldname": "tab_feeding",
+   "fieldtype": "Tab Break",
+   "label": "Feeding"
+  },
+  {
+   "description": "Choose which ways of feeding appear on the desk and on the phone. A way that is switched off on both is refused by the server too. Kaitet feeds from the Day sheet: Manual configuration is off unless you turn it on.",
+   "fieldname": "sb_feed_types",
+   "fieldtype": "Section Break",
+   "label": "Feed types"
+  },
+  {
+   "default": "1",
+   "fieldname": "feed_system_desk",
+   "fieldtype": "Check",
+   "label": "System: show on desk"
+  },
+  {
+   "default": "1",
+   "fieldname": "feed_system_phone",
+   "fieldtype": "Check",
+   "label": "System: show on phone"
+  },
+  {
+   "fieldname": "cb_feed_types_1",
+   "fieldtype": "Column Break"
   },
   {
    "default": "0",
-   "description": "While this is on, backdated records skip the age, interval and duplicate guards. Today's records are always guarded. Turn it off once the history load is finished.",
-   "fieldname": "custom_backdating_open",
+   "fieldname": "feed_manual_desk",
    "fieldtype": "Check",
-   "label": "Backdating Open"
+   "label": "Manual configuration: show on desk"
   },
   {
    "default": "0",
-   "description": "When on, a milking recorded on the phone without signal is accepted if it syncs the next day, even with Backdating Open off. The record shows who posted it. Off: such a milking is refused like any backdated record.",
-   "fieldname": "allow_offline_milking_grace",
+   "fieldname": "feed_manual_phone",
    "fieldtype": "Check",
-   "label": "Allow offline milkings to sync one day late"
+   "label": "Manual configuration: show on phone"
+  },
+  {
+   "fieldname": "cb_feed_types_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "1",
+   "fieldname": "feed_day_sheet_desk",
+   "fieldtype": "Check",
+   "label": "Day sheet: show on desk"
+  },
+  {
+   "default": "1",
+   "fieldname": "feed_day_sheet_phone",
+   "fieldtype": "Check",
+   "label": "Day sheet: show on phone"
+  },
+  {
+   "fieldname": "sb_feed_sources",
+   "fieldtype": "Section Break",
+   "label": "Feed Source Warehouses"
+  },
+  {
+   "description": "Warehouses feed inputs may be drawn from, in search order. The first row that can cover a line in full is the one the Work Order transfers from. The Feed WIP / Store Warehouse above is always tried last.",
+   "fieldname": "feed_source_warehouses",
+   "fieldtype": "Table",
+   "label": "Feed Source Warehouses",
+   "options": "Livestock Feed Warehouse"
+  },
+  {
+   "fieldname": "sb_concentrates",
+   "fieldtype": "Section Break",
+   "label": "Bought-in Concentrates"
+  },
+  {
+   "description": "Concentrates the farm buys ready-packed. A concentrate that is mixed on the farm is recognised by its BOM and does not belong here — list only the ones that arrive already made, so the feeding programme flags them as concentrate rather than plain raw material.",
+   "fieldname": "bought_in_concentrates",
+   "fieldtype": "Table",
+   "label": "Bought-in Concentrates",
+   "options": "Livestock Bought In Concentrate"
+  },
+  {
+   "fieldname": "tab_dairy",
+   "fieldtype": "Tab Break",
+   "label": "Milking & Quality"
   },
   {
    "fieldname": "sb_milk_quality",
@@ -959,33 +803,273 @@
    "label": "Concentrate Cover Warning (days)"
   },
   {
-   "fieldname": "tab_health",
-   "fieldtype": "Tab Break",
-   "label": "Health"
-  },
-  {
-   "fieldname": "sb_health_cases",
+   "fieldname": "sb_backdating",
    "fieldtype": "Section Break",
-   "label": "Health Cases",
-   "description": "A case is a file, and a file left open is a cow nobody has closed the book on."
+   "label": "Backdating"
   },
   {
-   "fieldname": "health_case_concern_days",
-   "fieldtype": "Int",
-   "label": "Concern After (days open)",
-   "default": "21",
-   "description": "How long a health case may stay open before the farm wants to know about it. A cow three weeks under treatment is either not recovering or her file was never closed, and both are worth seeing. 0 turns the check off."
+   "default": "0",
+   "description": "While this is on, backdated records skip the age, interval and duplicate guards. Today's records are always guarded. Turn it off once the history load is finished.",
+   "fieldname": "custom_backdating_open",
+   "fieldtype": "Check",
+   "label": "Backdating Open"
   },
   {
-   "fieldname": "cb_health_cases",
+   "fieldname": "sb_milk_price",
+   "fieldtype": "Section Break",
+   "label": "Milk Price & Colostrum"
+  },
+  {
+   "fieldname": "custom_default_milk_price",
+   "fieldtype": "Currency",
+   "label": "Default Milk Price (KES/kg)"
+  },
+  {
+   "fieldname": "custom_milk_price_per_kg",
+   "fieldtype": "Currency",
+   "label": "Milk Price per kg (KES)",
+   "description": "For revenue in KPI figures."
+  },
+  {
+   "fieldname": "cb_milk_price",
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "health_case_stale_days",
+   "fieldname": "custom_colostrum_item",
+   "fieldtype": "Link",
+   "label": "Colostrum Item",
+   "options": "Item"
+  },
+  {
+   "fieldname": "custom_colostrum_warehouse",
+   "fieldtype": "Link",
+   "label": "Colostrum Warehouse",
+   "options": "Warehouse"
+  },
+  {
+   "fieldname": "tab_stock",
+   "fieldtype": "Tab Break",
+   "label": "Stock"
+  },
+  {
+   "fieldname": "stock_rules_note",
+   "fieldtype": "HTML",
+   "label": "Event stock rules",
+   "options": "<p>Whether an event posts a Stock Entry, the item groups it draws on, its default store and whether it must name an item are set per event type — on each <a href='/app/livestock-event-type'>Livestock Event Type</a>, or all together on the app's <b>Settings → Events</b> tab, where an event can also be switched off.</p>"
+  },
+  {
+   "fieldname": "custom_dairy_section",
+   "fieldtype": "Section Break",
+   "label": "Feed & Milk Stock"
+  },
+  {
+   "description": "Store where manufactured feed (TMR) is produced and held.",
+   "fieldname": "custom_feed_wip_warehouse",
+   "fieldtype": "Link",
+   "label": "Feed WIP / Store Warehouse",
+   "options": "Warehouse"
+  },
+  {
+   "description": "Stock item representing raw milk.",
+   "fieldname": "custom_milk_item",
+   "fieldtype": "Link",
+   "label": "Milk Item",
+   "options": "Item"
+  },
+  {
+   "default": "Milking",
+   "fieldname": "custom_milking_stock_entry_type",
+   "fieldtype": "Link",
+   "label": "Milking Stock Entry Type",
+   "options": "Stock Entry Type"
+  },
+  {
+   "fieldname": "custom_dairy_col",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Warehouse net sellable milk is posted into.",
+   "fieldname": "custom_milk_target_warehouse",
+   "fieldtype": "Link",
+   "label": "Milk Target Warehouse",
+   "options": "Warehouse"
+  },
+  {
+   "description": "Warehouse discarded/withheld milk is posted into.",
+   "fieldname": "custom_milk_discard_warehouse",
+   "fieldtype": "Link",
+   "label": "Milk Discard Warehouse",
+   "options": "Warehouse"
+  },
+  {
+   "fieldname": "sb_husbandry_stock",
+   "fieldtype": "Section Break",
+   "label": "Stock Defaults"
+  },
+  {
+   "description": "The item group this farm keeps its feed in — raw materials, mixed concentrate and bought-in alike. The Stock page shows this group and nothing else, and a new ration or concentrate is created in it. Left blank it uses “DAIRY”.",
+   "fieldname": "custom_feed_item_group",
+   "fieldtype": "Link",
+   "label": "Feed Item Group",
+   "options": "Item Group"
+  },
+  {
+   "fieldname": "cb_husbandry_stock",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Default straw item for a Service when none is chosen on the event.",
+   "fieldname": "semen_item",
+   "fieldtype": "Link",
+   "label": "Default Semen Item",
+   "options": "Item"
+  },
+  {
+   "fieldname": "tab_assets",
+   "fieldtype": "Tab Break",
+   "label": "Assets & Appreciation"
+  },
+  {
+   "fieldname": "calf_asset_section",
+   "fieldtype": "Section Break",
+   "label": "Calf asset",
+   "description": "Each calf born on the farm is put on the fixed-asset register when its birth is recorded."
+  },
+  {
+   "default": "1",
+   "fieldname": "create_calf_asset",
+   "fieldtype": "Check",
+   "label": "Create an asset for each calf born"
+  },
+  {
+   "fieldname": "calf_asset_item",
+   "fieldtype": "Link",
+   "label": "Calf Asset Item",
+   "options": "Item",
+   "description": "The fixed-asset item the farm's herd is booked under (herd)."
+  },
+  {
+   "fieldname": "calf_asset_category",
+   "fieldtype": "Link",
+   "label": "Calf Asset Category",
+   "options": "Asset Category"
+  },
+  {
+   "fieldname": "calf_asset_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "calf_asset_location",
+   "fieldtype": "Link",
+   "label": "Calf Asset Location",
+   "options": "Location"
+  },
+  {
+   "default": "5000",
+   "fieldname": "calf_asset_value",
+   "fieldtype": "Currency",
+   "label": "Calf Asset Value"
+  },
+  {
+   "default": "ACC-ASS-.YYYY.-",
+   "fieldname": "calf_asset_naming_series",
+   "fieldtype": "Data",
+   "label": "Calf Asset Naming Series"
+  },
+  {
+   "fieldname": "sb_appreciation",
+   "fieldtype": "Section Break",
+   "label": "Asset Appreciation",
+   "description": "Raises each animal's Asset value as it gains weight, by posting an Asset Value Adjustment (price per kg of live weight from the matrix below). Nothing is posted until this is switched on and the account and prices are set."
+  },
+  {
+   "fieldname": "appreciation_enabled",
+   "fieldtype": "Check",
+   "label": "Appreciate Animal Assets",
+   "default": "0"
+  },
+  {
+   "fieldname": "appreciation_account",
+   "fieldtype": "Link",
+   "label": "Appreciation Account",
+   "options": "Account",
+   "description": "Income / revaluation account the difference is posted to (credited on an increase)."
+  },
+  {
+   "fieldname": "appreciation_min_change",
+   "fieldtype": "Currency",
+   "label": "Minimum Change to Post",
+   "default": "500",
+   "description": "Smaller differences are left until the next weighing (KES)."
+  },
+  {
+   "fieldname": "appreciation_allow_decrease",
+   "fieldtype": "Check",
+   "label": "Allow Value Decrease",
+   "default": "0",
+   "description": "When a lower weight or price gives a lower value, post the fall too. Off: values only go up."
+  },
+  {
+   "fieldname": "cb_appreciation",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "appreciation_frequency",
+   "fieldtype": "Select",
+   "label": "Run Frequency",
+   "options": "Daily\nWeekly\nMonthly",
+   "default": "Weekly",
+   "description": "Weekly runs on Mondays, monthly on the 1st."
+  },
+  {
+   "fieldname": "appreciation_hour",
    "fieldtype": "Int",
-   "label": "Untouched For (days)",
-   "default": "7",
-   "description": "An open case with no treatment recorded for this long is stale — nobody has written anything down, whatever is or is not happening in the shed. 0 turns the check off."
+   "label": "Run at Hour (0-23)",
+   "default": "2",
+   "description": "Server time. The scheduler checks hourly and runs once in this hour."
+  },
+  {
+   "fieldname": "appreciation_matrix",
+   "fieldtype": "Table",
+   "label": "Appreciation Matrix",
+   "options": "Livestock Appreciation Rate",
+   "description": "The first row that fits the animal (band, age, weight) prices it. Prices are placeholders for the farm to fill in."
+  },
+  {
+   "fieldname": "tab_accounts",
+   "fieldtype": "Tab Break",
+   "label": "Accounts & Insurance"
+  },
+  {
+   "fieldname": "sb_accounting",
+   "fieldtype": "Section Break",
+   "label": "Accounting"
+  },
+  {
+   "fieldname": "custom_default_company",
+   "fieldtype": "Link",
+   "label": "Default Company (Livestock JE)",
+   "options": "Company"
+  },
+  {
+   "fieldname": "custom_default_credit_account",
+   "fieldtype": "Link",
+   "label": "Default Credit Account (Livestock JE)",
+   "options": "Account"
+  },
+  {
+   "description": "Where a CONCENTRATE mix books to. A mix has no herd — it is made for the store and eaten by several herds — so the herd's own cost centre cannot answer for it. Left blank it falls to the per-company row below, which is the answer for everything herdless.",
+   "fieldname": "custom_concentrate_cost_center",
+   "fieldtype": "Link",
+   "label": "Concentrate Cost Center",
+   "options": "Cost Center"
+  },
+  {
+   "description": "Charged for feed, milk, drug and husbandry stock movements when the herd names no cost centre of its own. One row per company — the dairy and the flower side do not share a centre. ERPNext refuses a stock entry outright when the item's expense account is a P&amp;L one and no cost centre can be found.",
+   "fieldname": "custom_company_cost_centers",
+   "fieldtype": "Table",
+   "label": "Default Cost Centres by Company",
+   "options": "Livestock Cost Center Default"
   },
   {
    "fieldname": "sb_business",
@@ -1108,36 +1192,64 @@
    "description": "Used for a claim when its policy names no payout percentage."
   },
   {
-   "fieldname": "sb_milk_price",
+   "fieldname": "tab_bulls",
+   "fieldtype": "Tab Break",
+   "label": "Bulls"
+  },
+  {
+   "fieldname": "sb_bull_cull",
    "fieldtype": "Section Break",
-   "label": "Milk Price & Colostrum"
+   "label": "Bull Culling"
   },
   {
-   "fieldname": "custom_default_milk_price",
-   "fieldtype": "Currency",
-   "label": "Default Milk Price (KES/kg)"
+   "default": "0",
+   "description": "Some farms sell a bull calf almost as soon as it is born. Tick this and the system will warn before the window closes.",
+   "fieldname": "cull_bulls_after_birth",
+   "fieldtype": "Check",
+   "label": "Cull Bulls After Birth"
   },
   {
-   "fieldname": "custom_milk_price_per_kg",
-   "fieldtype": "Currency",
-   "label": "Milk Price per kg (KES)",
-   "description": "For revenue in KPI figures."
+   "default": "14",
+   "depends_on": "cull_bulls_after_birth",
+   "description": "Longest a bull calf should remain before it is sold.",
+   "fieldname": "bull_cull_max_days",
+   "fieldtype": "Int",
+   "label": "Maximum Days on Farm"
   },
   {
-   "fieldname": "cb_milk_price",
+   "fieldname": "cb_bull_cull",
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "custom_colostrum_item",
-   "fieldtype": "Link",
-   "label": "Colostrum Item",
-   "options": "Item"
+   "default": "75",
+   "depends_on": "cull_bulls_after_birth",
+   "description": "At 75% of 14 days the warning fires on day 10.5.",
+   "fieldname": "bull_cull_warn_percent",
+   "fieldtype": "Percent",
+   "label": "Warn At (% of window)"
   },
   {
-   "fieldname": "custom_colostrum_warehouse",
-   "fieldtype": "Link",
-   "label": "Colostrum Warehouse",
-   "options": "Warehouse"
+   "fieldname": "sb_bull_purpose",
+   "fieldtype": "Section Break",
+   "label": "Bull Purpose"
+  },
+  {
+   "default": "Cull for sale at birth",
+   "description": "Why the farm keeps its bulls. 'Cull for sale at birth': sold as soon as born, there is no natural service, so every day a bull stays is cost. 'Fattening': grown out for beef. 'Breeding': kept as a sire.",
+   "fieldname": "bull_purpose",
+   "fieldtype": "Select",
+   "label": "Bull Purpose",
+   "options": "Cull for sale at birth\nFattening\nBreeding"
+  },
+  {
+   "fieldname": "cb_bull_purpose",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Used to value a bull that has no Asset: this price times his last weight. Leave empty to show no value for those bulls.",
+   "fieldname": "bull_price_per_kg",
+   "fieldtype": "Currency",
+   "label": "Bull Price per kg"
   },
   {
    "fieldname": "tab_targets",
@@ -1277,102 +1389,38 @@
    "label": "Weaning Complete (days)"
   },
   {
-   "fieldname": "milking_herds",
-   "fieldtype": "Table",
-   "label": "Milking Herds",
-   "options": "Livestock Milking Herd",
-   "description": "The herds that are milked. The milking screens offer these herds and their cows, and the mobile app marks them as milking herds."
-  },
-  {
-   "fieldname": "heifer_herds",
-   "fieldtype": "Table",
-   "label": "Heifer herds",
-   "options": "Livestock Heifer Herd",
-   "description": "The herds that hold heifers (for example the service heifers). The mobile app's Heifers filter shows the animals in these herds."
-  },
-  {
-   "fieldname": "in_calf_herds",
-   "fieldtype": "Table",
-   "label": "In-calf herds",
-   "options": "Livestock In-calf Herd",
-   "description": "The herds where in-calf animals go (for example the bullying heifers and the steamers). The mobile app's In-calf filter shows only the animals in these herds."
-  },
-  {
-   "fieldname": "calf_herds",
-   "fieldtype": "Table",
-   "label": "Calf herds",
-   "options": "Livestock Calf Herd",
-   "description": "The calf groups (for example the bull calves, 0-2 and 2-4). The mobile app's Calves filter shows the animals in these herds."
-  },
-  {
-   "fieldname": "sb_appreciation",
-   "fieldtype": "Section Break",
-   "label": "Asset Appreciation",
-   "description": "Raises each animal's Asset value as it gains weight, by posting an Asset Value Adjustment (price per kg of live weight from the matrix below). Nothing is posted until this is switched on and the account and prices are set."
-  },
-  {
-   "fieldname": "appreciation_enabled",
-   "fieldtype": "Check",
-   "label": "Appreciate Animal Assets",
-   "default": "0"
-  },
-  {
-   "fieldname": "appreciation_account",
-   "fieldtype": "Link",
-   "label": "Appreciation Account",
-   "options": "Account",
-   "description": "Income / revaluation account the difference is posted to (credited on an increase)."
-  },
-  {
-   "fieldname": "appreciation_min_change",
-   "fieldtype": "Currency",
-   "label": "Minimum Change to Post",
-   "default": "500",
-   "description": "Smaller differences are left until the next weighing (KES)."
-  },
-  {
-   "fieldname": "appreciation_allow_decrease",
-   "fieldtype": "Check",
-   "label": "Allow Value Decrease",
-   "default": "0",
-   "description": "When a lower weight or price gives a lower value, post the fall too. Off: values only go up."
-  },
-  {
-   "fieldname": "cb_appreciation",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "appreciation_frequency",
-   "fieldtype": "Select",
-   "label": "Run Frequency",
-   "options": "Daily\nWeekly\nMonthly",
-   "default": "Weekly",
-   "description": "Weekly runs on Mondays, monthly on the 1st."
-  },
-  {
-   "fieldname": "appreciation_hour",
-   "fieldtype": "Int",
-   "label": "Run at Hour (0-23)",
-   "default": "2",
-   "description": "Server time. The scheduler checks hourly and runs once in this hour."
-  },
-  {
-   "fieldname": "appreciation_matrix",
-   "fieldtype": "Table",
-   "label": "Appreciation Matrix",
-   "options": "Livestock Appreciation Rate",
-   "description": "The first row that fits the animal (band, age, weight) prices it. Prices are placeholders for the farm to fill in."
-  },
-  {
-   "fieldname": "tab_stock",
+   "fieldname": "tab_notifications",
    "fieldtype": "Tab Break",
-   "label": "Stock"
+   "label": "Notifications"
   },
   {
-   "fieldname": "stock_rules_note",
-   "fieldtype": "HTML",
-   "label": "Event stock rules",
-   "options": "<p>Whether an event posts a Stock Entry, the item groups it draws on, its default store and whether it must name an item are set per event type — on each <a href='/app/livestock-event-type'>Livestock Event Type</a>, or all together on the app's <b>Settings → Events</b> tab, where an event can also be switched off.</p>"
+   "fieldname": "sb_notifications",
+   "fieldtype": "Section Break",
+   "label": "Alerts"
+  },
+  {
+   "default": "Accounts Manager, Accounts User",
+   "description": "Users with these roles (comma separated) are emailed, and get a bell notice, when a sale creates a draft Sales Invoice to submit.",
+   "fieldname": "sale_invoice_alert_roles",
+   "fieldtype": "Small Text",
+   "label": "Sale invoice alert roles"
+  },
+  {
+   "fieldname": "tab_mobile",
+   "fieldtype": "Tab Break",
+   "label": "Mobile"
+  },
+  {
+   "fieldname": "sb_mobile",
+   "fieldtype": "Section Break",
+   "label": "Phone & offline"
+  },
+  {
+   "default": "0",
+   "description": "When on, a milking recorded on the phone without signal is accepted if it syncs the next day, even with Backdating Open off. The record shows who posted it. Off: such a milking is refused like any backdated record.",
+   "fieldname": "allow_offline_milking_grace",
+   "fieldtype": "Check",
+   "label": "Allow offline milkings to sync one day late"
   }
  ],
  "grid_page_length": 50,
@@ -1438,6 +1486,10 @@
   {
    "read": 1,
    "role": "Livestock Stores"
+  },
+  {
+   "read": 1,
+   "role": "Accounts Manager"
   }
  ],
  "row_format": "Dynamic",

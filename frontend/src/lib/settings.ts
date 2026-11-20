@@ -37,7 +37,11 @@ export type SettingsField = {
   description: string | null;
   default: string | null;
   depends_on: string | null;
+  mandatory_depends_on?: string | null;
+  read_only_depends_on?: string | null;
   reqd: boolean;
+  read_only?: boolean;
+  hidden?: boolean;
   zero: ZeroRule;
   /** True where a wrong value posts stock or money somewhere else rather than
    *  raising — the warehouse, item and account links. */
@@ -69,6 +73,10 @@ export type SettingsTableRow = Record<string, unknown> & {
 export type SettingsTable = {
   fieldname: string;
   label: string;
+  /** "Table" or "Table MultiSelect". */
+  fieldtype?: string;
+  depends_on?: string | null;
+  read_only?: boolean;
   description: string | null;
   doctype: string;
   columns: SettingsField[];
@@ -82,6 +90,10 @@ export type LivestockSettingsDoc = {
   values: Record<string, SettingsValue>;
   tables: SettingsTable[];
   can_write: boolean;
+  /** Fieldnames this user may change. Finer than `can_write`: an Accounts
+   *  Manager may change the Accounts & Insurance tab and nothing else. Absent on
+   *  an older server, which means "all of it if can_write". */
+  writable?: string[];
 };
 
 export type SettingsChange = { from: SettingsValue; to: SettingsValue };
@@ -91,6 +103,8 @@ export type SaveResult = {
   changed: Record<string, SettingsChange>;
   unchanged: string[];
   values: Record<string, SettingsValue>;
+  /** Each list that was written, re-read as stored. */
+  tables?: Record<string, { added: number; removed: number; rows: SettingsTableRow[] }>;
 };
 
 /* ── Endpoints ─────────────────────────────────────────────────────────── */
@@ -98,37 +112,23 @@ export type SaveResult = {
 const READ = "upande_livestock.serverscripts.settings.livestock_settings.livestock_settings";
 const SAVE =
   "upande_livestock.serverscripts.settings.save_livestock_settings.save_livestock_settings";
-const SAVE_TABLE =
-  "upande_livestock.serverscripts.settings.save_livestock_settings_table.save_livestock_settings_table";
 
 export function livestockSettings(): Promise<Envelope<LivestockSettingsDoc>> {
   return call(READ);
 }
 
+/**
+ * The one save. Changed scalars and whole replaced lists go in a single call,
+ * which the server checks completely before writing any of it — so a refused
+ * field never leaves the farm on half a change.
+ */
 export function saveLivestockSettings(
   changes: Record<string, SettingsValue>,
+  tables?: Record<string, SettingsTableRow[]>,
 ): Promise<Envelope<SaveResult>> {
-  return call(SAVE, { payload: changes });
-}
-
-export type SaveTableResult = {
-  ok: boolean;
-  fieldname: string;
-  added: number;
-  removed: number;
-  rows: SettingsTableRow[];
-};
-
-/**
- * Save a whole list. Adding, removing and reordering are one edit to the person
- * doing it, and three calls racing on one table is how a farm ends up with a
- * feed store listed twice and its feed counted twice with it.
- */
-export function saveSettingsTable(
-  fieldname: string,
-  rows: SettingsTableRow[],
-): Promise<Envelope<SaveTableResult>> {
-  return call(SAVE_TABLE, { payload: { fieldname, rows } });
+  const args: Record<string, unknown> = { payload: changes };
+  if (tables && Object.keys(tables).length) args.tables = tables;
+  return call(SAVE, args);
 }
 
 /* ── The rules the screen must not break ───────────────────────────────── */
@@ -263,21 +263,87 @@ export function showValue(field: SettingsField, value: SettingsValue): string {
   return String(value);
 }
 
+function truthy(v: SettingsValue): boolean {
+  return !isBlank(v) && Number(v) !== 0 && String(v).trim() !== "0";
+}
+
+function literal(raw: string): string {
+  const t = raw.trim();
+  const m = /^(['"])(.*)\1$/.exec(t);
+  return m ? m[2] : t;
+}
+
 /**
- * Whether a `depends_on` field should be shown.
+ * Evaluate a Frappe `depends_on` style condition against the current values.
  *
- * Only the plain-fieldname form is honoured — `"cull_bulls_after_birth"`, which
- * is the only form this doctype uses. An `eval:` expression is shown rather than
- * hidden: a setting the operator cannot see is worse than one shown at the
- * wrong moment, and this page will not run the desk's JavaScript to find out.
+ * Handles a bare fieldname, and `eval:` expressions made of `doc.field`,
+ * `!doc.field`, `doc.field == 'x'` / `!=`, joined by `&&` and `||`. The desk's
+ * JavaScript is never run. Returns `null` for a form it cannot read — the
+ * caller then shows the field: a setting the operator cannot see is worse than
+ * one shown at the wrong moment.
  */
+export function evalCondition(
+  expr: string | null | undefined,
+  values: Record<string, SettingsValue>,
+  draft: Record<string, SettingsValue>,
+): boolean | null {
+  let dep = (expr || "").trim();
+  if (!dep) return null;
+  if (!dep.startsWith("eval:")) {
+    return truthy(effectiveValue(dep.replace(/^doc\./, ""), values, draft));
+  }
+  dep = dep.slice(5).trim();
+  const clause = /^(!*)\s*\(?\s*doc\.(\w+)\s*(?:(===?|!==?)\s*(.+?))?\s*\)?$/;
+  let anyOr = false;
+  for (const orPart of dep.split("||")) {
+    let allAnd = true;
+    for (const part of orPart.split("&&")) {
+      const m = clause.exec(part.trim());
+      if (!m) return null;
+      const current = effectiveValue(m[2], values, draft);
+      let result = m[3]
+        ? (m[3].startsWith("!") ? !sameText(current, literal(m[4])) : sameText(current, literal(m[4])))
+        : truthy(current);
+      if (m[1].length % 2 === 1) result = !result;
+      if (!result) allAnd = false;
+    }
+    if (allAnd) anyOr = true;
+  }
+  return anyOr;
+}
+
+function sameText(current: SettingsValue, wanted: string): boolean {
+  return String(current ?? "").trim() === wanted;
+}
+
+/** Whether a field should be shown: not `hidden`, and its `depends_on` holds. */
 export function isVisible(
-  field: SettingsField,
+  field: { depends_on?: string | null; hidden?: boolean },
   values: Record<string, SettingsValue>,
   draft: Record<string, SettingsValue>,
 ): boolean {
-  const dep = (field.depends_on || "").trim();
-  if (!dep || dep.startsWith("eval:")) return true;
-  const current = effectiveValue(dep.replace(/^doc\./, ""), values, draft);
-  return !isBlank(current) && Number(current) !== 0;
+  if (field.hidden) return false;
+  return evalCondition(field.depends_on, values, draft) ?? true;
+}
+
+/** Whether a field may be edited right now by this user. */
+export function isEditable(
+  field: Pick<SettingsField, "fieldname" | "read_only" | "read_only_depends_on">,
+  doc: Pick<LivestockSettingsDoc, "can_write" | "writable"> | null,
+  values: Record<string, SettingsValue>,
+  draft: Record<string, SettingsValue>,
+): boolean {
+  if (!doc || field.read_only) return false;
+  if (evalCondition(field.read_only_depends_on, values, draft)) return false;
+  if (doc.writable) return doc.writable.includes(field.fieldname);
+  return doc.can_write;
+}
+
+/** Whether a field is mandatory right now: `reqd`, or `mandatory_depends_on`. */
+export function isMandatory(
+  field: Pick<SettingsField, "reqd" | "mandatory_depends_on">,
+  values: Record<string, SettingsValue>,
+  draft: Record<string, SettingsValue>,
+): boolean {
+  return !!field.reqd || !!evalCondition(field.mandatory_depends_on, values, draft);
 }
