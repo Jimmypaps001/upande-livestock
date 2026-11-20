@@ -201,3 +201,23 @@ describe("sidebar event order", () => {
     expect([...order].sort((a, b) => a - b)).toEqual(order);
   });
 });
+
+describe("sidebar brand and fit", () => {
+  it("shows Dairy under the product name", () => {
+    const { container } = mount();
+    expect(container.textContent).toContain("Upande Livestock");
+    expect(container.textContent).toContain("Dairy");
+    expect(container.textContent).not.toMatch(/Herd & Dairy Operations/i);
+  });
+
+  it("wraps long labels and keeps the row wrapper from outgrowing the viewport", () => {
+    const { container } = mount();
+    const scroll = container.querySelector('[data-slot="scroll-area"]') as HTMLElement;
+    expect(scroll.className).toContain("[&>[data-radix-scroll-area-viewport]>div]:!block");
+    const label = [...container.querySelectorAll('[data-sidebar="menu-button"] span')].find(
+      (s) => s.textContent === "Pregnancy confirmation (PD)",
+    ) as HTMLElement;
+    expect(label.className).toContain("!whitespace-normal");
+    expect(label.className).toContain("!overflow-visible");
+  });
+});

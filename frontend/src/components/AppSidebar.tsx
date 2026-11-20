@@ -31,7 +31,6 @@ import {
   CalendarClock,
   TrendingUp,
   UserRound,
-  Dna,
   ShieldAlert,
   Siren,
 } from "lucide-react";
@@ -196,12 +195,6 @@ const NAV: NavSection[] = [
         icon: UserRound,
         hint: "Each vet's work for a period, and adding one",
       },
-      {
-        view: "sires",
-        label: "Sires",
-        icon: Dna,
-        hint: "The bulls and straws a service can name",
-      },
     ],
   },
   {
@@ -265,7 +258,6 @@ export const BUILT_VIEWS: ReadonlySet<View> = new Set<View>([
   "transactions",
   "feed-quality",
   "vets",
-  "sires",
   "claims",
   "loss-scenarios",
 ]);
