@@ -44,6 +44,8 @@ class Doc:
 
 	# The REAL method, so the gate is exercised, not stubbed.
 	_type_consumes_drugs = LE.LivestockEvent._type_consumes_drugs
+	# Also real: the herd whose cost centre the issue is charged to.
+	stock_herd = LE.LivestockEvent.stock_herd
 
 	def get(self, key, default=None):
 		return getattr(self, key, default)
