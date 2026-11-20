@@ -7,14 +7,16 @@ import frappe
 from frappe import _
 from frappe.utils import getdate
 
-from upande_livestock.serverscripts.common.envelope import as_dict, guard_read, run
+from upande_livestock.serverscripts.common.envelope import as_dict, guard_read_or_livestock, run
 from upande_livestock.serverscripts.transactions._drafts import day_counts
 
 
 @frappe.whitelist()
 def stock_calendar(payload=None):
 	def go():
-		guard_read("Stock Entry")
+		# The farm roles carry no ERPNext Stock Entry permission, and should not need
+		# it to see the livestock entries (and only those) that this page lists.
+		guard_read_or_livestock("Stock Entry")
 		d = as_dict(payload)
 		if not d.get("from_date") or not d.get("to_date"):
 			frappe.throw(_("Say which days to show."))
